@@ -152,7 +152,10 @@ export default function Tickets({ role, userName, onToast }: Props) {
     if (!sortKey) return filteredTickets;
     const dir = sortDir === "asc" ? 1 : -1;
     const prioRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-    const statusRank: Record<string, number> = { open: 0, pending: 1, resolved: 2, closed: 3 };
+    // Jira's order, with `reopened` treated as the top of the queue (it needs attention again).
+    const statusRank: Record<string, number> = {
+      reopened: 0, open: 1, pending: 2, in_progress: 3, done: 4,
+    };
     return [...filteredTickets].sort((a, b) => {
       let r: number;
       if (sortKey === "priority") r = (prioRank[a.priority] ?? 9) - (prioRank[b.priority] ?? 9);
@@ -177,8 +180,9 @@ export default function Tickets({ role, userName, onToast }: Props) {
       total: list.length,
       open: list.filter((t) => t.status === "open").length,
       pending: list.filter((t) => t.status === "pending").length,
-      resolved: list.filter((t) => t.status === "resolved").length,
-      closed: list.filter((t) => t.status === "closed").length,
+      in_progress: list.filter((t) => t.status === "in_progress").length,
+      done: list.filter((t) => t.status === "done").length,
+      reopened: list.filter((t) => t.status === "reopened").length,
     };
   }, [tickets]);
 
@@ -531,8 +535,9 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 all: stats.total,
                 open: stats.open,
                 pending: stats.pending,
-                resolved: stats.resolved,
-                closed: stats.closed ?? 0,
+                in_progress: stats.in_progress,
+                done: stats.done,
+                reopened: stats.reopened,
               }}
               onChange={(patch) => {
                 if (patch.query !== undefined) setQuery(patch.query);

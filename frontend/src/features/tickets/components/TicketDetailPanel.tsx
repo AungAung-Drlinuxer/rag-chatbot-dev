@@ -39,7 +39,9 @@ import {
   statusMeta,
 } from "@/features/tickets/model";
 
-const FLOW = ["open", "pending", "resolved", "closed"] as const;
+// The rail is Jira's happy path. `reopened` is a loop back to the start, not a fifth dot:
+// it is shown on the badge and fills the rail at step one.
+const FLOW = ["open", "pending", "in_progress", "done"] as const;
 
 type EditFields = { subject: string; description: string; assignee: string; due_date: string };
 
@@ -98,7 +100,10 @@ export function TicketDetailPanel({
   const priority = priorityMeta(ticket.priority);
   // Position in the Jira workflow drives the rail's fill; an unknown status simply sits at
   // the start rather than throwing in the middle of a render.
-  const statusIndex = Math.max(0, FLOW.indexOf(ticket.status as (typeof FLOW)[number]));
+  const isReopened = ticket.status === "reopened";
+  const statusIndex = isReopened
+    ? 0
+    : Math.max(0, FLOW.indexOf(ticket.status as (typeof FLOW)[number]));
 
   async function save() {
     if (!editing) return;
@@ -197,7 +202,7 @@ export function TicketDetailPanel({
               <div className="relative flex items-start">
                 {FLOW.map((s, i) => {
                   const m = statusMeta(s);
-                  const active = ticket.status === s;
+                  const active = ticket.status === s || (isReopened && s === "open");
                   const done = i < statusIndex;
                   return (
                     <button

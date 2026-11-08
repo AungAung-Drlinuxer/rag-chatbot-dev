@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
 import { useBranding } from "@/app/useBranding";
-import { BookOpen, Bot, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
+import { BookOpen, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { useNotifications, NotificationBell } from "@/components/NotificationBell";
 import {
   listConversations,
@@ -169,17 +169,6 @@ export default function PageSidebar({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("ith:restore-assistant-btn"));
-              }}
-              title="Assistant widget"
-              aria-label="Show floating assistant button"
-              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition"
-            >
-              <Bot className="size-4" />
-            </button>
             {canManage && (
               <NotificationBell notices={notices} collapsed={collapsed} onOpen={onNavigate} />
             )}

@@ -25,18 +25,22 @@ const PRIORITY_BAR: Record<string, string> = {
   low: "bg-[var(--border)]",
 };
 
+// One dot and one pill per Jira status. Colour never carries the meaning on its own — the
+// label is always rendered next to the dot.
 const STATUS_DOT: Record<string, string> = {
   open: "bg-[var(--primary)]",
   pending: "bg-[var(--warn)]",
-  resolved: "bg-[var(--ok)]",
-  closed: "bg-muted-foreground/50",
+  in_progress: "bg-[var(--primary)]",
+  done: "bg-[var(--ok)]",
+  reopened: "bg-[var(--danger)]",
 };
 
 const STATUS_PILL: Record<string, string> = {
-  open: "border-[var(--primary)]/35 bg-[var(--accent-soft)] text-[var(--accent-foreground)]",
+  open: "border-[var(--border)] bg-muted text-foreground",
   pending: "border-[var(--warn)]/40 bg-[var(--warn)]/10 text-foreground",
-  resolved: "border-[var(--ok)]/40 bg-[var(--ok)]/10 text-foreground",
-  closed: "border-[var(--border)] bg-muted text-muted-foreground",
+  in_progress: "border-[var(--primary)]/35 bg-[var(--accent-soft)] text-[var(--accent-foreground)]",
+  done: "border-[var(--ok)]/40 bg-[var(--ok)]/10 text-foreground",
+  reopened: "border-[var(--danger)]/40 bg-[var(--danger)]/10 text-foreground",
 };
 
 export function StatusPill({ status }: { status: Ticket["status"] }) {

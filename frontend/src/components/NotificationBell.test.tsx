@@ -1,0 +1,105 @@
+/**
+ * The bell is the only place the shell says "someone is waiting on you".
+ *
+ * Regressions pinned here: the badge counts *unread* notices (a queue that existed before the
+ * tab opened is not new), opening the list clears the badge, and a genuinely new notice rings
+ * the chime once — never on the silent first poll.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+import { NotificationBell, type Notice } from "@/components/NotificationBell";
+
+let container: HTMLDivElement | null = null;
+let root: Root | null = null;
+const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+async function mount(notices: Notice[]) {
+  if (root) await act(async () => { root!.unmount(); });
+  container?.remove();
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => { root!.render(<NotificationBell notices={notices} />); });
+  await settle();
+  return container;
+}
+
+const notice = (id: string): Notice => ({ id, kind: "approval", label: `Approve ${id}`, sub: "HITL approval" });
+
+// jsdom in this setup exposes no storage; the component treats storage as optional, so a
+// Map-backed stub is enough to exercise the read/unread behaviour.
+const store = new Map<string, string>();
+beforeEach(() => {
+  store.clear();
+  vi.stubGlobal("localStorage", {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => store.clear(),
+  });
+  vi.useRealTimers();
+});
+
+afterEach(async () => {
+  if (root) await act(async () => { root!.unmount(); });
+  container?.remove();
+  root = null; container = null;
+  vi.restoreAllMocks();
+});
+
+describe("NotificationBell", () => {
+  it("counts unread notices in the badge", async () => {
+    const el = await mount([notice("ap-1"), notice("ap-2")]);
+    const badge = el.querySelector('[aria-label="Notifications, 2 unread"]');
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent).toContain("2");
+  });
+
+  it("clears the badge when the list is opened", async () => {
+    const el = await mount([notice("ap-1")]);
+    const bell = el.querySelector('[aria-label^="Notifications"]') as HTMLButtonElement;
+    await act(async () => { bell.click(); });
+    await settle();
+    expect(el.querySelector('[aria-label^="Notifications,"]')).toBeNull();
+    expect(el.textContent).toContain("Approve ap-1");
+  });
+
+  it("rings once for a notice that arrives after the first poll", async () => {
+    // jsdom has no Web Audio; count contexts instead of listening. `playChime` swallows any
+    // failure, so the assertion is "we tried to make a sound", not "a sound was audible".
+    let contexts = 0;
+    class FakeAudioContext {
+      currentTime = 0;
+      destination = {};
+      createOscillator() { return { type: "", frequency: { value: 0 }, connect: (n: unknown) => n, start: () => {}, stop: () => {} }; }
+      createGain() {
+        return { gain: { setValueAtTime: () => {}, linearRampToValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} }, connect: (n: unknown) => n };
+      }
+      close() { return Promise.resolve(); }
+    }
+    (window as unknown as { AudioContext: unknown }).AudioContext = function () {
+      contexts += 1;
+      return new FakeAudioContext();
+    };
+    const el = await mount([notice("ap-1")]);
+    // First poll is a silent baseline: nothing rings for work that was already waiting.
+    expect(contexts).toBe(0);
+
+    await act(async () => { root!.render(<NotificationBell notices={[notice("ap-1"), notice("ap-2")]} />); });
+    await settle();
+    expect(contexts).toBe(1);
+    expect(el.textContent).toBeDefined();
+  });
+
+  it("shows the caught-up state when the queue is empty", async () => {
+    const el = await mount([]);
+    const bell = el.querySelector('[aria-label="Notifications"]') as HTMLButtonElement;
+    await act(async () => { bell.click(); });
+    await settle();
+    expect(el.textContent).toContain("You're all caught up");
+  });
+});

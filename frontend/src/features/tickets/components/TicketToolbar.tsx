@@ -22,8 +22,9 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: "all", label: "All" },
   { key: "open", label: "Open" },
   { key: "pending", label: "Pending" },
-  { key: "resolved", label: "Resolved" },
-  { key: "closed", label: "Closed" },
+  { key: "in_progress", label: "In progress" },
+  { key: "done", label: "Done" },
+  { key: "reopened", label: "Reopened" },
 ];
 
 export function TicketToolbar({

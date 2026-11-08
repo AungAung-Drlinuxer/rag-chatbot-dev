@@ -4,7 +4,8 @@ export type Ticket = {
   id: string;
   subject: string;
   description?: string;
-  status: "open" | "pending" | "resolved" | "closed";
+  /** Jira's own workflow, verbatim: OPEN / PENDING / WORK IN PROGRESS / DONE / REOPENED. */
+  status: "open" | "pending" | "in_progress" | "done" | "reopened";
   priority: "critical" | "high" | "medium" | "low";
   category: string;
   requester: string;
@@ -21,29 +22,31 @@ export type Attachment = { id: number; filename: string; size: number; created_b
 export const STATUS_META = {
   open: {
     label: "Open",
-    dot: "bg-blue-500",
-    className:
-      "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300",
+    dot: "bg-[var(--primary)]",
+    className: "border-[var(--border)] bg-muted text-foreground",
   },
   pending: {
     label: "Pending",
-    dot: "bg-amber-500",
-    className:
-      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+    dot: "bg-[var(--warn)]",
+    className: "border-[var(--warn)]/40 bg-[var(--warn)]/10 text-foreground",
   },
-  resolved: {
-    label: "Resolved",
-    dot: "bg-emerald-500",
+  in_progress: {
+    label: "In progress",
+    dot: "bg-[var(--primary)]",
     className:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300",
+      "border-[var(--primary)]/35 bg-[var(--accent-soft)] text-[var(--accent-foreground)]",
   },
-  closed: {
-    label: "Closed",
-    dot: "bg-slate-400",
-    className:
-      "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400",
+  done: {
+    label: "Done",
+    dot: "bg-[var(--ok)]",
+    className: "border-[var(--ok)]/40 bg-[var(--ok)]/10 text-foreground",
   },
-};
+  reopened: {
+    label: "Reopened",
+    dot: "bg-[var(--danger)]",
+    className: "border-[var(--danger)]/40 bg-[var(--danger)]/10 text-foreground",
+  },
+} as const;
 
 export const PRIORITY_META = {
   critical: {

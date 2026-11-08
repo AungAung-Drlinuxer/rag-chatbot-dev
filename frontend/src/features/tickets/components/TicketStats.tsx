@@ -12,7 +12,14 @@ import { AlertOctagon, CheckCircle2, Clock3, Inbox } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 
-export type TicketTotals = { total: number; open: number; pending: number; resolved: number; closed: number };
+export type TicketTotals = {
+  total: number;
+  open: number;
+  pending: number;
+  in_progress: number;
+  done: number;
+  reopened: number;
+};
 
 type Tone = "primary" | "amber" | "emerald" | "slate";
 
@@ -151,14 +158,24 @@ export function TicketStats({
         title="Awaiting the requester to reply or confirm a fix"
       />
       <Tile
-        label="Resolved"
-        value={totals.resolved}
-        caption="Marked resolved"
+        label="In progress"
+        value={totals.in_progress}
+        caption="Someone is working on it"
+        icon={<Clock3 className="size-3.5" />}
+        tone="primary"
+        active={activeStatus === "in_progress"}
+        onClick={() => onPick("in_progress")}
+        title="Show tickets that are in progress"
+      />
+      <Tile
+        label="Done"
+        value={totals.done}
+        caption="Closed in Jira"
         icon={<CheckCircle2 className="size-3.5" />}
         tone="emerald"
-        active={activeStatus === "resolved"}
-        onClick={() => onPick("resolved")}
-        title="Show resolved tickets only"
+        active={activeStatus === "done"}
+        onClick={() => onPick("done")}
+        title="Show tickets that are done"
       />
     </section>
   );

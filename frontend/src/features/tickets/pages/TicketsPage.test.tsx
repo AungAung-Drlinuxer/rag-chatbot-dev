@@ -66,7 +66,7 @@ function ticket(over: Record<string, any>) {
 const TICKETS = [
   ticket({ id: "IT-1", subject: "VPN down", status: "open", priority: "high", requester: "alice" }),
   ticket({ id: "IT-2", subject: "Printer jam", status: "pending", priority: "medium", requester: "bob", assignee: "carol" }),
-  ticket({ id: "IT-3", subject: "DB slow", status: "resolved", priority: "critical", requester: "dave" }),
+  ticket({ id: "IT-3", subject: "DB slow", status: "done", priority: "critical", requester: "dave" }),
 ];
 
 function happyPath() {
@@ -152,13 +152,14 @@ describe("TicketsPage — loading, data and stats", () => {
     expect(text).toContain("carol");
   });
 
-  it("counts total / open / pending / resolved from the loaded list", async () => {
+  it("counts total / open / pending / in progress / done from the loaded list", async () => {
     const el = await mount("admin");
     const text = el.textContent!;
     expect(text).toContain("Total tickets");
     expect(text).toContain("Open");
     expect(text).toContain("Pending");
-    expect(text).toContain("Resolved");
+    expect(text).toContain("In progress");
+    expect(text).toContain("Done");
     // The three stat figures 3,1,1,1 appear somewhere in the KPI cards.
     const cards = el.querySelectorAll('[data-slot="card"]');
     const kpi = [...cards].slice(0, 4).map((c) => c.textContent);
@@ -220,10 +221,10 @@ describe("TicketsPage — filtering and sorting", () => {
     const el = await mount("admin");
     // Status is a segmented switch now, not a <select>: every state is visible with its count.
     const group = el.querySelector('[role="group"][aria-label="Filter by status"]') as HTMLElement;
-    const resolved = [...group.querySelectorAll("button")].find((b) =>
-      b.textContent?.trim().startsWith("Resolved"),
+    const done = [...group.querySelectorAll("button")].find((b) =>
+      b.textContent?.trim().startsWith("Done"),
     ) as HTMLElement;
-    await click(resolved);
+    await click(done);
     expect(rowCount(el)).toBe(1);
     expect(el.textContent).toContain("DB slow");
   });
@@ -261,7 +262,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     // The control is now the Jira workflow rail: four labelled steps on one track.
     expect(text).toContain("Jira workflow");
     expect(text).toContain("click a step to move it");
-    for (const step of ["Open", "Pending", "Resolved", "Closed"]) expect(text).toContain(step);
+    for (const step of ["Open", "Pending", "In progress", "Done"]) expect(text).toContain(step);
   });
 
   it("opens the create dialog and refuses to create a ticket with no subject", async () => {
