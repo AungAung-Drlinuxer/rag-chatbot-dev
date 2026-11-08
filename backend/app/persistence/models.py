@@ -283,3 +283,18 @@ class ClassifierDomain(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class DashboardLayout(Base):
+    """One customizable Overview layout per user.
+
+    Stored as a JSONB document rather than a table per panel: a layout is written and read
+    as a whole, panels have no identity outside their position, and a new panel type must not
+    need a migration. `panels` holds an ordered array of {id, type, title, span, options}.
+    """
+    __tablename__ = "dashboard_layouts"
+    username: Mapped[str] = mapped_column(String(64), primary_key=True)
+    panels: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

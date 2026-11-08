@@ -583,3 +583,107 @@ class TicketCreate(BaseModel):
     due_date: str | None = None    # v0.20.2 ISO date
 
 
+
+
+# --------------------------------------------------------------------------------------
+# Overview layout — per-user, Grafana-style panel arrangement
+# --------------------------------------------------------------------------------------
+
+MAX_PANELS = 40
+MIN_SPAN = 3
+MAX_SPAN = 12
+
+
+class PanelSpec(BaseModel):
+    id: str
+    type: str
+    title: str = ""
+    span: int = 6
+    options: dict = {}
+
+
+class LayoutIn(BaseModel):
+    panels: list[PanelSpec]
+
+
+def normalise_panels(panels: list[dict] | list[PanelSpec]) -> list[dict]:
+    """Validate and clamp a layout. Raises ValueError with an actionable message.
+
+    The panel TYPE is not checked against a server-side list on purpose: the catalogue lives
+    with the renderer, and a new panel type would otherwise need a backend release before an
+    operator could save it. An unknown type is kept as-is and the frontend shows a labelled
+    placeholder instead of silently dropping the panel.
+    """
+    out: list[dict] = []
+    seen: set[str] = set()
+    if len(panels) > MAX_PANELS:
+        raise ValueError(f"a dashboard may hold at most {MAX_PANELS} panels")
+    for raw in panels:
+        p = raw.model_dump() if isinstance(raw, PanelSpec) else dict(raw or {})
+        pid = str(p.get("id") or "").strip()
+        ptype = str(p.get("type") or "").strip()
+        if not pid or len(pid) > 64:
+            raise ValueError("every panel needs an id of 1–64 characters")
+        if pid in seen:
+            raise ValueError(f"duplicate panel id: {pid}")
+        if not ptype or len(ptype) > 40:
+            raise ValueError(f"panel {pid} needs a type of 1–40 characters")
+        try:
+            span = int(p.get("span", 6))
+        except (TypeError, ValueError):
+            raise ValueError(f"panel {pid}: span must be a number") from None
+        # Clamp rather than reject: the editor's slider is the only writer, and a stored
+        # 1/12 column would be unreadable — but a slightly out-of-range value (an older
+        # client, a hand-written row) should still render as something usable.
+        span = max(MIN_SPAN, min(MAX_SPAN, span))
+        title = str(p.get("title") or "").strip()[:120]
+        options = p.get("options") if isinstance(p.get("options"), dict) else {}
+        out.append({"id": pid, "type": ptype, "title": title, "span": span,
+                    "options": options})
+        seen.add(pid)
+    return out
+
+
+@router.get("/dashboard/layout")
+def get_dashboard_layout(user: str = Depends(get_current_user)) -> dict:
+    """The caller's saved layout, or `custom: false` when they have never saved one.
+
+    Returning an empty list (rather than a server-side default) keeps the panel catalogue in
+    one place — the renderer — so a deployment cannot end up with two different ideas of what
+    the default dashboard is.
+    """
+    with _db() as s:
+        row = s.execute(text(
+            "SELECT panels, updated_at FROM dashboard_layouts WHERE username = :u"
+        ), {"u": user}).first()
+    if not row:
+        return {"panels": [], "custom": False, "updated_at": None}
+    return {"panels": row[0] or [], "custom": True,
+            "updated_at": row[1].isoformat() if row[1] else None}
+
+
+@router.put("/dashboard/layout")
+def put_dashboard_layout(payload: LayoutIn, user: str = Depends(get_current_user)) -> dict:
+    try:
+        panels = normalise_panels(payload.panels)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    with _db() as s:
+        s.execute(text(
+            "INSERT INTO dashboard_layouts (username, panels, updated_at) "
+            "VALUES (:u, CAST(:p AS jsonb), NOW()) "
+            "ON CONFLICT (username) DO UPDATE SET panels = EXCLUDED.panels, updated_at = NOW()"
+        ), {"u": user, "p": json.dumps(panels)})
+        s.commit()
+        row = s.execute(text(
+            "SELECT updated_at FROM dashboard_layouts WHERE username = :u"), {"u": user}).first()
+    return {"panels": panels, "custom": True,
+            "updated_at": row[0].isoformat() if row and row[0] else None}
+
+
+@router.delete("/dashboard/layout")
+def reset_dashboard_layout(user: str = Depends(get_current_user)) -> dict:
+    with _db() as s:
+        s.execute(text("DELETE FROM dashboard_layouts WHERE username = :u"), {"u": user})
+        s.commit()
+    return {"panels": [], "custom": False, "updated_at": None}

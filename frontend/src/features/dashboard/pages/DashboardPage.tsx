@@ -1,19 +1,14 @@
 import {
   Activity,
-  AlertTriangle,
-  BookOpen,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
-  ExternalLink,
-  Eye,
-  Gauge,
   LayoutDashboard,
-  MessageSquare,
+  Pencil,
+  Plus,
   RefreshCw,
-  ShieldAlert,
-  Ticket,
-  Users,
+  RotateCcw,
+  Save,
+  X,
 } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
@@ -30,32 +25,54 @@ import {
   type ReportWindow,
 } from "@/features/dashboard/api";
 
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import type { Conversation, RecentTicket, Domain, HealthItem } from "@/features/dashboard/lib/dashboardTypes";
-import { healthIcon, maskProfanity } from "@/features/dashboard/lib/dashboardUtils";
-import { Legend, ConversationChart, DonutChart } from "@/features/dashboard/components/DashboardCharts";
-import { KpiCard, DomainRow, HealthRow } from "@/features/dashboard/components/DashboardRows";
-import { ResultBadge, StatusBadge, PriorityBadge, DashboardReportButtons } from "@/features/dashboard/components/DashboardBits";
+import { healthIcon } from "@/features/dashboard/lib/dashboardUtils";
+import { DashboardReportButtons } from "@/features/dashboard/components/DashboardBits";
+
+import {
+  DashboardDataProvider,
+  type DashboardData,
+  type GatePoint,
+  type SeriesPoint,
+} from "@/features/dashboard/panels/data";
+import PanelFrame from "@/features/dashboard/panels/PanelFrame";
+import PanelEditor from "@/features/dashboard/panels/PanelEditor";
+import { renderPanelBody } from "@/features/dashboard/panels/PanelBodies";
+import {
+  getDashboardLayout,
+  resetDashboardLayout,
+  saveDashboardLayout,
+} from "@/features/dashboard/panels/layoutApi";
+import {
+  DEFAULT_LAYOUT,
+  MAX_SPAN,
+  MIN_SPAN,
+  newPanelId,
+  panelTitle,
+  type PanelSpec,
+} from "@/features/dashboard/panels/types";
 
 /**
- * Overview — what happened, what needs attention, and how trustworthy the answers are.
+ * Overview — a Grafana-style board of panels the operator arranges themselves.
  *
- * v1.7.3 redesign. The previous page tried to fit six KPI tiles, three charts, a gate-trend
- * band and three tables into a single non-scrolling viewport. Every panel was therefore
- * squeezed to a fixed height, and the most actionable signal (a dependency is down, answers
- * are being cautioned, escalations are piling up) sat in the same visual weight as vanity
- * counters. This version is built around three questions, top to bottom:
+ * WHY PANELS INSTEAD OF A FIXED LAYOUT: the page used to decide, for every deployment, that
+ * "needs attention" belonged above the KPI tiles and that system health belonged in a right
+ * rail. An admin who only watches the knowledge base still scrolled past five panels, and a
+ * team that runs no Jira had a permanently empty "recent tickets" box. The layout is now data
+ * (`dashboard_layouts.panels`), editable in place: move, resize, rename, duplicate, delete,
+ * add, and reset.
  *
- *   1. Does anything need me right now?   → the attention strip (only real signals)
- *   2. How much work happened?            → KPI tiles with honest deltas
- *   3. Is the assistant working well?     → trend, answer quality, escalations, knowledge
+ * WHAT DID NOT CHANGE: the seven /api/dashboard* endpoints remain the only source of figures,
+ * the reporting-window picker still governs every series, and a failed load still renders "—"
+ * plus a banner — a panel must never invent a zero. Every panel reads one shared data object,
+ * so ten panels cost the same seven requests as one, and a panel is never the reason a
+ * figure is missing.
  *
- * Every figure still comes from the seven /api/dashboard* endpoints. There are no sample
- * fallbacks: a failed load leaves "—" and an explicit banner, never a plausible-looking
- * zero. The page scrolls naturally instead of being forced into one screen, so nothing is
- * clipped at smaller heights.
+ * The panels themselves live in ./panels: `types.ts` is the catalogue, `PanelBodies.tsx` the
+ * renderers, `PanelFrame.tsx` the chrome, `PanelEditor.tsx` the form, `layoutApi.ts` the
+ * storage. This file owns the data load and the editing state machine.
  */
 
 type Props = {
@@ -79,12 +96,12 @@ export default function Dashboard({ role }: Props) {
 
   // Real API data
   const [stats, setStats] = useState<any>(null);
-  const [series, setSeries] = useState<{ day: string; total: number; resolved: number; escalated: number }[]>([]);
-  const [domainsLive, setDomainsLive] = useState<Domain[] | null>(null);
-  const [liveConversations, setLiveConversations] = useState<Conversation[] | null>(null);
-  const [liveTickets, setLiveTickets] = useState<RecentTicket[] | null>(null);
-  const [liveHealth, setLiveHealth] = useState<HealthItem[] | null>(null);
-  const [gateTrend, setGateTrend] = useState<{ day: string; answered: number; cautioned: number }[]>([]);
+  const [series, setSeries] = useState<SeriesPoint[]>([]);
+  const [domainsLive, setDomainsLive] = useState<Domain[]>([]);
+  const [liveConversations, setLiveConversations] = useState<Conversation[]>([]);
+  const [liveTickets, setLiveTickets] = useState<RecentTicket[]>([]);
+  const [liveHealth, setLiveHealth] = useState<HealthItem[]>([]);
+  const [gateTrend, setGateTrend] = useState<GatePoint[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [healthSummary, setHealthSummary] = useState<{
@@ -92,6 +109,18 @@ export default function Dashboard({ role }: Props) {
     down: string[];
     guardrailEvents: number;
   }>({ overall: "Healthy", down: [], guardrailEvents: 0 });
+
+  // Layout: `layout` is what is saved, `draft` is what edit mode is manipulating.
+  const [layout, setLayout] = useState<PanelSpec[]>(DEFAULT_LAYOUT);
+  const [draft, setDraft] = useState<PanelSpec[]>(DEFAULT_LAYOUT);
+  const [custom, setCustom] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [layoutLabel, setLayoutLabel] = useState("Default layout");
+  const [layoutReady, setLayoutReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
+  const [editor, setEditor] = useState<{ index: number | null; panel: PanelSpec } | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
 
   // Poll every 60s so a dashboard left open does not show stale figures.
   const [nowTick, setNowTick] = useState(0);
@@ -120,6 +149,26 @@ export default function Dashboard({ role }: Props) {
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const customInvalid = !!customFrom && !!customTo && (customFrom > customTo || customFrom > todayIso);
+
+  // ---- saved layout ---------------------------------------------------------------
+  useEffect(() => {
+    let alive = true;
+    getDashboardLayout()
+      .then((saved) => {
+        if (!alive) return;
+        if (saved.custom && Array.isArray(saved.panels) && saved.panels.length) {
+          setLayout(saved.panels as PanelSpec[]);
+          setCustom(true);
+          setLayoutLabel("Saved layout");
+        }
+      })
+      .catch(() => {
+        // No saved layout (or the endpoint is unreachable): the default board is the page.
+        // A failure here must not block the dashboard itself.
+      })
+      .finally(() => { if (alive) setLayoutReady(true); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -295,6 +344,86 @@ export default function Dashboard({ role }: Props) {
 
   const healthDown = healthSummary.down;
 
+  const data: DashboardData = {
+    role, loading, loadError, stats, series, gateTrend,
+    domains: domainsLive, conversations: liveConversations,
+    tickets: liveTickets, health: liveHealth, healthSummary,
+    totals, needsReview, attention, healthDown, win, rangeLabel, deltaProps,
+    refresh: refreshDashboard,
+  };
+
+  // ---- layout editing ------------------------------------------------------------
+  const panels = editing ? draft : layout;
+
+  function beginEdit() {
+    setDraft(layout.map((p) => ({ ...p, options: { ...p.options } })));
+    setEditing(true);
+    setLayoutMsg(null);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setLayoutMsg(null);
+  }
+
+  function movePanel(index: number, direction: -1 | 1) {
+    const to = index + direction;
+    if (to < 0 || to >= draft.length) return;
+    const next = [...draft];
+    [next[index], next[to]] = [next[to], next[index]];
+    setDraft(next);
+  }
+
+  function dropOn(index: number) {
+    if (dragFrom === null || dragFrom === index) {
+      setDragFrom(null);
+      return;
+    }
+    const next = [...draft];
+    const [moved] = next.splice(dragFrom, 1);
+    next.splice(index, 0, moved);
+    setDragFrom(null);
+    setDraft(next);
+  }
+
+  async function saveLayout() {
+    setSaving(true);
+    setLayoutMsg(null);
+    try {
+      const saved = await saveDashboardLayout(draft);
+      setLayout(saved.panels as PanelSpec[]);
+      setCustom(true);
+      setLayoutLabel("Saved layout");
+      setEditing(false);
+      setLayoutMsg("Layout saved for your account.");
+    } catch (err) {
+      setLayoutMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetLayout() {
+    setSaving(true);
+    setLayoutMsg(null);
+    try {
+      await resetDashboardLayout();
+      setLayout(DEFAULT_LAYOUT);
+      setDraft(DEFAULT_LAYOUT);
+      setCustom(false);
+      setLayoutLabel("Default layout");
+      setEditing(false);
+      setLayoutMsg("Reset to the default layout.");
+    } catch (err) {
+      setLayoutMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const openNewPanel = () =>
+    setEditor({ index: null, panel: { id: newPanelId(), type: "attention", title: "", span: 6, options: {} } });
+
   return (
     <PageShell>
       <PageHeader
@@ -402,389 +531,132 @@ export default function Dashboard({ role }: Props) {
             tickets={liveTickets ?? []}
             domains={domainsLive ?? []}
           />
+
+          {!editing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={beginEdit}
+              disabled={!layoutReady}
+              title="Move, resize, rename, add or remove panels"
+            >
+              <Pencil className="mr-2 size-3.5" /> Customize
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={saving}>
+                <X className="mr-2 size-3.5" /> Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetLayout}
+                disabled={saving || !custom}
+                title={custom ? "Delete your saved layout and use the default board" : "Already the default layout"}
+              >
+                <RotateCcw className="mr-2 size-3.5" /> Reset
+              </Button>
+              <Button size="sm" onClick={saveLayout} disabled={saving}>
+                <Save className="mr-2 size-3.5" /> {saving ? "Saving…" : "Save layout"}
+              </Button>
+            </>
+          )}
         </>}
       />
 
-      <main className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-5">
-          {loadError && !loading && (
-            <ErrorState
-              banner
-              title="Some dashboard data could not be loaded"
-              detail={loadError}
-              onRetry={refreshDashboard}
-              retryLabel="Retry"
-            />
-          )}
+      <main className="space-y-4">
+        {loadError && !loading && (
+          <ErrorState
+            banner
+            title="Some dashboard data could not be loaded"
+            detail={loadError}
+            onRetry={refreshDashboard}
+            retryLabel="Retry"
+          />
+        )}
 
-          {noActivity ? (
-            <EmptyState
-              icon={<Activity className="size-5" />}
-              title="No activity in this reporting window"
-              description="Nothing has been recorded for the selected period. Try a wider range, or check that the chat and ticket integrations are connected in Settings."
-              actionLabel="Widen to 90 days"
-              onAction={() => setWin({ kind: "preset", days: 90 })}
-            />
-          ) : (
-            <>
-              {/* ---------- 1. what needs a human ---------- */}
-              <section
-                data-section="attention"
-                aria-label="Needs attention"
-                className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card"
-              >
-                <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
-                  <div className="min-w-0">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      {attention.length ? (
-                        <AlertTriangle className="size-3.5 text-[var(--warn)]" />
-                      ) : (
-                        <CheckCircle2 className="size-3.5 text-[var(--ok)]" />
-                      )}
-                      Needs attention
-                      <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                        {loading ? "…" : attention.length}
-                      </span>
-                    </h2>
-                    <p className="mt-1 text-xs text-muted-foreground" role="status" aria-live="polite">
-                      {loading
-                        ? "Reading live service and conversation data."
-                        : attention.length
-                          ? "Derived from failing dependencies, escalations, the confidence gate and guardrails."
-                          : "Nothing is blocking right now."}
-                    </p>
-                  </div>
-                </div>
-
-                {!loading && attention.length === 0 ? (
-                  <div className="flex items-start gap-3 border-t border-[var(--border)] px-5 py-3.5">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-[var(--ok)]/12 text-[var(--ok)]">
-                      <CheckCircle2 className="size-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold">All clear</p>
-                      <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">
-                        {(liveHealth ?? []).length} dependencies healthy · {totals.resolvedPct}% of conversations resolved without a human
-                        {totals.gatePassPct === null ? "" : ` · ${totals.gatePassPct}% passed the confidence gate`}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
-                    {attention.slice(0, 3).map((a) => (
-                      <div key={a.key} className="flex items-start gap-3 px-5 py-3">
-                        <span
-                          className={[
-                            "mt-1.5 size-2 shrink-0 rounded-full",
-                            a.tone === "danger" ? "bg-[var(--danger)]" : a.tone === "warn" ? "bg-[var(--warn)]" : "bg-[var(--ok)]",
-                          ].join(" ")}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold">{a.title}</p>
-                          <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">{a.detail}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* ---------- 2. volume ---------- */}
-              <section data-section="kpis" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <KpiCard
-                  icon={<MessageSquare className="size-4" />}
-                  value={stats ? String(stats.total_conversations) : "—"}
-                  title="Total Conversations"
-                  {...deltaProps("total_conversations", stats?.total_conversations ?? 0)}
-                  loading={loading}
-                />
-                <KpiCard
-                  tone="emerald"
-                  icon={<CheckCircle2 className="size-4" />}
-                  value={stats ? String(stats.resolved_by_bot) : "—"}
-                  title="Resolved by Bot"
-                  {...deltaProps("resolved_by_bot", stats?.resolved_by_bot ?? 0)}
-                  loading={loading}
-                />
-                <KpiCard
-                  tone="orange"
-                  icon={<Ticket className="size-4" />}
-                  value={stats ? String(stats.escalated_to_tickets) : "—"}
-                  title="Escalated to Tickets"
-                  change={stats?.escalated_to_tickets === 0 ? null : deltaInfo("escalated_to_tickets", stats?.escalated_to_tickets ?? 0).change}
-                  positive={(stats?.deltas?.escalated_to_tickets ?? 0) < 0}
-                  description={stats?.escalated_to_tickets === 0 ? "no escalations this week" : deltaInfo("escalated_to_tickets", 0).description}
-                  loading={loading}
-                />
-                <KpiCard
-                  tone="sky"
-                  icon={<Users className="size-4" />}
-                  value={stats ? String(stats.active_users) : "—"}
-                  title="Active Users"
-                  {...deltaProps("active_users", stats?.active_users ?? 0)}
-                  loading={loading}
-                />
-              </section>
-
-              {/* ---------- 3. trend ---------- */}
-              <section data-section="trend" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-                <div className="flex flex-wrap items-start justify-between gap-2 px-5 pb-3 pt-4">
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold">Conversations over time</h2>
-                    <p className="mt-0.5 text-2xs text-muted-foreground">
-                      {win.kind === "custom" ? rangeLabel : `last ${win.days} days`} · split by what the assistant did with each conversation
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-2xs text-muted-foreground">
-                    <Legend label="Total conversations" className="bg-[var(--primary)]" />
-                    <Legend label="Resolved by Bot" className="bg-[var(--ok)]" />
-                    <Legend label="Escalated" className="bg-[var(--warn)]" />
-                  </div>
-                </div>
-                <div className="px-5 pb-4">
-                  <ConversationChart data={series} />
-                </div>
-              </section>
-
-              {/* ---------- 4. queue ---------- */}
-              <section data-section="queue" className="grid gap-5 lg:grid-cols-2">
-                <Card className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)]">
-                  <div className="flex items-center justify-between px-5 pb-3 pt-4">
-                    <h2 className="text-sm font-semibold">Needs review</h2>
-                    <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                      {liveConversations ? needsReview.length : "—"}
-                    </span>
-                  </div>
-                  <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
-                    {needsReview.length === 0 && (
-                      <p className="px-5 py-8 text-center text-2xs text-muted-foreground">
-                        No conversations yet — data appears as users chat.
-                      </p>
-                    )}
-                    {needsReview.map((conversation) => (
-                      <div key={`${conversation.time}-${conversation.user}`} className="space-y-1 px-5 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <ResultBadge result={conversation.result} />
-                            <span className="truncate text-xs font-medium" title={conversation.user}>{conversation.user}</span>
-                          </span>
-                          <span className="shrink-0 text-2xs text-muted-foreground" title={conversation.time}>
-                            {(() => {
-                              const d = conversation.time
-                                ? new Date(conversation.time.endsWith("Z") || conversation.time.includes("+") ? conversation.time : conversation.time + "Z")
-                                : null;
-                              return d && !Number.isNaN(d.getTime())
-                                ? d.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false })
-                                : conversation.time;
-                            })()}
-                          </span>
-                        </div>
-                        <p className="truncate text-xs text-muted-foreground" title={maskProfanity(conversation.question)}>
-                          {maskProfanity(conversation.question)}
-                        </p>
-                        <button
-                          onClick={() => {
-                            window.dispatchEvent(new CustomEvent("ith:view-conversation", {
-                              detail: { user: conversation.user, question: conversation.question },
-                            }));
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-medium text-[var(--accent-foreground)] transition hover:bg-accent"
-                        >
-                          <Eye className="size-3.5" /> View
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)]">
-                  <div className="flex items-center justify-between px-5 pb-3 pt-4">
-                    <h2 className="text-sm font-semibold">Recent tickets</h2>
-                    <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                      {liveTickets ? `${totals.openTickets} open` : "—"}
-                    </span>
-                  </div>
-                  <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
-                    {(liveTickets ?? []).length === 0 && (
-                      <div className="px-5 py-8 text-center text-2xs text-muted-foreground">
-                        No tickets yet — escalations will appear here.
-                      </div>
-                    )}
-                    {(liveTickets ?? []).map((ticket) => (
-                      <div key={ticket.id} className="flex items-center gap-3 px-5 py-3 transition hover:bg-muted/50">
-                        <div className="w-14 shrink-0 font-mono text-2xs font-semibold text-[var(--accent-foreground)]">{ticket.id}</div>
-                        <div className="min-w-0 flex-1 truncate text-xs font-medium">{ticket.subject}</div>
-                        <StatusBadge status={ticket.status} />
-                        <PriorityBadge priority={ticket.priority} />
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </section>
-
-              {/* ---------- 5. knowledge ---------- */}
-              <section data-section="knowledge" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-                <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4">
-                  <h2 className="text-sm font-semibold">Knowledge by domain</h2>
-                  <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                    {stats?.kb_pages != null ? `${stats.kb_pages} articles` : "—"}
-                  </span>
-                </div>
-                <div className="space-y-3 px-5 pb-4">
-                  {(domainsLive ?? []).length === 0 && (
-                    <div className="py-4 text-center text-2xs text-muted-foreground">No domain data yet.</div>
-                  )}
-                  {(domainsLive ?? []).slice(0, 6).map((domain) => (
-                    <DomainRow key={domain.name} domain={domain} />
-                  ))}
-                  {(domainsLive ?? []).length > 6 && (
-                    <p className="text-2xs text-muted-foreground">+{(domainsLive ?? []).length - 6} more domains</p>
-                  )}
-                </div>
-              </section>
-            </>
-          )}
-        </div>
-
-        {/* ---------- rail: the state of the platform ---------- */}
-        <aside className="space-y-5 xl:sticky xl:top-6">
-          <section
-            data-section="health"
-            aria-label="System health"
-            className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card"
-          >
-            <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold leading-tight">System health</h2>
-                <p className="mt-0.5 truncate text-2xs leading-tight text-muted-foreground">
-                  {(liveHealth ?? []).length === 0
-                    ? "Checking dependencies…"
-                    : healthDown.length > 0
-                      ? `Failing: ${healthDown.join(", ")}`
-                      : `${(liveHealth ?? []).length} dependencies reporting healthy`}
-                </p>
-              </div>
-              <span className={[
-                "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium",
-                healthSummary.overall === "Healthy"
-                  ? "bg-[var(--ok)]/12 text-[var(--ok)]"
-                  : healthSummary.overall === "Down"
-                    ? "bg-[var(--danger)]/12 text-[var(--danger)]"
-                    : "bg-[var(--warn)]/12 text-[var(--warn)]",
-              ].join(" ")}>
-                {healthSummary.overall}
-              </span>
-            </div>
-
-            <div className="max-h-[300px] divide-y divide-[var(--border)] overflow-y-auto border-t border-[var(--border)]">
-              {(liveHealth ?? []).length === 0 && (
-                <div className="px-5 py-6 text-center text-2xs text-muted-foreground">
-                  Health data unavailable.
-                </div>
-              )}
-              {(liveHealth ?? []).map((item) => (
-                <HealthRow key={item.key ?? item.name} item={item} />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-3 border-t border-[var(--border)] bg-muted/50 px-5 py-2.5">
-              <ShieldAlert className="size-3.5 shrink-0 text-[var(--warn)]" />
-              <span className="flex-1 text-2xs font-medium">
-                Guardrail activity
-                <span className="ml-1 font-normal text-muted-foreground">last 7 days</span>
-              </span>
-              <span className="text-2xs text-muted-foreground">
-                {healthSummary.guardrailEvents} event{healthSummary.guardrailEvents === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            <a
-              href="http://10.10.10.18:3000/d/rag-platform-health"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-1.5 border-t border-[var(--border)] px-4 py-2 text-[11px] font-medium text-[var(--accent-foreground)] transition hover:bg-accent"
+        {editing && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-2xs text-muted-foreground">
+            <span className="font-medium text-foreground">Editing layout · {layoutLabel.toLowerCase()}</span>
+            <button
+              type="button"
+              onClick={openNewPanel}
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-card px-2 py-1 font-medium text-foreground transition hover:bg-muted"
             >
-              <ExternalLink className="size-3" /> Open in Grafana
-            </a>
-          </section>
+              <Plus className="size-3" /> Add panel
+            </button>
+            <span className="hidden sm:inline">
+              Drag a panel to reorder · width 3–12 of 12 columns · changes apply when you save
+            </span>
+          </div>
+        )}
 
-          <section
-            data-section="quality"
-            aria-label="Answer quality"
-            className="rounded-2xl border border-[var(--border)] bg-card p-4"
-          >
-            <div className="mb-3">
-              <h2 className="text-sm font-semibold">Answer quality</h2>
-              <p className="mt-0.5 text-2xs text-muted-foreground">How often the bot finished without a human</p>
-            </div>
+        {layoutMsg && (
+          <p role="status" className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-2xs text-muted-foreground">
+            {layoutMsg}
+          </p>
+        )}
 
-            <div className="flex items-center gap-4">
-              <DonutChart stats={stats} />
-              <div className="min-w-0 flex-1 space-y-2.5">
-                {[
-                  { label: "Resolved by bot", pct: totals.resolvedPct, cls: "bg-[var(--ok)]" },
-                  { label: "Escalated to IT", pct: totals.escalatedPct, cls: "bg-[var(--warn)]" },
-                  { label: "No action taken", pct: totals.unresolvedPct, cls: "bg-[var(--border)]" },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-center justify-between gap-3 text-2xs">
-                    <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                      <span className={`size-2 shrink-0 rounded-full ${row.cls}`} aria-hidden />
-                      <span className="truncate">{row.label}</span>
-                    </span>
-                    <span className="shrink-0 font-semibold tabular-nums">{stats ? `${row.pct}%` : "—"}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-[var(--border)] bg-muted/30 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Gauge className="size-3" /> Confidence gate
-                </p>
-                <span className="text-xs font-semibold tabular-nums">
-                  {totals.gatePassPct === null ? "—" : `${totals.gatePassPct}%`}
-                </span>
-              </div>
-              <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
-                {totals.gateTotal > 0
-                  ? `${totals.gateAnswered} answered · ${totals.gateCautioned} cautioned`
-                  : "No gated answers in this window."}
-              </p>
-              {gateTrend.length === 0 ? (
-                <p className="mt-2 text-2xs text-muted-foreground">No gate data yet</p>
-              ) : (
-                <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-[var(--warn)]/35" aria-hidden>
-                  <span className="h-full rounded-full bg-[var(--ok)]" style={{ width: `${totals.gatePassPct ?? 0}%` }} />
+        {noActivity && !editing ? (
+          <EmptyState
+            icon={<Activity className="size-5" />}
+            title="No activity in this reporting window"
+            description="Nothing has been recorded for the selected period. Try a wider range, or check that the chat and ticket integrations are connected in Settings."
+            actionLabel="Widen to 90 days"
+            onAction={() => setWin({ kind: "preset", days: 90 })}
+          />
+        ) : (
+          <DashboardDataProvider value={data}>
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
+              {panels.map((panel, index) => (
+                <div
+                  key={panel.id}
+                  className="dash-cell min-w-0"
+                  style={{ ["--panel-span" as any]: Math.min(MAX_SPAN, Math.max(MIN_SPAN, panel.span)) }}
+                >
+                  <PanelFrame
+                    panel={panel}
+                    index={index}
+                    count={panels.length}
+                    editing={editing}
+                    dragging={dragFrom === index}
+                    onEdit={() => setEditor({ index, panel })}
+                    onDuplicate={() => {
+                      const copy: PanelSpec = {
+                        ...panel,
+                        id: newPanelId(),
+                        title: `${panelTitle(panel)} copy`,
+                        options: { ...panel.options },
+                      };
+                      const next = [...draft];
+                      next.splice(index + 1, 0, copy);
+                      setDraft(next);
+                    }}
+                    onRemove={() => setDraft(draft.filter((p) => p.id !== panel.id))}
+                    onMove={(dir) => movePanel(index, dir)}
+                    onDragStart={() => setDragFrom(index)}
+                    onDrop={() => dropOn(index)}
+                    onSpan={(span) => setDraft(draft.map((p) => (p.id === panel.id ? { ...p, span } : p)))}
+                  >
+                    {renderPanelBody(panel, panelTitle(panel))}
+                  </PanelFrame>
                 </div>
+              ))}
+
+              {editing && (
+                <button
+                  type="button"
+                  onClick={openNewPanel}
+                  className="dash-cell flex min-h-24 items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-card text-xs font-medium text-muted-foreground transition hover:border-[var(--primary)] hover:text-foreground"
+                  style={{ ["--panel-span" as any]: 12 }}
+                >
+                  <Plus className="size-4" /> Add panel
+                </button>
               )}
             </div>
-          </section>
-
-          <section
-            data-section="workspace"
-            aria-label="Workspace"
-            className="rounded-2xl border border-[var(--border)] bg-card p-4"
-          >
-            <h2 className="mb-3 text-sm font-semibold">Workspace</h2>
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-2xs text-muted-foreground">
-                  <BookOpen className="size-3.5" /> KB Articles
-                </span>
-                <span className="text-xs font-semibold tabular-nums">{stats ? String(stats.kb_pages ?? "—") : "—"}</span>
-              </div>
-              {role === "admin" && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-2xs text-muted-foreground">
-                    <ShieldAlert className="size-3.5" /> Attacks Blocked (7d)
-                  </span>
-                  <span className="text-xs font-semibold tabular-nums">{stats ? String(stats.attacks_blocked_7d ?? 0) : "—"}</span>
-                </div>
-              )}
-            </div>
-          </section>
-        </aside>
+          </DashboardDataProvider>
+        )}
       </main>
 
       {/* ---------------- FOOTER ---------------- */}
@@ -805,6 +677,8 @@ export default function Dashboard({ role }: Props) {
             })()})
           </span>
         </span>
+        <span className="hidden sm:block">|</span>
+        <span>{panels.length} panels · {layoutLabel}</span>
         <button
           type="button"
           onClick={refreshDashboard}
@@ -815,6 +689,19 @@ export default function Dashboard({ role }: Props) {
           <RefreshCw className={["size-3", loading ? "animate-spin" : ""].join(" ")} />
         </button>
       </div>
+
+      {editor && (
+        <PanelEditor
+          initial={editor.panel}
+          isNew={editor.index === null}
+          onCancel={() => setEditor(null)}
+          onSave={(panel) => {
+            if (editor.index === null) setDraft([...draft, panel]);
+            else setDraft(draft.map((p, i) => (i === editor.index ? panel : p)));
+            setEditor(null);
+          }}
+        />
+      )}
     </PageShell>
   );
 }

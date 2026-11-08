@@ -912,3 +912,10 @@ code, pre, .mono { font-family: var(--mono); }
    --------------------------------------------------------------------------- */
 .md-table-wrap { -webkit-overflow-scrolling: touch; }
 .md-table-wrap table { min-width: 100%; }
+
+/* Overview board: panels declare their width in twelfths (3–12) on a 12-column grid.
+   Below `sm` the grid is a single column, so a narrow screen never halves a chart. */
+.dash-cell { grid-column: span 12 / span 12; }
+@media (min-width: 640px) {
+  .dash-cell { grid-column: span var(--panel-span, 12) / span var(--panel-span, 12); }
+}

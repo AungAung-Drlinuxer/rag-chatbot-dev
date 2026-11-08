@@ -59,9 +59,9 @@ DATABASE_URL='postgresql+psycopg2://app:<app-role-password>@<host>:5432/assistan
 ထွက်လာတဲ့ report (ဥပမာ):
 
 ```
-database ready: tables=29, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
-schema: 29/25 tables, pgvector 0.8.0
-  owners: app=29
+database ready: tables=30, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
+schema: 30/26 tables, pgvector 0.8.0
+  owners: app=30
 note: no administrator yet — run with --admin <username> before using the UI
 ```
 
@@ -72,7 +72,7 @@ note: no administrator yet — run with --admin <username> before using the UI
 | `--json` | CI/Job အတွက် machine-readable report |
 | `--check` | ဘာမှ မ ဆောက်ဘဲ (လိုအပ်ရင် schema ဆောက်ပြီး) လက်ရှိ state ကို report |
 
-`tables=29` ဖြစ်တာက **25 required + 4 LangGraph checkpoint**။ Vector store ရဲ့
+`tables=30` ဖြစ်တာက **26 required + 4 LangGraph checkpoint**။ Vector store ရဲ့
 `langchain_pg_collection`/`langchain_pg_embedding` ကို ပထမဆုံး ingest လုပ်တဲ့အခါ LangChain
 က ဖန်တီးတယ် — installer က အဲဒီနှစ်ခုကို `lazy_tables_missing` အနေနဲ့ report လုပ်တယ်၊ error မ ဟုတ်ပါ။
 
@@ -176,7 +176,7 @@ database ကနေ တိုက်ရိုက် ဖတ်ပြီး ပြ�
 {
   "ready": false,
   "steps": [
-    {"key": "database",      "status": "done", "detail": "29 tables · pgvector 0.8.0"},
+    {"key": "database",      "status": "done", "detail": "30 tables · pgvector 0.8.0"},
     {"key": "administrator", "status": "done", "detail": "1 admin account"},
     {"key": "knowledge",     "status": "todo", "detail": "Confluence connected, nothing indexed yet",
      "hint": "Open Knowledge and press Sync — or wait for the sync queued by saving credentials"},
@@ -196,7 +196,7 @@ Settings → Integrations ရဲ့ ထိပ်မှာ ဒီ step တွေ�
 ## 8. Verification queries (fresh install မှန်/မမှန်)
 
 ```sql
-SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 29 (--init) / 31 (after first ingest)
+SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 30 (--init) / 32 (after first ingest)
 SELECT extversion FROM pg_extension WHERE extname='vector';                       -- 0.8.0
 SELECT indexname FROM pg_indexes WHERE indexname='langchain_pg_embedding_hnsw_idx';
 SELECT count(*) FROM users;             -- 1 (ပထမ admin) — demo user မရှိ
