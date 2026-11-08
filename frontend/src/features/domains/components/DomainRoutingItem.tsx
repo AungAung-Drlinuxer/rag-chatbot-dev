@@ -84,7 +84,7 @@ export function DomainRoutingItem({
             </p>
           ) : (
             <p className="mt-1.5 text-2xs italic text-[var(--warn)]">
-              No description — the classifier only sees the keywords.
+              No description — the LLM router only sees the name and the keywords.
             </p>
           )}
 
@@ -119,7 +119,7 @@ export function DomainRoutingItem({
 
             {keywords.length === 0 && (
               <span className="rounded-md border border-[var(--warn)]/35 px-1.5 py-0.5 text-2xs text-[var(--warn)]">
-                No keywords — this domain can never match
+                No keyword fallback — routing still works through the LLM
               </span>
             )}
           </div>

@@ -124,3 +124,15 @@ export async function saveDomainAssignees(id: number, payload: { users: string[]
   }
   return r.json() as Promise<DomainAssignees & { ok: boolean }>;
 }
+
+
+export async function suggestDomainProfile(id: number): Promise<{ description: string; keywords: string[]; articles_used: number }> {
+  const r = await apiFetch(`${BASE}/api/admin/domains/${id}/suggest`, {
+    method: "POST", headers: { ...authHeaders() },
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json();
+}

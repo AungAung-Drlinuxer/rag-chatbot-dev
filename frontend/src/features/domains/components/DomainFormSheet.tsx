@@ -26,6 +26,7 @@ import {
   type ClassifierDomainItem,
   createClassifierDomain,
   renameClassifierDomain,
+  suggestDomainProfile,
   updateClassifierDomain,
 } from "@/features/domains/api";
 import { COLOR_OPTIONS, ICON_OPTIONS } from "@/features/domains/components/domainMeta";
@@ -98,6 +99,8 @@ export function DomainFormSheet({
   const [description, setDescription] = useState("");
   const [jiraProject, setJiraProject] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [icon, setIcon] = useState("BookOpen");
   const [color, setColor] = useState("blue");
@@ -429,6 +432,40 @@ export function DomainFormSheet({
                 )}
               </Field>
 
+              {domain && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
+                  <p className="text-2xs leading-4 text-muted-foreground">
+                    Draft the description and the keyword fallback from the articles already in
+                    this domain.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={suggesting}
+                    onClick={async () => {
+                      setSuggesting(true);
+                      setSuggestError(null);
+                      try {
+                        const out = await suggestDomainProfile(domain.id);
+                        if (out.description) setDescription(out.description);
+                        if (out.keywords?.length) setKeywords(out.keywords);
+                        revalidate({ description: out.description, keywords: out.keywords });
+                      } catch (e) {
+                        setSuggestError(e instanceof Error ? e.message : "Suggestion failed");
+                      } finally {
+                        setSuggesting(false);
+                      }
+                    }}
+                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background px-2.5 text-2xs font-medium transition hover:bg-muted disabled:opacity-50"
+                  >
+                    <Sparkles className="size-3" aria-hidden />
+                    {suggesting ? "Thinking…" : "Suggest with AI"}
+                  </button>
+                </div>
+              )}
+              {suggestError && (
+                <p role="alert" className="text-2xs text-[var(--danger)]">{suggestError}</p>
+              )}
+
               <Field
                 label="Description"
                 htmlFor="domain-desc"
@@ -463,7 +500,11 @@ export function DomainFormSheet({
                 label="Triggers"
                 htmlFor="domain-keywords"
                 error={errors.keywords}
-                hint={keywords.length === 0 ? "Add at least one keyword, or this domain can never match a question." : "Enter, comma or Tab adds a keyword. Backspace removes the last one."}
+                hint={
+                  keywords.length === 0
+                    ? "Optional: the LLM router reads the name and description; keywords are only the offline fallback."
+                    : "Enter, comma or Tab adds a keyword. Backspace removes the last one."
+                }
               >
                 <div
                   className={[

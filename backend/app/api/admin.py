@@ -324,6 +324,39 @@ def set_domain_assignees(domain_id: int, req: DomainAssigneesRequest,
     return {"ok": True, "domain_key": key, **result}
 
 
+@router.post("/api/admin/domains/{domain_id}/suggest")
+def suggest_domain_profile(domain_id: int,
+                           user: str = Depends(require_cap("manage_domains"))) -> dict:
+    """Ask the routing model to draft a description and keyword fallback for this domain.
+
+    Grounded in the titles already classified here, so the words are the ones this workspace
+    actually uses. Returns a suggestion only — saving stays the admin's decision.
+    """
+    from sqlalchemy import text as _t
+
+    from app.classifier.profile_suggest import suggest_profile
+
+    with SessionLocal() as s:
+        d = s.query(ClassifierDomain).filter(ClassifierDomain.id == domain_id).first()
+        if not d:
+            raise HTTPException(status_code=404, detail="Domain not found.")
+        titles = [r["title"] for r in s.execute(
+            _t("SELECT title FROM kb_meta WHERE lower(domain) = :k "
+               "AND title IS NOT NULL ORDER BY last_synced DESC LIMIT 25"),
+            {"k": d.domain_key}).mappings().all()]
+        payload = dict(key=d.domain_key, name=d.display_name,
+                       description=d.description or "", keywords=d.keywords or [],
+                       titles=titles)
+
+    out = suggest_profile(**payload)
+    if out is None:
+        raise HTTPException(
+            status_code=503,
+            detail="The routing model is not available — check Settings → Integrations → LLM.",
+        )
+    return {"ok": True, "domain_key": payload["key"], "articles_used": len(titles), **out}
+
+
 @router.delete("/api/admin/domains/{domain_id}")
 def delete_domain(domain_id: int,
                   user: str = Depends(require_cap("manage_domains"))) -> dict:
