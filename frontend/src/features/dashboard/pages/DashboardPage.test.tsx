@@ -144,7 +144,6 @@ describe("DashboardPage — data rendering", () => {
     expect(text).toContain("Resolved by Bot");
     expect(text).toContain("30");
     expect(text).toContain("Active Users");
-    expect(text).toContain("KB Articles");
     expect(text).toContain("120");
     // Loading is over: the pulse placeholders must be gone.
     expect(el.querySelectorAll(".animate-pulse")).toHaveLength(0);
@@ -181,7 +180,7 @@ describe("DashboardPage — data rendering", () => {
     expect(text).toContain("database");
     expect(text).toContain("40%");
     // Tokens are broken down per model on the board (who spent the window's tokens).
-    expect(text).toContain("Tokens by model");
+    expect(text).toContain("Tokens & cost by model");
     expect(text).toContain("openai/gpt-4o-mini");
     // The ticket queue and the review queue live on their own pages, by request.
     expect(text).not.toContain("IT-1");
@@ -200,7 +199,7 @@ describe("DashboardPage — data rendering", () => {
     expect(board.style.getPropertyValue("--board-rows")).toContain("minmax");
 
     const bands = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--row"));
-    expect(new Set(bands)).toEqual(new Set(["1", "2", "3", "4", "5"]));
+    expect(new Set(bands)).toEqual(new Set(["1", "2", "3", "4"]));
 
     const text = rootEl.textContent!;
     expect(text).not.toContain("Customize");
@@ -219,12 +218,13 @@ describe("DashboardPage — data rendering", () => {
     expect(text).toContain("2 events");
   });
 
-  it("shows the gate-trend empty note when there is no gate data", async () => {
+  it("shows the gate-trend empty note when there is no gate data (agent board)", async () => {
     m.dashGateTrend.mockResolvedValue({ series: [] });
-    const text = (await mount("admin")).textContent!;
-    // The gate rate lives in the Outcome mix panel now; with no data it must read "—",
-    // never "NaN%" or a fabricated percentage.
-    expect(text).toContain("Gate pass rate");
+    const text = (await mount("user")).textContent!;
+    // The gate rate lives in the Answer quality panel; with no gated answers it must say so,
+    // never show "NaN%" or a fabricated percentage.
+    expect(text).toContain("Confidence gate");
+    expect(text).toContain("No gate data yet");
     expect(text).not.toContain("NaN");
   });
 

@@ -109,8 +109,9 @@ describe("merged Overview + Observability", () => {
     expect(userTypes).not.toContain("usage-kpis");
     expect(userTypes).not.toContain("guardrail-events");
     // Both boards still open with the thing an operator acts on first.
-    expect(adminTypes[0]).toBe("attention");
-    expect(userTypes[0]).toBe("attention");
+    // The board leads with the numbers; there is no "attention" strip any more.
+    expect(adminTypes[0]).toBe("kpis");
+    expect(userTypes[0]).toBe("kpis");
   });
 
   it("renders real tokens, cost and p95 latency for an administrator", async () => {
@@ -118,7 +119,7 @@ describe("merged Overview + Observability", () => {
     expect(text).toContain("154,321 / 42,310");
     expect(text).toContain("$0.4213");
     expect(text).toContain("5.4s");
-    expect(text).toContain("Cost by model");
+    expect(text).toContain("Tokens & cost by model");
     expect(text).toContain("openai/gpt-4o-mini");
   });
 
@@ -144,7 +145,7 @@ describe("merged Overview + Observability", () => {
   it("says permission is required rather than showing a zero spend on a 403", async () => {
     o.getObservabilityOverview.mockRejectedValue(new Error("overview failed: HTTP 403"));
     const text = (await mount({ role: "admin" })).textContent!;
-    expect(text).toContain("Administrator permission required to see spend.");
+    expect(text).toContain("Administrator permission required to see token and cost data.");
     expect(text).not.toContain("$0.00 total");
   });
 

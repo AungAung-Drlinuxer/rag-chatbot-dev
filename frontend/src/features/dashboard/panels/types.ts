@@ -88,7 +88,7 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
     description: "How answers ended — answer, caution, escalate — with the confidence-gate pass rate." },
   { type: "guardrail-events", label: "Guardrail events", defaultSpan: 6,
     description: "Newest refusals from the audit trail (administrators only)." },
-  { type: "token-breakdown", label: "Tokens by model", defaultSpan: 6,
+  { type: "token-breakdown", label: "Tokens & cost by model", defaultSpan: 4,
     description: "Answers, tokens in/out and spend per model — the detail behind the total." },
 ];
 
@@ -110,28 +110,23 @@ const p = (
 ): PanelSpec => ({ id, type, title: "", span, row, options });
 
 export const DEFAULT_LAYOUT: PanelSpec[] = [
-  p("attention", "attention", 6, 1),
-  p("kpis", "kpis", 6, 1),
+  p("kpis", "kpis", 12, 1),
   p("trend", "trend", 8, 2),
   p("quality", "quality", 4, 2),
-  p("domains", "domains", 6, 3),
-  p("knowledge", "knowledge", 6, 3),
-  p("health", "health", 12, 4),
+  p("domains", "domains", 4, 3),
+  p("knowledge", "knowledge", 4, 3),
+  p("health", "health", 4, 3),
 ];
 
 export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
-  p("attention", "attention", 4, 1),
-  p("kpis", "kpis", 8, 1),
-  p("usage", "usage-kpis", 3, 2),
-  p("trend", "trend", 6, 2),
-  p("outcome", "outcome-mix", 3, 2),
-  p("cost", "cost-trend", 4, 3),
-  p("tokens", "token-breakdown", 4, 3),
-  p("model-cost", "model-cost", 4, 3),
-  p("domains", "domains", 4, 4),
-  p("knowledge", "knowledge", 4, 4),
-  p("health", "health", 4, 4),
-  p("guardrails", "guardrail-events", 12, 5, { limit: 8 }),
+  p("kpis", "kpis", 12, 1),
+  p("usage", "usage-kpis", 4, 2),
+  p("trend", "trend", 8, 2),
+  p("domains", "domains", 3, 3),
+  p("tokens", "token-breakdown", 3, 3),
+  p("health", "health", 3, 3),
+  p("knowledge", "knowledge", 3, 3),
+  p("guardrails", "guardrail-events", 12, 4, { limit: 6 }),
 ];
 
 /** The board for a role. Agents see operations; administrators also see usage and spend. */
@@ -145,9 +140,9 @@ export function layoutFor(role: string | undefined): PanelSpec[] {
  * height instead of being taller than the screen.
  */
 export const BOARD_ROWS_ADMIN =
-  "minmax(96px,auto) minmax(140px,1.55fr) minmax(124px,1.2fr) minmax(104px,1fr) minmax(120px,0.85fr)";
+  "minmax(112px,auto) minmax(210px,1.15fr) minmax(180px,1fr) minmax(130px,0.55fr)";
 export const BOARD_ROWS_USER =
-  "minmax(96px,auto) minmax(140px,1.6fr) minmax(124px,1.1fr) minmax(104px,0.9fr)";
+  "minmax(112px,auto) minmax(210px,1.2fr) minmax(180px,1fr)";
 
 export const ADMIN_ONLY_PANELS: readonly string[] = [
   "usage-kpis", "cost-trend", "model-cost", "token-breakdown", "guardrail-events",

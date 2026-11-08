@@ -12,12 +12,15 @@ every band is visible at once and there is **no page scroll**; at 1440×900 it s
 page falls back to scrolling — a phone must not be squeezed into a desktop board.
 
 ```
-Band 1  Needs attention                    4  +  Volume KPIs                 8
-Band 2  Tokens, cost & latency             3  +  Conversations over time    6  +  Outcome mix   3
-Band 3  Tokens & cost per day              4  +  Tokens by model            4  +  Cost by model 4
-Band 4  Knowledge by domain                4  +  Workspace                  4  +  System health 4
-Band 5  Guardrail events                  12
+Band 1  Volume KPIs (conversations, resolved, escalated, active users)      12
+Band 2  Tokens, cost & latency   4  +  Conversations over time              8
+Band 3  Knowledge by domain      3  +  Tokens & cost by model    3
+        +  System health         3  +  Workspace                   3
+Band 4  Guardrail events         12
 ```
+
+Agents get the same shape without the usage/cost/guardrail cards, plus **Answer quality**
+in band 2 and without Workspace's admin-only counter.
 
 There is no arrange mode: the page uses the same shell as every other screen — `PageHeader`
 (breadcrumbs, eyebrow, icon, role badge, reporting window, Refresh, Export CSV, Report),

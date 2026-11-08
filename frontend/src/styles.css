@@ -944,11 +944,11 @@ code, pre, .mono { font-family: var(--mono); }
 }
 /* Dense board: a panel that shares one screen cannot spend 20px of padding on a 240px band. */
 [data-board="fill"] .panel-surface > section {
-  padding: 0.7rem 0.85rem;
+  padding: 0.9rem 1rem;
 }
 [data-board="fill"] .panel-surface h2 {
-  font-size: 0.78rem;
-  line-height: 1.15rem;
+  font-size: 0.82rem;
+  line-height: 1.2rem;
 }
 
 /* The Overview board: five bands that share one viewport. Heights come from the page as a
