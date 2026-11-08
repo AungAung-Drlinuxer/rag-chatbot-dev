@@ -107,6 +107,26 @@ describe("GridCanvas", () => {
     expect(next.find((p) => p.id === "a")).toMatchObject({ h: 4, span: 6 });
   });
 
+  it("shows the panel growing while the corner is dragged, not sliding away", async () => {
+    await mount();
+    const cell = container!.querySelector('[data-cell-id="a"]') as HTMLElement;
+    const corner = cell.querySelector('[aria-label="Resize A"]')!;
+
+    await act(async () => {
+      corner.dispatchEvent(pointer("pointerdown", 100, 100));
+      window.dispatchEvent(pointer("pointermove", 100, 284)); // two rows
+    });
+
+    // Live feedback is width/height on the cell — a translate here would read as a move.
+    expect(cell.style.height).toBe("452px"); // (3 + 2) rows * 92 - 8px gap
+    expect(cell.style.transform).toBe("");
+
+    await act(async () => {
+      window.dispatchEvent(pointer("pointerup", 100, 284));
+    });
+    await settle();
+  });
+
   it("does not rewrite the layout for a click that never moved", async () => {
     const onChange = await mount();
     const handle = container!.querySelector('[data-cell-id="a"] [data-drag-handle]')!;

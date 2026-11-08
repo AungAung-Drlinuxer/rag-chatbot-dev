@@ -68,14 +68,29 @@ export function GridCanvas({
     return () => mq.removeEventListener?.("change", sync);
   }, []);
 
-  useEffect(() => {
-    function move(e: PointerEvent) {
-      const state = drag.current;
+
+
+  function begin(e: React.PointerEvent, cell: Cell, mode: Mode) {
+    if (!editing) return;
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const holder = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-cell-id]");
+    const state: {
+      id: string; mode: Mode; start: Cell; preview?: Cell;
+      startX: number; startY: number; el: HTMLElement | null;
+    } = {
+      id: cell.id, mode, start: { ...cell }, startX: e.clientX, startY: e.clientY, el: holder,
+    };
+    drag.current = state;
+    document.body.style.cursor = mode === "move" ? "grabbing" : "nwse-resize";
+
+    const onMove = (ev: PointerEvent) => {
       const rect = board.current?.getBoundingClientRect();
-      if (!state || !rect || !ghost.current) return;
+      if (!rect || !ghost.current) return;
       const colW = rect.width / COLS;
-      const dx = Math.round((e.clientX - state.startX) / colW);
-      const dy = Math.round((e.clientY - state.startY) / ROW_H);
+      const dx = Math.round((ev.clientX - state.startX) / colW);
+      const dy = Math.round((ev.clientY - state.startY) / ROW_H);
 
       const next: Cell =
         state.mode === "move"
@@ -91,33 +106,41 @@ export function GridCanvas({
             };
       state.preview = next;
 
-      ghost.current.hidden = false;
+      // The ghost is the affordance: it shows the cell the panel will occupy on release.
+      const g = ghost.current;
+      g.hidden = false;
       const style = cellStyle(next);
-      ghost.current.style.left = style.left;
-      ghost.current.style.width = style.width;
-      ghost.current.style.top = `${style.top}px`;
-      ghost.current.style.height = `${style.height}px`;
+      g.style.left = style.left;
+      g.style.width = style.width;
+      g.style.top = `${style.top}px`;
+      g.style.height = `${style.height}px`;
 
-      if (state.el) {
-        state.el.style.transform = `translate(${dx * colW}px, ${dy * ROW_H}px)`;
-        state.el.style.zIndex = "40";
+      if (holder) {
+        holder.style.zIndex = "40";
+        if (state.mode === "resize") {
+          // A resize must show the panel getting bigger, not sliding across the board.
+          holder.style.width = style.width;
+          holder.style.height = `${style.height}px`;
+        } else {
+          holder.style.transform = `translate(${dx * colW}px, ${dy * ROW_H}px)`;
+        }
       }
-    }
+    };
 
-    function up() {
-      const state = drag.current;
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       document.body.style.cursor = "";
       if (ghost.current) ghost.current.hidden = true;
-      if (!state) return;
-      const el = state.el;
-      el?.style.removeProperty("transform");
-      el?.style.removeProperty("z-index");
+      holder?.style.removeProperty("transform");
+      holder?.style.removeProperty("z-index");
+      holder?.style.removeProperty("width");
+      holder?.style.removeProperty("height");
       drag.current = null;
       const preview = state.preview;
-      if (!preview) return;
       // A click that never moved is not an edit — do not rewrite a layout for nothing.
+      if (!preview) return;
       if (preview.x === state.start.x && preview.y === state.start.y &&
           preview.w === state.start.w && preview.h === state.start.h) return;
       onChange(
@@ -125,24 +148,13 @@ export function GridCanvas({
           ? movePanelTo(panels, state.id, preview.x, preview.y)
           : resizePanelTo(panels, state.id, preview.w, preview.h),
       );
-    }
-
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
     };
-  }, [panels, onChange]);
 
-  function begin(e: React.PointerEvent, cell: Cell, mode: Mode) {
-    if (!editing) return;
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const holder = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-cell-id]");
-    drag.current = { id: cell.id, mode, start: { ...cell }, startX: e.clientX, startY: e.clientY, el: holder };
-    document.body.style.cursor = mode === "move" ? "grabbing" : "nwse-resize";
+    // Listeners belong to THIS gesture. Registering them in an effect tied to `panels` meant a
+    // stale array silently swallowed drops after the first edit.
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
   if (!desktop) {

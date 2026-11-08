@@ -43,18 +43,23 @@ export function BarRow({
 
 /** Per-day columns; zeros are drawn as a baseline so gaps stay visible. */
 export function DayColumns({
-  data, pick, format = fmtInt, height = 96,
+  data, pick, format = fmtInt, height = 96, fill = false,
 }: {
   data: { day: string }[];
   pick: (row: any) => number;
   format?: (n: number) => string;
   height?: number;
+  /** Grow with the panel instead of a fixed height (the bar heights are percentages already). */
+  fill?: boolean;
 }) {
   const values = data.map(pick);
   const max = Math.max(...values, 0);
   return (
-    <div>
-      <div className="flex items-end gap-0.5" style={{ height }}>
+    <div className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
+      <div
+        className={["flex items-end gap-0.5", fill ? "min-h-8 flex-1" : ""].join(" ")}
+        style={fill ? undefined : { height }}
+      >
         {data.map((d) => {
           const v = pick(d);
           const h = max > 0 ? Math.max(v > 0 ? 4 : 0, Math.round((v / max) * 100)) : 0;

@@ -4,6 +4,8 @@
  * The SVG charts: they take already-shaped data and draw it.
  */
 
+import { useEffect, useRef, useState } from "react";
+
 import { niceTickStep } from "@/features/dashboard/lib/dashboardUtils";
 
 export function MiniSparkline() {
@@ -52,10 +54,36 @@ export function Legend({
    CONVERSATION CHART
 ============================================================ */
 
+/**
+ * Measure a container so an SVG chart can redraw at the panel's size.
+ *
+ * A viewBox alone does not solve this: `meet` scales the picture uniformly and letterboxes the
+ * leftover room, so a taller panel would show the same 620×240 chart with empty space above and
+ * below. Grafana redraws; so does this.
+ */
+export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState({ w: fallbackWidth, h: fallbackHeight });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (!box || box.width < 20 || box.height < 40) return;
+      setSize({ w: Math.round(box.width), h: Math.round(box.height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size] as const;
+}
+
 export function ConversationChart({
-  data,
+  data, width: boxWidth, height: boxHeight,
 }: {
   data: { day: string; total: number; resolved: number; escalated: number }[];
+  width?: number;
+  height?: number;
 }) {
   // v0.21.84 — dynamic Y scale (was hardcoded 400): nearest "nice" ceiling
   // v1.5.3 — headroom reduced to 10% and "nice" step aligned to data magnitude
@@ -67,8 +95,8 @@ export function ConversationChart({
   const niceStep = niceTickStep(dataMax / 4);
   const max = niceStep * 4;
 
-  const width = 620;
-  const height = 240;
+  const width = Math.max(320, Math.round(boxWidth ?? 620));
+  const height = Math.max(160, Math.round(boxHeight ?? 240));
 
   const left = 40;
   const right = 15;

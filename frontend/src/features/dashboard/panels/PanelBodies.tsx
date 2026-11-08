@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { ConversationChart, DonutChart, Legend } from "@/features/dashboard/components/DashboardCharts";
+import { ConversationChart, DonutChart, Legend, useChartSize } from "@/features/dashboard/components/DashboardCharts";
 import { DomainRow, HealthRow, KpiCard } from "@/features/dashboard/components/DashboardRows";
 import { PriorityBadge, ResultBadge, StatusBadge } from "@/features/dashboard/components/DashboardBits";
 import { maskProfanity } from "@/features/dashboard/lib/dashboardUtils";
@@ -139,6 +139,7 @@ function Kpis() {
 
 function Trend({ title }: PanelBodyProps) {
   const { series, win, rangeLabel } = useDashboardData();
+  const [chartRef, chartSize] = useChartSize(620, 240);
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
       <div className="flex flex-wrap items-start justify-between gap-2 px-5 pb-3 pt-4">
@@ -154,8 +155,10 @@ function Trend({ title }: PanelBodyProps) {
           <Legend label="Escalated" className="bg-[var(--warn)]" />
         </div>
       </div>
-      <div className="px-5 pb-4">
-        <ConversationChart data={series} />
+      {/* The chart measures its own box, so dragging the panel taller redraws a taller plot
+          instead of scaling a 620×240 picture up and letterboxing it. */}
+      <div ref={chartRef} className="flex min-h-[140px] flex-1 flex-col px-5 pb-4">
+        <ConversationChart data={series} width={chartSize.w} height={chartSize.h} />
       </div>
     </section>
   );
@@ -376,7 +379,7 @@ function Health({ title }: PanelBodyProps) {
         </span>
       </div>
 
-      <div className="max-h-[300px] divide-y divide-[var(--border)] overflow-y-auto border-t border-[var(--border)]">
+      <div data-list-scroll className="divide-y divide-[var(--border)] overflow-y-auto border-t border-[var(--border)]">
         {(health ?? []).length === 0 && (
           <div className="px-5 py-6 text-center text-2xs text-muted-foreground">Health data unavailable.</div>
         )}
@@ -495,11 +498,11 @@ function CostTrend({ title }: PanelBodyProps) {
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-2xs text-muted-foreground">Tokens / day</p>
-            <DayColumns data={series} pick={(d) => d.tokens_in + d.tokens_out} format={fmtInt} height={80} />
+            <DayColumns data={series} pick={(d) => d.tokens_in + d.tokens_out} format={fmtInt} fill />
           </div>
           <div>
             <p className="text-2xs text-muted-foreground">Cost / day</p>
-            <DayColumns data={series} pick={(d) => Number(d.cost)} format={fmtCost} height={80} />
+            <DayColumns data={series} pick={(d) => Number(d.cost)} format={fmtCost} fill />
           </div>
         </div>
       )}

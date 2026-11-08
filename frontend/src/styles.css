@@ -913,9 +913,37 @@ code, pre, .mono { font-family: var(--mono); }
 .md-table-wrap { -webkit-overflow-scrolling: touch; }
 .md-table-wrap table { min-width: 100%; }
 
-/* Overview board: panels declare their width in twelfths (3–12) on a 12-column grid.
-   Below `sm` the grid is a single column, so a narrow screen never halves a chart. */
+/* Overview board: panels are absolutely positioned on a 12-column canvas (panels/grid.ts).
+   `.dash-cell` remains for any older markup that still uses the stacked grid. */
 .dash-cell { grid-column: span 12 / span 12; }
 @media (min-width: 640px) {
   .dash-cell { grid-column: span var(--panel-span, 12) / span var(--panel-span, 12); }
+}
+
+/* A panel body is a card sized by the cell, not by its content. Without this a chart kept its
+   intrinsic height, so dragging a panel bigger produced a bigger empty card — Grafana resizes
+   the plot with the panel, and so does this. */
+.panel-surface > section,
+.panel-surface > div {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.panel-surface > section > *,
+.panel-surface > div > * {
+  min-height: 0;
+}
+/* The last block in a panel body (the plot or the list) takes the remaining height, so the
+   chart's own wrapper can measure a real box instead of its content height. */
+.panel-surface > section > :last-child,
+.panel-surface > div > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* The scrollable list inside a list panel takes the leftover room instead of a fixed 300px. */
+.panel-surface [data-list-scroll] {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }

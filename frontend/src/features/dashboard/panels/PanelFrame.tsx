@@ -149,7 +149,13 @@ export default function PanelFrame({
         </header>
       )}
 
-      <div className={["min-h-0 flex-1", fixedHeight ? "overflow-auto" : ""].join(" ")}>
+      {/* `panel-surface` makes the body's own card fill the cell: `height:100%`, a flex column,
+          and a min-height so a chart inside can take the leftover space (see index.css). A
+          panel that is dragged bigger therefore scales its content instead of leaving a gap. */}
+      <div
+        className={["panel-surface min-h-0 flex-1", fixedHeight ? "overflow-auto" : ""].join(" ")}
+        data-panel-body
+      >
         {children}
       </div>
 
@@ -159,7 +165,7 @@ export default function PanelFrame({
           role="separator"
           aria-label={`Resize ${label}`}
           title="Drag to resize"
-          className="absolute bottom-0 right-0 z-10 size-4 cursor-nwse-resize touch-none"
+          className="absolute bottom-0 right-0 z-20 size-5 cursor-nwse-resize touch-none p-0.5 hover:text-[var(--primary)]"
         >
           <svg viewBox="0 0 16 16" className="size-4 text-muted-foreground/70" aria-hidden>
             <path d="M15 6 L6 15 M15 11 L11 15" stroke="currentColor" strokeWidth="1.4" fill="none" />
