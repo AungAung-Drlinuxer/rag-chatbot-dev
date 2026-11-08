@@ -19,6 +19,8 @@ The `decide()` step is pure so the rules can be tested without a database or a l
 """
 from __future__ import annotations
 
+from app.integrations.ticket_status import normalise_status as normalise
+
 from sqlalchemy import text
 
 DELETED_STATUS = "deleted"
@@ -31,7 +33,7 @@ def decide(
 
     rows:      [{id, jira_key, status}] straight from the mirror.
     results:   {jira_key: {"ok": bool, "status": str, "missing": bool, "detail": str}}.
-    canonicalise: jira status name -> canonical status (open|pending|resolved|closed).
+    canonicalise: Jira status name -> canonical status (open|pending|in_progress|done|reopened).
 
     Returns {"delete": [ids], "revive": [ids], "status": {status: [ids]}, "missing": [keys],
              "unreachable": n, "checked": n}.
@@ -58,15 +60,11 @@ def decide(
             unreachable += 1
             continue
         target = canonicalise(answer.get("status") or "")
+        target = normalise(target)
         was_deleted = (row.get("status") or "").lower() == DELETED_STATUS
         if was_deleted:
             revive.append(int(row["id"]))
-        current = (row.get("status") or "").lower()
-        # Jira's terminal status is singular (Done → "resolved"). A row the operator closed
-        # must stay closed instead of being pulled back to "resolved" on every run; a real
-        # reopen still wins, because that target is "open", not "resolved".
-        if target == "resolved" and current == "closed":
-            target = ""
+        current = normalise(row.get("status"))
         if target and target != current:
             by_status.setdefault(target, []).append(int(row["id"]))
 

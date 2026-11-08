@@ -372,10 +372,10 @@ def dashboard_recent_tickets(
                 # (op-46 vs OP-46); normalize so the table is scannable.
                 "id": (str(r["jira_key"]).upper() if r.get("jira_key") else f"IT-{r['id']}"),
                 "subject": r.get("subject") or ((r.get("domain") or "general") + " escalation"),
-                # normalize to Dashboard's badge vocabulary (Open/Pending/Resolved)
-                "status": {"created": "Open", "open": "Open", "pending": "Pending",
-                           "in progress": "Pending", "resolved": "Resolved",
-                           "done": "Resolved", "closed": "Resolved"}.get(
+                # Jira's own vocabulary, title-cased for the badge.
+                "status": {"open": "Open", "pending": "Pending",
+                           "in_progress": "In progress", "reopened": "Reopened",
+                           "done": "Done"}.get(
                                (r.get("status") or "open").lower(), "Open"),
                 "priority": (r.get("priority") or priority_map.get(r.get("domain") or "", "Medium")).capitalize(),
             }

@@ -115,18 +115,6 @@ def _rows(sql: str, params: dict | None = None) -> list[dict]:
 _jira_status_cache: dict[str, tuple[float, str]] = {}  # jira_key -> (ts, mapped_local_status)
 _JIRA_SYNC_TTL = 60  # seconds
 
-def _respect_local_closed(current: str | None, live: str) -> str:
-    """Keep a locally closed row closed when Jira reports its single terminal status.
-
-    Jira here has one terminal state (Done -> "resolved"), so a plain assignment pulled every
-    row the operator had closed back to "resolved" on each page load — the board looked like it
-    refused to close anything. A real reopen still wins, because that target is "open".
-    """
-    if live == "resolved" and (current or "").strip().lower() == "closed":
-        return "closed"
-    return live
-
-
 def _persist_status_changes(s, mapped_by_key: dict[str, str]) -> None:
     """Persist canonical statuses for many tickets with TWO statements, not 2N.
 
@@ -145,7 +133,6 @@ def _persist_status_changes(s, mapped_by_key: dict[str, str]) -> None:
     by_status: dict[str, list[int]] = {}
     for row_id, key, current in found:
         want = mapped_by_key.get(key)
-        want = _respect_local_closed(current, want) if want else want
         if want and want != current and row_id is not None:
             by_status.setdefault(want, []).append(row_id)
     for status, ids in by_status.items():
@@ -178,9 +165,7 @@ def _bulk_upstream_status_refresh(rows: list[dict]) -> None:
             continue
         cached = _jira_status_cache.get(jk)
         if cached and (time.time() - cached[0]) < _JIRA_SYNC_TTL:
-            # The cache holds the upstream canonical status; the closed-preserving rule still
-            # applies, otherwise a warm cache re-opens what the DB correctly kept closed.
-            r["status"] = _respect_local_closed(r.get("status"), cached[1])
+            r["status"] = cached[1]
             continue
         jira_keys.append(jk)
 
@@ -202,9 +187,7 @@ def _bulk_upstream_status_refresh(rows: list[dict]) -> None:
         for r in rows:
             key = r.get("jira_key")
             if key in mapped_by_key:
-                mapped = mapped_by_key[key]
-                r["status"] = _respect_local_closed(r.get("status"), mapped)
-                mapped_by_key[key] = r["status"]
+                r["status"] = mapped_by_key[key]
 
 
 
@@ -507,6 +490,17 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
                 status_code=http_status.HTTP_409_CONFLICT,
                 detail=f"Jira refused the status change: {tr.get('detail')}",
             )
+        # The transition name can land somewhere adjacent to what was asked: from DONE the only
+        # way out is "Reopen issue", which produces REOPENED. Store what Jira actually reports
+        # so the row never claims a state the issue is not in.
+        try:
+            from app.integrations.jira import fetch_issue_status
+
+            live = fetch_issue_status(row.jira_key)
+            if live.get("ok") and live.get("status"):
+                req.status = canonical_from_jira_status(live["status"])
+        except Exception:  # noqa: BLE001 - the transition itself succeeded
+            pass
         sync_notes.append("synced to Jira")
 
     with SessionLocal() as s:
@@ -681,14 +675,9 @@ def jira_sync(user: str = Depends(require_cap("manage_kb"))) -> dict:
                 {"k": key},
             ).first()
             if existing:
-                # Jira has one terminal status (Done). A row the operator explicitly closed
-                # must not be pulled back to "resolved" by every sync — that flip-flop is
-                # what made "Closed" look like it never stuck.
                 s.execute(text(
-                    "UPDATE jira_tickets SET "
-                    "status = CASE WHEN :st = 'resolved' AND status = 'closed' "
-                    "              THEN 'closed' ELSE :st END, "
-                    "subject=:sj, description=:ds, assignee=:asg WHERE jira_key=:k"
+                    "UPDATE jira_tickets SET status=:st, subject=:sj, description=:ds, "
+                    "assignee=:asg WHERE jira_key=:k"
                 ), {"st": canonical_from_jira_status(t["status"]),
                     "sj": t["title"], "ds": t["body"],
                     "asg": t["assignee"] or None, "k": key})

@@ -1,11 +1,12 @@
-"""Ticket status: one terminal Jira state, and the board must not drift from it.
+"""Ticket status must speak Jira's own workflow.
 
-Live project ITHD has a single terminal status ("Done") and, once there, the only available
-transition is "Reopen issue". So:
+The ITHD project runs the JSM default workflow — OPEN / PENDING / WORK IN PROGRESS / DONE /
+REOPENED — with DONE as the only terminal state. Two regressions must stay fixed:
 
-  * asking for `closed` on a Done issue is an accepted no-op, not a failure,
-  * a refused transition must leave the local row untouched (no optimistic write),
-  * a row the operator closed must survive the next pull instead of flipping to `resolved`.
+  * `resolved`/`closed` are not Jira statuses; they were invented here, so "close" asked for a
+    transition that never existed,
+  * a status change must reach Jira before it is written locally, and a refusal must change
+    nothing.
 """
 from __future__ import annotations
 
@@ -14,36 +15,40 @@ import inspect
 from app.api import tickets as tickets_api
 from app.integrations import jira as jira_mod
 from app.integrations import jira_reconcile
-from app.integrations.ticket_status import canonical_from_jira_status, is_terminal
+from app.integrations.ticket_status import (
+    canonical_from_jira_status,
+    canonical_statuses,
+    is_terminal,
+    normalise_status,
+)
 
 
-def test_resolved_and_closed_are_one_upstream_state():
-    assert canonical_from_jira_status("Done") == "resolved"
-    assert canonical_from_jira_status("Closed") == "closed"
-    assert is_terminal("resolved") and is_terminal("closed")
-    assert not is_terminal("pending")
+def test_the_board_uses_jiras_five_statuses():
+    assert canonical_statuses() == ["open", "pending", "in_progress", "done", "reopened"]
+    assert canonical_from_jira_status("OPEN") == "open"
+    assert canonical_from_jira_status("Pending") == "pending"
+    assert canonical_from_jira_status("Work in progress") == "in_progress"
+    assert canonical_from_jira_status("Done") == "done"
+    assert canonical_from_jira_status("Reopened") == "reopened"
+    assert canonical_from_jira_status("Something new") == "open"
 
 
-def test_closing_an_already_done_issue_is_a_no_op_not_a_transition_hunt(monkeypatch):
-    monkeypatch.setattr(jira_mod, "fetch_issue_status",
-                        lambda key: {"ok": True, "status": "done", "assignee": None})
-    # Any attempt to list/post transitions would raise here: there is nothing to transition.
-    monkeypatch.setattr(jira_mod, "_jira_cfg",
-                        lambda: {"base_url": "https://example.atlassian.net",
-                                 "email": "a@b.c", "api_token": "x", "project": "ITHD"})
-
-    out = jira_mod.transition_issue("ITHD-36", "closed")
-    assert out["ok"] is True
-    assert "already" in out["detail"]
+def test_only_done_is_terminal_and_legacy_names_read_as_done():
+    assert is_terminal("done") and is_terminal("resolved") and is_terminal("closed")
+    assert not is_terminal("pending") and not is_terminal("reopened")
+    assert normalise_status("resolved") == "done"
+    assert normalise_status("closed") == "done"
+    assert normalise_status(None) == "open"
 
 
-def test_setting_the_status_it_already_has_is_a_no_op(monkeypatch):
+def test_asking_for_the_current_status_is_a_no_op(monkeypatch):
     monkeypatch.setattr(jira_mod, "fetch_issue_status",
                         lambda key: {"ok": True, "status": "Pending", "assignee": None})
-    monkeypatch.setattr(jira_mod, "_jira_cfg",
-                        lambda: {"base_url": "https://example.atlassian.net",
-                                 "email": "a@b.c", "api_token": "x", "project": "ITHD"})
-    out = jira_mod.transition_issue("ITHD-1", "open")
+    cfg = {"base_url": "https://example.atlassian.net", "email": "a@b.c",
+           "api_token": "x", "project": "ITHD"}
+    monkeypatch.setattr(jira_mod, "_jira_cfg", lambda: cfg)
+
+    out = jira_mod.transition_issue("ITHD-1", "pending")
     assert out["ok"] is True
     assert "already" in out["detail"]
 
@@ -61,23 +66,22 @@ def test_a_refused_transition_is_a_409_with_the_reason():
     assert "Jira refused the status change" in source
 
 
-def test_reconcile_does_not_pull_a_closed_row_back_to_resolved():
-    rows = [{"id": 7, "jira_key": "ITHD-36", "status": "closed"}]
-    results = {"ITHD-36": {"ok": True, "status": "done"}}
+def test_reconcile_adopts_a_status_change():
+    rows = [{"id": 7, "jira_key": "ITHD-36", "status": "open"}]
+    results = {"ITHD-36": {"ok": True, "status": "Done"}}
+    plan = jira_reconcile.decide(rows, results, canonical_from_jira_status)
+    assert plan["status"] == {"done": [7]}, plan
+
+
+def test_reconcile_does_not_rewrite_a_row_that_already_matches():
+    rows = [{"id": 7, "jira_key": "ITHD-36", "status": "resolved"}]  # legacy row, same meaning
+    results = {"ITHD-36": {"ok": True, "status": "Done"}}
     plan = jira_reconcile.decide(rows, results, canonical_from_jira_status)
     assert plan["status"] == {}, plan
 
 
-def test_reconcile_still_applies_a_real_reopen():
-    rows = [{"id": 7, "jira_key": "ITHD-36", "status": "closed"}]
+def test_reconcile_still_applies_a_reopen():
+    rows = [{"id": 7, "jira_key": "ITHD-36", "status": "done"}]
     results = {"ITHD-36": {"ok": True, "status": "Reopened"}}
     plan = jira_reconcile.decide(rows, results, canonical_from_jira_status)
-    assert plan["status"] == {"open": [7]}, plan
-
-
-def test_a_locally_closed_row_is_not_pulled_back_by_a_list_read():
-    # Jira's Done is dynamic: it maps to "resolved". Every board refresh used to rewrite a
-    # closed row as resolved, so "Closed" never appeared to stick.
-    assert tickets_api._respect_local_closed("closed", "resolved") == "closed"
-    assert tickets_api._respect_local_closed("pending", "resolved") == "resolved"
-    assert tickets_api._respect_local_closed("closed", "open") == "open"
+    assert plan["status"] == {"reopened": [7]}, plan

@@ -130,7 +130,7 @@ def observability_overview(
 
         counts = s.execute(text(
             "SELECT (SELECT count(*) FROM kb_meta) AS kb_articles, "
-            "       (SELECT count(*) FROM jira_tickets WHERE COALESCE(status, '') NOT IN ('deleted', 'resolved', 'closed')) AS tickets_open, "
+            "       (SELECT count(*) FROM jira_tickets WHERE COALESCE(status, '') NOT IN ('deleted', 'done')) AS tickets_open, "
             "       (SELECT count(*) FROM users) AS users, "
             "       (SELECT count(*) FROM chat_sessions WHERE started_at >= :s AND started_at < :e) AS sessions"
         ), params).mappings().first()

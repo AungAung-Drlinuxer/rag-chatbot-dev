@@ -7,16 +7,7 @@ Jira can give to the write it is allowed to cause — and nothing more.
 from __future__ import annotations
 
 from app.integrations.jira_reconcile import decide
-
-
-def canon(name: str) -> str:
-    # Mirrors app.integrations.ticket_status.canonical_from_jira_status for the cases used here.
-    n = (name or "").lower()
-    if n in {"done", "closed", "resolved"}:
-        return "resolved"
-    if n in {"in progress", "work in progress", "pending"}:
-        return "pending"
-    return "open"
+from app.integrations.ticket_status import canonical_from_jira_status as canon
 
 
 ROWS = [
@@ -45,12 +36,12 @@ def test_a_live_status_is_adopted_only_when_it_differs():
     plan = decide(
         [ROWS[0], ROWS[1]],
         {
-            "ITHD-1": {"ok": True, "status": "Done"},          # open -> resolved
+            "ITHD-1": {"ok": True, "status": "Done"},          # open -> done
             "ITHD-2": {"ok": True, "status": "Open"},          # unchanged
         },
         canon,
     )
-    assert plan["status"] == {"resolved": [1]}
+    assert plan["status"] == {"done": [1]}
     assert plan["delete"] == []
 
 
@@ -61,7 +52,7 @@ def test_a_ticket_that_reappears_is_revived_and_restatused():
         canon,
     )
     assert plan["revive"] == [4]
-    assert plan["status"] == {"pending": [4]}
+    assert plan["status"] == {"in_progress": [4]}
 
 
 def test_rows_without_a_jira_key_are_not_checked():

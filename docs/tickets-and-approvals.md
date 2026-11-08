@@ -50,28 +50,26 @@ kubectl -n rag-chatbot-dev exec postgres-dev-1 -c postgres -- \
 The Tickets page shows the same row under **Awaiting your decision**. Approving logs
 `approval resumed: approved=true` in the backend log and stores the Jira key on the row.
 
-## Status mapping, and why "Closed" used to bounce
+## Status model — Jira's own workflow
 
-The Jira project behind this deployment has **one** terminal status, `Done`, and once an issue
-is there the only available transition is `Reopen issue`. The board keeps four steps
-(`open / pending / resolved / closed`), so:
+The board shows exactly the statuses the ITHD project runs, no invented ones:
 
-| Board | Jira |
-|---|---|
-| Open | To Do / Open / Reopened / Pending (waiting on reporter) |
-| Pending | Work in progress |
-| Resolved | **Done** |
-| Closed | **Done** (same upstream state) |
+| Board | Jira | Terminal |
+|---|---|---|
+| Open | OPEN (also To Do / Backlog) | no |
+| Pending | PENDING / Waiting for customer | no |
+| In progress | WORK IN PROGRESS | no |
+| Done | DONE | **yes** |
+| Reopened | REOPENED | no |
 
-Consequences, all enforced now:
+Rules enforced by `app/integrations/ticket_status.py`:
 
-- Closing an issue that is already `Done` is accepted as a no-op (`already 'done' in Jira`)
-  instead of hunting for a `Close` transition that does not exist.
-- The status is pushed to Jira **before** the local row is written. A refusal returns
-  `409` with Jira's own reason and changes nothing — the board cannot claim a state Jira
+- `resolved` and `closed` were invented here; they are read as `done` and migrated to `done`
+  on start-up (idempotent `UPDATE … WHERE status IN ('resolved','closed')`).
+- A status change is pushed to Jira **before** the local row is written. A refusal returns
+  `409` with Jira's own reason and changes nothing, so the board cannot claim a state Jira
   never accepted.
-- A row the operator closed stays `closed` through list refreshes, the pull-sync and the
-  nightly reconcile; only a real reopen (`Reopened` → `open`) moves it.
-
-If a Jira status the board does not know appears, it falls back to `open` rather than
-displaying a raw name.
+- Asking for the status an issue already has is an accepted no-op.
+- If a transition lands next to what was asked (from `DONE` the only exit is *Reopen issue*,
+  which produces `REOPENED`), the stored status is re-read from Jira rather than assumed.
+- An unknown Jira status falls back to `open`.

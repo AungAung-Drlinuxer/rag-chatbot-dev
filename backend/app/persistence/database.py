@@ -130,6 +130,10 @@ def init_db() -> None:
         ("jira_tickets.subject", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(200)"),
         ("jira_tickets.description", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS description TEXT"),
         ("jira_tickets.priority", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS priority VARCHAR(16)"),
+        # The board now speaks Jira's own workflow; `resolved`/`closed` were invented states
+        # this project never had. One pass, idempotent.
+        ("jira_tickets.status.legacy", "UPDATE jira_tickets SET status='done' "
+                                       "WHERE status IN ('resolved', 'closed')"),
         ("jira_tickets.assignee", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS assignee VARCHAR(64)"),
         ("jira_tickets.due_date", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ"),
         (

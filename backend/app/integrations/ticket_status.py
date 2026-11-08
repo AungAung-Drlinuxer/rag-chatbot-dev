@@ -1,68 +1,59 @@
-"""v1.6.9 — canonical ticket status model shared by Jira and OpenProject.
+"""Canonical ticket status model — mirrors the Jira project's real workflow.
 
-The platform uses four internal statuses on the Tickets board:
-    open | pending | resolved | closed
+The ITHD project runs the JSM default workflow:
 
-Each integration maps those onto its own real workflow values, and maps
-upstream status names BACK to the canonical set on pull.
+    Create → OPEN → PENDING / WORK IN PROGRESS → DONE → REOPENED
 
-Jira (live project ITHD, verified transitions):
-    open     -> "To Do"/"Open"/"Reopen"            (status: Open / Pending)
-    pending  -> "Start progress"                   (status: Work in progress)
-    resolved -> "Mark as done"                     (status: Done)
-    closed   -> fallback "Mark as done" (Done terminal)
+so the board uses exactly those five statuses (`open`, `pending`, `in_progress`, `done`,
+`reopened`). Earlier versions invented `resolved` and `closed`, which this Jira project never
+has: closing meant asking for a transition that does not exist, and every refresh rewrote the
+local `closed` back to `resolved`.
 
-OpenProject (workflow probed live on WP 44 — stock Task workflow):
-    open     -> 1  New
-    pending  -> 7  In progress     (13 On hold is an alternative)
-    resolved -> 12 Closed          (only reachable terminal state in stock workflow)
-    closed   -> 12 Closed          (14 Rejected also closed)
-    Workflow edges: New <-> In progress -> Closed/On hold/Rejected (bidirectional
-    between all four "active" states)
-
-Any upstream status name that does not map exactly is bucketed by keyword so
-the board never shows a raw unknown status.
+Rules
+-----
+* `DONE` is the only terminal status; `resolved`/`closed` are legacy aliases migrated on start.
+* An unknown upstream status falls back to `open`, never to a raw new value.
+* Asking for the status an issue already has is an accepted no-op, not a failed transition.
 """
 from __future__ import annotations
 
-# ---------------------------------------------------------------------------
-# OpenProject: canonical -> real status IDs
-# ---------------------------------------------------------------------------
-
-# Live status IDs from GET /api/v3/statuses on this instance (stock workflow).
-# ---------------------------------------------------------------------------
-# Jira: canonical -> transitions, and status-name -> canonical
-# ---------------------------------------------------------------------------
-
-# verified live on ITHD: transitions are 'Pending', 'Start progress' (to
-# 'Work in progress'), 'Mark as done' (to 'Done')
+# canonical -> acceptable Jira transition names (first match wins)
 JIRA_TRANSITIONS_BY_CANONICAL: dict[str, list[str]] = {
-    "open": ["Reopen", "Re-open", "To Do", "Open", "Backlog", "Pending"],
-    "pending": ["Start progress", "Start Progress", "In Progress", "Pending"],
-    "resolved": ["Mark as done", "Done", "Resolve Issue", "Resolve"],
-    "closed": ["Close Issue", "Close", "Mark as done", "Done"],
+    "open": ["Open", "reopen issue", "Reopen", "Re-open"],
+    "pending": ["Pending"],
+    "in_progress": ["Start progress", "Start Progress", "In Progress", "In progress"],
+    "done": ["Mark as done", "Done", "Resolve Issue", "Resolve"],
+    "reopened": ["Reopen issue", "Reopen", "Re-open"],
 }
 
+# Jira status name (lowercased substring) -> canonical. Order matters: "reopened" before
+# "open", "work in progress" before "in progress"-ish fragments.
 _JIRA_TO_CANONICAL: list[tuple[str, str]] = [
-    ("to do", "open"),
-    ("open", "open"),
-    ("backlog", "open"),
-    ("reopened", "open"),
-    ("re-open", "open"),
-    ("pending", "open"),      # Jira "Pending" = waiting on reporter -> still open
-    ("work in progress", "pending"),
-    ("in progress", "pending"),
-    ("under review", "pending"),
+    ("reopened", "reopened"),
+    ("re-open", "reopened"),
+    ("pending", "pending"),
+    ("work in progress", "in_progress"),
+    ("in progress", "in_progress"),
+    ("under review", "in_progress"),
     ("waiting for support", "pending"),
-    ("waiting for customer", "open"),
-    ("done", "resolved"),
-    ("resolved", "resolved"),
-    ("complete", "resolved"),
-    ("closed", "closed"),
-    ("cancelled", "closed"),
-    ("canceled", "closed"),
-    ("rejected", "closed"),
+    ("waiting for customer", "pending"),
+    ("done", "done"),
+    ("resolved", "done"),
+    ("complete", "done"),
+    ("closed", "done"),
+    ("cancelled", "done"),
+    ("canceled", "done"),
+    ("rejected", "done"),
+    ("to do", "open"),
+    ("backlog", "open"),
+    ("open", "open"),
 ]
+
+#: The only status that means "this workflow is finished".
+TERMINAL_STATUSES = frozenset({"done"})
+
+#: Statuses written by older releases. Read as their canonical equivalent, migrated on start.
+LEGACY_STATUS_ALIASES: dict[str, str] = {"resolved": "done", "closed": "done"}
 
 
 def canonical_from_jira_status(name: str) -> str:
@@ -74,15 +65,17 @@ def canonical_from_jira_status(name: str) -> str:
     return "open"
 
 
-#: Statuses that mean "the workflow is finished". Jira's project here has a single terminal
-#: status (Done), so resolved and closed are the same upstream state — which is why asking for
-#: "closed" on a Done issue must be an accepted no-op, not a transition hunt.
-TERMINAL_STATUSES = frozenset({"resolved", "closed"})
+def normalise_status(status: str | None) -> str:
+    """Canonicalise anything stored, including legacy `resolved`/`closed`."""
+    s = (status or "").strip().lower()
+    if not s:
+        return "open"
+    return LEGACY_STATUS_ALIASES.get(s, s)
 
 
 def is_terminal(status: str) -> bool:
-    return (status or "").strip().lower() in TERMINAL_STATUSES
+    return normalise_status(status) in TERMINAL_STATUSES
 
 
 def canonical_statuses() -> list[str]:
-    return ["open", "pending", "resolved", "closed"]
+    return ["open", "pending", "in_progress", "done", "reopened"]
