@@ -344,6 +344,106 @@ def set_domain_assignees(domain_id: int, req: DomainAssigneesRequest,
     return {"ok": True, "domain_key": key, **result}
 
 
+# --------------------------------------------------------------------------
+# App groups — the unit categories are assigned to.
+#   /api/admin/groups          GET, POST
+#   /api/admin/groups/{name}   PUT, DELETE
+# --------------------------------------------------------------------------
+
+class GroupRequest(BaseModel):
+    name: str
+    description: str | None = None
+    role: str = "agent"
+    members: list[str] = []
+
+
+class GroupUpdateRequest(BaseModel):
+    description: str | None = None
+    role: str | None = None
+    members: list[str] | None = None
+
+
+def _group_rows(s) -> list[dict]:
+    from app.persistence.models import AppGroup, GroupMember
+
+    members: dict[str, list[str]] = {}
+    for m in s.query(GroupMember).all():
+        members.setdefault(m.group_name, []).append(m.username)
+    return [
+        {"name": g.name, "description": g.description, "role": g.role,
+         "members": sorted(members.get(g.name, []))}
+        for g in s.query(AppGroup).order_by(AppGroup.name).all()
+    ]
+
+
+@router.get("/api/admin/groups")
+def list_groups(user: str = Depends(require_cap("manage_users"))) -> dict:
+    """Groups a ticket category can be assigned to, with their members."""
+    with SessionLocal() as s:
+        return {"groups": _group_rows(s)}
+
+
+@router.post("/api/admin/groups")
+def create_group(req: GroupRequest, user: str = Depends(require_cap("manage_users"))) -> dict:
+    from app.persistence.models import AppGroup, GroupMember
+
+    name = req.name.strip()[:64]
+    if not name:
+        raise HTTPException(status_code=400, detail="Group name is required")
+    with SessionLocal() as s:
+        if s.get(AppGroup, name):
+            raise HTTPException(status_code=400, detail=f"Group '{name}' already exists")
+        s.add(AppGroup(name=name, description=(req.description or "")[:255] or None,
+                       role=(req.role or "agent")[:32]))
+        for u in dict.fromkeys(x.strip() for x in req.members if x.strip()):
+            s.add(GroupMember(group_name=name, username=u[:64]))
+        s.commit()
+        rows = _group_rows(s)
+    audit("group_created", user, detail=f"group={name} members={len(req.members)}")
+    return {"ok": True, "groups": rows}
+
+
+@router.put("/api/admin/groups/{name}")
+def update_group(name: str, req: GroupUpdateRequest,
+                 user: str = Depends(require_cap("manage_users"))) -> dict:
+    """Rename-free update: members are replaced wholesale, which is what the editor shows."""
+    from app.persistence.models import AppGroup, GroupMember
+
+    with SessionLocal() as s:
+        g = s.get(AppGroup, name)
+        if not g:
+            raise HTTPException(status_code=404, detail="Group not found")
+        if req.description is not None:
+            g.description = req.description[:255] or None
+        if req.role is not None:
+            g.role = req.role[:32] or "agent"
+        if req.members is not None:
+            s.query(GroupMember).filter(GroupMember.group_name == name).delete()
+            for u in dict.fromkeys(x.strip() for x in req.members if x.strip()):
+                s.add(GroupMember(group_name=name, username=u[:64]))
+        s.commit()
+        rows = _group_rows(s)
+    audit("group_updated", user, detail=f"group={name}")
+    return {"ok": True, "groups": rows}
+
+
+@router.delete("/api/admin/groups/{name}")
+def delete_group(name: str, user: str = Depends(require_cap("manage_users"))) -> dict:
+    from app.persistence.models import AppGroup, DomainAssignee, GroupMember
+
+    with SessionLocal() as s:
+        if not s.get(AppGroup, name):
+            raise HTTPException(status_code=404, detail="Group not found")
+        s.query(GroupMember).filter(GroupMember.group_name == name).delete()
+        s.query(DomainAssignee).filter(DomainAssignee.principal_type == "group",
+                                       DomainAssignee.principal == name).delete()
+        s.query(AppGroup).filter(AppGroup.name == name).delete()
+        s.commit()
+        rows = _group_rows(s)
+    audit("group_deleted", user, detail=f"group={name}")
+    return {"ok": True, "groups": rows}
+
+
 @router.post("/api/admin/domains/{domain_id}/suggest")
 def suggest_domain_profile(domain_id: int,
                            user: str = Depends(require_cap("manage_domains"))) -> dict:

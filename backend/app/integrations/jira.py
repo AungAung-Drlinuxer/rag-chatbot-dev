@@ -98,10 +98,33 @@ def _get_request_type(domain):
     return table.get((domain or "").lower()) or table.get("general")
 
 
+def domain_project(domain: str | None) -> str:
+    """The Jira project a category escalates to, or "" when it has none configured.
+
+    `classifier_domains.jira_project` is the per-domain route the Domains page shows; without
+    it every domain silently used the global project while the board claimed "No Jira route".
+    """
+    key = (domain or "").strip().lower()
+    if not key:
+        return ""
+    try:
+        from sqlalchemy import text
+
+        from app.persistence.database import SessionLocal
+
+        with SessionLocal() as s:
+            return (s.execute(text(
+                "SELECT jira_project FROM classifier_domains "
+                "WHERE lower(domain_key) = :k AND is_active = true"), {"k": key}).scalar() or "")
+    except Exception:  # noqa: BLE001 - a DB hiccup must not stop a ticket
+        return ""
+
+
 def escalate(summary: str, description: str, reporter=None,
              project=None, assignee=None, domain=None) -> dict:
     """Create a Jira ticket via JSM API (preferred) or issue REST (fallback)."""
     cfg = _jira_cfg()
+    project = project or domain_project(domain) or None
     if not cfg["base_url"]:
         return {"link": build_create_link(summary, description), "mode": "link",
                 "jira_key": None, "reporter": reporter}

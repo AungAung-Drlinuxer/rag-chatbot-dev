@@ -112,3 +112,51 @@ export async function putRbacMatrix(matrix: any[]) {
   }
   return r.json();
 }
+
+
+/* ---------------------------------------------------------------- app groups */
+
+export type AppGroup = { name: string; description?: string | null; role: string; members: string[] };
+
+export async function listGroups(): Promise<{ groups: AppGroup[] }> {
+  const r = await apiFetch(`${BASE}/api/admin/groups`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function createGroup(name: string, members: string[] = []) {
+  const r = await apiFetch(`${BASE}/api/admin/groups`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ name, members, role: "agent" }),
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json() as Promise<{ groups: AppGroup[] }>;
+}
+
+export async function updateGroupMembers(name: string, members: string[]) {
+  const r = await apiFetch(`${BASE}/api/admin/groups/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ members }),
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json() as Promise<{ groups: AppGroup[] }>;
+}
+
+export async function deleteGroup(name: string) {
+  const r = await apiFetch(`${BASE}/api/admin/groups/${encodeURIComponent(name)}`, {
+    method: "DELETE", headers: { ...authHeaders() },
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json() as Promise<{ groups: AppGroup[] }>;
+}

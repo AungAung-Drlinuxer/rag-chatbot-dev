@@ -45,7 +45,23 @@ reason; nothing is written.
 | `No description` | The LLM router only has the name and the keywords | Suggest with AI |
 | `No keyword fallback` | Offline keyword path has nothing to match | Suggest with AI |
 
-## Assignees per category
+## Jira route per category
 
-`domain_assignees` maps a category to app groups and/or users (Domains → **Assignees**);
-`GET /api/tickets/assignees?domain=<key>` expands groups to members for the create dialog.
+`classifier_domains.jira_project` is what the card's route badge shows **and** what
+`escalate()` uses for the issue's project (`domain_project(domain)`), falling back to the
+global project when a category has none. An empty value is a real "No Jira route": tickets for
+that category would land in the default project while the board implies otherwise.
+
+## Groups and assignees per category
+
+`app_groups` had a reader but no writer, so every install showed "no groups". It is now
+manageable where it is used:
+
+- `GET/POST /api/admin/groups`, `PUT/DELETE /api/admin/groups/{name}` (needs `manage_users`),
+- the **Assignees** dialog creates a group, ticks its members, and can delete it;
+  deleting a group also removes it from every category mapping.
+
+`domain_assignees` maps a category to groups and/or users;
+`GET /api/tickets/assignees?domain=<key>` expands groups through `app_group_members` and
+returns each person with the group they came from, plus a default (the first), which the
+create dialog preselects.
