@@ -265,10 +265,46 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(text).not.toContain("No ticket selected");
     expect(text).toContain("VPN down");
     expect(text).toContain("Cannot reach the VPN gateway.");
-    // The control is now the Jira workflow rail: four labelled steps on one track.
+    // Read-only until Edit: the rail is visible, but the step picker and the note box are not.
     expect(text).toContain("Jira workflow");
-    expect(text).toContain("Pick a step above to move the ticket, or just write a note.");
+    expect(text).toContain("Read-only. Edit to comment, move the workflow or attach a file.");
+    expect(text).not.toContain("Pick a step above to move the ticket");
+
+    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
+    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
+    await Promise.resolve();
+    // Unlocked: the Jira workflow rail offers its four steps on one track.
+    expect(el.textContent).toContain("Pick a step above to move the ticket, or just write a note.");
     for (const step of ["Open", "Pending", "In progress", "Done"]) expect(text).toContain(step);
+  });
+
+  /**
+   * The panel is a document until the operator unlocks it. The bug this guards: a read-only
+   * look at a ticket exposed a live workflow stepper, a comment composer and an upload label,
+   * so a stray click could write to Jira.
+   */
+  it("keeps every control read-only until Edit is pressed", async () => {
+    const el = await mount("admin");
+    await click(button(el, "IT-1"));
+    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
+
+    expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeNull();
+    expect(pane.querySelector('textarea[aria-label="Comment to post with the status change"]')).toBeNull();
+    expect(pane.querySelector('input[type="file"]')).toBeNull();
+    expect(pane.textContent).toContain("Read-only. Edit to comment, move the workflow or attach a file.");
+
+    const steps = [...pane.querySelectorAll("button")].filter((b) =>
+      ["Open", "Pending", "In progress", "Done"].includes(b.textContent?.trim() ?? ""),
+    ) as HTMLButtonElement[];
+    expect(steps.length).toBe(4);
+    expect(steps.every((s) => s.disabled)).toBe(true);
+
+    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
+    await Promise.resolve();
+
+    expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeTruthy();
+    expect(pane.querySelector('input[type="file"]')).toBeTruthy();
+    expect(pane.textContent).toContain("Pick a step above to move the ticket");
   });
 
   it("opens the create dialog and refuses to create a ticket with no subject", async () => {
@@ -325,6 +361,9 @@ describe("TicketsPage — detail panel and create dialog", () => {
     await click(button(el, "IT-1"));
 
     const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
+    // Workflow, comments and attachments unlock only after Edit.
+    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
+    await Promise.resolve();
     const step = [...pane.querySelectorAll("button")].find(
       (b) => b.textContent?.trim() === "In progress",
     ) as HTMLButtonElement;

@@ -9,7 +9,7 @@
  * The panel is presentational + local form state only: status transitions, comments and
  * attachments are callbacks so the page keeps one owner for network + optimistic updates.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -76,6 +76,20 @@ export function TicketDetailPanel({
   const [target, setTarget] = useState<Ticket["status"] | null>(null);
   const [note, setNote] = useState("");
   const [applying, setApplying] = useState(false);
+  /**
+   * Nothing is editable until the operator says so.
+   *
+   * The panel used to carry live inputs — a workflow stepper that fired a Jira transition, a
+   * comment composer, an upload label — so a stray click on a row you were only reading could
+   * write to Jira. Now the panel is a document; Edit unlocks the controls, Done locks them.
+   */
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    setEditing(false);
+    setTarget(null);
+    setNote("");
+    setComment("");
+  }, [ticket?.id]);
 
   const shell =
     "flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card";
@@ -130,14 +144,48 @@ export function TicketDetailPanel({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            aria-label="Close ticket detail"
-          >
-            <X className="size-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {editing ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 rounded-lg px-2 text-[11px]"
+                  onClick={onEdit}
+                  title="Subject, description, priority, due date and assignee"
+                >
+                  <Pencil className="mr-1 size-3" /> Details
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 rounded-lg px-2 text-[11px]"
+                  onClick={() => setEditing(false)}
+                >
+                  Done
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-lg px-2 text-[11px]"
+                onClick={() => setEditing(true)}
+                disabled={!canManage}
+                aria-label="Edit ticket"
+                title={canManage ? "Unlock comments, workflow and attachments" : "Your role cannot change tickets"}
+              >
+                <Pencil className="mr-1 size-3" /> Edit
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              aria-label="Close ticket detail"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -166,7 +214,11 @@ export function TicketDetailPanel({
                 Jira workflow
               </p>
               <span className="text-[9.5px] text-muted-foreground">
-                {jiraReady ? "click a step to move it" : "read-only until Jira is connected"}
+                {!jiraReady
+                  ? "read-only until Jira is connected"
+                  : editing
+                    ? "click a step to move it"
+                    : "read-only — Edit to move"}
               </span>
             </div>
 
@@ -192,10 +244,11 @@ export function TicketDetailPanel({
                     <button
                       key={s}
                       type="button"
-                      disabled={!jiraReady || !!statusBusy || active}
+                      disabled={!editing || !jiraReady || !!statusBusy || active}
                       onClick={() => setTarget(s)}
                       aria-pressed={target === s || active}
                       aria-label={`${m.label} — selects this step for the next update`}
+                      aria-disabled={!editing || !jiraReady || !!statusBusy || active}
                       className="group flex w-1/4 flex-col items-center gap-1.5 disabled:cursor-default"
                     >
                       <span className="relative grid size-7 place-items-center">
@@ -248,6 +301,13 @@ export function TicketDetailPanel({
                 Jira is not connected, so this workflow is read-only — a local status change
                 would not reach the tracker. Add the base URL, email and API token in
                 Settings → Integrations.
+              </p>
+            ) : !editing ? (
+              /* Locked: the rail still shows where the ticket sits, but there is nothing to
+                 click and no note box to type into until Edit is pressed. */
+              <p className="mt-3 flex items-center gap-1.5 text-[10px] leading-4 text-muted-foreground">
+                <Pencil className="size-3 shrink-0" />
+                Read-only. Press Edit to move this ticket in Jira, or to comment.
               </p>
             ) : (
               /* One action: pick a step, say why, save once. The old rail fired a transition
@@ -379,7 +439,7 @@ export function TicketDetailPanel({
                     <span className="min-w-0 flex-1 truncate">{a.filename}</span>
                     <span className="shrink-0 text-muted-foreground">{Math.round(a.size / 1024)} KB</span>
                   </a>
-                  {canManage && (
+                  {editing && canManage && (
                     <button
                       type="button"
                       onClick={() => onDeleteAttachment(a.id)}
@@ -395,66 +455,86 @@ export function TicketDetailPanel({
           </div>
         )}
 
-        <label className="mb-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[11px] font-medium text-muted-foreground transition hover:border-[var(--primary)]/40 hover:text-foreground">
-          <Paperclip className="size-3.5" />
-          Attach a file
-          <input
-            type="file"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onAddAttachment(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        {editing ? (
+          <label className="mb-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[11px] font-medium text-muted-foreground transition hover:border-[var(--primary)]/40 hover:text-foreground">
+            <Paperclip className="size-3.5" />
+            Attach a file
+            <input
+              type="file"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onAddAttachment(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        ) : (
+          <p className="mb-5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <Paperclip className="size-3" /> Attachments are read-only — Edit to add or remove files.
+          </p>
+        )}
       </div>
 
-      {/* composer pinned to the bottom of the pane */}
+      {/* Composer is the bottom of the pane — only while the panel is unlocked. */}
       <footer className="shrink-0 border-t border-[var(--border)] bg-card px-4 py-3">
-        <div className="rounded-xl border border-[var(--border)] bg-background focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && comment.trim()) {
-                onAddComment(comment.trim());
-                setComment("");
-              }
-            }}
-            rows={2}
-            placeholder="Reply to the requester…"
-            aria-label="Add a comment"
-            className="w-full resize-none bg-transparent px-3 pt-2.5 text-xs leading-5 outline-none placeholder:text-muted-foreground"
-          />
-          <div className="flex items-center justify-between px-2 pb-2">
-            <span className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
-            <div className="flex items-center gap-1.5">
-              {canManage && (
-                <Button variant="outline" size="sm" className="rounded-lg text-[11px]" onClick={onEdit}>
-                  <Pencil className="mr-1 size-3" />
-                  Edit
+        {editing ? (
+          <>
+            <div className="rounded-xl border border-[var(--border)] bg-background focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && comment.trim()) {
+                    onAddComment(comment.trim());
+                    setComment("");
+                  }
+                }}
+                rows={2}
+                placeholder="Reply to the requester…"
+                aria-label="Add a comment"
+                className="w-full resize-none bg-transparent px-3 pt-2.5 text-xs leading-5 outline-none placeholder:text-muted-foreground"
+              />
+              <div className="flex items-center justify-between px-2 pb-2">
+                <span className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
+                <Button
+                  size="sm"
+                  className="rounded-lg text-[11px]"
+                  disabled={!comment.trim()}
+                  onClick={() => {
+                    onAddComment(comment.trim());
+                    setComment("");
+                  }}
+                >
+                  <Send className="mr-1 size-3" />
+                  Send
                 </Button>
-              )}
+              </div>
+            </div>
+            <p className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+              <MessageSquare className="size-2.5" />
+              Comments are mirrored to the Jira issue.
+            </p>
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-[10.5px] leading-4 text-muted-foreground">
+              <MessageSquare className="size-3 shrink-0" />
+              Read-only. Edit to comment, move the workflow or attach a file.
+            </p>
+            {canManage && (
               <Button
                 size="sm"
-                className="rounded-lg text-[11px]"
-                disabled={!comment.trim()}
-                onClick={() => {
-                  onAddComment(comment.trim());
-                  setComment("");
-                }}
+                variant="outline"
+                className="shrink-0 rounded-lg text-[11px]"
+                onClick={() => setEditing(true)}
+                aria-label="Edit ticket"
               >
-                <Send className="mr-1 size-3" />
-                Send
+                <Pencil className="mr-1 size-3" /> Edit
               </Button>
-            </div>
+            )}
           </div>
-        </div>
-        <p className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-          <MessageSquare className="size-2.5" />
-          Comments are mirrored to the Jira issue.
-        </p>
+        )}
       </footer>
     </aside>
   );
