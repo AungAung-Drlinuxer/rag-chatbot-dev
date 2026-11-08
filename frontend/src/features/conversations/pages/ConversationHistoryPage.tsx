@@ -286,15 +286,28 @@ export default function ConversationHistoryPage() {
 
         {/* Toolbar — drives the list and the transcript panel together. */}
         <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border)] bg-card px-4 py-3">
-          <div className="flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-[var(--border)] bg-background px-3">
-            <Search className="size-3.5 shrink-0 text-muted-foreground" />
+          {/* Same search control as Tickets, Knowledge, Domains and Users: icon inside the
+              field, focus ring on the input itself. It used to be a hand-rolled wrapper with
+              the border on the div, which is why this page's box looked different. */}
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search conversation or user..."
               aria-label="Search conversations"
-              className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+              className="h-9 w-full rounded-lg border border-[var(--border)] bg-background pl-9 pr-9 text-xs outline-none transition placeholder:text-muted-foreground/80 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
             />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            )}
           </div>
           <select
             value={filterUser}

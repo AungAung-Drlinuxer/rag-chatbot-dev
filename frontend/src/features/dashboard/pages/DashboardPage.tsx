@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, ChevronDown, LayoutDashboard, RefreshCw } from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, Home, RefreshCw } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -355,7 +355,7 @@ export default function Dashboard({ role, perms }: Props) {
       <PageHeader
         breadcrumbs={["Workspace", "Overview"]}
         eyebrow="Workspace"
-        icon={<LayoutDashboard className="size-5" />}
+        icon={<Home className="size-5" />}
         badge={role === "admin" ? "Administrator" : "User"}
         title="Overview"
         description="What the assistant did, who it helped, and what still needs a human."

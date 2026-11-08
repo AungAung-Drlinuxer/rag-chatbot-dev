@@ -116,7 +116,9 @@ describe("merged Overview + Observability", () => {
 
   it("renders real tokens, cost and p95 latency for an administrator", async () => {
     const text = (await mount({ role: "admin" })).textContent!;
-    expect(text).toContain("154,321 / 42,310");
+    // In/out are stacked in their own tile so a narrow card never clips the second number.
+    expect(text).toContain("In 154,321");
+    expect(text).toContain("Out 42,310");
     expect(text).toContain("$0.4213");
     expect(text).toContain("5.4s");
     expect(text).toContain("Tokens & cost by model");

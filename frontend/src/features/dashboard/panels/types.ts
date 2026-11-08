@@ -140,7 +140,7 @@ export function layoutFor(role: string | undefined): PanelSpec[] {
  * height instead of being taller than the screen.
  */
 export const BOARD_ROWS_ADMIN =
-  "minmax(112px,auto) minmax(210px,1.15fr) minmax(180px,1fr) minmax(130px,0.55fr)";
+  "minmax(112px,auto) minmax(190px,1fr) minmax(180px,0.97fr) minmax(150px,0.72fr)";
 export const BOARD_ROWS_USER =
   "minmax(112px,auto) minmax(210px,1.2fr) minmax(180px,1fr)";
 

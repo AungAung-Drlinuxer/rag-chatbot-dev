@@ -459,7 +459,8 @@ function UsageKpis({ title }: PanelBodyProps) {
   const perAnswer = t && t.requests > 0 ? t.cost_usd / t.requests : 0;
   const tiles = [
     { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "queries resolved", icon: <MessageSquare className="size-3.5" />, hint: undefined },
-    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, hint: undefined },
+    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, hint: undefined,
+      stack: t ? [`In ${fmtInt(t.tokens_in)}`, `Out ${fmtInt(t.tokens_out)}`] : undefined },
     { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", caption: t ? `avg ${fmtCost(perAnswer)} / answer` : "no usage in this window", icon: <Gauge className="size-3.5" />, hint: undefined },
     { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", caption: "LLM generation", icon: <Activity className="size-3.5" />, hint: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : undefined },
   ];
@@ -487,7 +488,19 @@ function UsageKpis({ title }: PanelBodyProps) {
               <span className="text-[var(--accent-foreground)]">{tile.icon}</span>
               <span className="truncate">{tile.label}</span>
             </div>
-            <p className="mt-1.5 truncate text-2xl font-bold tabular-nums leading-none">{tile.value}</p>
+            {/* In/out is two numbers; one line of a narrow tile clipped the second one.
+                Stacking them keeps both readable without shrinking the other tiles. */}
+            {tile.stack ? (
+              <div className="mt-1.5 space-y-0.5" title={tile.value}>
+                {tile.stack.map((line) => (
+                  <p key={line} className="truncate text-[15px] font-bold leading-tight tabular-nums">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1.5 truncate text-2xl font-bold tabular-nums leading-none">{tile.value}</p>
+            )}
             <p className="mt-1 truncate text-[10px] text-muted-foreground">{tile.caption}</p>
           </div>
         ))}
