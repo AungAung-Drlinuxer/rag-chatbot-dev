@@ -44,6 +44,8 @@ import {
   type SeriesPoint,
 } from "@/features/dashboard/panels/data";
 import PanelFrame from "@/features/dashboard/panels/PanelFrame";
+import { GridCanvas } from "@/features/dashboard/panels/GridCanvas";
+import { defaultHeightFor, movePanelTo, normaliseLayout, resizePanelTo } from "@/features/dashboard/panels/grid";
 import PanelEditor from "@/features/dashboard/panels/PanelEditor";
 import { renderPanelBody } from "@/features/dashboard/panels/PanelBodies";
 import {
@@ -53,8 +55,6 @@ import {
 } from "@/features/dashboard/panels/layoutApi";
 import {
   defaultLayoutFor,
-  MAX_SPAN,
-  MIN_SPAN,
   newPanelId,
   panelTitle,
   type PanelSpec,
@@ -135,7 +135,6 @@ export default function Dashboard({ role, perms }: Props) {
   const [saving, setSaving] = useState(false);
   const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ index: number | null; panel: PanelSpec } | null>(null);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
 
   // Poll every 60s so a dashboard left open does not show stale figures.
   const [nowTick, setNowTick] = useState(0);
@@ -400,10 +399,12 @@ export default function Dashboard({ role, perms }: Props) {
   };
 
   // ---- layout editing ------------------------------------------------------------
-  const panels = editing ? draft : layout;
+  // Positions are derived, not required: a layout saved by the old stacked board has no x/y,
+  // and normalising here means every render path (read, edit, save) sees the same geometry.
+  const panels = useMemo(() => normaliseLayout(editing ? draft : layout), [editing, draft, layout]);
 
   function beginEdit() {
-    setDraft(layout.map((p) => ({ ...p, options: { ...p.options } })));
+    setDraft(normaliseLayout(layout.map((p) => ({ ...p, options: { ...p.options } }))));
     setEditing(true);
     setLayoutMsg(null);
   }
@@ -413,31 +414,21 @@ export default function Dashboard({ role, perms }: Props) {
     setLayoutMsg(null);
   }
 
+  /**
+   * Keyboard/button movement in a grid is horizontal: the panel keeps its row and slides one
+   * panel-width left or right, landing beside its neighbour instead of shuffling the array.
+   */
   function movePanel(index: number, direction: -1 | 1) {
-    const to = index + direction;
-    if (to < 0 || to >= draft.length) return;
-    const next = [...draft];
-    [next[index], next[to]] = [next[to], next[index]];
-    setDraft(next);
-  }
-
-  function dropOn(index: number) {
-    if (dragFrom === null || dragFrom === index) {
-      setDragFrom(null);
-      return;
-    }
-    const next = [...draft];
-    const [moved] = next.splice(dragFrom, 1);
-    next.splice(index, 0, moved);
-    setDragFrom(null);
-    setDraft(next);
+    const panel = panels[index];
+    if (!panel) return;
+    setDraft(movePanelTo(panels, panel.id, (panel.x ?? 0) + direction * panel.span, panel.y ?? 0));
   }
 
   async function saveLayout() {
     setSaving(true);
     setLayoutMsg(null);
     try {
-      const saved = await saveDashboardLayout(draft);
+      const saved = await saveDashboardLayout(panels);
       setLayout(saved.panels as PanelSpec[]);
       setCustom(true);
       setLayoutLabel("Saved layout");
@@ -471,7 +462,13 @@ export default function Dashboard({ role, perms }: Props) {
   }
 
   const openNewPanel = () =>
-    setEditor({ index: null, panel: { id: newPanelId(), type: "attention", title: "", span: 6, options: {} } });
+    setEditor({
+      index: null,
+      panel: {
+        id: newPanelId(), type: "attention", title: "", span: 6,
+        h: defaultHeightFor("attention"), options: {},
+      },
+    });
 
   return (
     <PageShell>
@@ -636,7 +633,7 @@ export default function Dashboard({ role, perms }: Props) {
               <Plus className="size-3" /> Add panel
             </button>
             <span className="hidden sm:inline">
-              Drag a panel to reorder · width 3–12 of 12 columns · changes apply when you save
+              Drag a header to move · drag a corner to resize · changes apply when you save
             </span>
           </div>
         )}
@@ -657,53 +654,46 @@ export default function Dashboard({ role, perms }: Props) {
           />
         ) : (
           <DashboardDataProvider value={data}>
-            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
-              {panels.map((panel, index) => (
-                <div
-                  key={panel.id}
-                  className="dash-cell min-w-0"
-                  style={{ ["--panel-span" as any]: Math.min(MAX_SPAN, Math.max(MIN_SPAN, panel.span)) }}
+            <GridCanvas panels={panels} editing={editing} onChange={setDraft}>
+              {(panel, index, handles) => (
+                <PanelFrame
+                  panel={panel}
+                  index={index}
+                  count={panels.length}
+                  editing={editing}
+                  fixedHeight={!handles.stacked}
+                  onEdit={() => setEditor({ index, panel })}
+                  onDuplicate={() => {
+                    const copy: PanelSpec = {
+                      ...panel,
+                      id: newPanelId(),
+                      title: `${panelTitle(panel)} copy`,
+                      options: { ...panel.options },
+                      // A copy lands directly below the original, never on top of it.
+                      y: (panel.y ?? 0) + (panel.h ?? defaultHeightFor(panel.type)),
+                    };
+                    setDraft(next => movePanelTo([...next, copy], copy.id, copy.x ?? 0, copy.y ?? 0));
+                  }}
+                  onRemove={() => setDraft(draft.filter((p) => p.id !== panel.id))}
+                  onMove={(dir) => movePanel(index, dir)}
+                  onWidth={(span) => setDraft(resizePanelTo(panels, panel.id, span, panel.h ?? defaultHeightFor(panel.type)))}
+                  onHeight={(rows) => setDraft(resizePanelTo(panels, panel.id, panel.span, rows))}
+                  handles={handles}
                 >
-                  <PanelFrame
-                    panel={panel}
-                    index={index}
-                    count={panels.length}
-                    editing={editing}
-                    dragging={dragFrom === index}
-                    onEdit={() => setEditor({ index, panel })}
-                    onDuplicate={() => {
-                      const copy: PanelSpec = {
-                        ...panel,
-                        id: newPanelId(),
-                        title: `${panelTitle(panel)} copy`,
-                        options: { ...panel.options },
-                      };
-                      const next = [...draft];
-                      next.splice(index + 1, 0, copy);
-                      setDraft(next);
-                    }}
-                    onRemove={() => setDraft(draft.filter((p) => p.id !== panel.id))}
-                    onMove={(dir) => movePanel(index, dir)}
-                    onDragStart={() => setDragFrom(index)}
-                    onDrop={() => dropOn(index)}
-                    onSpan={(span) => setDraft(draft.map((p) => (p.id === panel.id ? { ...p, span } : p)))}
-                  >
-                    {renderPanelBody(panel, panelTitle(panel))}
-                  </PanelFrame>
-                </div>
-              ))}
-
-              {editing && (
-                <button
-                  type="button"
-                  onClick={openNewPanel}
-                  className="dash-cell flex min-h-24 items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-card text-xs font-medium text-muted-foreground transition hover:border-[var(--primary)] hover:text-foreground"
-                  style={{ ["--panel-span" as any]: 12 }}
-                >
-                  <Plus className="size-4" /> Add panel
-                </button>
+                  {renderPanelBody(panel, panelTitle(panel))}
+                </PanelFrame>
               )}
-            </div>
+            </GridCanvas>
+
+            {editing && (
+              <button
+                type="button"
+                onClick={openNewPanel}
+                className="mt-4 flex w-full min-h-20 items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-card text-xs font-medium text-muted-foreground transition hover:border-[var(--primary)] hover:text-foreground"
+              >
+                <Plus className="size-4" /> Add panel
+              </button>
+            )}
           </DashboardDataProvider>
         )}
       </main>

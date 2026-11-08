@@ -78,3 +78,29 @@ def test_layout_routes_are_mounted_under_api():
         for m in getattr(r, "methods", set())
     }
     assert {"GET", "PUT", "DELETE"} <= methods
+
+
+def test_geometry_round_trips():
+    out = normalise_panels([
+        {"id": "a", "type": "trend", "span": 6, "x": 0, "y": 0, "h": 5, "options": {}},
+        {"id": "b", "type": "note", "span": 6, "x": 6, "y": 0, "h": 3, "options": {}},
+    ])
+    assert [(p["x"], p["y"], p["h"]) for p in out] == [(0, 0, 5), (6, 0, 3)]
+
+
+def test_geometry_is_clamped_not_rejected():
+    # A stale client (or a hand-written row) should load as a usable board, not a 422.
+    out = normalise_panels([{"id": "a", "type": "trend", "span": 12, "x": 9, "y": -4, "h": 99}])
+    assert out[0]["x"] == 0          # a full-width panel cannot start at column 9
+    assert out[0]["y"] == 0
+    assert out[0]["h"] == 12
+
+
+def test_a_legacy_layout_without_positions_still_saves():
+    out = normalise_panels([{"id": "a", "type": "kpis", "span": 12, "options": {}}])
+    assert out[0]["x"] == 0 and out[0]["y"] == 0 and out[0]["h"] == 4
+
+
+def test_non_numeric_geometry_falls_back_instead_of_erroring():
+    out = normalise_panels([{"id": "a", "type": "kpis", "span": 6, "x": "left", "y": None, "h": "tall"}])
+    assert out[0]["x"] == 0 and out[0]["y"] == 0 and out[0]["h"] == 4

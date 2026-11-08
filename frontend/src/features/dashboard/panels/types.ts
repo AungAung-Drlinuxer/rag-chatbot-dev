@@ -29,6 +29,12 @@ export type PanelSpec = {
   title: string;
   /** Width in a 12-column grid. 12 = full width, 6 = half, 4 = third. */
   span: number;
+  /** Column 0–11. Absent on layouts saved before the board became a positionable grid. */
+  x?: number;
+  /** Row the panel starts at, in grid rows. */
+  y?: number;
+  /** Height in grid rows. */
+  h?: number;
   options: {
     /** Recent-list panels: how many rows to show. */
     limit?: number;
@@ -49,6 +55,9 @@ export type PanelCatalogueEntry = {
 
 export const MIN_SPAN = 3;
 export const MAX_SPAN = 12;
+/** Minimum and maximum panel height, in grid rows (see panels/grid.ts). */
+export const MIN_HEIGHT = 2;
+export const MAX_HEIGHT = 12;
 
 export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
   { type: "attention", label: "Needs attention", defaultSpan: 12,

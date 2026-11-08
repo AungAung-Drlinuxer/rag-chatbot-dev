@@ -592,6 +592,11 @@ class TicketCreate(BaseModel):
 MAX_PANELS = 40
 MIN_SPAN = 3
 MAX_SPAN = 12
+MIN_HEIGHT = 2
+MAX_HEIGHT = 12
+#: Panels are placed on a 12-column canvas; a row index above this is a corrupt layout, not a
+#: tall board (the client never scrolls that far).
+MAX_ROW = 200
 
 
 class PanelSpec(BaseModel):
@@ -599,6 +604,10 @@ class PanelSpec(BaseModel):
     type: str
     title: str = ""
     span: int = 6
+    #: Grid position; absent on layouts saved before the board became positionable.
+    x: int | None = None
+    y: int | None = None
+    h: int | None = None
     options: dict = {}
 
 
@@ -638,8 +647,23 @@ def normalise_panels(panels: list[dict] | list[PanelSpec]) -> list[dict]:
         span = max(MIN_SPAN, min(MAX_SPAN, span))
         title = str(p.get("title") or "").strip()[:120]
         options = p.get("options") if isinstance(p.get("options"), dict) else {}
-        out.append({"id": pid, "type": ptype, "title": title, "span": span,
-                    "options": options})
+
+        def _int(name: str, default: int, lo: int, hi: int) -> int:
+            try:
+                return max(lo, min(hi, int(p.get(name, default))))
+            except (TypeError, ValueError):
+                return default
+
+        # Geometry is clamped, not rejected: a stale client or a hand-written row should still
+        # load as a usable board instead of a 422 that hides the whole page.
+        height = _int("h", 4, MIN_HEIGHT, MAX_HEIGHT)
+        out.append({
+            "id": pid, "type": ptype, "title": title, "span": span,
+            "x": _int("x", 0, 0, MAX_SPAN - span),
+            "y": _int("y", 0, 0, MAX_ROW),
+            "h": height,
+            "options": options,
+        })
         seen.add(pid)
     return out
 

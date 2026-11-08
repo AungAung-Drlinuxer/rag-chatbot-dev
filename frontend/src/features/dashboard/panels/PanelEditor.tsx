@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   MAX_SPAN, MIN_SPAN, PANEL_CATALOGUE, catalogueFor, newPanelId, type PanelSpec, type PanelType,
 } from "@/features/dashboard/panels/types";
+import { MAX_H, MIN_H, defaultHeightFor } from "@/features/dashboard/panels/grid";
 
 type Props = {
   /** null = nothing open. A panel without `id` in the list means "new". */
@@ -25,6 +26,7 @@ export default function PanelEditor({ initial, isNew, onSave, onCancel }: Props)
   const [type, setType] = useState<PanelType>("attention");
   const [title, setTitle] = useState("");
   const [span, setSpan] = useState(6);
+  const [rows, setRows] = useState(4);
   const [limit, setLimit] = useState(5);
   const [body, setBody] = useState("");
 
@@ -33,6 +35,7 @@ export default function PanelEditor({ initial, isNew, onSave, onCancel }: Props)
     setType(initial.type);
     setTitle(initial.title);
     setSpan(initial.span);
+    setRows(initial.h ?? defaultHeightFor(initial.type));
     setLimit(initial.options.limit ?? 5);
     setBody(initial.options.body ?? "");
   }, [initial]);
@@ -52,6 +55,7 @@ export default function PanelEditor({ initial, isNew, onSave, onCancel }: Props)
       type,
       title: title.trim().slice(0, 120),
       span,
+      h: rows,
       options,
     });
   }
@@ -73,6 +77,7 @@ export default function PanelEditor({ initial, isNew, onSave, onCancel }: Props)
                 const next = e.target.value as PanelType;
                 setType(next);
                 setSpan(catalogueFor(next)?.defaultSpan ?? 6);
+                setRows(defaultHeightFor(next));
               }}
               className="mt-1 w-full rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5 text-xs"
             >
@@ -110,6 +115,23 @@ export default function PanelEditor({ initial, isNew, onSave, onCancel }: Props)
                 aria-label="Panel width in twelfths"
               />
               <span className="w-14 text-right text-2xs tabular-nums text-muted-foreground">{span}/12</span>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="text-2xs font-medium text-muted-foreground">Height</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="range"
+                min={MIN_H}
+                max={MAX_H}
+                step={1}
+                value={rows}
+                onChange={(e) => setRows(Number(e.target.value))}
+                className="flex-1"
+                aria-label="Panel height in rows"
+              />
+              <span className="w-14 text-right text-2xs tabular-nums text-muted-foreground">{rows} rows</span>
             </div>
           </label>
 
