@@ -100,3 +100,27 @@ export async function deleteClassifierDomain(id: number): Promise<{ status: stri
   }
   return r.json();
 }
+
+
+/* ------------------------------------------------ ticket assignees per category */
+
+export type DomainAssignees = { domain_key: string; users: string[]; groups: string[] };
+
+export async function getDomainAssignees(id: number): Promise<DomainAssignees> {
+  const r = await apiFetch(`${BASE}/api/admin/domains/${id}/assignees`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function saveDomainAssignees(id: number, payload: { users: string[]; groups: string[] }) {
+  const r = await apiFetch(`${BASE}/api/admin/domains/${id}/assignees`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json() as Promise<DomainAssignees & { ok: boolean }>;
+}

@@ -110,19 +110,59 @@ export async function ticketAddComment(ref: string, body: string) {
   return r.json();
 }
 
+export type CategoryAssignee = { username: string; email?: string | null; group?: string | null };
+
+export async function ticketAssignees(domain: string) {
+  const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+  const r = await apiFetch(`${BASE}/api/tickets/assignees${q}`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json() as Promise<{
+    domain: string;
+    configured: boolean;
+    assignees: CategoryAssignee[];
+    default: string | null;
+  }>;
+}
+
 export async function ticketAttachments(ref: string) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}/attachments`, { headers: authHeaders() });
   return r.json();
 }
 
+/**
+ * Base64 without blowing the call stack.
+ *
+ * `String.fromCharCode(...bytes)` spreads every byte as an argument, so anything past roughly
+ * 100 KB throws "Maximum call stack size exceeded" — which surfaced as a generic "Upload
+ * failed" for every real attachment. Convert in 32 KB slices instead.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 export async function ticketAttachmentAdd(ref: string, file: File) {
   const buf = await file.arrayBuffer();
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
   const r = await apiFetch(`${BASE}/api/tickets/${ref}/attachments`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ filename: file.name, content_type: file.type, data_base64: b64 }),
+    body: JSON.stringify({
+      filename: file.name,
+      content_type: file.type || "application/octet-stream",
+      data_base64: bytesToBase64(new Uint8Array(buf)),
+    }),
   });
+  // The backend uploads to the Jira issue first; a refusal is a 502 with Jira's reason.
+  // Returning the body regardless made the panel say "Attachment added" for a file that
+  // never left this app.
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
   return r.json();
 }
 

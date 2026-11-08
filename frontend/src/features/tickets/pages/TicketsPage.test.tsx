@@ -30,6 +30,7 @@ vi.mock("@/features/tickets/api", () => ({
   ticketUpdate: vi.fn(),
   ticketAttachments: vi.fn(),
   ticketAttachmentAdd: vi.fn(),
+  ticketAssignees: vi.fn(),
   attachmentUrl: (ref: string, id: number) => `/api/tickets/${ref}/attachments/${id}/download`,
 }));
 
@@ -72,6 +73,9 @@ const TICKETS = [
 function happyPath() {
   m.listTickets.mockResolvedValue({ tickets: TICKETS });
   m.listTicketDestinations.mockResolvedValue([{ key: "jira", label: "Jira", configured: true }]);
+  m.ticketAssignees.mockResolvedValue({
+    domain: "general", configured: false, assignees: [], default: null,
+  });
   m.listActiveDomains.mockResolvedValue([]);
   m.ticketComments.mockResolvedValue({ comments: [] });
   m.ticketAttachments.mockResolvedValue({ attachments: [] });
@@ -107,9 +111,11 @@ async function click(el: Element | undefined | null) {
   await settle();
 }
 
-async function typeInto(el: HTMLInputElement, value: string) {
+async function typeInto(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    // A textarea has its own value accessor; using the input one silently does nothing.
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value")!.set!;
     setter.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
   });
@@ -261,7 +267,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(text).toContain("Cannot reach the VPN gateway.");
     // The control is now the Jira workflow rail: four labelled steps on one track.
     expect(text).toContain("Jira workflow");
-    expect(text).toContain("click a step to move it");
+    expect(text).toContain("Pick a step above to move the ticket, or just write a note.");
     for (const step of ["Open", "Pending", "In progress", "Done"]) expect(text).toContain(step);
   });
 
@@ -311,5 +317,38 @@ describe("TicketsPage — detail panel and create dialog", () => {
       (b) => b.textContent?.trim() === "Pending",
     ) as HTMLButtonElement;
     expect(step.disabled).toBe(true);
+  });
+
+  it("sends the status change and the comment in one update", async () => {
+    m.ticketUpdate.mockResolvedValue({ ok: true, jira_synced: true, comment_synced: true });
+    const el = await mount("admin");
+    await click(button(el, "IT-1"));
+
+    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
+    const step = [...pane.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "In progress",
+    ) as HTMLButtonElement;
+
+    // Selecting a step is not a save: nothing reaches Jira until the operator says so.
+    await click(step);
+    expect(m.ticketUpdate).not.toHaveBeenCalled();
+    expect(pane.textContent).toContain("Move to");
+    expect(pane.textContent).toContain("In progress");
+
+    const note = pane.querySelector(
+      'textarea[aria-label="Comment to post with the status change"]',
+    ) as HTMLTextAreaElement;
+    await typeInto(note, "Replaced the drum unit.");
+
+    const save = [...pane.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Update in Jira"),
+    );
+    await click(save);
+
+    expect(m.ticketUpdate).toHaveBeenCalledTimes(1);
+    expect(m.ticketUpdate).toHaveBeenCalledWith("IT-1", {
+      status: "in_progress",
+      comment: "Replaced the drum unit.",
+    });
   });
 });

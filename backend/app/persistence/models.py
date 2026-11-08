@@ -23,6 +23,7 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -275,6 +276,25 @@ class LocalUserCredential(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     source: Mapped[str] = mapped_column(String(8), nullable=False, default="local")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class DomainAssignee(Base):
+    """Which people (or app groups) take tickets in a category.
+
+    Jira assigns to a person, so a group entry is expanded to its members when the create
+    dialog asks which assignees that category offers.
+    """
+    __tablename__ = "domain_assignees"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    domain_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    principal_type: Mapped[str] = mapped_column(String(16), nullable=False, default="user")
+    principal: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("domain_key", "principal_type", "principal", name="uq_domain_principal"),
+    )
 
 
 class ClassifierDomain(Base):

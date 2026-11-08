@@ -202,38 +202,41 @@ export default function Tickets({ role, userName, onToast }: Props) {
   }
 
   /* --------------------------------------------------------------- writing */
-  async function handleStatus(status: Ticket["status"]) {
-    if (!selected || statusBusy) return;
+  async function handleStatus(status: Ticket["status"], comment = ""): Promise<boolean> {
+    if (!selected || statusBusy) return false;
     const previous = selected.status;
     setStatusBusy(status);
     setSelected({ ...selected, status });
     try {
-      const res = await ticketUpdate(selected.id, { status });
-      // The backend writes the local mirror first and then asks Jira best-effort, so a 200
-      // is not proof the tracker moved. `jira_synced` is the only field that says so.
-      const synced = (res as { jira_synced?: boolean })?.jira_synced !== false;
-      setComments((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          author: userName,
-          body: synced ? `status → ${status}` : `status → ${status} (Jira sync failed)`,
-          kind: "status",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      if (synced) onToast("Status updated in Jira");
-      else onToast("Saved in the queue — Jira did not accept the transition", "err");
+      // One request: the transition and the comment travel together, so an operator never has
+      // to remember to add the explanation as a second step.
+      const res = await ticketUpdate(selected.id, { status, ...(comment ? { comment } : {}) }) as {
+        jira_synced?: boolean;
+        comment_synced?: boolean | null;
+      };
+      const synced = res?.jira_synced !== false;
+      const commentOk = res?.comment_synced !== false;
+      const fresh = await ticketComments(selected.id).catch(() => null);
+      if (fresh?.comments) setComments(fresh.comments as Comment[]);
+      if (synced && commentOk) {
+        onToast(comment ? "Updated in Jira with your comment" : "Status updated in Jira");
+      } else if (!synced) {
+        onToast("Saved in the queue — Jira did not accept the transition", "err");
+      } else {
+        onToast("Status updated, but Jira rejected the comment", "err");
+      }
       void loadTickets();
+      return synced;
     } catch (err) {
       setSelected({ ...selected, status: previous });
       const why = err instanceof Error ? err.message : "";
       onToast(
         why
-          ? `Jira rejected the transition — status unchanged. ${why}`
-          : "Jira rejected the transition — the status is unchanged",
+          ? `Jira rejected the change — nothing was saved. ${why}`
+          : "Jira rejected the change — nothing was saved",
         "err",
       );
+      return false;
     } finally {
       setStatusBusy(null);
     }

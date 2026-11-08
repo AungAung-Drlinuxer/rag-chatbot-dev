@@ -73,3 +73,30 @@ Rules enforced by `app/integrations/ticket_status.py`:
 - If a transition lands next to what was asked (from `DONE` the only exit is *Reopen issue*,
   which produces `REOPENED`), the stored status is re-read from Jira rather than assumed.
 - An unknown Jira status falls back to `open`.
+
+## One save: status + comment
+
+The workflow rail selects a step; it no longer fires a transition on click. The note field and
+the step are submitted together (`PUT /api/tickets/{ref}` with `status` and `comment`), so the
+explanation can never be forgotten as a "second step". Order of operations:
+
+1. transition pushed to Jira — a refusal is `409` and nothing is written locally,
+2. comment posted to the issue (`comment_synced` reports it),
+3. the local mirror and its activity log updated.
+
+## Attachments
+
+`POST /api/tickets/{ref}/attachments` uploads to the Jira issue **first** (multipart with
+`X-Atlassian-Token: no-check`, required by Jira's XSRF guard) and only then records the row in
+`ticket_attachments`. A Jira refusal is a `502` with Jira's reason — an attachment that exists
+only inside this app is invisible to the person working the ticket. Files are capped at 8 MB;
+nginx accepts up to 12 MB because the payload is base64 (4/3 of the file).
+
+## Category → assignees
+
+`domain_assignees` maps a category to app groups and/or users (Domains → **Assignees**).
+`GET /api/tickets/assignees?domain=<key>` expands groups through `app_group_members`, so the
+create dialog offers the network team for a network ticket and preselects its first person.
+No mapping means no restriction: the whole assignable directory is offered and
+`configured: false` says so. Jira takes an `accountId`, so the chosen username is resolved
+through `assignable/search` and the issue is assigned after creation.

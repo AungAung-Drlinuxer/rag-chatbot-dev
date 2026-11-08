@@ -134,6 +134,14 @@ def init_db() -> None:
         # this project never had. One pass, idempotent.
         ("jira_tickets.status.legacy", "UPDATE jira_tickets SET status='done' "
                                        "WHERE status IN ('resolved', 'closed')"),
+        ("domain_assignees", "CREATE TABLE IF NOT EXISTS domain_assignees ("
+                             "id BIGSERIAL PRIMARY KEY, domain_key VARCHAR(64) NOT NULL, "
+                             "principal_type VARCHAR(16) NOT NULL DEFAULT 'user', "
+                             "principal VARCHAR(128) NOT NULL, "
+                             "created_at TIMESTAMPTZ DEFAULT now(), "
+                             "CONSTRAINT uq_domain_principal UNIQUE (domain_key, principal_type, principal))"),
+        ("domain_assignees.idx", "CREATE INDEX IF NOT EXISTS ix_domain_assignees_domain_key "
+                                 "ON domain_assignees (domain_key)"),
         ("jira_tickets.assignee", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS assignee VARCHAR(64)"),
         ("jira_tickets.due_date", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ"),
         (

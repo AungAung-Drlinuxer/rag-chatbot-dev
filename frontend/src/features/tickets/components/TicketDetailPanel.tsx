@@ -67,13 +67,17 @@ export function TicketDetailPanel({
   statusBusy: string | null;
   jiraReady: boolean;
   onClose: () => void;
-  onStatus: (status: Ticket["status"]) => void;
+  onStatus: (status: Ticket["status"], comment: string) => Promise<boolean>;
   onSaveEdit: (fields: EditFields) => Promise<boolean>;
   onAddComment: (body: string) => void;
   onAddAttachment: (file: File) => void;
 }) {
   const [editing, setEditing] = useState<EditFields | null>(null);
   const [comment, setComment] = useState("");
+  // Two halves of one action: which step to move to, and what to tell the people in Jira.
+  const [target, setTarget] = useState<Ticket["status"] | null>(null);
+  const [note, setNote] = useState("");
+  const [applying, setApplying] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const shell =
@@ -209,9 +213,9 @@ export function TicketDetailPanel({
                       key={s}
                       type="button"
                       disabled={!jiraReady || !!statusBusy || active}
-                      onClick={() => onStatus(s)}
-                      aria-pressed={active}
-                      aria-label={`${m.label} — moves the ticket in Jira`}
+                      onClick={() => setTarget(s)}
+                      aria-pressed={target === s || active}
+                      aria-label={`${m.label} — selects this step for the next update`}
                       className="group flex w-1/4 flex-col items-center gap-1.5 disabled:cursor-default"
                     >
                       <span className="relative grid size-7 place-items-center">
@@ -242,7 +246,13 @@ export function TicketDetailPanel({
                       <span
                         className={[
                           "text-center text-[9.5px] font-semibold leading-tight transition-colors",
-                          active ? "text-[var(--accent-foreground)]" : done ? "text-foreground/80" : "text-muted-foreground",
+                          target === s
+                            ? "text-[var(--accent-foreground)] underline decoration-dotted underline-offset-2"
+                            : active
+                              ? "text-[var(--accent-foreground)]"
+                              : done
+                                ? "text-foreground/80"
+                                : "text-muted-foreground",
                         ].join(" ")}
                       >
                         {m.label}
@@ -253,13 +263,71 @@ export function TicketDetailPanel({
               </div>
             </div>
 
-            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              {!jiraReady
-                ? "Jira is not connected, so this workflow is read-only — a local status change would not reach the tracker. Add the base URL, email and API token in Settings → Integrations."
-                : statusBusy
-                  ? "Asking Jira to accept the transition…"
-                  : `Ticket is ${statusMeta(ticket.status).label.toLowerCase()} in the queue — the rail shows how far it has moved.`}
-            </p>
+            {!jiraReady ? (
+              <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+                Jira is not connected, so this workflow is read-only — a local status change
+                would not reach the tracker. Add the base URL, email and API token in
+                Settings → Integrations.
+              </p>
+            ) : (
+              /* One action: pick a step, say why, save once. The old rail fired a transition
+                 on click, so the comment explaining it had to be sent separately — or never. */
+              <div className="mt-3 rounded-xl border border-[var(--border)] bg-muted/20 p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {target ? (
+                    <>
+                      <span className="text-[10px] text-muted-foreground">Move to</span>
+                      <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-foreground)]">
+                        {statusMeta(target).label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setTarget(null)}
+                        className="text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        clear
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">
+                      Pick a step above to move the ticket, or just write a note.
+                    </span>
+                  )}
+                </div>
+
+                <textarea
+                  rows={2}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What changed? Posted to Jira with the status…"
+                  aria-label="Comment to post with the status change"
+                  className="w-full resize-none rounded-lg border border-[var(--border)] bg-background px-2.5 py-2 text-[11.5px] leading-5 outline-none focus:border-[var(--primary)]"
+                />
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-[9.5px] text-muted-foreground">
+                    {statusBusy || applying ? "Saving to Jira…" : "Status and comment are sent together"}
+                  </span>
+                  <Button
+                    size="sm"
+                    className="rounded-lg text-[11px]"
+                    disabled={(!target && !note.trim()) || !!statusBusy || applying}
+                    onClick={async () => {
+                      setApplying(true);
+                      const ok = await onStatus(target ?? ticket.status, note.trim());
+                      setApplying(false);
+                      if (ok) {
+                        setTarget(null);
+                        setNote("");
+                      }
+                    }}
+                  >
+                    <Workflow className="mr-1 size-3" />
+                    {target ? "Update in Jira" : "Comment only"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

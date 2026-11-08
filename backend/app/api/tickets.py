@@ -56,6 +56,57 @@ class AttachmentRequest(BaseModel):
     data_base64: str
 
 
+@router.get("/tickets/assignees")
+def ticket_assignees(domain: str = "", user: str = Depends(get_current_user)) -> dict:
+    """Assignees offered for a ticket category.
+
+    The category decides the pool: explicit users plus the members of its app groups. When a
+    category has no mapping the whole assignable directory is returned (`configured: false`)
+    so an unconfigured install behaves exactly as before.
+    """
+    from sqlalchemy import text as _t
+
+    key = (domain or "").strip().lower()
+    with SessionLocal() as s:
+        rows = s.execute(
+            _t("SELECT principal_type, principal FROM domain_assignees WHERE domain_key = :k"),
+            {"k": key}).mappings().all()
+        explicit = [r["principal"] for r in rows if r["principal_type"] == "user"]
+        groups = [r["principal"] for r in rows if r["principal_type"] == "group"]
+
+        members: list[tuple[str, str]] = []
+        if groups:
+            members = [
+                (r["username"], r["group_name"]) for r in s.execute(
+                    _t("SELECT username, group_name FROM app_group_members "
+                       "WHERE group_name = ANY(:g)"), {"g": groups}).mappings().all()
+            ]
+
+        pool: dict[str, dict] = {}
+        for username, group in members:
+            if username not in explicit:
+                pool[username] = {"username": username, "group": group}
+        for username in explicit:
+            pool.setdefault(username, {"username": username, "group": None})
+
+        if pool:
+            emails = {r["username"]: r["email"] for r in s.execute(
+                _t("SELECT username, email FROM users WHERE username = ANY(:u)"),
+                {"u": list(pool)}).mappings().all()}
+            for name, entry in pool.items():
+                entry["email"] = emails.get(name)
+            out = sorted(pool.values(), key=lambda e: (e["group"] or "", e["username"]))
+            return {"domain": key, "configured": True, "assignees": out,
+                    "default": out[0]["username"] if out else None}
+
+    from app.api.users import assignable_users
+
+    fallback = assignable_users(user).get("users", [])
+    out = [{"username": u["username"], "email": u.get("email"), "group": None} for u in fallback]
+    return {"domain": key, "configured": False, "assignees": out,
+            "default": out[0]["username"] if out else None}
+
+
 @router.get("/ticket-destinations")
 def list_ticket_destinations(user: str = Depends(get_current_user)) -> dict:
     """Configured external ticket destinations for the create dialogs.
@@ -277,12 +328,24 @@ def create_ticket(
                                 detail="destination must be 'jira' — it is the only configured tracker")
 
         from app.integrations.jira import escalate as jira_escalate
+
+        # When the operator leaves the assignee blank, the category's first mapped person
+        # takes it — choosing "Network" should not leave a network ticket unowned.
+        assignee = req.assignee or None
+        if not assignee and req.domain:
+            from sqlalchemy import text as _t
+
+            assignee = s.execute(
+                _t("SELECT principal FROM domain_assignees "
+                   "WHERE domain_key = :k AND principal_type = 'user' ORDER BY id LIMIT 1"),
+                {"k": (req.domain or "").strip().lower()}).scalar()
+
         res = jira_escalate(
             summary=summary,
             description=req.description,
             reporter=user,
             project=None,  # jira_route(domain) decides inside escalate
-            assignee=req.assignee or None,  # v0.21.98 — honor chosen assignee in Jira
+            assignee=assignee,  # v0.21.98 — honor chosen assignee in Jira
             domain=req.domain,
         )
         ext_key, ext_link, ext_mode = res.get("jira_key"), res.get("link", ""), res.get("mode", "")
@@ -302,7 +365,7 @@ def create_ticket(
             subject=subj[:200],
             description=req.description,
             priority=req.priority[:16],
-            assignee=(req.assignee or None),
+            assignee=assignee,
             due_date=(_dt.fromisoformat(req.due_date) if req.due_date else None),
         )
         s.add(row)
@@ -444,6 +507,14 @@ def ticket_comment_add(ticket_ref: str, req: CommentRequest,
     row = _resolve_ticket(ticket_ref, user)
     if row is None:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="ticket not found")
+    jira_synced = None
+    if getattr(row, "jira_key", None):
+        from app.integrations.jira import add_comment
+
+        posted = add_comment(row.jira_key, req.body)
+        jira_synced = bool(posted.get("ok"))
+        if not jira_synced:
+            logger.warning("jira comment failed for %s: %s", row.jira_key, posted.get("detail"))
     with SessionLocal() as s:
         from app.persistence.models import TicketComment
 
@@ -451,6 +522,7 @@ def ticket_comment_add(ticket_ref: str, req: CommentRequest,
         s.add(c)
         s.commit()
         return {"id": c.id, "author": user, "body": c.body, "kind": "comment",
+                "jira_synced": jira_synced,
                 "created_at": c.created_at.isoformat() if c.created_at else None}
 
 
@@ -460,6 +532,8 @@ class TicketUpdateRequest(BaseModel):
     due_date: str | None = None  # ISO date
     subject: str | None = None
     description: str | None = None
+    #: Posted to the Jira issue as part of the same save as the status change.
+    comment: str | None = None
 
 
 @router.put("/tickets/{ticket_ref}")
@@ -495,6 +569,7 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
         # so the row never claims a state the issue is not in.
         try:
             from app.integrations.jira import fetch_issue_status
+            from app.integrations.ticket_status import canonical_from_jira_status
 
             live = fetch_issue_status(row.jira_key)
             if live.get("ok") and live.get("status"):
@@ -502,6 +577,18 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
         except Exception:  # noqa: BLE001 - the transition itself succeeded
             pass
         sync_notes.append("synced to Jira")
+
+    # A status change and its explanation belong together: the operator writes one note, Jira
+    # gets the transition and the comment in the same save instead of two round trips.
+    comment_synced: bool | None = None
+    if (req.comment or "").strip() and getattr(row, "jira_key", None):
+        from app.integrations.jira import add_comment
+
+        posted = add_comment(row.jira_key, req.comment or "")
+        comment_synced = bool(posted.get("ok"))
+        if not comment_synced:
+            logger.warning("jira comment failed for %s: %s", row.jira_key, posted.get("detail"))
+            sync_notes.append(f"comment not posted ({posted.get('detail')})")
 
     with SessionLocal() as s:
         s.add(row)
@@ -533,8 +620,13 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             body = "; ".join(changes) + jira_note if changes else f"Upstream sync: {jira_note.strip(' ·')}"
             s.add(TicketComment(ticket_id=row.id, author=user,
                                 body=body, kind="status"))
-            s.commit()
-    return {"ok": True, "changes": changes, "jira_synced": jira_note.endswith("synced to Jira")}
+        if (req.comment or "").strip():
+            s.add(TicketComment(ticket_id=row.id, author=user,
+                                body=req.comment.strip()[:4000], kind="comment"))
+        s.commit()
+    return {"ok": True, "changes": changes,
+            "jira_synced": jira_note.endswith("synced to Jira"),
+            "comment_synced": comment_synced}
 
 
 
@@ -570,8 +662,24 @@ def ticket_attachment_add(ticket_ref: str, req: AttachmentRequest,
         blob = _b64.b64decode(req.data_base64)
     except Exception:
         raise HTTPException(status_code=400, detail="invalid base64 payload")
-    if len(blob) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="attachment exceeds 5 MB")
+    if len(blob) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="attachment exceeds 8 MB")
+
+    # Upload to the issue before recording it. An attachment that only exists in this app is
+    # invisible to the person working the ticket in Jira, which is the whole point of filing it.
+    jira_attachment: dict | None = None
+    if getattr(row, "jira_key", None):
+        from app.integrations.jira import upload_attachment
+
+        up = upload_attachment(row.jira_key, req.filename[:255], blob, req.content_type)
+        if not up.get("ok"):
+            logger.warning("jira attachment failed for %s: %s", row.jira_key, up.get("detail"))
+            raise HTTPException(
+                status_code=http_status.HTTP_502_BAD_GATEWAY,
+                detail=f"Jira rejected the attachment: {up.get('detail')}",
+            )
+        jira_attachment = up
+
     with SessionLocal() as s:
         from app.persistence.models import TicketAttachment
 
@@ -580,7 +688,8 @@ def ticket_attachment_add(ticket_ref: str, req: AttachmentRequest,
                              size_bytes=len(blob), created_by=user)
         s.add(a)
         s.commit()
-        return {"id": a.id, "filename": a.filename, "size": a.size_bytes}
+        return {"id": a.id, "filename": a.filename, "size": a.size_bytes,
+                "jira_attachment_id": (jira_attachment or {}).get("id")}
 
 
 @router.get("/tickets/{ticket_ref}/attachments/{att_id}/download")

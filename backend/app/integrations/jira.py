@@ -114,10 +114,14 @@ def escalate(summary: str, description: str, reporter=None,
             key, link = _create_via_jsm(
                 service_desk_id, rt_id, summary, description, reporter, assignee, domain
             )
-            return {"link": link, "mode": "jsm", "jira_key": key, "reporter": reporter}
+            assigned = assign_issue(key, assignee) if assignee else None
+            return {"link": link, "mode": "jsm", "jira_key": key, "reporter": reporter,
+                    "assignee": assigned}
         if cfg["email"] and cfg["api_token"]:
             key, link = _create_via_issue_rest(summary, description, reporter, project, assignee)
-            return {"link": link, "mode": "rest", "jira_key": key, "reporter": reporter}
+            assigned = assign_issue(key, assignee) if assignee else None
+            return {"link": link, "mode": "rest", "jira_key": key, "reporter": reporter,
+                    "assignee": assigned}
         # v1.6.4 — mock keys removed by policy: a ticket must exist in REAL Jira.
         # Without credentials we fail loudly (tickets API -> 502) instead of
         # inventing ESC-xxxx keys that never exist upstream.
@@ -421,3 +425,127 @@ def request_types(desk_id: str) -> list[dict]:
     body = jira_get(f"/rest/servicedeskapi/servicedesk/{desk_id}/requesttype", {"limit": 50})
     return [{"id": str(t.get("id") or ""), "name": t.get("name") or ""}
             for t in (body.get("values") or [])]
+
+
+# ---------------------------------------------------------------- assignment
+
+def assign_issue(issue_key: str, identifier: str) -> dict:
+    """Assign an issue to a person.
+
+    Jira takes an `accountId`; this app stores usernames and emails. Resolve through the
+    assignable-user search (scoped to the issue, so it only offers people who may actually
+    take it), then fall back to the global user search.
+    """
+    cfg = _jira_cfg()
+    ident = (identifier or "").strip()
+    if not ident or not (cfg.get("base_url") and cfg.get("api_token")):
+        return {"ok": False, "detail": "nothing to assign"}
+    base = cfg["base_url"].rstrip("/")
+    headers = {"Authorization": _auth_header(), "Accept": "application/json"}
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20, headers=headers) as client:
+            candidates: list[dict] = []
+            r = client.get(f"{base}/rest/api/3/user/assignable/search",
+                           params={"issueKey": issue_key, "query": ident, "maxResults": 50})
+            if r.status_code == 200:
+                candidates = r.json() or []
+            if not candidates:
+                r = client.get(f"{base}/rest/api/3/user/search",
+                               params={"query": ident, "maxResults": 50})
+                if r.status_code == 200:
+                    candidates = r.json() or []
+            match = next(
+                (c for c in candidates
+                 if ident.lower() in {
+                     (c.get("accountId") or "").lower(),
+                     (c.get("emailAddress") or "").lower(),
+                     (c.get("displayName") or "").lower(),
+                     (c.get("name") or "").lower(),
+                 }),
+                candidates[0] if candidates else None,
+            )
+            if not match or not match.get("accountId"):
+                return {"ok": False, "detail": f"no Jira user matches '{ident}'"}
+            put = client.put(f"{base}/rest/api/3/issue/{issue_key}/assignee",
+                             json={"accountId": match["accountId"]})
+            if put.status_code in (200, 201, 204):
+                return {"ok": True, "account_id": match["accountId"],
+                        "display_name": match.get("displayName")}
+            return {"ok": False, "detail": f"HTTP {put.status_code}: {put.text[:200]}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+
+# ---------------------------------------------------------------- comments & attachments
+
+def _issue_url(path: str) -> str:
+    cfg = _jira_cfg()
+    return cfg["base_url"].rstrip("/") + path
+
+
+def add_comment(issue_key: str, body: str) -> dict:
+    """Post a comment to the Jira issue. Jira Cloud v3 wants an ADF document, not a string."""
+    cfg = _jira_cfg()
+    if not (cfg.get("base_url") and cfg.get("api_token")):
+        return {"ok": False, "detail": "Jira is not configured"}
+    text = (body or "").strip()
+    if not text:
+        return {"ok": False, "detail": "empty comment"}
+    payload = {
+        "body": {
+            "type": "doc",
+            "version": 1,
+            "content": [{
+                "type": "paragraph",
+                "content": [{"type": "text", "text": text[:30000]}],
+            }],
+        }
+    }
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20, headers={
+            "Authorization": _auth_header(),
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }) as client:
+            r = client.post(_issue_url(f"/rest/api/3/issue/{issue_key}/comment"), json=payload)
+            if r.status_code in (200, 201):
+                return {"ok": True, "id": (r.json() or {}).get("id")}
+            return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+
+def upload_attachment(issue_key: str, filename: str, content: bytes, mime: str) -> dict:
+    """Attach a file to the Jira issue.
+
+    `X-Atlassian-Token: no-check` is mandatory for multipart uploads (Jira's XSRF guard);
+    without it the API answers 403 and the file silently never leaves this app.
+    """
+    cfg = _jira_cfg()
+    if not (cfg.get("base_url") and cfg.get("api_token")):
+        return {"ok": False, "detail": "Jira is not configured"}
+    if not content:
+        return {"ok": False, "detail": "empty file"}
+    try:
+        import httpx
+
+        with httpx.Client(timeout=60, headers={
+            "Authorization": _auth_header(),
+            "Accept": "application/json",
+            "X-Atlassian-Token": "no-check",
+        }) as client:
+            r = client.post(
+                _issue_url(f"/rest/api/3/issue/{issue_key}/attachments"),
+                files={"file": (filename, content, mime or "application/octet-stream")},
+            )
+            if r.status_code in (200, 201):
+                data = r.json() or []
+                return {"ok": True, "id": (data[0] or {}).get("id") if data else None,
+                        "filename": (data[0] or {}).get("filename") if data else filename}
+            return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}

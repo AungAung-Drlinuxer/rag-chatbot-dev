@@ -17,6 +17,7 @@ import { resolve } from "node:path";
 vi.mock("@/features/tickets/api", () => ({
   createTicketApi: vi.fn(),
   ticketAttachmentAdd: vi.fn(),
+  ticketAssignees: vi.fn(),
   listActiveDomains: vi.fn(),
   listTicketDestinations: vi.fn(),
 }));
@@ -63,6 +64,11 @@ beforeEach(() => {
     { key: "network", label: "Network" },
   ]);
   m.listTicketDestinations.mockResolvedValue([{ key: "jira", label: "Jira", configured: true }]);
+  m.ticketAssignees.mockResolvedValue({
+    domain: "general", configured: false,
+    assignees: [{ username: "alice", group: null }, { username: "bob", group: null }],
+    default: "alice",
+  });
   m.createTicketApi.mockResolvedValue({ id: "IT-99", subject: "VPN down" });
   u.assignableUsers.mockResolvedValue({ users: [{ username: "alice", role: "admin" }] });
 });
@@ -121,5 +127,41 @@ describe("CreateTicketDialog", () => {
     // The old inline dialog titled the form "Create Jira ticket" with only two fields.
     expect(chat).not.toContain("Create Jira ticket</DialogTitle>");
     expect(chat).not.toContain("createTicketApi");
+  });
+
+  it("narrows the assignee list to the chosen category", async () => {
+    m.ticketAssignees.mockImplementation((domain: string) =>
+      domain === "network"
+        ? Promise.resolve({
+            domain: "network",
+            configured: true,
+            assignees: [
+              { username: "carol", group: "Network Team" },
+              { username: "dave", group: "NOC" },
+            ],
+            default: "carol",
+          })
+        : Promise.resolve({
+            domain: "general",
+            configured: false,
+            assignees: [{ username: "alice", group: null }],
+            default: "alice",
+          }),
+    );
+
+    const el = await mount();
+    const select = el.querySelector('select[aria-label="Assignee"]') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).toContain("alice");
+
+    setValue(el.querySelector('select[aria-label="Category"]') as HTMLSelectElement, "Network");
+    await settle();
+
+    expect(m.ticketAssignees).toHaveBeenCalledWith("network");
+    const labels = [...select.querySelectorAll("optgroup")].map((g) => g.getAttribute("label"));
+    expect(labels).toEqual(["Network Team", "NOC"]);
+    expect([...select.options].map((o) => o.value)).toEqual(["", "carol", "dave"]);
+    // The category's default person is preselected, so a network ticket is never unowned.
+    expect(select.value).toBe("carol");
+    expect(el.textContent).toContain("Only people mapped to Network can be picked.");
   });
 });

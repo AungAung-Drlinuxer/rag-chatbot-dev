@@ -24,8 +24,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { articleDraft } from "@/features/knowledge/api";
-import { createTicketApi, listActiveDomains, listTicketDestinations, ticketAttachmentAdd } from "@/features/tickets/api";
-import { assignableUsers } from "@/features/users/api";
+import {
+  createTicketApi,
+  listActiveDomains,
+  listTicketDestinations,
+  ticketAssignees,
+  ticketAttachmentAdd,
+} from "@/features/tickets/api";
 
 export type CreateTicketPreset = {
   subject?: string;
@@ -58,16 +63,14 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   const [categories, setCategories] = useState<{ key: string; label: string }[]>([
     { key: "general", label: "General" },
   ]);
-  const [assignable, setAssignable] = useState<{ username: string; role?: string }[]>([]);
+  const [assignable, setAssignable] = useState<{ username: string; group?: string | null }[]>([]);
+  const [assigneeScope, setAssigneeScope] = useState<"category" | "all">("all");
   const [jiraReady, setJiraReady] = useState<boolean | null>(null);
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
 
   // Reference data is loaded once per mount; the dialog is mounted with the page.
   useEffect(() => {
-    assignableUsers()
-      .then((d) => setAssignable(d?.users ?? []))
-      .catch(() => {});
     listTicketDestinations()
       .then((ds) => setJiraReady(Boolean(ds.find((d) => d.key === "jira")?.configured)))
       .catch(() => setJiraReady(null));
@@ -82,6 +85,22 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
       })
       .catch(() => {});
   }, []);
+
+  // The category decides the pool: choosing "Network" must offer the network team, not the
+  // whole directory. Falls back to every assignable user when the category has no mapping.
+  useEffect(() => {
+    let alive = true;
+    setDraft((d) => ({ ...d, assignee: "" }));
+    ticketAssignees(draft.category.toLowerCase())
+      .then((d) => {
+        if (!alive) return;
+        setAssignable(d.assignees ?? []);
+        setAssigneeScope(d.configured ? "category" : "all");
+        setDraft((prev) => ({ ...prev, assignee: prev.assignee || d.default || "" }));
+      })
+      .catch(() => { if (alive) setAssignable([]); });
+    return () => { alive = false; };
+  }, [draft.category, open]);
 
   // Each opening starts from the preset, not from the previous attempt's leftovers.
   useEffect(() => {
@@ -238,12 +257,25 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none"
               >
                 <option value="">Unassigned</option>
-                {assignable.map((u) => (
-                  <option key={u.username} value={u.username}>
-                    {u.username}{u.role === "admin" ? " (admin)" : ""}
-                  </option>
+                {Object.entries(
+                  assignable.reduce<Record<string, typeof assignable>>((acc, u) => {
+                    const g = u.group || (assigneeScope === "category" ? "Category team" : "Everyone");
+                    (acc[g] ??= []).push(u);
+                    return acc;
+                  }, {}),
+                ).map(([group, users]) => (
+                  <optgroup key={group} label={group}>
+                    {users.map((u) => (
+                      <option key={u.username} value={u.username}>{u.username}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                {assigneeScope === "category"
+                  ? `Only people mapped to ${draft.category} can be picked.`
+                  : "No team is mapped to this category yet — showing every assignable user."}
+              </span>
             </label>
 
             <label className="block">

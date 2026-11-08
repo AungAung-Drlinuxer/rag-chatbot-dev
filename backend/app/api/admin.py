@@ -270,6 +270,60 @@ def update_domain(domain_id: int,
     return {"status": "ok", "id": domain_id, "domain_key": key}
 
 
+class DomainAssigneesRequest(BaseModel):
+    users: list[str] = []
+    groups: list[str] = []
+
+
+def _domain_assignees(s, key: str) -> dict:
+    from app.persistence.models import DomainAssignee
+
+    rows = s.query(DomainAssignee).filter(DomainAssignee.domain_key == key).all()
+    return {
+        "users": [r.principal for r in rows if r.principal_type == "user"],
+        "groups": [r.principal for r in rows if r.principal_type == "group"],
+    }
+
+
+@router.get("/api/admin/domains/{domain_id}/assignees")
+def get_domain_assignees(domain_id: int,
+                         user: str = Depends(require_cap("manage_domains"))) -> dict:
+    """Who can be assigned a ticket in this category (users + app groups)."""
+    with SessionLocal() as s:
+        d = s.query(ClassifierDomain).filter(ClassifierDomain.id == domain_id).first()
+        if not d:
+            raise HTTPException(status_code=404, detail="Domain not found.")
+        return {"domain_key": d.domain_key, **_domain_assignees(s, d.domain_key)}
+
+
+@router.put("/api/admin/domains/{domain_id}/assignees")
+def set_domain_assignees(domain_id: int, req: DomainAssigneesRequest,
+                         user: str = Depends(require_cap("manage_domains"))) -> dict:
+    """Replace the category's assignee list.
+
+    Empty lists are meaningful: they mean "no restriction", and the create dialog falls back
+    to the whole assignable directory rather than offering nobody.
+    """
+    from app.persistence.models import DomainAssignee
+
+    with SessionLocal() as s:
+        d = s.query(ClassifierDomain).filter(ClassifierDomain.id == domain_id).first()
+        if not d:
+            raise HTTPException(status_code=404, detail="Domain not found.")
+        key = d.domain_key
+        s.query(DomainAssignee).filter(DomainAssignee.domain_key == key).delete()
+        for principal in dict.fromkeys(u.strip() for u in req.users if u.strip()):
+            s.add(DomainAssignee(domain_key=key, principal_type="user", principal=principal[:128]))
+        for principal in dict.fromkeys(g.strip() for g in req.groups if g.strip()):
+            s.add(DomainAssignee(domain_key=key, principal_type="group", principal=principal[:128]))
+        s.commit()
+        result = _domain_assignees(s, key)
+
+    audit("domain_assignees_updated", user,
+          detail=f"domain={key} users={len(result['users'])} groups={len(result['groups'])}")
+    return {"ok": True, "domain_key": key, **result}
+
+
 @router.delete("/api/admin/domains/{domain_id}")
 def delete_domain(domain_id: int,
                   user: str = Depends(require_cap("manage_domains"))) -> dict:

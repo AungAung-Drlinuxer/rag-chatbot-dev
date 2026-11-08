@@ -6,7 +6,7 @@
  * capped at six with an explicit "+N more" so a domain with 40 keywords cannot dominate
  * the list, and the action buttons keep a 36px target on touch.
  */
-import { CheckCircle2, ChevronDown, ChevronUp, Edit2, Route, Tag, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Edit2, Route, Tag, Trash2, Users, XCircle } from "lucide-react";
 import { useState } from "react";
 
 import type { ClassifierDomainItem } from "@/features/domains/api";
@@ -18,11 +18,13 @@ export function DomainRoutingItem({
   domain,
   canManage,
   onEdit,
+  onAssignees,
   onDelete,
 }: {
   domain: ClassifierDomainItem;
   canManage: boolean;
   onEdit: (domain: ClassifierDomainItem) => void;
+  onAssignees: (domain: ClassifierDomainItem) => void;
   onDelete: (domain: ClassifierDomainItem) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -134,6 +136,15 @@ export function DomainRoutingItem({
             >
               <Edit2 className="size-3.5" aria-hidden />
               Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => onAssignees(domain)}
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 text-xs font-medium transition hover:bg-muted sm:h-8 sm:flex-none"
+              aria-label={`Assignees for ${domain.display_name}`}
+            >
+              <Users className="size-3.5" aria-hidden />
+              Assignees
             </button>
             <button
               type="button"

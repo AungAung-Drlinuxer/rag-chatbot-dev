@@ -11,6 +11,7 @@ import { AlertCircle, Plus } from "lucide-react";
 import { ClassifierDomainItem, deleteClassifierDomain } from "@/features/domains/api";
 import { DomainFormSheet, type DomainFormMode } from "@/features/domains/components/DomainFormSheet";
 import { DomainRoutingItem } from "@/features/domains/components/DomainRoutingItem";
+import { DomainAssigneesDialog } from "@/features/domains/components/DomainAssigneesDialog";
 
 // Presentation metadata lives in one place; re-exported for older imports.
 export { ICON_OPTIONS, COLOR_OPTIONS } from "@/features/domains/components/domainMeta";
@@ -36,6 +37,8 @@ export function DomainClassifierManager({
   const [deleting, setDeleting] = useState<ClassifierDomainItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [assigneesFor, setAssigneesFor] = useState<ClassifierDomainItem | null>(null);
+  const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "err" } | null>(null);
 
   useEffect(() => {
     if (openCreateSignal > 0) setSheet({ mode: "create", domain: null });
@@ -85,10 +88,29 @@ export function DomainClassifierManager({
             domain={d}
             canManage={canManage}
             onEdit={(domain) => setSheet({ mode: "edit", domain })}
+            onAssignees={(domain) => setAssigneesFor(domain)}
             onDelete={(domain) => { setDeleting(domain); setDeleteError(null); }}
           />
         ))}
       </div>
+
+      {notice && (
+        <p
+          role="status"
+          className={[
+            "px-4 pb-2 text-2xs sm:px-5",
+            notice.tone === "err" ? "text-[var(--danger)]" : "text-muted-foreground",
+          ].join(" ")}
+        >
+          {notice.msg}
+        </p>
+      )}
+
+      <DomainAssigneesDialog
+        domain={assigneesFor}
+        onClose={() => setAssigneesFor(null)}
+        onToast={(msg, tone = "ok") => setNotice({ msg, tone })}
+      />
 
       <DomainFormSheet
         open={sheet !== null}
