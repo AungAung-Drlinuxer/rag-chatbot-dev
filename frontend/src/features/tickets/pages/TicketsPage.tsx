@@ -4,19 +4,14 @@ import {
   Plus,
   Printer,
   RefreshCw,
-  Sparkles,
   Ticket as TicketIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
-import { articleDraft } from "@/features/knowledge/api";
 import {
-  createTicketApi,
-  listActiveDomains,
   listTicketDestinations,
   listTickets,
   syncJiraTickets,
@@ -39,6 +34,8 @@ import { TicketStats, type TicketTotals } from "@/features/tickets/components/Ti
 import { TicketTable, type SortKey } from "@/features/tickets/components/TicketTable";
 import { TicketToolbar } from "@/features/tickets/components/TicketToolbar";
 import { assignableUsers } from "@/features/users/api";
+import { ApprovalQueue } from "@/features/tickets/components/ApprovalQueue";
+import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 
 /**
  * Tickets — the support queue, bound to Jira.
@@ -60,15 +57,6 @@ type Props = {
 };
 
 const PAGE_SIZE = 10;
-
-const emptyDraft = {
-  subject: "",
-  description: "",
-  category: "General",
-  priority: "medium",
-  assignee: "",
-  due_date: "",
-};
 
 export default function Tickets({ role, userName, onToast }: Props) {
   const canManage = role === "admin" || role === "agent";
@@ -92,13 +80,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [statusBusy, setStatusBusy] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [drafting, setDrafting] = useState(false);
-  const [newTicket, setNewTicket] = useState({ ...emptyDraft });
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [categories, setCategories] = useState<{ key: string; label: string }[]>([
-    { key: "general", label: "General" },
-  ]);
 
   const [syncBusy, setSyncBusy] = useState(false);
   const [reconcileBusy, setReconcileBusy] = useState(false);
@@ -130,16 +111,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
     listTicketDestinations()
       .then((ds) => setJiraReady(Boolean(ds.find((d) => d.key === "jira")?.configured)))
       .catch(() => setJiraReady(null));
-    listActiveDomains()
-      .then((ds) => {
-        if (!ds.length) return;
-        const hasGeneral = ds.some((x) => x.key === "general");
-        setCategories([
-          ...(hasGeneral ? [] : [{ key: "general", label: "General" }]),
-          ...ds.map((x) => ({ key: x.key, label: x.label })),
-        ]);
-      })
-      .catch(() => {});
   }, []);
 
   // Comments and attachments belong to the selected ticket; both reset when it changes so a
@@ -360,58 +331,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
     }
   }
 
-  async function createTicket() {
-    if (!newTicket.subject.trim()) {
-      onToast("Ticket subject is required", "err");
-      return;
-    }
-    setCreating(true);
-    try {
-      const created = await createTicketApi({
-        subject: newTicket.subject,
-        description: newTicket.description,
-        domain: newTicket.category.toLowerCase(),
-        priority: newTicket.priority,
-        assignee: newTicket.assignee || null,
-        due_date: newTicket.due_date || null,
-        destination: "jira",
-      });
-      for (const f of pendingFiles) {
-        try {
-          await ticketAttachmentAdd(created.id, f);
-        } catch {
-          onToast(`Attachment failed: ${f.name}`, "err");
-        }
-      }
-      setCreateOpen(false);
-      setNewTicket({ ...emptyDraft });
-      setPendingFiles([]);
-      onToast("Ticket created in Jira");
-      await loadTickets();
-      // The refresh can land before the mirror has the new row (Jira is eventually
-      // consistent); put the created ticket on top so the queue reflects the write.
-      const fresh: Ticket = {
-        id: created.id ?? "new",
-        subject: created.subject ?? newTicket.subject,
-        description: created.description ?? newTicket.description,
-        status: (created.status ?? "open") as Ticket["status"],
-        priority: created.priority ?? newTicket.priority,
-        category: created.category ?? newTicket.category,
-        requester: created.requester ?? userName ?? "you",
-        assignee: created.assignee ?? (newTicket.assignee || null),
-        due_date: created.due_date ?? (newTicket.due_date || null),
-        created_at: created.created_at ?? new Date().toISOString(),
-        updated_at: created.updated_at ?? new Date().toISOString(),
-      };
-      setTickets((prev) => [fresh, ...(prev ?? []).filter((t) => t.id !== fresh.id)]);
-      setPage(1);
-    } catch (e) {
-      onToast(e instanceof Error ? e.message : "Ticket creation failed", "err");
-    } finally {
-      setCreating(false);
-    }
-  }
-
   /* --------------------------------------------------------------- exports */
   function ticketRows() {
     return filteredTickets.map((t) => ({
@@ -528,6 +447,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
       />
 
       <main className="space-y-4 pb-2">
+        {role === "admin" && <ApprovalQueue onToast={onToast} onDecided={() => void loadTickets()} />}
         {/* The four figures span the page, as they do on Overview and Domains; only the
             queue and its detail pane share the row below. */}
         <TicketStats
@@ -687,167 +607,35 @@ export default function Tickets({ role, userName, onToast }: Props) {
         </div>
       </main>
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-xl rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Create support ticket</DialogTitle>
-          </DialogHeader>
+      <CreateTicketDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onToast={onToast}
+        onCreated={(created: any) => {
+          // Jira is eventually consistent: the list refetch can land before the mirror has
+          // the new row, so the created ticket goes on top immediately.
+          const fresh: Ticket = {
+            id: created?.id ?? "new",
+            subject: created?.subject ?? "",
+            description: created?.description ?? "",
+            status: (created?.status ?? "open") as Ticket["status"],
+            priority: created?.priority ?? "medium",
+            category: created?.category ?? "General",
+            requester: created?.requester ?? userName ?? "you",
+            assignee: created?.assignee ?? null,
+            due_date: created?.due_date ?? null,
+            created_at: created?.created_at ?? new Date().toISOString(),
+            updated_at: created?.updated_at ?? new Date().toISOString(),
+          };
+          // Refresh first, then prepend: the reverse order let the refetch replace the list
+          // and drop the row we had just added.
+          void loadTickets().then(() => {
+            setTickets((prev) => [fresh, ...(prev ?? []).filter((t) => t.id !== fresh.id)]);
+            setPage(1);
+          });
+        }}
+      />
 
-          <div className="space-y-4 py-2">
-            <div className="flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]/50 px-3 py-2 text-[11px] text-[var(--accent-foreground)]">
-              <TicketIcon className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                <span className="font-semibold">Create in Jira</span>
-                <span className="text-[var(--accent-foreground)]/80">
-                  {" "}— there is no other destination; the issue is mirrored into this queue.
-                </span>
-                {jiraReady === false && (
-                  <span className="mt-1 block font-medium">
-                    Jira is not configured yet — set it up in Settings → Integrations first.
-                  </span>
-                )}
-              </span>
-            </div>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium">Subject</span>
-              <input
-                value={newTicket.subject}
-                onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-                placeholder="Briefly describe the issue"
-                aria-label="Subject"
-                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
-              />
-            </label>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs font-medium">Description</span>
-                <button
-                  type="button"
-                  disabled={drafting || !newTicket.subject.trim()}
-                  onClick={async () => {
-                    setDrafting(true);
-                    try {
-                      const data = await articleDraft(newTicket.subject, newTicket.category.toLowerCase());
-                      if (data.draft) {
-                        setNewTicket({ ...newTicket, description: data.draft });
-                        onToast("AI draft generated");
-                      } else {
-                        onToast(data.detail || "Draft failed", "err");
-                      }
-                    } catch {
-                      onToast("Draft failed", "err");
-                    } finally {
-                      setDrafting(false);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-[10px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)] disabled:opacity-40"
-                >
-                  <Sparkles className="size-3" />
-                  {drafting ? "Drafting…" : "AI assist"}
-                </button>
-              </div>
-              <textarea
-                rows={5}
-                value={newTicket.description}
-                onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                placeholder="What happened, any error messages, the affected system, and what you already tried…"
-                aria-label="Ticket description"
-                className="w-full resize-none rounded-xl border border-[var(--border)] bg-background px-3 py-2.5 text-sm leading-6 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium">Category</span>
-                <select
-                  value={newTicket.category}
-                  onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                  aria-label="Category"
-                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.key} value={c.label}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium">Priority</span>
-                <select
-                  value={newTicket.priority}
-                  onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-                  aria-label="Priority"
-                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none"
-                >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium">Assignee</span>
-                <select
-                  value={newTicket.assignee}
-                  onChange={(e) => setNewTicket({ ...newTicket, assignee: e.target.value })}
-                  aria-label="Assignee"
-                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none"
-                >
-                  <option value="">Unassigned</option>
-                  {assignable.map((u) => (
-                    <option key={u.username} value={u.username}>
-                      {u.username}
-                      {u.role === "admin" ? " (admin)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium">Due date</span>
-                <input
-                  type="date"
-                  value={newTicket.due_date}
-                  onChange={(e) => setNewTicket({ ...newTicket, due_date: e.target.value })}
-                  aria-label="Due date"
-                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none"
-                />
-              </label>
-            </div>
-
-            <div>
-              <span className="mb-1.5 block text-xs font-medium">Attachments</span>
-              <input
-                type="file"
-                multiple
-                onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
-                className="w-full rounded-xl border border-[var(--border)] bg-background px-3 py-2 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--accent)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--accent-foreground)]"
-              />
-              {pendingFiles.length > 0 && (
-                <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  {pendingFiles.length} file{pendingFiles.length > 1 ? "s" : ""} ready — uploaded
-                  after the ticket exists.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={createTicket} disabled={creating}>
-              <Plus className="mr-2 size-4" />
-              {creating ? "Creating…" : "Create ticket"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </PageShell>
   );
 }

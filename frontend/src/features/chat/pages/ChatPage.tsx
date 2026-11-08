@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   Sparkles,
   Square,
-  Ticket,
   X,
 } from "lucide-react";
 
@@ -30,13 +29,9 @@ import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
-import { createTicketApi } from "@/features/tickets/api";
+import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { currentTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 
 type Props = {
@@ -103,10 +98,10 @@ export default function Chat({ onNavigate, userName }: Props) {
   const [feedback, setFeedback] = useState<Record<string, 1 | -1>>({});
   const [toast, setToast] = useState("");
   const [railOpen, setRailOpen] = useState(false);
+  // The chat does not own a ticket form: it opens the same dialog the Tickets page uses,
+  // with the question and the answer as its starting text.
   const [ticketFor, setTicketFor] = useState<Message | null>(null);
-  const [ticketSummary, setTicketSummary] = useState("");
-  const [ticketDesc, setTicketDesc] = useState("");
-  const [ticketBusy, setTicketBusy] = useState(false);
+  const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string }>({ subject: "", description: "" });
 
   const history = useRef<{ role: string; content: string }[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -339,30 +334,11 @@ export default function Chat({ onNavigate, userName }: Props) {
 
   function openTicket(m: Message) {
     const question = [...messages].slice(0, messages.indexOf(m)).reverse().find((x) => x.role === "user");
+    setTicketPreset({
+      subject: question?.content.slice(0, 90) || "Incident from the IT assistant",
+      description: m.content,
+    });
     setTicketFor(m);
-    setTicketSummary(question?.content.slice(0, 90) || "Incident from the IT assistant");
-    setTicketDesc(m.content);
-  }
-
-  async function submitTicket(e: React.FormEvent) {
-    e.preventDefault();
-    if (!ticketSummary.trim()) return;
-    setTicketBusy(true);
-    try {
-      await createTicketApi({
-        subject: ticketSummary.trim(),
-        description: ticketDesc,
-        priority: "medium",
-        domain: "general",
-        session_id: sessionId,
-      });
-      setTicketFor(null);
-      notify("Ticket created in Jira.");
-    } catch (err: any) {
-      notify(err?.message || "Ticket creation failed.");
-    } finally {
-      setTicketBusy(false);
-    }
   }
 
   const citedTitles = useMemo(() => new Set(latest.map((s) => s.title)).size, [latest]);
@@ -618,43 +594,17 @@ export default function Chat({ onNavigate, userName }: Props) {
       )}
 
       {/* ---------------- escalate ---------------- */}
-      <Dialog open={!!ticketFor} onOpenChange={(o) => { if (!o) setTicketFor(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create Jira ticket</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={submitTicket} className="space-y-4">
-            <label className="block text-xs font-medium">
-              Summary
-              <input
-                value={ticketSummary}
-                onChange={(e) => setTicketSummary(e.target.value)}
-                required
-                className="mt-1.5 h-9 w-full rounded-lg border border-[var(--border)] bg-background px-3 text-xs outline-none focus:border-[var(--primary)]"
-              />
-            </label>
-            <label className="block text-xs font-medium">
-              Description
-              <textarea
-                value={ticketDesc}
-                onChange={(e) => setTicketDesc(e.target.value)}
-                rows={6}
-                required
-                className="mt-1.5 w-full resize-y rounded-lg border border-[var(--border)] bg-background px-3 py-2 text-xs leading-5 outline-none focus:border-[var(--primary)]"
-              />
-            </label>
-            <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-4">
-              <button type="button" onClick={() => setTicketFor(null)} className="h-9 rounded-lg border border-[var(--border)] px-3 text-xs font-medium hover:bg-muted">
-                Cancel
-              </button>
-              <button type="submit" disabled={ticketBusy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] disabled:opacity-50">
-                <Ticket className="size-3.5" aria-hidden />
-                {ticketBusy ? "Creating…" : "Create ticket"}
-              </button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Same form as Tickets → Create ticket: one dialog, one set of fields. */}
+      <CreateTicketDialog
+        open={!!ticketFor}
+        onOpenChange={(o) => { if (!o) setTicketFor(null); }}
+        preset={{
+          subject: ticketPreset.subject,
+          description: ticketPreset.description,
+          sessionId,
+        }}
+        onToast={notify}
+      />
 
       {toast && (
         <div role="status" aria-live="polite" className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-foreground px-3.5 py-2 text-2xs font-medium text-background shadow-lg">
