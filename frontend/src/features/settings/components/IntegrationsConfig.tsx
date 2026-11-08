@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen, CheckCircle2, ExternalLink, Info, KeyRound, Loader2, Loader as LoaderIcon, Lock,
-  Pencil, Plug, Plus, Power, Save, Search, Settings2, ShieldCheck, Ticket, Trash2, Users, XCircle,
+  Pencil, Plug, Plus, Save, Search, Settings2, ShieldCheck, Ticket, Trash2, Users, XCircle,
   Eye, EyeOff, ChevronRight,
 } from "lucide-react";
 import {
@@ -847,26 +847,6 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
                       : "Only enabled providers show a configuration panel — keep the list short."}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {enabledList.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => { setEnabled({}); setSelected(null); setBrowsing(true); void persist({}); }}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
-                  >
-                    <Power className="size-3" /> Turn all off
-                  </button>
-                )}
-                {!personal && (
-                  <button
-                    type="button"
-                    onClick={() => setBrowsing((b) => !b)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
-                  >
-                    <Plus className="size-3" /> Add integration
-                  </button>
-                )}
               </div>
             </header>
 
