@@ -17,6 +17,7 @@ import {
   syncJiraTickets,
   reconcileJiraTickets,
   ticketAddComment,
+  deleteTicketAttachment,
   ticketAttachmentAdd,
   ticketAttachments,
   ticketComments,
@@ -30,6 +31,10 @@ import {
 } from "@/features/tickets/model";
 import { RefreshIcon } from "@/features/tickets/components/presentational";
 import { TicketDetailPanel } from "@/features/tickets/components/TicketDetailPanel";
+import {
+  TicketEditDialog,
+  type TicketEditPayload,
+} from "@/features/tickets/components/TicketEditDialog";
 import { TicketStats, type TicketTotals } from "@/features/tickets/components/TicketStats";
 import { TicketTable, type SortKey } from "@/features/tickets/components/TicketTable";
 import { TicketToolbar } from "@/features/tickets/components/TicketToolbar";
@@ -78,6 +83,8 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [assignable, setAssignable] = useState<Assignable[]>([]);
   const [statusBusy, setStatusBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -242,43 +249,74 @@ export default function Tickets({ role, userName, onToast }: Props) {
     }
   }
 
-  async function handleSaveEdit(fields: {
-    subject: string;
-    description: string;
-    assignee: string;
-    due_date: string;
-  }): Promise<boolean> {
+  /**
+   * One save for the whole edit sheet.
+   *
+   * Order matters: the field/workflow PUT goes first because it is the only call Jira can
+   * refuse with a reason (409). Attachments follow, since a file that lands on an issue whose
+   * status never moved is confusing. Each failure is reported by name rather than as one
+   * generic "save failed", so the operator knows what did and did not land.
+   */
+  async function handleSaveTicket(p: TicketEditPayload): Promise<boolean> {
     if (!selected) return false;
+    setEditBusy(true);
+    const target = selected;
+    const problems: string[] = [];
     try {
-      await ticketUpdate(selected.id, {
-        subject: fields.subject,
-        description: fields.description,
-        assignee: fields.assignee || null,
-        due_date: fields.due_date || null,
+      const res = await ticketUpdate(target.id, {
+        subject: p.subject,
+        description: p.description,
+        priority: p.priority,
+        assignee: p.assignee || null,
+        due_date: p.due_date || null,
+        ...(p.status ? { status: p.status } : {}),
+        ...(p.comment ? { comment: p.comment } : {}),
       });
-      setSelected({
-        ...selected,
-        subject: fields.subject,
-        description: fields.description,
-        assignee: fields.assignee || null,
-        due_date: fields.due_date || null,
-      });
-      setComments((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          author: userName,
-          body: "subject / description / assignee / due date edited",
-          kind: "edit",
-          created_at: new Date().toISOString(),
-        },
+      if (res?.fields_synced === false) problems.push("Jira kept its own copy of the details");
+      if (res?.comment_synced === false) problems.push("the note was not posted to Jira");
+
+      for (const id of p.removeAttachments) {
+        try {
+          const out = await deleteTicketAttachment(target.id, id);
+          if (out.jira_synced === false) problems.push(`“${out.filename}” is still on the issue`);
+        } catch (e) {
+          problems.push(e instanceof Error ? e.message : "an attachment could not be deleted");
+        }
+      }
+      for (const f of p.addFiles) {
+        try {
+          await ticketAttachmentAdd(target.id, f);
+        } catch (e) {
+          problems.push(`“${f.name}” did not upload (${e instanceof Error ? e.message : "error"})`);
+        }
+      }
+
+      const [fresh, freshComments] = await Promise.all([
+        ticketAttachments(target.id).catch(() => ({ attachments: [] })),
+        ticketComments(target.id).catch(() => ({ comments: [] })),
       ]);
-      onToast("Ticket updated in Jira");
+      setAttachments((fresh?.attachments ?? []) as Attachment[]);
+      setComments((freshComments?.comments ?? []) as Comment[]);
+      setSelected({
+        ...target,
+        subject: p.subject,
+        description: p.description,
+        priority: p.priority as Ticket["priority"],
+        assignee: p.assignee || null,
+        due_date: p.due_date || null,
+        ...(p.status ? { status: p.status as Ticket["status"] } : {}),
+      });
+
+      if (problems.length) onToast(`Saved, with ${problems.length} caveat(s): ${problems.join("; ")}`, "err");
+      else onToast(p.status ? `Saved to Jira — moved to ${p.status.replace("_", " ")}` : "Saved to Jira");
       void loadTickets();
+      setEditing(false);
       return true;
-    } catch {
-      onToast("Update failed — Jira did not accept the change", "err");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Save failed — nothing was changed", "err");
       return false;
+    } finally {
+      setEditBusy(false);
     }
   }
 
@@ -302,6 +340,18 @@ export default function Tickets({ role, userName, onToast }: Props) {
       onToast("Attachment added");
     } catch {
       onToast("Upload failed", "err");
+    }
+  }
+
+  async function handleDeleteAttachment(id: number) {
+    if (!selected) return;
+    try {
+      const out = await deleteTicketAttachment(selected.id, id);
+      setAttachments((prev) => prev.filter((a) => a.id !== id));
+      onToast(out.jira_synced === false ? "Removed here — Jira kept its copy" : "Attachment removed",
+              out.jira_synced === false ? "err" : "ok");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Delete failed", "err");
     }
   }
 
@@ -609,14 +659,24 @@ export default function Tickets({ role, userName, onToast }: Props) {
           canManage={canManage}
           comments={comments}
           attachments={attachments}
-          assignable={assignable}
           statusBusy={statusBusy}
           jiraReady={jiraReady !== false}
           onClose={() => setSelected(null)}
           onStatus={handleStatus}
-          onSaveEdit={handleSaveEdit}
+          onEdit={() => setEditing(true)}
+          onDeleteAttachment={handleDeleteAttachment}
           onAddComment={handleAddComment}
           onAddAttachment={handleAddAttachment}
+          />
+
+          <TicketEditDialog
+            ticket={editing ? selected : null}
+            assignable={assignable}
+            attachments={attachments}
+            jiraReady={jiraReady !== false}
+            busy={editBusy}
+            onClose={() => setEditing(false)}
+            onSave={handleSaveTicket}
           />
         </div>
       </main>

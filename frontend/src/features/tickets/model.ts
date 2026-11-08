@@ -16,7 +16,13 @@ export type Ticket = {
 };
 
 export type Comment = { id: number; author?: string | null; body: string; kind: string; created_at?: string | null };
-export type Assignable = { username: string; email: string | null; role: string };
+export type Assignable = {
+  username: string;
+  email: string | null;
+  role: string;
+  /** Present when the pool came from a category mapping — the team the person was found in. */
+  group?: string | null;
+};
 export type Attachment = { id: number; filename: string; size: number; created_by: string | null };
 
 export const STATUS_META = {

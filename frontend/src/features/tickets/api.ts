@@ -79,7 +79,7 @@ export async function createTicketApi(body: {
 
 export async function ticketUpdate(ref: string, patch: {
   status?: string; assignee?: string | null; due_date?: string | null;
-  subject?: string; description?: string;
+  subject?: string; description?: string; priority?: string; comment?: string;
 }) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}`, {
     method: "PUT",
@@ -94,6 +94,18 @@ export async function ticketUpdate(ref: string, patch: {
     throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
   }
   return r.json();
+}
+
+/** Remove an attachment from the issue (Jira first) and from the mirror. */
+export async function deleteTicketAttachment(ref: string, attId: number) {
+  const r = await apiFetch(`${BASE}/api/tickets/${ref}/attachments/${attId}`, {
+    method: "DELETE", headers: authHeaders(),
+  });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
+  return r.json() as Promise<{ ok: boolean; jira_synced: boolean | null; filename: string }>;
 }
 
 export async function ticketComments(ref: string) {

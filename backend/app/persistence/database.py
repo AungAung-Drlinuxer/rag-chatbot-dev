@@ -153,6 +153,10 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS ix_ticket_comments_ticket ON ticket_comments(ticket_id)",
         ),
         (
+            "ticket_attachments.jira_attachment_id",
+            "ALTER TABLE ticket_attachments ADD COLUMN IF NOT EXISTS jira_attachment_id VARCHAR(64)",
+        ),
+        (
             "ticket_attachments index",
             "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_ticket ON ticket_attachments(ticket_id)",
         ),

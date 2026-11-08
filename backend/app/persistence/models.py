@@ -106,6 +106,9 @@ class TicketAttachment(Base):
     data: Mapped[bytes] = mapped_column()
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     created_by: Mapped[str | None] = mapped_column(String(64))
+    #: The attachment's id in Jira, so deleting here can delete there. Null for rows uploaded
+    #: while Jira was unreachable — the delete falls back to matching by filename.
+    jira_attachment_id: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

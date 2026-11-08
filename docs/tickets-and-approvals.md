@@ -100,3 +100,24 @@ create dialog offers the network team for a network ticket and preselects its fi
 No mapping means no restriction: the whole assignable directory is offered and
 `configured: false` says so. Jira takes an `accountId`, so the chosen username is resolved
 through `assignable/search` and the issue is assigned after creation.
+
+## Editing a ticket
+
+**Edit** in the detail pane opens one sheet covering everything that can change:
+
+| Section | Fields | Destination |
+|---|---|---|
+| Details | subject, description, priority, assignee, due date | `PUT /api/tickets/{ref}` → `PUT /rest/api/3/issue/{key}` |
+| Attachments | add files, delete existing (staged) | upload: `POST …/attachments`; delete: `DELETE …/attachments/{id}` → `DELETE /rest/api/3/attachment/{id}` |
+| Workflow | target step + note | transition and comment, same save as the details |
+
+Nothing is written until **Save ticket**. The order is fixed: details and workflow first (the
+only call Jira can refuse with a `409`), then attachment removals, then uploads. A partial
+failure is reported per item ("photo.png did not upload…"), never as one opaque error, and the
+sheet stays open so nothing typed is lost.
+
+Delete goes to Jira **before** the local row: an attachment removed only here is still visible
+on the issue and out of the agent's reach. If Jira refuses, the row stays and the toast says so.
+
+`ticket_attachments.jira_attachment_id` records which Jira attachment a row is. Rows uploaded
+before that column existed fall back to matching by filename when deleted.

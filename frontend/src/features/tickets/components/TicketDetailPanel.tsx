@@ -20,6 +20,7 @@ import {
   Send,
   Tag,
   Ticket as TicketIcon,
+  Trash2,
   UserRound,
   Users,
   Workflow,
@@ -30,7 +31,6 @@ import { Button } from "@/components/ui/button";
 import { MetaRow, PriorityBadge, StatusBadge } from "@/features/tickets/components/presentational";
 import { attachmentUrl } from "@/features/tickets/api";
 import {
-  type Assignable,
   type Attachment,
   type Comment,
   type Ticket,
@@ -43,19 +43,17 @@ import {
 // it is shown on the badge and fills the rail at step one.
 const FLOW = ["open", "pending", "in_progress", "done"] as const;
 
-type EditFields = { subject: string; description: string; assignee: string; due_date: string };
-
 export function TicketDetailPanel({
   ticket,
   canManage,
   comments,
   attachments,
-  assignable,
   statusBusy,
   jiraReady,
   onClose,
   onStatus,
-  onSaveEdit,
+  onEdit,
+  onDeleteAttachment,
   onAddComment,
   onAddAttachment,
 }: {
@@ -63,22 +61,21 @@ export function TicketDetailPanel({
   canManage: boolean;
   comments: Comment[];
   attachments: Attachment[];
-  assignable: Assignable[];
   statusBusy: string | null;
   jiraReady: boolean;
   onClose: () => void;
   onStatus: (status: Ticket["status"], comment: string) => Promise<boolean>;
-  onSaveEdit: (fields: EditFields) => Promise<boolean>;
+  /** Opens the edit sheet — every editable field, attachments and the workflow live there. */
+  onEdit: () => void;
+  onDeleteAttachment: (id: number) => void;
   onAddComment: (body: string) => void;
   onAddAttachment: (file: File) => void;
 }) {
-  const [editing, setEditing] = useState<EditFields | null>(null);
   const [comment, setComment] = useState("");
   // Two halves of one action: which step to move to, and what to tell the people in Jira.
   const [target, setTarget] = useState<Ticket["status"] | null>(null);
   const [note, setNote] = useState("");
   const [applying, setApplying] = useState(false);
-  const [savingEdit, setSavingEdit] = useState(false);
 
   const shell =
     "flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card";
@@ -108,23 +105,6 @@ export function TicketDetailPanel({
   const statusIndex = isReopened
     ? 0
     : Math.max(0, FLOW.indexOf(ticket.status as (typeof FLOW)[number]));
-
-  async function save() {
-    if (!editing) return;
-    setSavingEdit(true);
-    const ok = await onSaveEdit(editing);
-    setSavingEdit(false);
-    if (ok) setEditing(null);
-  }
-
-  function startEdit() {
-    setEditing({
-      subject: ticket!.subject,
-      description: ticket!.description ?? "",
-      assignee: ticket!.assignee ?? "",
-      due_date: ticket!.due_date ? ticket!.due_date.slice(0, 10) : "",
-    });
-  }
 
   return (
     <aside
@@ -331,79 +311,12 @@ export function TicketDetailPanel({
           </div>
         )}
 
-        {/* edit form, inline — no modal on top of a panel */}
-        {editing ? (
-          <div className="mb-5 space-y-3 rounded-xl border border-[var(--border)] bg-muted/20 p-3.5">
-            <label className="block">
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Subject
-              </span>
-              <input
-                value={editing.subject}
-                onChange={(e) => setEditing({ ...editing, subject: e.target.value })}
-                className="h-9 w-full rounded-lg border border-[var(--border)] bg-background px-2.5 text-xs outline-none focus:border-[var(--primary)]"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Description
-              </span>
-              <textarea
-                rows={5}
-                value={editing.description}
-                onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                className="w-full resize-none rounded-lg border border-[var(--border)] bg-background px-2.5 py-2 text-xs leading-5 outline-none focus:border-[var(--primary)]"
-              />
-            </label>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Assignee
-                </span>
-                <select
-                  value={editing.assignee}
-                  onChange={(e) => setEditing({ ...editing, assignee: e.target.value })}
-                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none"
-                >
-                  <option value="">Unassigned</option>
-                  {assignable.map((u) => (
-                    <option key={u.username} value={u.username}>
-                      {u.username}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Due date
-                </span>
-                <input
-                  type="date"
-                  value={editing.due_date}
-                  onChange={(e) => setEditing({ ...editing, due_date: e.target.value })}
-                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none"
-                />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" size="sm" className="rounded-lg text-xs" onClick={() => setEditing(null)}>
-                Cancel
-              </Button>
-              <Button size="sm" className="rounded-lg text-xs" disabled={savingEdit} onClick={save}>
-                {savingEdit ? "Saving…" : "Save to Jira"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Description
-            </p>
-            <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[13px] leading-6 text-foreground">
-              {ticket.description?.trim() || "No description provided."}
-            </div>
-          </>
-        )}
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Description
+        </p>
+        <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[13px] leading-6 text-foreground">
+          {ticket.description?.trim() || "No description provided."}
+        </div>
 
         <div className="mb-5 grid grid-cols-2 gap-x-4 gap-y-3.5">
           <MetaRow icon={<UserRound className="size-3" />} label="Requester" value={ticket.requester} />
@@ -452,17 +365,31 @@ export function TicketDetailPanel({
             </p>
             <div className="space-y-1.5">
               {attachments.map((a) => (
-                <a
+                <div
                   key={a.id}
-                  href={attachmentUrl(ticket.id, a.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] transition hover:bg-muted"
+                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] pl-2.5 pr-1 text-[11px] transition hover:bg-muted"
                 >
-                  <Paperclip className="size-3 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{a.filename}</span>
-                  <span className="shrink-0 text-muted-foreground">{Math.round(a.size / 1024)} KB</span>
-                </a>
+                  <Paperclip className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  <a
+                    href={attachmentUrl(ticket.id, a.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex min-w-0 flex-1 items-center gap-2 py-1.5"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{a.filename}</span>
+                    <span className="shrink-0 text-muted-foreground">{Math.round(a.size / 1024)} KB</span>
+                  </a>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteAttachment(a.id)}
+                      aria-label={`Delete ${a.filename}`}
+                      className="rounded p-1 text-muted-foreground transition hover:bg-card hover:text-[var(--danger)]"
+                    >
+                      <Trash2 className="size-3" aria-hidden />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -504,7 +431,7 @@ export function TicketDetailPanel({
             <span className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
             <div className="flex items-center gap-1.5">
               {canManage && (
-                <Button variant="outline" size="sm" className="rounded-lg text-[11px]" onClick={startEdit}>
+                <Button variant="outline" size="sm" className="rounded-lg text-[11px]" onClick={onEdit}>
                   <Pencil className="mr-1 size-3" />
                   Edit
                 </Button>

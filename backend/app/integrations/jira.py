@@ -572,3 +572,109 @@ def upload_attachment(issue_key: str, filename: str, content: bytes, mime: str) 
             return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+def _adf(text: str) -> dict:
+    """Jira Cloud v3 takes rich text, and a plain string is rejected with 400."""
+    blocks = [ln for ln in (text or "").splitlines()]
+    return {"type": "doc", "version": 1, "content": [
+        {"type": "paragraph", "content": ([{"type": "text", "text": ln}] if ln else [])}
+        for ln in blocks
+    ] or [{"type": "paragraph", "content": []}]}
+
+
+PRIORITY_NAMES = {"low": "Low", "medium": "Medium", "high": "High", "urgent": "Highest"}
+
+
+def update_issue_fields(issue_key: str, *, summary: str | None = None,
+                        description: str | None = None, priority: str | None = None,
+                        due_date: str | None = None) -> dict:
+    """Write the editable fields of an issue. Returns {ok, detail?}.
+
+    The board used to edit only its own row, so a ticket whose summary said one thing here and
+    another in Jira was normal. Fields travel together in one PUT because Jira applies them
+    atomically — a half-applied edit is exactly the drift this endpoint removes.
+    """
+    cfg = _jira_cfg()
+    if not cfg.get("base_url"):
+        return {"ok": False, "detail": "Jira is not configured"}
+    fields: dict = {}
+    if summary is not None:
+        fields["summary"] = summary[:255]
+    if description is not None:
+        fields["description"] = _adf(description)
+    if priority:
+        fields["priority"] = {"name": PRIORITY_NAMES.get(priority.lower(), priority.title())}
+    if due_date is not None:
+        fields["duedate"] = due_date or None
+    if not fields:
+        return {"ok": True, "skipped": True}
+
+    import httpx
+
+    try:
+        with httpx.Client(timeout=30) as c:
+            r = c.put(f"{cfg['base_url']}/rest/api/3/issue/{issue_key}",
+                      headers={"Authorization": _auth_header(),
+                               "Accept": "application/json",
+                               "Content-Type": "application/json"},
+                      json={"fields": fields})
+        if r.status_code >= 400:
+            detail = ""
+            try:
+                detail = r.json().get("errorMessages") and "; ".join(r.json()["errorMessages"]) or ""
+                errs = r.json().get("errors") or {}
+                if errs:
+                    detail = (detail + " " + "; ".join(f"{k}: {v}" for k, v in errs.items())).strip()
+            except Exception:  # noqa: BLE001
+                detail = (r.text or "")[:200]
+            return {"ok": False, "detail": detail or f"HTTP {r.status_code}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "detail": str(exc)}
+    return {"ok": True}
+
+
+def delete_attachment(attachment_id: str) -> dict:
+    """Remove an attachment from Jira. Deleting only the local row left an orphan in the issue."""
+    cfg = _jira_cfg()
+    if not cfg.get("base_url") or not attachment_id:
+        return {"ok": False, "detail": "no attachment to delete"}
+    import httpx
+
+    try:
+        with httpx.Client(timeout=30) as c:
+            r = c.delete(f"{cfg['base_url']}/rest/api/3/attachment/{attachment_id}",
+                         headers={"Authorization": _auth_header(), "Accept": "application/json"})
+        if r.status_code in (200, 204, 404):
+            return {"ok": True, "already_gone": r.status_code == 404}
+        return {"ok": False, "detail": (r.text or "")[:200] or f"HTTP {r.status_code}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "detail": str(exc)}
+
+
+def list_attachment_ids(issue_key: str, filename: str | None = None) -> dict:
+    """Look up an issue's attachments (optionally by filename). Returns {ok, ids, deleted}.
+
+    Rows uploaded before `ticket_attachments.jira_attachment_id` existed cannot say which Jira
+    attachment they are, so the delete path matches on the filename the user sees.
+    """
+    cfg = _jira_cfg()
+    if not cfg.get("base_url"):
+        return {"ok": False, "ids": [], "deleted": 0, "detail": "Jira is not configured"}
+    import httpx
+
+    try:
+        with httpx.Client(timeout=30) as c:
+            r = c.get(f"{cfg['base_url']}/rest/api/3/issue/{issue_key}",
+                      headers={"Authorization": _auth_header(), "Accept": "application/json"},
+                      params={"fields": "attachment"})
+        if r.status_code >= 400:
+            return {"ok": False, "ids": [], "deleted": 0, "detail": f"HTTP {r.status_code}"}
+        items = (r.json().get("fields") or {}).get("attachment") or []
+        matches = [i for i in items if filename is None or i.get("filename") == filename]
+        deleted = 0
+        for item in matches:
+            if delete_attachment(str(item.get("id"))).get("ok"):
+                deleted += 1
+        return {"ok": True, "ids": [i.get("id") for i in matches], "deleted": deleted}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "ids": [], "deleted": 0, "detail": str(exc)}

@@ -529,6 +529,7 @@ def ticket_comment_add(ticket_ref: str, req: CommentRequest,
 class TicketUpdateRequest(BaseModel):
     status: str | None = None
     assignee: str | None = None
+    priority: str | None = None
     due_date: str | None = None  # ISO date
     subject: str | None = None
     description: str | None = None
@@ -590,9 +591,32 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             logger.warning("jira comment failed for %s: %s", row.jira_key, posted.get("detail"))
             sync_notes.append(f"comment not posted ({posted.get('detail')})")
 
+    # The editable fields belong to the issue, not to this mirror. Push them in one PUT before
+    # writing locally, and report a refusal instead of silently diverging: a board whose summary
+    # and Jira's summary disagree is worse than no edit at all.
+    fields_synced: bool | None = None
+    if getattr(row, "jira_key", None) and any(
+            v is not None for v in (req.subject, req.description, req.priority, req.due_date)):
+        from app.integrations.jira import update_issue_fields
+
+        pushed = update_issue_fields(
+            row.jira_key,
+            summary=req.subject.strip() if req.subject is not None else None,
+            description=req.description if req.description is not None else None,
+            priority=req.priority or None,
+            due_date=req.due_date if req.due_date is not None else None,
+        )
+        fields_synced = bool(pushed.get("ok"))
+        if not fields_synced:
+            logger.warning("jira field update refused for %s: %s", row.jira_key, pushed.get("detail"))
+            sync_notes.append(f"fields not saved to Jira ({pushed.get('detail')})")
+
     with SessionLocal() as s:
         s.add(row)
         s.refresh(row)
+        if req.priority:
+            row.priority = req.priority[:16].lower()
+            changes.append(f"priority → {row.priority}")
         if req.status:
             row.status = req.status[:32].lower()
             changes.append(f"status → {row.status}")
@@ -624,8 +648,12 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             s.add(TicketComment(ticket_id=row.id, author=user,
                                 body=req.comment.strip()[:4000], kind="comment"))
         s.commit()
+    # `jira_synced` used to be inferred from the activity note's tail, so a save that pushed
+    # only fields reported False and the UI warned about a failure that never happened.
+    pushed_to_jira = bool(req.status) if getattr(row, "jira_key", None) else False
     return {"ok": True, "changes": changes,
-            "jira_synced": jira_note.endswith("synced to Jira"),
+            "jira_synced": (fields_synced if fields_synced is not None else pushed_to_jira),
+            "fields_synced": fields_synced,
             "comment_synced": comment_synced}
 
 
@@ -685,11 +713,48 @@ def ticket_attachment_add(ticket_ref: str, req: AttachmentRequest,
 
         a = TicketAttachment(ticket_id=row.id, filename=req.filename[:255],
                              content_type=req.content_type[:128], data=blob,
-                             size_bytes=len(blob), created_by=user)
+                             size_bytes=len(blob), created_by=user,
+                             jira_attachment_id=str((jira_attachment or {}).get("id") or "") or None)
         s.add(a)
         s.commit()
         return {"id": a.id, "filename": a.filename, "size": a.size_bytes,
                 "jira_attachment_id": (jira_attachment or {}).get("id")}
+
+
+@router.delete("/tickets/{ticket_ref}/attachments/{att_id}")
+def ticket_attachment_delete(ticket_ref: str, att_id: int,
+                             user: str = Depends(get_current_user),
+                             _role: str = Depends(require_role("admin", "agent"))) -> dict:
+    """Remove an attachment from the issue and from the mirror.
+
+    The Jira side goes first: a row deleted locally but still hanging on the issue is an
+    attachment the requester can see and the agent cannot remove from this app.
+    """
+    row = _resolve_ticket(ticket_ref, user)
+    if row is None:
+        raise HTTPException(status_code=404, detail="ticket not found")
+
+    from app.integrations.jira import delete_attachment
+    from app.persistence.models import TicketAttachment
+
+    with SessionLocal() as s:
+        a = s.get(TicketAttachment, att_id)
+        if a is None or a.ticket_id != row.id:
+            raise HTTPException(status_code=404, detail="attachment not found")
+        filename, jira_id = a.filename, a.jira_attachment_id
+        s.delete(a)
+        s.commit()
+
+    jira_ok: bool | None = None
+    if getattr(row, "jira_key", None) and jira_id:
+        jira_ok = bool(delete_attachment(jira_id).get("ok"))
+    elif getattr(row, "jira_key", None):
+        # Uploaded before the id was stored (`jira_attachment_id`): find it by name.
+        from app.integrations.jira import list_attachment_ids
+
+        found = list_attachment_ids(row.jira_key, filename)
+        jira_ok = bool(found.get("ok") and found.get("deleted", 0) >= 1)
+    return {"ok": True, "jira_synced": jira_ok, "filename": filename}
 
 
 @router.get("/tickets/{ticket_ref}/attachments/{att_id}/download")
