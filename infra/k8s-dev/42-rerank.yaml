@@ -1,0 +1,67 @@
+# Cross-encoder reranker (CPU). One replica is enough for dev: the service keeps the model in
+# memory and the backend batches at most RERANK_MAX_CANDIDATES documents per query.
+#
+# The backend reaches it at http://rerank-svc:8080 (RERANK_MODE=remote in backend-config).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rerank-svc
+  namespace: rag-chatbot-dev
+  labels:
+    app.kubernetes.io/name: rerank-svc
+    app.kubernetes.io/component: ai-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rerank-svc
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rerank-svc
+        app.kubernetes.io/component: ai-runtime
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: rerank
+          image: harbor.drlinuxer.com/rag-chatbot/rerank-svc:1.0.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: RERANK_MODEL,          value: BAAI/bge-reranker-base }
+            - { name: RERANK_DEVICE,         value: cpu }
+            - { name: RERANK_MAX_CANDIDATES, value: "50" }
+            - { name: RERANK_TIMEOUT,        value: "30" }
+            - name: RERANK_API_KEY
+              valueFrom:
+                secretKeyRef: { name: backend-secrets, key: rerank-api-key, optional: true }
+          ports:
+            - { name: http, containerPort: 8080 }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 250m, memory: 1Gi }
+            # 1 core queued a 10-doc batch behind KB-sync embeddings long enough to trip the
+            # client's 12s attempt budget, which silently downgrades answers to vector order.
+            limits: { cpu: "2", memory: 2Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rerank-svc
+  namespace: rag-chatbot-dev
+spec:
+  selector:
+    app.kubernetes.io/name: rerank-svc
+  ports:
+    - { name: http, port: 8080, targetPort: http }

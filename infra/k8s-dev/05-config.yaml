@@ -1,0 +1,50 @@
+# Runtime configuration for the dev workspace — the whole set, in one place.
+#
+# Everything the app points at lives in this namespace: its own embedding runtime, its own
+# reranker, its own Redis (via Sentinel). The previous ConfigMap reached into the prod
+# namespace for Ollama, which made a dev deploy depend on prod staying up.
+#
+# Secrets are NOT here: DATABASE_URL, REDIS_PASSWORD and LDAP_BIND_PASSWORD come from the
+# backend-secrets Secret. Provider keys, SMTP and integration tokens are stored in the
+# database through Settings, not in this file.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: rag-chatbot-dev
+data:
+  APP_ENV: dev
+  LOG_LEVEL: info
+  ALLOWED_DOMAINS: dev-chat.drlinuxer.com
+  RAGCHAT_NAMESPACE: rag-chatbot-dev
+
+  # Retrieval pipeline
+  OLLAMA_URL: http://ollama:11434
+  EMBEDDING_MODEL: nomic-embed-text
+  RERANK_ENABLED: "true"
+  RERANK_MODE: remote
+  RERANK_URL: http://rerank-svc:8080
+  RAG_FETCH_K: "32"
+  RAG_TOP_K: "5"
+  SIMILARITY_THRESHOLD: "0.55"
+  HYBRID_ENABLED: "true"
+  LANGGRAPH_ENABLED: "1"
+
+  # Broker/cache through Sentinel (single master + single sentinel in dev)
+  REDIS_MODE: sentinel
+  REDIS_SENTINELS: redis-sentinel-service:26379
+  REDIS_MASTER_NAME: mymaster
+
+  # Directory (credentials in backend-secrets; enabled per-login attempt)
+  LDAP_URL: ldap://10.10.10.10:389
+  LDAP_BASE_DN: OU=Employees,OU=Dr-Linuxer,DC=drlinuxer,DC=com
+  LDAP_BIND_DN: chatbot-svc@drlinuxer.com
+  LDAP_USER_FILTER: "(&(sAMAccountName={username})(userPrincipalName=*@drlinuxer.com))"
+  LDAP_ENABLED: "false"
+  RBAC_ADMIN_GROUPS: cn=it-help-admins,ou=groups,dc=drlinuxer,dc=local
+  RBAC_AGENT_GROUPS: it-help-agents
+
+  # Knowledge source (token is set in Settings → Integrations, not here)
+  CONFLUENCE_BASE_URL: https://drlinuxer.atlassian.net/wiki
+  CONFLUENCE_EMAIL: ops@drlinuxer.com
+

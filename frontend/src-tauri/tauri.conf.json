@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "IT Help Chatbot",
+  "version": "0.1.0",
+  "identifier": "com.drlinuxer.ithelpchatbot",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "IT Help Chatbot",
+        "width": 1040,
+        "height": 760,
+        "minWidth": 760,
+        "minHeight": 520
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "deb"],
+    "icon": ["icons/icon.ico", "icons/icon.png"]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://updates.example.com/latest.json"],
+      "pubkey": "REPLACE_WITH_TAURI_PUBKEY"
+    }
+  }
+}

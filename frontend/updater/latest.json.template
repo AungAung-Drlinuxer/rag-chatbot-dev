@@ -1,0 +1,17 @@
+# Tauri updater manifest template — served by the internal update server (Phase 10).
+# `tauri build` regenerates this; keep version + sha256 in sync with the bundle.
+{
+  "version": "0.1.0",
+  "notes": "Internal IT Help Chatbot desktop release.",
+  "pub_date": "2026-08-25T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "REPLACE_WITH_SIGNATURE_FROM_tauri_build",
+      "url": "https://updates.example.com/v0.1.0/it-help-chatbot_0.1.0_x64-setup.msi.zip"
+    },
+    "linux-x86_64": {
+      "signature": "REPLACE_WITH_SIGNATURE_FROM_tauri_build",
+      "url": "https://updates.example.com/v0.1.0/it-help-chatbot_0.1.0_amd64.AppImage.tar.gz"
+    }
+  }
+}

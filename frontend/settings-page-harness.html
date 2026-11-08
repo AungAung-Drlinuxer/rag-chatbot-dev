@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings — page harness</title>
+    <script>
+      // Match the app: theme applied before first paint, overridable with ?theme=dark.
+      try {
+        var t = new URLSearchParams(location.search).get("theme") || "light";
+        document.documentElement.setAttribute("data-theme", t);
+        if (t === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/__settings_page_harness__.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,200 @@
+# IT Help Chatbot — Eval Dataset (v2)
+#
+# Updated after Confluence IHKB sync (real page IDs).
+# Each entry: question, must-contain keywords, expected source page_ids,
+# expected domain/decision. Used by POST /api/eval/run.
+#
+# Confluence real page IDs (verified in kb_meta):
+#   295337 PostgreSQL Connection Timeout
+#   66142  PostgreSQL Disk Full
+#   98592  VPN Connection Failure
+#   98747  PostgreSQL Authentication Failure
+#   131135 Linux Systemd Service Failure
+#   295225 High CPU Usage
+#   65986  Root Filesystem Full
+#   66014  Network Latency or Slow Speed
+#   131187 DNS Resolution Failure
+#   131200 Route or Default Gateway Issue
+#   131124 High Memory Usage and OOM Recovery
+#   131148 Controlled Server Reboot Procedure
+#   295464 Suspicious Login or Unauthorized Access
+
+# --- Database ---
+- question: "How do I fix a PostgreSQL connection timeout?"
+  answer_must_contain: ["postgresql", "timeout"]
+  expected_source_page_ids: ["295337", "db-1"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "PostgreSQL disk is full, what do I do?"
+  answer_must_contain: ["disk"]
+  expected_source_page_ids: ["66142", "db-2"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "PostgreSQL replication lag is growing, what do I check?"
+  answer_must_contain: ["replication"]
+  expected_source_page_ids: ["98727"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "How do I fix PostgreSQL authentication failure?"
+  answer_must_contain: ["authentication"]
+  expected_source_page_ids: ["98747"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "PostgreSQL service failed to start"
+  answer_must_contain: ["postgresql"]
+  expected_source_page_ids: ["98719"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "Database connection pool exhausted — what now?"
+  answer_must_contain: ["pool"]
+  expected_source_page_ids: ["66092"]
+  expected_domain: database
+  expected_decision: answer
+
+- question: "How do I investigate a slow PostgreSQL query?"
+  answer_must_contain: ["query"]
+  expected_source_page_ids: ["66108"]
+  expected_domain: database
+  expected_decision: answer
+
+# --- Network ---
+- question: "VPN is disconnected — how do I reconnect?"
+  answer_must_contain: ["VPN"]
+  expected_source_page_ids: ["98592", "net-1"]
+  expected_domain: network
+  expected_decision: answer
+
+- question: "Network interface is down on a Linux server"
+  answer_must_contain: ["interface"]
+  expected_source_page_ids: ["98604"]
+  expected_domain: network
+  expected_decision: answer
+
+- question: "DNS resolution is failing on a server"
+  answer_must_contain: ["DNS"]
+  expected_source_page_ids: ["131187"]
+  expected_domain: network
+  expected_decision: answer
+
+- question: "Default gateway or route issue on Linux"
+  answer_must_contain: ["gateway"]
+  expected_source_page_ids: ["131200"]
+  expected_domain: network
+  expected_decision: answer
+
+- question: "Network latency is high, connections are slow"
+  answer_must_contain: ["latency"]
+  expected_source_page_ids: ["66014"]
+  expected_domain: network
+  expected_decision: answer
+
+- question: "Proxy connectivity failure — apps can't reach the internet"
+  answer_must_contain: ["proxy"]
+  expected_source_page_ids: ["295303"]
+  expected_domain: network
+  expected_decision: answer
+
+# --- Security ---
+- question: "Suspicious login detected on a server"
+  answer_must_contain: ["login"]
+  expected_source_page_ids: ["295464"]
+  expected_domain: security
+  expected_decision: answer
+
+- question: "TLS certificate expired or validation failing"
+  answer_must_contain: ["certificate"]
+  expected_source_page_ids: ["295431"]
+  expected_domain: security
+  expected_decision: answer
+
+- question: "Access denied / permission issue on a shared resource"
+  answer_must_contain: ["permission"]
+  expected_source_page_ids: ["295419"]
+  expected_domain: security
+  expected_decision: answer
+
+# --- System ---
+- question: "A service has crashed, what's the first step?"
+  answer_must_contain: ["service", "logs"]
+  expected_source_page_ids: ["131135", "sys-1"]
+  expected_domain: system
+  expected_decision: answer
+
+- question: "CPU is at 100%, how do I find the cause?"
+  answer_must_contain: ["cpu"]
+  expected_source_page_ids: ["295225", "sys-2"]
+  expected_domain: system
+  expected_decision: answer
+
+- question: "Disk usage is at 90%, what should I do?"
+  answer_must_contain: ["disk"]
+  expected_source_page_ids: ["65986", "66042"]
+  expected_domain: system
+  expected_decision: answer
+
+- question: "Out of memory / OOM killed my process"
+  answer_must_contain: ["memory"]
+  expected_source_page_ids: ["131124"]
+  expected_domain: system
+  expected_decision: answer
+
+- question: "When is a controlled server reboot allowed?"
+  answer_must_contain: ["reboot"]
+  expected_source_page_ids: ["131148"]
+  expected_domain: system
+  expected_decision: answer
+
+- question: "Chrony or NTP time synchronization failure"
+  answer_must_contain: ["ntp"]
+  expected_source_page_ids: ["98558"]
+  expected_domain: system
+  expected_decision: answer
+
+# --- Storage / Kubernetes ---
+- question: "NFS mount is failing on a client"
+  answer_must_contain: ["nfs"]
+  expected_source_page_ids: ["98647"]
+  expected_domain: storage
+  expected_decision: answer
+
+- question: "Kubernetes PVC is stuck pending"
+  answer_must_contain: ["pvc"]
+  expected_source_page_ids: ["131251", "66066"]
+  expected_domain: kubernetes
+  expected_decision: answer
+
+- question: "Deployment or StatefulSet rollout failure"
+  answer_must_contain: ["rollout"]
+  expected_source_page_ids: ["98856"]
+  expected_domain: kubernetes
+  expected_decision: answer
+
+- question: "Pod ImagePullBackOff — how do I fix it?"
+  answer_must_contain: ["image"]
+  expected_source_page_ids: ["98829"]
+  expected_domain: kubernetes
+  expected_decision: answer
+
+- question: "AppArmor is denying an application"
+  answer_must_contain: ["apparmor"]
+  expected_source_page_ids: ["98796"]
+  expected_domain: system
+  expected_decision: answer
+
+# --- Fallback / general (expect caution, no strong source) ---
+- question: "What's the password reset policy for service accounts?"
+  answer_must_contain: []
+  expected_source_page_ids: []
+  expected_domain: general
+  expected_decision: caution
+
+- question: "Who do I contact for major incident routing?"
+  answer_must_contain: []
+  expected_source_page_ids: ["458962", "589857"]
+  expected_domain: general
+  expected_decision: answer

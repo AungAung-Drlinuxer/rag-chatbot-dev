@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Encoder Reranker Architecture — Bi-Encoder vs Cross-Encoder</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot {
+      width: 12px; height: 12px;
+      background: #fbbf24;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.75rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.45rem; line-height: 1.45; }
+    .card strong { color: #e2e8f0; }
+    .footer { text-align: center; margin-top: 2rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Cross-Encoder Reranker &amp; Scoring Architecture</h1>
+      </div>
+      <p class="subtitle">Deep Dive: Bi-Encoder (Dense Vector Retrieval) vs Cross-Encoder (BAAI/bge-reranker-base), Title Overlap Boosting, and Remote Deployment</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1160 840" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- =================================================================
+             ZONE 1: RETRIEVAL CANDIDATES (STAGE 1 OUTPUT)
+             ================================================================= -->
+        <rect x="25" y="40" width="220" height="480" rx="10" fill="rgba(76, 29, 149, 0.12)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="37" y="62" fill="#a78bfa" font-size="10" font-weight="700">1. INITIAL RETRIEVAL (TOP-N)</text>
+
+        <!-- Bi-Encoder Explanation -->
+        <rect x="40" y="80" width="190" height="95" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="80" width="190" height="95" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="135" y="102" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Bi-Encoder Retrieval</text>
+        <text x="135" y="118" fill="#a78bfa" font-size="8" text-anchor="middle">Fast, Coarse ANN Filter</text>
+        <text x="135" y="134" fill="#94a3b8" font-size="7.5" text-anchor="middle">pgvector HNSW + BM25</text>
+        <text x="135" y="148" fill="#34d399" font-size="7.5" text-anchor="middle">Retrieves N = 20 Candidates</text>
+        <text x="135" y="162" fill="#22d3ee" font-size="7" text-anchor="middle">Independent Embeddings</text>
+
+        <!-- Candidates Pool Card -->
+        <rect x="40" y="190" width="190" height="315" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="190" width="190" height="315" rx="6" fill="rgba(15, 23, 42, 0.7)" stroke="#64748b" stroke-width="1"/>
+        <text x="135" y="210" fill="#e2e8f0" font-size="9.5" font-weight="600" text-anchor="middle">20 Candidate Chunks</text>
+        
+        <!-- Candidate 1 -->
+        <rect x="48" y="222" width="174" height="42" rx="4" fill="rgba(30, 41, 59, 0.7)" stroke="#64748b" stroke-width="0.8"/>
+        <text x="56" y="238" fill="#94a3b8" font-size="8">Chunk #1: General Network Hub</text>
+        <text x="56" y="252" fill="#fbbf24" font-size="7.5">Vector Dist: 0.18 (False Top-1)</text>
+
+        <!-- Candidate 2 -->
+        <rect x="48" y="272" width="174" height="42" rx="4" fill="rgba(30, 41, 59, 0.7)" stroke="#64748b" stroke-width="0.8"/>
+        <text x="56" y="288" fill="#94a3b8" font-size="8">Chunk #2: Cisco Switch Upgrade</text>
+        <text x="56" y="302" fill="#22d3ee" font-size="7.5">Vector Dist: 0.24 (Rank #2)</text>
+
+        <!-- Candidate 3 -->
+        <rect x="48" y="322" width="174" height="42" rx="4" fill="rgba(30, 41, 59, 0.7)" stroke="#64748b" stroke-width="0.8"/>
+        <text x="56" y="338" fill="#94a3b8" font-size="8">Chunk #3: ROMMON Baud Reset</text>
+        <text x="56" y="352" fill="#22d3ee" font-size="7.5">Vector Dist: 0.31 (Rank #3)</text>
+
+        <!-- Candidate 4 to 20 -->
+        <rect x="48" y="372" width="174" height="60" rx="4" fill="rgba(15, 23, 42, 0.9)" stroke="#475569" stroke-width="0.8"/>
+        <text x="135" y="394" fill="#64748b" font-size="8" text-anchor="middle">• • • 17 More Chunks • • •</text>
+        <text x="135" y="412" fill="#94a3b8" font-size="7.5" text-anchor="middle">Peripheral &amp; Keyword hits</text>
+
+        <rect x="48" y="442" width="174" height="50" rx="4" fill="rgba(136, 19, 55, 0.2)" stroke="#fb7185" stroke-width="0.8"/>
+        <text x="135" y="460" fill="#fb7185" font-size="7.5" font-weight="600" text-anchor="middle">Bi-Encoder Limitation:</text>
+        <text x="135" y="474" fill="#94a3b8" font-size="7" text-anchor="middle">No cross-attention between</text>
+        <text x="135" y="486" fill="#94a3b8" font-size="7" text-anchor="middle">Query words &amp; Document terms</text>
+
+        <!-- =================================================================
+             ZONE 2: CROSS-ENCODER ARCHITECTURE & INFERENCE
+             ================================================================= -->
+        <rect x="275" y="40" width="370" height="480" rx="10" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="287" y="62" fill="#fbbf24" font-size="10" font-weight="700">2. CROSS-ENCODER SCORING ENGINE</text>
+
+        <!-- Arrow Zone 1 to 2 -->
+        <line x1="245" y1="260" x2="293" y2="260" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
+        <text x="268" y="250" fill="#a78bfa" font-size="7.5" text-anchor="middle">20 Pairs</text>
+
+        <!-- Model Card -->
+        <rect x="295" y="80" width="330" height="130" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="295" y="80" width="330" height="130" rx="8" fill="rgba(120, 53, 15, 0.45)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="460" y="103" fill="white" font-size="11.5" font-weight="600" text-anchor="middle">BAAI / bge-reranker-base</text>
+        <text x="460" y="119" fill="#fbbf24" font-size="9" font-weight="600" text-anchor="middle">Full Cross-Attention Transformer (max_length=512)</text>
+
+        <rect x="310" y="132" width="140" height="65" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#fbbf24" stroke-width="0.8"/>
+        <text x="380" y="150" fill="#e2e8f0" font-size="8" font-weight="600" text-anchor="middle">Pair Input Format</text>
+        <text x="380" y="164" fill="#22d3ee" font-size="7.5" text-anchor="middle">[CLS] Query [SEP]</text>
+        <text x="380" y="178" fill="#34d399" font-size="7.5" text-anchor="middle">Chunk Content [SEP]</text>
+        <text x="380" y="190" fill="#94a3b8" font-size="6.5" text-anchor="middle">Content capped at 2000ch</text>
+
+        <rect x="465" y="132" width="145" height="65" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#fbbf24" stroke-width="0.8"/>
+        <text x="537" y="150" fill="#e2e8f0" font-size="8" font-weight="600" text-anchor="middle">Deployment Mode</text>
+        <text x="537" y="164" fill="#34d399" font-size="7.5" text-anchor="middle">RERANK_MODE = remote</text>
+        <text x="537" y="178" fill="#94a3b8" font-size="7.5" text-anchor="middle">rerank-svc :8080 (k8s)</text>
+        <text x="537" y="190" fill="#fbbf24" font-size="7" text-anchor="middle">Latency: ~200-400ms</text>
+
+        <!-- Attention Matrix Visualization -->
+        <rect x="295" y="225" width="330" height="150" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="295" y="225" width="330" height="150" rx="8" fill="rgba(15, 23, 42, 0.8)" stroke="#64748b" stroke-width="1"/>
+        <text x="460" y="246" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Cross-Attention Matrix Computation</text>
+
+        <!-- Grid Matrix representation -->
+        <g transform="translate(325, 260)">
+          <rect x="0" y="0" width="30" height="18" fill="rgba(251, 191, 36, 0.8)" rx="2"/>
+          <text x="15" y="12" fill="#0f172a" font-size="7" font-weight="700" text-anchor="middle">0.94</text>
+          
+          <rect x="35" y="0" width="30" height="18" fill="rgba(251, 191, 36, 0.6)" rx="2"/>
+          <text x="50" y="12" fill="#0f172a" font-size="7" font-weight="700" text-anchor="middle">0.78</text>
+
+          <rect x="70" y="0" width="30" height="18" fill="rgba(251, 191, 36, 0.2)" rx="2"/>
+          <text x="85" y="12" fill="#e2e8f0" font-size="7" text-anchor="middle">0.12</text>
+
+          <rect x="105" y="0" width="30" height="18" fill="rgba(251, 191, 36, 0.9)" rx="2"/>
+          <text x="120" y="12" fill="#0f172a" font-size="7" font-weight="700" text-anchor="middle">0.98</text>
+
+          <text x="150" y="13" fill="#94a3b8" font-size="8">Query terms attend directly to</text>
+          <text x="150" y="27" fill="#94a3b8" font-size="8">every document token!</text>
+        </g>
+
+        <rect x="310" y="300" width="300" height="60" rx="4" fill="rgba(6, 78, 59, 0.25)" stroke="#34d399" stroke-width="0.8"/>
+        <text x="460" y="318" fill="#34d399" font-size="8" font-weight="600" text-anchor="middle">Why Cross-Encoder is Accurate</text>
+        <text x="460" y="332" fill="#e2e8f0" font-size="7.5" text-anchor="middle">Word order, negations ("not working" vs "working"), and technical</text>
+        <text x="460" y="346" fill="#e2e8f0" font-size="7.5" text-anchor="middle">acronyms are evaluated simultaneously across 12 transformer layers.</text>
+
+        <!-- Output Logits Card -->
+        <rect x="295" y="390" width="330" height="115" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="295" y="390" width="330" height="115" rx="8" fill="rgba(120, 53, 15, 0.35)" stroke="#fbbf24" stroke-width="1.2"/>
+        <text x="460" y="410" fill="white" font-size="10" font-weight="600" text-anchor="middle">Raw Relevance Logits Output</text>
+        <text x="460" y="428" fill="#fbbf24" font-size="8">score = float(model.predict([query, chunk]))</text>
+        <text x="460" y="445" fill="#94a3b8" font-size="7.5">Output Range: Logits (~ -8.0 to +8.0)</text>
+        <text x="460" y="460" fill="#34d399" font-size="7.5">Passes to Title Heuristic &amp; Re-Ranking Processor</text>
+        <text x="460" y="485" fill="#fb7185" font-size="7" text-anchor="middle">Fail-safe: On remote service failure, fallback to vector order gracefully</text>
+
+        <!-- =================================================================
+             ZONE 3: HEURISTIC BOOSTING & RESCORING
+             ================================================================= -->
+        <rect x="675" y="40" width="220" height="480" rx="10" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="687" y="62" fill="#22d3ee" font-size="10" font-weight="700">3. HEURISTIC BOOST &amp; RANK</text>
+
+        <!-- Arrow Zone 2 to 3 -->
+        <line x1="625" y1="260" x2="673" y2="260" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#arrow-amber)"/>
+
+        <!-- Title Boost Rule -->
+        <rect x="690" y="80" width="190" height="150" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="690" y="80" width="190" height="150" rx="6" fill="rgba(8, 51, 68, 0.45)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="785" y="102" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Title Keyword Boosting</text>
+        
+        <rect x="700" y="115" width="170" height="48" rx="4" fill="rgba(15, 23, 42, 0.9)" stroke="#22d3ee" stroke-width="0.8"/>
+        <text x="785" y="132" fill="#22d3ee" font-size="7.5" font-weight="600" text-anchor="middle">Query Terms in Doc Title</text>
+        <text x="785" y="146" fill="#e2e8f0" font-size="7.5" text-anchor="middle">boost = min(0.15 * overlap, 0.45)</text>
+
+        <rect x="700" y="170" width="170" height="50" rx="4" fill="rgba(136, 19, 55, 0.3)" stroke="#fb7185" stroke-width="0.8"/>
+        <text x="785" y="188" fill="#fb7185" font-size="7.5" font-weight="600" text-anchor="middle">Generic Hub Penalty</text>
+        <text x="785" y="202" fill="#94a3b8" font-size="7" text-anchor="middle">GENERIC_TITLES: "network", "server"</text>
+        <text x="785" y="214" fill="#fb7185" font-size="7" text-anchor="middle">Penalty: boost -= 0.1</text>
+
+        <!-- Final Score Formula -->
+        <rect x="690" y="245" width="190" height="95" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="690" y="245" width="190" height="95" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="785" y="267" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Final Rescoring</text>
+        <text x="785" y="287" fill="#34d399" font-size="8.5" font-weight="600" text-anchor="middle">final_score =</text>
+        <text x="785" y="303" fill="#e2e8f0" font-size="8.5" text-anchor="middle">rerank_score + title_boost</text>
+        <text x="785" y="323" fill="#94a3b8" font-size="7.5" text-anchor="middle">Sorted descending by final_score</text>
+
+        <!-- Top-K Trim -->
+        <rect x="690" y="355" width="190" height="150" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="690" y="355" width="190" height="150" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="785" y="377" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Top-K Trim &amp; Gate</text>
+        <text x="785" y="395" fill="#a78bfa" font-size="8.5" text-anchor="middle">Retain Top-5 Chunks</text>
+        <text x="785" y="415" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Reordered by true relevance</text>
+        <text x="785" y="430" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Irrelevant noise dropped</text>
+        
+        <rect x="700" y="445" width="170" height="48" rx="4" fill="rgba(15, 23, 42, 0.9)" stroke="#34d399" stroke-width="1"/>
+        <text x="785" y="463" fill="#34d399" font-size="7.5" font-weight="600" text-anchor="middle">Confidence Gate Mapping</text>
+        <text x="785" y="478" fill="#e2e8f0" font-size="7.5" text-anchor="middle">sigmoid(final_score[0]) = 0.88</text>
+
+        <!-- =================================================================
+             ZONE 4: SURVIVORS TO LLM & CONFIDENCE GATE
+             ================================================================= -->
+        <rect x="925" y="40" width="210" height="480" rx="10" fill="rgba(6, 78, 59, 0.15)" stroke="#34d399" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="937" y="62" fill="#34d399" font-size="10" font-weight="700">4. GROUNDED CONTEXT (TOP-K)</text>
+
+        <!-- Arrow Zone 3 to 4 -->
+        <line x1="880" y1="260" x2="923" y2="260" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+        <text x="902" y="250" fill="#34d399" font-size="7.5" text-anchor="middle">Top 5</text>
+
+        <!-- Reordered List Card -->
+        <rect x="940" y="80" width="180" height="425" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="940" y="80" width="180" height="425" rx="8" fill="rgba(15, 23, 42, 0.8)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1030" y="103" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Reordered Chunks to LLM</text>
+        
+        <!-- Reordered #1 -->
+        <rect x="950" y="120" width="160" height="55" rx="4" fill="rgba(6, 78, 59, 0.5)" stroke="#34d399" stroke-width="1.2"/>
+        <text x="960" y="138" fill="#34d399" font-size="8" font-weight="700">Rank #1: Cisco Switch Upgrade</text>
+        <text x="960" y="152" fill="#fbbf24" font-size="7.5">Score: 4.82 (Was Rank #2!)</text>
+        <text x="960" y="164" fill="#94a3b8" font-size="6.5">Exact technical runbook promoted</text>
+
+        <!-- Reordered #2 -->
+        <rect x="950" y="185" width="160" height="55" rx="4" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="960" y="203" fill="#34d399" font-size="8" font-weight="700">Rank #2: ROMMON Baud Reset</text>
+        <text x="960" y="217" fill="#fbbf24" font-size="7.5">Score: 3.45 (Was Rank #3!)</text>
+        <text x="960" y="229" fill="#94a3b8" font-size="6.5">Specific recovery step promoted</text>
+
+        <!-- Reordered #3 -->
+        <rect x="950" y="250" width="160" height="55" rx="4" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="0.8"/>
+        <text x="960" y="268" fill="#22d3ee" font-size="8">Rank #3: Firmware Hash Verify</text>
+        <text x="960" y="282" fill="#fbbf24" font-size="7.5">Score: 2.91</text>
+        <text x="960" y="294" fill="#94a3b8" font-size="6.5">Checksum verification step</text>
+
+        <!-- Reordered #4 -->
+        <rect x="950" y="315" width="160" height="50" rx="4" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="0.8"/>
+        <text x="960" y="333" fill="#22d3ee" font-size="8">Rank #4: TFTP Server Config</text>
+        <text x="960" y="347" fill="#fbbf24" font-size="7.5">Score: 1.84</text>
+        <text x="960" y="358" fill="#94a3b8" font-size="6.5">Network backup path</text>
+
+        <!-- Demoted Generic Chunk -->
+        <rect x="950" y="375" width="160" height="50" rx="4" fill="rgba(136, 19, 55, 0.2)" stroke="#fb7185" stroke-width="0.8"/>
+        <text x="960" y="393" fill="#fb7185" font-size="8">Rank #5: General Network Hub</text>
+        <text x="960" y="407" fill="#fbbf24" font-size="7.5">Score: 0.41 (Demoted from #1)</text>
+        <text x="960" y="418" fill="#fb7185" font-size="6.5">Hub index penalized -0.1</text>
+
+        <rect x="950" y="435" width="160" height="55" rx="4" fill="rgba(6, 78, 59, 0.7)" stroke="#34d399" stroke-width="1"/>
+        <text x="1030" y="455" fill="white" font-size="8.5" font-weight="700" text-anchor="middle">Passed to LCEL Prompt</text>
+        <text x="1030" y="471" fill="#34d399" font-size="7.5" text-anchor="middle">Confidence &gt;= 0.75 Confirmed</text>
+        <text x="1030" y="483" fill="#94a3b8" font-size="6.5" text-anchor="middle">Zero Hallucination Guarantee</text>
+
+        <!-- =================================================================
+             LOWER SECTION: COMPARISON (BI-ENCODER vs CROSS-ENCODER)
+             ================================================================= -->
+        <rect x="25" y="545" width="1110" height="185" rx="10" fill="rgba(15, 23, 42, 0.85)" stroke="#1e293b" stroke-width="1.2"/>
+        <text x="45" y="570" fill="white" font-size="12" font-weight="700">ARCHITECTURAL COMPARISON: BI-ENCODER vs CROSS-ENCODER</text>
+
+        <!-- Bi-Encoder Side -->
+        <rect x="45" y="590" width="510" height="125" rx="6" fill="rgba(76, 29, 149, 0.15)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="65" y="612" fill="#a78bfa" font-size="10" font-weight="700">Bi-Encoder (Vector Embeddings — nomic-embed-text)</text>
+        <text x="65" y="632" fill="#e2e8f0" font-size="8.5">• <tspan font-weight="700" fill="#ffffff">Mechanism:</tspan> Encodes Query and Document into independent vectors separately.</text>
+        <text x="65" y="650" fill="#e2e8f0" font-size="8.5">• <tspan font-weight="700" fill="#ffffff">Similarity:</tspan> Fast Dot Product / Cosine Distance via HNSW index in PostgreSQL.</text>
+        <text x="65" y="668" fill="#34d399" font-size="8.5">• <tspan font-weight="700" fill="#34d399">Pros:</tspan> Millions of vectors searched in &lt; 5ms. Scales linearly with index.</text>
+        <text x="65" y="686" fill="#fb7185" font-size="8.5">• <tspan font-weight="700" fill="#fb7185">Cons:</tspan> Cannot capture token-to-token interactions; suffers from lexical mismatch.</text>
+        <text x="65" y="704" fill="#a78bfa" font-size="8"><tspan font-weight="700" fill="#a78bfa">Role:</tspan> First-Stage Retrieval (Candidate Generation — Top 20).</text>
+
+        <!-- Cross-Encoder Side -->
+        <rect x="585" y="590" width="530" height="125" rx="6" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="605" y="612" fill="#fbbf24" font-size="10" font-weight="700">Cross-Encoder (BAAI/bge-reranker-base)</text>
+        <text x="605" y="632" fill="#e2e8f0" font-size="8.5">• <tspan font-weight="700" fill="#ffffff">Mechanism:</tspan> Feeds [Query, Document] pair simultaneously into BERT attention layers.</text>
+        <text x="605" y="650" fill="#e2e8f0" font-size="8.5">• <tspan font-weight="700" fill="#ffffff">Cross-Attention:</tspan> Every token in the query attends to every token in the document.</text>
+        <text x="605" y="668" fill="#34d399" font-size="8.5">• <tspan font-weight="700" fill="#34d399">Pros:</tspan> State-of-the-art precision; understands negation, technical codes &amp; context.</text>
+        <text x="605" y="686" fill="#fb7185" font-size="8.5">• <tspan font-weight="700" fill="#fb7185">Cons:</tspan> Computationally expensive (cannot pre-compute vectors; takes ~300ms for 20 pairs).</text>
+        <text x="605" y="704" fill="#fbbf24" font-size="8"><tspan font-weight="700" fill="#fbbf24">Role:</tspan> Second-Stage Reranking (Re-orders Top 20 to select the definitive Top 5).</text>
+
+        <!-- =================================================================
+             BOTTOM LEGEND
+             ================================================================= -->
+        <rect x="25" y="745" width="1110" height="40" rx="6" fill="rgba(15, 23, 42, 0.85)" stroke="#1e293b" stroke-width="1"/>
+        
+        <rect x="40" y="760" width="14" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="60" y="768" fill="#94a3b8" font-size="8">Stage 1 Candidate Retrieval</text>
+
+        <rect x="260" y="760" width="14" height="10" rx="2" fill="rgba(120, 53, 15, 0.4)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="280" y="768" fill="#94a3b8" font-size="8">Cross-Encoder Inference (bge-reranker)</text>
+
+        <rect x="520" y="760" width="14" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="540" y="768" fill="#94a3b8" font-size="8">Title Overlap &amp; Hub Penalties</text>
+
+        <rect x="760" y="760" width="14" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="780" y="768" fill="#94a3b8" font-size="8">Grounded Top-K Context Selection</text>
+
+        <rect x="970" y="760" width="14" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="990" y="768" fill="#94a3b8" font-size="8">Generic Index Demotion</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>1. Why Rerank? (The 2-Stage Retrieval Pattern)</h3>
+        </div>
+        <ul>
+          <li>• <strong>Scale vs Precision Trade-off:</strong> Vector search is fast (ANN) but coarse. Cross-encoders are exact but slow.</li>
+          <li>• <strong>Cost Minimization:</strong> Running cross-attention on 10,000 documents is impossible (minutes). Running on 20 candidates takes only ~250ms.</li>
+          <li>• <strong>False Positives Elimination:</strong> Chunks that share superficial keywords but discuss the wrong topic are reliably filtered out.</li>
+          <li>• <strong>Token Economy:</strong> Sends only the top 5 high-signal chunks to LLM, saving prompt tokens and avoiding context bloat.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>2. Title Overlap &amp; Hub Demotion Heuristics</h3>
+        </div>
+        <ul>
+          <li>• <strong>Title Overlap Bonus:</strong> Boosts final score by <code>min(0.15 * overlap, 0.45)</code> when query terms explicitly match the document title.</li>
+          <li>• <strong>Hub Page Demotion:</strong> Pages with titles like "Network", "Server", "IT Support Guide" are penalized by <code>-0.10</code> to prevent generic index pages from burying specific operational runbooks.</li>
+          <li>• <strong>Dynamic Reordering:</strong> Specific runbooks with precise CLI commands are elevated over generic introductory overviews.</li>
+          <li>• <strong>Fail-Safe Fallback:</strong> If reranking fails or times out, the pipeline safely falls back to raw vector similarity order without breaking the chat stream.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>3. Production Deployment &amp; Remote Scaling</h3>
+        </div>
+        <ul>
+          <li>• <strong>Model:</strong> <code>BAAI/bge-reranker-base</code> (CrossEncoder architecture, max_length=512).</li>
+          <li>• <strong>Remote Deployment (Option A):</strong> Offloaded to standalone <code>rerank-svc:8080</code> pod, preserving backend CPU.</li>
+          <li>• <strong>Confidence Gate Binding:</strong> Sigmoid of top-1 rerank score feeds the 0.75 confidence gate threshold.</li>
+          <li>• <strong>Hallucination Defense:</strong> If top chunk score remains below 0.75 even after reranking, the LLM is directed to emit a polite caution refusal.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      IT Help Chatbot Platform • Cross-Encoder Reranker Specification (reranker.py v0.10.3) • drlinuxer-prod
+    </p>
+  </div>
+</body>
+</html>

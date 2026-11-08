@@ -1,0 +1,16 @@
+node_modules
+dist
+src-tauri/target
+src-tauri/gen
+updater
+*.log
+.env
+# A developer's local override must never reach the build context. `.env.local` is
+# gitignored but was still copied in, so the image could bake a machine-specific API URL
+# instead of using the same-origin /api proxy nginx.conf sets up. The Dockerfile's empty
+# ARG wins over it, but relying on that precedence to save the build is fragile.
+.env*.local
+# Render-harness fixtures. These are fetched by src/__*_harness__.tsx only — never by app
+# code — so shipping them would publish dev test data from the production image. Vite
+# still serves them in dev straight out of public/, so excluding them here costs nothing.
+public/anytype_connectors_fixture.json

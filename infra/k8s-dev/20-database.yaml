@@ -1,0 +1,40 @@
+# === rag-chatbot DEV — its own database ======================================
+# The dev stack must never write to the production knowledge base, so it gets a private
+# PostgreSQL cluster with the same image as production (it ships pgvector; the backend
+# runs `CREATE EXTENSION IF NOT EXISTS vector` on first boot).
+#
+# One instance, 5Gi: a preview environment does not need HA, and three replicas would
+# triple the storage cost of a database nobody depends on.
+#
+# ONE PRIVILEGED STEP: the backend runs `CREATE EXTENSION IF NOT EXISTS vector` as the
+# `app` user, which is not a superuser — the first boot fails with "permission denied to
+# create extension vector". Create it once as the CNPG superuser after the cluster is
+# healthy (idempotent):
+#
+#   kubectl -n rag-chatbot-dev exec postgres-dev-1 -c postgres -- \
+#     psql -U postgres -d assistant -c "CREATE EXTENSION IF NOT EXISTS vector;"
+#
+# Bootstrap credentials live in the `postgres-dev-app` Secret (created out-of-band, never
+# committed). CNPG reads `username` + `password` from it and creates the `assistant`
+# database owned by `app`.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-dev
+  namespace: rag-chatbot-dev
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  storage:
+    size: 5Gi
+  bootstrap:
+    initdb:
+      database: assistant
+      owner: app
+      secret:
+        name: postgres-dev-app
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: "1", memory: 1Gi }
+  monitoring:
+    enablePodMonitor: false

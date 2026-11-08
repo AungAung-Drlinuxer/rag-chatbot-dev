@@ -1,0 +1,404 @@
+/**
+ * DashboardCharts.tsx — extracted from DashboardPage.
+ *
+ * The SVG charts: they take already-shaped data and draw it.
+ */
+
+import { niceTickStep } from "@/features/dashboard/lib/dashboardUtils";
+
+export function MiniSparkline() {
+  return (
+    <svg
+      width="65"
+      height="34"
+      viewBox="0 0 65 34"
+      fill="none"
+      className="text-blue-500"
+    >
+      <path
+        d="M2 28 L12 23 L20 25 L29 14 L38 19 L47 8 L55 14 L63 3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* ============================================================
+   LEGEND
+============================================================ */
+
+export function Legend({
+  label,
+  className,
+}: {
+  label: string;
+  className: string;
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={`h-0.5 w-3.5 rounded-full ${className}`}
+      />
+
+      {label}
+    </span>
+  );
+}
+
+/* ============================================================
+   CONVERSATION CHART
+============================================================ */
+
+export function ConversationChart({
+  data,
+}: {
+  data: { day: string; total: number; resolved: number; escalated: number }[];
+}) {
+  // v0.21.84 — dynamic Y scale (was hardcoded 400): nearest "nice" ceiling
+  // v1.5.3 — headroom reduced to 10% and "nice" step aligned to data magnitude
+  // (a single spike no longer visually dwarfs the rest of the week)
+  // #9 — tick labels used to land on values like 18 / 35 / 53 because max was
+  // rounded to a power-of-ten step and then quartered. Pick a NICE step first and
+  // derive the ceiling from it, so every gridline is a round number.
+  const dataMax = Math.max(10, ...data.flatMap((d) => [d.total, d.resolved, d.escalated]));
+  const niceStep = niceTickStep(dataMax / 4);
+  const max = niceStep * 4;
+
+  const width = 620;
+  const height = 240;
+
+  const left = 40;
+  const right = 15;
+  const top = 15;
+  const bottom = 35;
+
+  const chartWidth =
+    width - left - right;
+
+  const chartHeight =
+    height - top - bottom;
+
+  function points(key: "total" | "resolved" | "escalated") {
+    return data
+      .map((item, index) => {
+        const x =
+          left +
+          (index /
+            (data.length - 1)) *
+            chartWidth;
+
+        const y =
+          top +
+          chartHeight -
+          (item[key] / max) * chartHeight;
+
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }
+
+  return (
+    /* The card owns the height now (the dashboard's chart row is a fixed 230px), so the
+       chart fills whatever is left. `meet` scales it UNIFORMLY — the 620×240 proportions
+       are kept and any leftover space is letterboxed, rather than `none` stretching the
+       axis labels out of shape when the box gets shorter. */
+    <div className="mt-2 min-h-0 w-full flex-1 overflow-hidden">
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-full w-full"
+        preserveAspectRatio="xMidYMid meet"
+      >
+
+        {/* Grid */}
+
+        {[0, 0.25, 0.5, 0.75, 1].map(
+          (frac) => {
+            const value = Math.round(max * frac);
+            const y =
+              top +
+              chartHeight -
+              (value / max) *
+                chartHeight;
+
+            return (
+              <g key={value}>
+                <line
+                  x1={left}
+                  x2={width - right}
+                  y1={y}
+                  y2={y}
+                  stroke="currentColor"
+                  className="text-slate-100 dark:text-slate-800"
+                />
+
+                <text
+                  x="5"
+                  y={y + 3}
+                  fontSize="10"
+                  className="fill-slate-400"
+                >
+                  {value}
+                </text>
+              </g>
+            );
+          }
+        )}
+
+        {/* Total */}
+
+        <polyline
+          points={points("total")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-blue-500"
+        />
+
+        {/* Resolved */}
+
+        <polyline
+          points={points("resolved")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-[var(--ok)]"
+        />
+
+        {/* Escalated */}
+
+        <polyline
+          points={points("escalated")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-[var(--warn)]"
+        />
+
+        {/* Points */}
+
+        {data.map(
+          (item, index) => {
+            const x =
+              left +
+              (index /
+                (data.length - 1)) *
+                chartWidth;
+
+            const y =
+              top +
+              chartHeight -
+              (item.total / max) *
+                chartHeight;
+
+            return (
+              <circle
+                key={item.day}
+                cx={x}
+                cy={y}
+                r="3"
+                className="fill-blue-500"
+              />
+            );
+          }
+        )}
+
+        {/* X labels */}
+
+        {data.map(
+          (item, index) => {
+            const x =
+              left +
+              (index /
+                (data.length - 1)) *
+                chartWidth;
+
+            return (
+              <text
+                key={item.day}
+                x={x}
+                y={height - 10}
+                textAnchor="middle"
+                fontSize="10"
+                className="fill-slate-400"
+              >
+                {item.day}
+              </text>
+            );
+          }
+        )}
+
+      </svg>
+
+    </div>
+  );
+}
+
+/* ============================================================
+   DONUT
+============================================================ */
+
+export function DonutChart({ stats }: { stats: Record<string, number> | null }) {
+  const circumference = 2 * Math.PI * 70;
+
+  // v0.21.84 — real escalation rate instead of a hardcoded mock
+  const total = stats?.total_conversations ?? 0;
+  const escalated = stats?.escalated_to_tickets ?? 0;
+  const percentage = total > 0 ? Math.min(100, Math.round((escalated / total) * 1000) / 10) : 0;
+
+  const dash =
+    (percentage / 100) *
+    circumference;
+
+  // v1.5.3 — no conversations yet → calm empty state instead of a 0% donut
+  if (total === 0) {
+    return (
+      <div className="flex size-44 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-800">
+        <span className="text-2xl font-semibold text-muted-foreground">—</span>
+        <span className="text-2xs text-muted-foreground">No data yet</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative size-44">
+
+      <svg
+        viewBox="0 0 180 180"
+        className="-rotate-90"
+      >
+
+        <circle
+          cx="90"
+          cy="90"
+          r="70"
+          stroke="currentColor"
+          strokeWidth="16"
+          fill="none"
+          className="text-slate-200 dark:text-slate-800"
+        />
+
+        <circle
+          cx="90"
+          cy="90"
+          r="70"
+          stroke="currentColor"
+          strokeWidth="16"
+          fill="none"
+          strokeDasharray={`${dash} ${circumference}`}
+          strokeLinecap="butt"
+          className="text-[var(--warn)]"
+        />
+
+      </svg>
+
+      <div className="absolute inset-0 grid place-items-center text-center">
+
+        <div>
+          <div className="text-2xl font-semibold">
+            {percentage}%
+          </div>
+
+          <div className="text-2xs text-muted-foreground">
+            Escalation rate
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* ============================================================
+   ESCALATION ROW
+============================================================ */
+
+export function GateTrendChart({
+  data,
+}: {
+  data: { day: string; answered: number; cautioned: number }[];
+}) {
+  // #9 — same nice-step treatment as the conversation chart.
+  const dataMax = Math.max(10, ...data.flatMap((d) => [d.answered, d.cautioned]));
+  const max = niceTickStep(dataMax / 4) * 4;
+
+  const width = 1000;
+  /* v1.6.70 — the plot was 200 tall on a 1000-wide viewBox, so at full page width the
+     chart alone was ~270px. The dashboard now has to fit one screen, and the card gives
+     this chart ~100px, so the viewBox is flatter (1000×130): it scales uniformly to fill
+     that box instead of being letterboxed down to half of it. */
+  const height = 130;
+  const left = 36;
+  const right = 12;
+  const top = 8;
+  const bottom = 20;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+
+  function pts(key: "answered" | "cautioned") {
+    return data
+      .map((d, i) => {
+        const x = left + (i / Math.max(1, data.length - 1)) * chartWidth;
+        const y = top + chartHeight - (d[key] / max) * chartHeight;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="mt-2 h-full w-full" preserveAspectRatio="xMidYMid meet">
+      {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+        <g key={f}>
+          <line
+            x1={left} x2={width - right}
+            y1={top + chartHeight - f * chartHeight}
+            y2={top + chartHeight - f * chartHeight}
+            stroke="currentColor" className="text-slate-200 dark:text-slate-800"
+            strokeWidth="1"
+          />
+          <text
+            x={left - 6}
+            y={top + chartHeight - f * chartHeight + 3}
+            textAnchor="end"
+            className="fill-slate-400 text-2xs"
+          >
+            {Math.round(f * max)}
+          </text>
+        </g>
+      ))}
+      <polyline
+        points={pts("answered")}
+        fill="none" stroke="#10b981" strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round"
+      />
+      <polyline
+        points={pts("cautioned")}
+        fill="none" stroke="#f59e0b" strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round"
+      />
+      {data.map((d, i) => {
+        const x = left + (i / Math.max(1, data.length - 1)) * chartWidth;
+        return (
+          <text
+            key={d.day}
+            x={x} y={height - 8}
+            textAnchor="middle"
+            className="fill-slate-400 text-2xs"
+          >
+            {d.day}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}

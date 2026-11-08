@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hybrid Search Architecture — pgvector + In-Memory BM25 + RRF</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot {
+      width: 12px; height: 12px;
+      background: #a78bfa;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.75rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.45rem; line-height: 1.45; }
+    .card strong { color: #e2e8f0; }
+    .footer { text-align: center; margin-top: 2rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Hybrid Search Engine Architecture — pgvector + BM25 + RRF</h1>
+      </div>
+      <p class="subtitle">Detailed technical topology: Parallel Semantic Vector Search (HNSW) &amp; Two-Tier Lexical BM25 Search with Reciprocal Rank Fusion &amp; Cross-Encoder Reranking</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1160 820" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrow-slate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- =================================================================
+             ZONE 1: QUERY PRE-PROCESSING & DUAL DISPATCH
+             ================================================================= -->
+        <rect x="25" y="40" width="220" height="420" rx="10" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="37" y="62" fill="#22d3ee" font-size="10" font-weight="700">1. QUERY INGEST &amp; DISPATCH</text>
+
+        <!-- User Query -->
+        <rect x="40" y="80" width="190" height="65" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="80" width="190" height="65" rx="6" fill="rgba(30, 41, 59, 0.6)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="135" y="103" fill="white" font-size="11" font-weight="600" text-anchor="middle">User Input Query</text>
+        <text x="135" y="121" fill="#22d3ee" font-size="8" text-anchor="middle">"cisco switch firmware upgrade"</text>
+        <text x="135" y="133" fill="#94a3b8" font-size="7.5" text-anchor="middle">Desktop / SSE Stream API</text>
+
+        <!-- Guardrails -->
+        <rect x="40" y="170" width="190" height="65" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="170" width="190" height="65" rx="6" fill="rgba(136, 19, 55, 0.35)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="135" y="193" fill="white" font-size="11" font-weight="600" text-anchor="middle">Input Guardrails</text>
+        <text x="135" y="210" fill="#fb7185" font-size="8" text-anchor="middle">Injection / Toxic / Overflow</text>
+        <text x="135" y="222" fill="#94a3b8" font-size="7.5" text-anchor="middle">Deterministic Policy Check</text>
+
+        <!-- Arrow Query to Guardrails -->
+        <line x1="135" y1="145" x2="135" y2="168" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+        <!-- Query Rewriter -->
+        <rect x="40" y="260" width="190" height="75" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="260" width="190" height="75" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="135" y="283" fill="white" font-size="11" font-weight="600" text-anchor="middle">Query Rewriter</text>
+        <text x="135" y="300" fill="#22d3ee" font-size="8" text-anchor="middle">• Strip Noise &amp; Punctuation</text>
+        <text x="135" y="313" fill="#22d3ee" font-size="8" text-anchor="middle">• Follow-Up Context Carry</text>
+        <text x="135" y="325" fill="#94a3b8" font-size="7.5" text-anchor="middle">Self-Contained Search Term</text>
+
+        <!-- Arrow Guardrail to Rewriter -->
+        <line x1="135" y1="235" x2="135" y2="258" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+
+        <!-- Dispatch Hub -->
+        <rect x="40" y="360" width="190" height="85" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="40" y="360" width="190" height="85" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="135" y="382" fill="white" font-size="11" font-weight="600" text-anchor="middle">Dual-Branch Dispatch</text>
+        <text x="135" y="400" fill="#fbbf24" font-size="8" text-anchor="middle">Parallel Asynchronous Search</text>
+        <text x="135" y="416" fill="#a78bfa" font-size="7.5" text-anchor="middle">Branch A: Semantic Embedding</text>
+        <text x="135" y="430" fill="#34d399" font-size="7.5" text-anchor="middle">Branch B: Lexical Tokenization</text>
+
+        <!-- Arrow Rewriter to Dispatch -->
+        <line x1="135" y1="335" x2="135" y2="358" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- =================================================================
+             BRANCH A (TOP): SEMANTIC VECTOR SEARCH (pgvector + HNSW)
+             ================================================================= -->
+        <rect x="290" y="40" width="370" height="300" rx="10" fill="rgba(76, 29, 149, 0.12)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="305" y="62" fill="#a78bfa" font-size="10" font-weight="700">BRANCH A: DENSE SEMANTIC SEARCH (pgvector)</text>
+
+        <!-- Ollama Embedding -->
+        <rect x="310" y="80" width="150" height="100" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="310" y="80" width="150" height="100" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="385" y="103" fill="white" font-size="11" font-weight="600" text-anchor="middle">Dense Embedding</text>
+        <text x="385" y="120" fill="#34d399" font-size="8.5" font-weight="600" text-anchor="middle">nomic-embed-text</text>
+        <text x="385" y="137" fill="#94a3b8" font-size="8" text-anchor="middle">Local Ollama :11434</text>
+        <text x="385" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">Vector Dim = 768</text>
+        <text x="385" y="169" fill="#34d399" font-size="7.5" text-anchor="middle">Query Vector [float32]</text>
+
+        <!-- Dispatch to Embedding -->
+        <path d="M 230 380 L 260 380 Q 275 380 275 250 L 275 130 L 308 130" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <text x="280" y="240" fill="#a78bfa" font-size="7.5" transform="rotate(-90 280 240)" text-anchor="middle">Query Text</text>
+
+        <!-- PostgreSQL pgvector Instance -->
+        <rect x="490" y="80" width="155" height="235" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="490" y="80" width="155" height="235" rx="6" fill="rgba(76, 29, 149, 0.45)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="567" y="103" fill="white" font-size="11" font-weight="600" text-anchor="middle">PostgreSQL 16.4</text>
+        <text x="567" y="119" fill="#a78bfa" font-size="8.5" font-weight="600" text-anchor="middle">CNPG HA + pgvector 0.8.0</text>
+        
+        <rect x="500" y="132" width="135" height="85" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="567" y="150" fill="#e2e8f0" font-size="8.5" font-weight="600" text-anchor="middle">HNSW Cosine Index</text>
+        <text x="567" y="165" fill="#94a3b8" font-size="7.5" text-anchor="middle">Distance Op: &lt;=&gt; (Cosine)</text>
+        <text x="567" y="179" fill="#94a3b8" font-size="7.5" text-anchor="middle">m=16, ef_const=64</text>
+        <text x="567" y="193" fill="#34d399" font-size="7.5" text-anchor="middle">Runtime ef_search=64</text>
+        <text x="567" y="207" fill="#22d3ee" font-size="7" text-anchor="middle">Fast Approximate Neighbor</text>
+
+        <rect x="500" y="228" width="135" height="75" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#34d399" stroke-width="1"/>
+        <text x="567" y="246" fill="#34d399" font-size="8" font-weight="600" text-anchor="middle">Vector Output</text>
+        <text x="567" y="262" fill="#94a3b8" font-size="7.5" text-anchor="middle">Top-K Candidate Chunks</text>
+        <text x="567" y="276" fill="#94a3b8" font-size="7.5" text-anchor="middle">Rank: 1, 2, ... N</text>
+        <text x="567" y="292" fill="#34d399" font-size="7.5" text-anchor="middle">Cosine Dist: 0.12 ~ 0.45</text>
+
+        <!-- Arrow Embedding to Postgres -->
+        <line x1="460" y1="130" x2="488" y2="130" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <text x="474" y="122" fill="#94a3b8" font-size="7" text-anchor="middle">[768]</text>
+
+        <!-- =================================================================
+             BRANCH B (BOTTOM): TWO-TIER LEXICAL SEARCH (BM25 + FTS FALLBACK)
+             ================================================================= -->
+        <rect x="290" y="370" width="370" height="340" rx="10" fill="rgba(6, 78, 59, 0.12)" stroke="#34d399" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="305" y="392" fill="#34d399" font-size="10" font-weight="700">BRANCH B: TWO-TIER LEXICAL KEYWORD SEARCH</text>
+
+        <!-- Tier 1: In-Memory BM25Okapi -->
+        <rect x="310" y="415" width="330" height="135" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="310" y="415" width="330" height="135" rx="6" fill="rgba(6, 78, 59, 0.45)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="475" y="438" fill="white" font-size="11.5" font-weight="600" text-anchor="middle">Tier 1 (Primary): In-Memory BM25Okapi Index</text>
+        <text x="475" y="455" fill="#34d399" font-size="9" font-weight="600" text-anchor="middle">Python Application Layer (rank_bm25 Singleton)</text>
+
+        <rect x="325" y="468" width="140" height="68" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#34d399" stroke-width="0.8"/>
+        <text x="395" y="485" fill="#e2e8f0" font-size="8" font-weight="600" text-anchor="middle">Algorithm Tuning</text>
+        <text x="395" y="499" fill="#94a3b8" font-size="7.5" text-anchor="middle">• k1=1.5 (Term Saturation)</text>
+        <text x="395" y="513" fill="#94a3b8" font-size="7.5" text-anchor="middle">• b=0.75 (Doc Length Norm)</text>
+        <text x="395" y="527" fill="#34d399" font-size="7" text-anchor="middle">Latencies: &lt; 1.5ms (Sub-ms)</text>
+
+        <rect x="480" y="468" width="145" height="68" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#34d399" stroke-width="0.8"/>
+        <text x="552" y="485" fill="#e2e8f0" font-size="8" font-weight="600" text-anchor="middle">Thread-Safe Memory</text>
+        <text x="552" y="499" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Preloaded from Postgres</text>
+        <text x="552" y="513" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Auto-Invalidate on Ingest</text>
+        <text x="552" y="527" fill="#22d3ee" font-size="7" text-anchor="middle">Memory Footprint: &lt; 15MB</text>
+
+        <!-- Dispatch to BM25 -->
+        <line x1="230" y1="420" x2="308" y2="445" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="270" y="445" fill="#34d399" font-size="7.5">Tokenized</text>
+
+        <!-- Tier 2: PostgreSQL FTS Fallback -->
+        <rect x="310" y="580" width="330" height="110" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="310" y="580" width="330" height="110" rx="6" fill="rgba(30, 41, 59, 0.6)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="475" y="603" fill="white" font-size="11" font-weight="600" text-anchor="middle">Tier 2 (Fallback): PostgreSQL GIN Full-Text Search</text>
+        <text x="475" y="620" fill="#94a3b8" font-size="8.5" text-anchor="middle">Triggered if BM25 uninitialized or cold start</text>
+
+        <rect x="325" y="630" width="300" height="48" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#94a3b8" stroke-width="0.8"/>
+        <text x="475" y="647" fill="#e2e8f0" font-size="8" text-anchor="middle">SQL: SELECT document, cmetadata FROM langchain_pg_embedding</text>
+        <text x="475" y="663" fill="#a78bfa" font-size="7.5" text-anchor="middle">WHERE tsv @@ websearch_to_tsquery('english', :query) LIMIT :k</text>
+
+        <!-- Fallback arrow from Tier 1 to Tier 2 -->
+        <line x1="475" y1="550" x2="475" y2="578" stroke="#fb7185" stroke-width="1.2" stroke-dasharray="4,4" marker-end="url(#arrow-rose)"/>
+        <text x="485" y="566" fill="#fb7185" font-size="7">If Empty/Cold</text>
+
+        <!-- =================================================================
+             ZONE 3: RECIPROCAL RANK FUSION (RRF)
+             ================================================================= -->
+        <rect x="700" y="160" width="200" height="380" rx="10" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="712" y="182" fill="#fbbf24" font-size="10" font-weight="700">3. RRF FUSION ENGINE</text>
+
+        <rect x="715" y="200" width="170" height="320" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="715" y="200" width="170" height="320" rx="8" fill="rgba(120, 53, 15, 0.4)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="800" y="224" fill="white" font-size="11" font-weight="600" text-anchor="middle">RRF Reciprocal Rank</text>
+        <text x="800" y="240" fill="#fbbf24" font-size="9" font-weight="600" text-anchor="middle">Fusion Formula (k=60)</text>
+
+        <rect x="725" y="255" width="150" height="60" rx="4" fill="rgba(15, 23, 42, 0.9)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="800" y="275" fill="#fbbf24" font-size="8" font-weight="600" text-anchor="middle">RRF Score Calculation</text>
+        <text x="800" y="293" fill="#e2e8f0" font-size="8.5" text-anchor="middle">RRF = Σ 1 / (60 + Rank)</text>
+        <text x="800" y="306" fill="#94a3b8" font-size="7" text-anchor="middle">Dense Vector + Lexical BM25</text>
+
+        <rect x="725" y="325" width="150" height="85" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#34d399" stroke-width="0.8"/>
+        <text x="800" y="343" fill="#34d399" font-size="8" font-weight="600" text-anchor="middle">Fusion Benefits</text>
+        <text x="800" y="359" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Semantic Context (Concepts)</text>
+        <text x="800" y="373" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Exact IDs / Error Codes</text>
+        <text x="800" y="387" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Cisco Models &amp; Hostnames</text>
+        <text x="800" y="401" fill="#34d399" font-size="7" text-anchor="middle">Zero Single-Point-Of-Failure</text>
+
+        <rect x="725" y="420" width="150" height="85" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#a78bfa" stroke-width="0.8"/>
+        <text x="800" y="440" fill="#a78bfa" font-size="8" font-weight="600" text-anchor="middle">Candidate Pool</text>
+        <text x="800" y="458" fill="#e2e8f0" font-size="8" text-anchor="middle">Trim to Top Candidates</text>
+        <text x="800" y="474" fill="#94a3b8" font-size="7.5" text-anchor="middle">N = max(15, k * 3)</text>
+        <text x="800" y="492" fill="#fbbf24" font-size="7.5" text-anchor="middle">Ordered by Combined Score</text>
+
+        <!-- Arrow Branch A to RRF -->
+        <path d="M 645 200 L 675 200 Q 690 200 690 280 L 713 280" fill="none" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
+        <text x="675" y="190" fill="#a78bfa" font-size="7.5">Vector Ranks</text>
+
+        <!-- Arrow Branch B to RRF -->
+        <path d="M 640 470 L 675 470 Q 690 470 690 380 L 713 380" fill="none" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+        <text x="675" y="482" fill="#34d399" font-size="7.5">BM25 Ranks</text>
+
+        <!-- =================================================================
+             ZONE 4: CROSS-ENCODER RERANK & GATE
+             ================================================================= -->
+        <rect x="940" y="160" width="195" height="380" rx="10" fill="rgba(136, 19, 55, 0.15)" stroke="#fb7185" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="952" y="182" fill="#fb7185" font-size="10" font-weight="700">4. RERANK &amp; GATE</text>
+
+        <rect x="955" y="200" width="165" height="150" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="955" y="200" width="165" height="150" rx="8" fill="rgba(120, 53, 15, 0.45)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="1037" y="223" fill="white" font-size="11" font-weight="600" text-anchor="middle">BGE Cross-Encoder</text>
+        <text x="1037" y="239" fill="#fbbf24" font-size="8.5" font-weight="600" text-anchor="middle">bge-reranker-base</text>
+        <text x="1037" y="259" fill="#94a3b8" font-size="7.5" text-anchor="middle">In-Cluster: rerank-svc :8080</text>
+        <text x="1037" y="273" fill="#94a3b8" font-size="7.5" text-anchor="middle">Full Cross-Attention Pairing:</text>
+        <text x="1037" y="287" fill="#e2e8f0" font-size="7.5" text-anchor="middle">[Query, Document Chunk]</text>
+        <text x="1037" y="303" fill="#94a3b8" font-size="7.5" text-anchor="middle">Outputs Sigmoid Logits</text>
+        <text x="1037" y="323" fill="#34d399" font-size="8" font-weight="600" text-anchor="middle">Trim to Top-K (5 Chunks)</text>
+
+        <!-- Confidence Gate -->
+        <rect x="955" y="375" width="165" height="145" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="955" y="375" width="165" height="145" rx="8" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="1037" y="398" fill="white" font-size="11" font-weight="600" text-anchor="middle">Confidence Gate</text>
+        <text x="1037" y="416" fill="#fb7185" font-size="8.5" font-weight="600" text-anchor="middle">Threshold = 0.75</text>
+        <text x="1037" y="438" fill="#34d399" font-size="7.5" text-anchor="middle">&gt;= 0.75: Confirmed Grounding</text>
+        <text x="1037" y="454" fill="#22d3ee" font-size="7.5" text-anchor="middle">──► Direct LCEL Prompt</text>
+        <text x="1037" y="478" fill="#fb7185" font-size="7.5" text-anchor="middle">&lt; 0.75: Caution State</text>
+        <text x="1037" y="494" fill="#fbbf24" font-size="7.5" text-anchor="middle">──► Rejection / HITL Ticket</text>
+
+        <!-- Arrow RRF to Reranker -->
+        <line x1="885" y1="275" x2="953" y2="275" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#arrow-amber)"/>
+
+        <!-- Arrow Reranker to Gate -->
+        <line x1="1037" y1="350" x2="1037" y2="373" stroke="#fb7185" stroke-width="1.5" marker-end="url(#arrow-rose)"/>
+
+        <!-- Arrow Gate out to LLM Synthesis -->
+        <path d="M 1037 520 L 1037 620 L 980 620" fill="none" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
+        <text x="1037" y="580" fill="#22d3ee" font-size="8" text-anchor="middle">Verified Context</text>
+
+        <!-- FINAL DESTINATION: PROMPT & LLM -->
+        <rect x="740" y="580" width="235" height="85" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="740" y="580" width="235" height="85" rx="8" fill="rgba(8, 51, 68, 0.45)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="857" y="605" fill="white" font-size="11" font-weight="600" text-anchor="middle">Prompt Synthesis &amp; LLM Stream</text>
+        <text x="857" y="623" fill="#22d3ee" font-size="8.5" text-anchor="middle">Assembled Grounded Context Chunks</text>
+        <text x="857" y="639" fill="#94a3b8" font-size="7.5" text-anchor="middle">Primary OpenRouter (Cloud) ─► Fallback Ollama (Local)</text>
+        <text x="857" y="653" fill="#34d399" font-size="7.5" text-anchor="middle">Delivered via SSE Token Stream to UI</text>
+
+        <!-- =================================================================
+             BOTTOM LEGEND
+             ================================================================= -->
+        <rect x="25" y="745" width="1110" height="40" rx="6" fill="rgba(15, 23, 42, 0.85)" stroke="#1e293b" stroke-width="1"/>
+        
+        <rect x="40" y="760" width="14" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="60" y="768" fill="#94a3b8" font-size="8">Query &amp; Ingest (Preprocessing)</text>
+
+        <rect x="250" y="760" width="14" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="270" y="768" fill="#94a3b8" font-size="8">pgvector HNSW Cosine (Dense)</text>
+
+        <rect x="470" y="760" width="14" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="490" y="768" fill="#94a3b8" font-size="8">In-Memory BM25Okapi (Lexical)</text>
+
+        <rect x="690" y="760" width="14" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="710" y="768" fill="#94a3b8" font-size="8">RRF Fusion &amp; BGE Reranker</text>
+
+        <rect x="920" y="760" width="14" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="940" y="768" fill="#94a3b8" font-size="8">Confidence Gate &amp; Security</text>
+      </svg>
+    </div>
+
+    <!-- Technical Summary Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Branch A: Dense Vector (pgvector)</h3>
+        </div>
+        <ul>
+          <li>• <strong>Model:</strong> Local Ollama <code>nomic-embed-text</code> (768 Dimensions, float32).</li>
+          <li>• <strong>Storage Engine:</strong> PostgreSQL 16.4 CNPG Cluster (3 HA instances on iSCSI).</li>
+          <li>• <strong>HNSW Parameters:</strong> <code>m=16</code>, <code>ef_construction=64</code>, <code>ef_search=64</code>.</li>
+          <li>• <strong>Strength:</strong> Semantic similarity, synonym matching, conceptual alignment.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Branch B: Two-Tier Lexical (BM25)</h3>
+        </div>
+        <ul>
+          <li>• <strong>Tier 1 (Primary):</strong> In-Memory <code>BM25Okapi</code> (Python singleton, &lt;1.5ms latency).</li>
+          <li>• <strong>Tier 2 (Fallback):</strong> PostgreSQL <code>tsvector</code> GIN index (English websearch).</li>
+          <li>• <strong>Tuning:</strong> <code>k1=1.5</code> (saturation), <code>b=0.75</code> (length normalization).</li>
+          <li>• <strong>Strength:</strong> Exact hostnames, serial numbers, error codes, Cisco models.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>RRF Fusion &amp; BGE Reranker</h3>
+        </div>
+        <ul>
+          <li>• <strong>RRF Scoring:</strong> <code>1 / (60 + rank_vec) + 1 / (60 + rank_bm25)</code>.</li>
+          <li>• <strong>Reranker:</strong> <code>bge-reranker-base</code> (Remote service, cross-attention scoring).</li>
+          <li>• <strong>Confidence Gate:</strong> Threshold 0.75 enforces anti-hallucination guard.</li>
+          <li>• <strong>Dual LLM:</strong> Cloud OpenRouter (15s timeout) ─► Local Llama 3.2 1B fallback.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      RAG Chatbot Platform • Hybrid Search &amp; Retrieval Architecture Specification • drlinuxer-prod
+    </p>
+  </div>
+</body>
+</html>

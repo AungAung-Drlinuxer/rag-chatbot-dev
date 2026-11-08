@@ -1,0 +1,39 @@
+# IT Help Chatbot dev stack.
+# The database password is NOT stored here: export POSTGRES_PASSWORD (or put it in an
+# untracked .env) before `docker compose -f docker-compose.dev.yml up`, and use the same
+# value in DATABASE_URL for the backend. NOTE: `name:` gives an ISOLATED project (container/volume/
+# network namespaced `it-help-chatbot-*`) so it cannot collide with onprem-ai-assistant.
+name: it-help-chatbot
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your shell or a local .env}
+      POSTGRES_DB: assistant
+    ports:
+      - "55433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4.11-alpine3.21
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  pgdata: {}
+  redisdata: {}

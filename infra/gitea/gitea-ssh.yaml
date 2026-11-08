@@ -1,0 +1,20 @@
+# Gitea SSH as a dedicated LoadBalancer service (B-3 follow-up).
+# MetalLB lan-pool assigns the next free IP (10.10.10.200-205 range).
+# DNS: gitssh.drlinuxer.com -> 10.10.10.201 (registered). Clone URL:
+#   git clone git@gitssh.drlinuxer.com:ragchatbot/ragchatbot.git   (port 22)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea-ssh
+  namespace: gitea
+  annotations:
+    metallb.io/allow-shared-ip: ""   # dedicated IP, do not share with ingress
+spec:
+  type: LoadBalancer
+  selector: { app: gitea }
+  ports:
+    - name: ssh
+      port: 22          # standard git-over-ssh port on the LB IP
+      targetPort: 22    # gitea container ssh (START_SSH_SERVER, SSH_LISTEN_PORT=22)
+      protocol: TCP

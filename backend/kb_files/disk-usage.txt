@@ -1,0 +1,10 @@
+Troubleshooting: server disk usage above 85%
+
+Steps to investigate and free space on a Linux server.
+
+- `df -h` — which mount is high? (checked from `kb_files/runbooks`)
+- `du -sh /var/log /var/tmp /tmp` — largest offenders
+- Remove old rotated logs; `journalctl --vacuum-size=200M`
+- Find large files: `find / -type f -size +500M 2>/dev/null`
+- Empty temp: `rm -rf /tmp/* /var/tmp/*` (careful — only transient data)
+- **New (v2):** check deleted-but-open files: `lsof +L1 | grep -v COMMAND`

@@ -1,0 +1,26 @@
+[package]
+name = "it-help-chatbot-desktop"
+version = "0.1.0"
+description = "IT Help Chatbot desktop shell (Tauri 2)"
+edition = "2021"
+
+[lib]
+name = "it_help_chatbot_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# OS keychain/jwk storage for JWT tokens (Phase 5 groundwork)
+keyring = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -1,0 +1,59 @@
+# Domain vocabulary — configuration-driven (Matrix rule: no hardcoded vocab in python)
+# classifier.py loads this at import; editing keywords requires no code change.
+lockdown_domain: general
+stage1_confidence: 0.7
+
+domains:
+  database:
+    - database
+    - postgres
+    - oracle
+    - sql
+    - ora-
+    - timeout
+    - connection refused
+    - disk full
+    - backup
+    - slow query
+    - deadlock
+    - replication
+    - pool exhaust
+    - vacuum
+    - wal
+  network:
+    - network
+    - internet
+    - dns
+    - wifi
+    - firewall
+    - vpn
+    - no internet
+    - speed
+    - connectivity
+    - ip
+    - interface
+    - eth0
+    - gateway
+    - proxy
+    - ntp
+    - chrony
+    - latency
+    - route
+    - traceroute
+    - ping
+  security:
+    - security
+    - password
+    - unauthorized
+    - access denied
+    - permission
+    - account
+    - 2fa
+    - mfa
+    - lockout
+    - phishing
+    - suspicious
+    - breach
+    - certificate
+    - tls
+    - ssl

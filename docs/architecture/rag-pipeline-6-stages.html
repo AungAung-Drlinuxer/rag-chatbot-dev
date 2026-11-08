@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise RAG Pipeline - 6 Stages Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot {
+      width: 12px; height: 12px;
+      background: #22d3ee;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.75rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.45rem; line-height: 1.4; }
+    .card strong { color: #e2e8f0; }
+    .footer { text-align: center; margin-top: 2rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Enterprise RAG Pipeline — 6 Core Stages Architecture</h1>
+      </div>
+      <p class="subtitle">Complete technical workflow: Ingestion, Embedding, Hybrid Vector Search, Cross-Encoder Rerank, Prompt Synthesis, and LLM Generation with Fallback</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1150 780" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <marker id="arrow-slate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- STAGE 1: INGESTION & CHUNKING -->
+        <rect x="20" y="30" width="160" height="270" rx="10" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="32" y="52" fill="#22d3ee" font-size="10" font-weight="700">STAGE 1: INGESTION</text>
+
+        <!-- KB Sources -->
+        <rect x="35" y="70" width="130" height="85" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="35" y="70" width="130" height="85" rx="6" fill="rgba(30, 41, 59, 0.6)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="100" y="90" fill="white" font-size="11" font-weight="600" text-anchor="middle">KB Sources</text>
+        <text x="100" y="108" fill="#94a3b8" font-size="8" text-anchor="middle">• Confluence KB</text>
+        <text x="100" y="122" fill="#94a3b8" font-size="8" text-anchor="middle">• OpenProject Wiki</text>
+        <text x="100" y="136" fill="#94a3b8" font-size="8" text-anchor="middle">• XWiki &amp; Manual</text>
+
+        <!-- Chunking Engine -->
+        <rect x="35" y="195" width="130" height="80" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="35" y="195" width="130" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="100" y="217" fill="white" font-size="11" font-weight="600" text-anchor="middle">Text Chunker</text>
+        <text x="100" y="235" fill="#22d3ee" font-size="8" text-anchor="middle">chunk_tokens = 800</text>
+        <text x="100" y="249" fill="#94a3b8" font-size="8" text-anchor="middle">overlap = 10% (80tok)</text>
+        <text x="100" y="263" fill="#64748b" font-size="7.5" text-anchor="middle">Clean Text Chunks</text>
+
+        <line x1="100" y1="155" x2="100" y2="193" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="105" y="177" fill="#94a3b8" font-size="7.5">Raw Docs</text>
+
+        <!-- STAGE 2: EMBEDDING -->
+        <rect x="215" y="30" width="160" height="270" rx="10" fill="rgba(6, 78, 59, 0.15)" stroke="#34d399" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="227" y="52" fill="#34d399" font-size="10" font-weight="700">STAGE 2: EMBEDDING</text>
+
+        <!-- Ollama Embed Service -->
+        <rect x="230" y="100" width="130" height="135" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="230" y="100" width="130" height="135" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="295" y="124" fill="white" font-size="11" font-weight="600" text-anchor="middle">Embedding Model</text>
+        <text x="295" y="142" fill="#34d399" font-size="9" font-weight="600" text-anchor="middle">nomic-embed-text</text>
+        <text x="295" y="162" fill="#94a3b8" font-size="8" text-anchor="middle">• 768 Dimensions</text>
+        <text x="295" y="177" fill="#94a3b8" font-size="8" text-anchor="middle">• Local On-Premise</text>
+        <text x="295" y="192" fill="#94a3b8" font-size="8" text-anchor="middle">• Ollama Service</text>
+        <text x="295" y="216" fill="#34d399" font-size="7.5" text-anchor="middle">float32 Vector[768]</text>
+
+        <!-- Arrow from Stage 1 to Stage 2 -->
+        <line x1="165" y1="235" x2="228" y2="175" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="195" y="210" fill="#94a3b8" font-size="7.5" text-anchor="middle">Chunks</text>
+
+        <!-- STAGE 3: VECTOR DB (HYBRID pgvector) -->
+        <rect x="410" y="30" width="190" height="420" rx="10" fill="rgba(76, 29, 149, 0.15)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="422" y="52" fill="#a78bfa" font-size="10" font-weight="700">STAGE 3: VECTOR DB</text>
+
+        <!-- PostgreSQL + pgvector box -->
+        <rect x="425" y="70" width="160" height="200" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="425" y="70" width="160" height="200" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="505" y="94" fill="white" font-size="11" font-weight="600" text-anchor="middle">PostgreSQL 16.4</text>
+        <text x="505" y="110" fill="#a78bfa" font-size="9" font-weight="600" text-anchor="middle">pgvector 0.8.0 HA</text>
+        
+        <rect x="435" y="125" width="140" height="60" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#a78bfa" stroke-width="0.8"/>
+        <text x="505" y="142" fill="#e2e8f0" font-size="8.5" font-weight="600" text-anchor="middle">HNSW Cosine Index</text>
+        <text x="505" y="156" fill="#94a3b8" font-size="7.5" text-anchor="middle">m=16, ef_const=64</text>
+        <text x="505" y="170" fill="#a78bfa" font-size="7.5" text-anchor="middle">ANN Fast Search</text>
+
+        <rect x="435" y="195" width="140" height="60" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#a78bfa" stroke-width="0.8"/>
+        <text x="505" y="212" fill="#e2e8f0" font-size="8.5" font-weight="600" text-anchor="middle">GIN Keyword Index</text>
+        <text x="505" y="226" fill="#94a3b8" font-size="7.5" text-anchor="middle">tsvector @@ tsquery</text>
+        <text x="505" y="240" fill="#a78bfa" font-size="7.5" text-anchor="middle">Full-Text Search (FTS)</text>
+
+        <!-- RRF Fusion Engine -->
+        <rect x="425" y="300" width="160" height="130" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="425" y="300" width="160" height="130" rx="8" fill="rgba(76, 29, 149, 0.5)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="505" y="324" fill="white" font-size="11" font-weight="600" text-anchor="middle">RRF Fusion</text>
+        <text x="505" y="342" fill="#a78bfa" font-size="8.5" text-anchor="middle">Reciprocal Rank Fusion</text>
+        <text x="505" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">Score: 1/(60 + rank)</text>
+        <text x="505" y="380" fill="#94a3b8" font-size="8" text-anchor="middle">Blends Vector + Keyword</text>
+        <text x="505" y="405" fill="#34d399" font-size="8.5" font-weight="600" text-anchor="middle">Top Candidates (N=15)</text>
+
+        <!-- Arrow Embedding to Vector DB -->
+        <line x1="360" y1="170" x2="423" y2="170" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <text x="392" y="162" fill="#94a3b8" font-size="7.5" text-anchor="middle">Vector Ingest</text>
+
+        <!-- Arrow Inside DB to RRF -->
+        <line x1="505" y1="270" x2="505" y2="298" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+
+        <!-- STAGE 4: RERANKER & CONFIDENCE GATE -->
+        <rect x="635" y="30" width="160" height="420" rx="10" fill="rgba(120, 53, 15, 0.15)" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="647" y="52" fill="#fbbf24" font-size="10" font-weight="700">STAGE 4: RERANKER</text>
+
+        <!-- BGE Reranker -->
+        <rect x="650" y="100" width="130" height="135" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="650" y="100" width="130" height="135" rx="6" fill="rgba(120, 53, 15, 0.4)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="715" y="124" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cross-Encoder</text>
+        <text x="715" y="142" fill="#fbbf24" font-size="9" font-weight="600" text-anchor="middle">bge-reranker-base</text>
+        <text x="715" y="162" fill="#94a3b8" font-size="8" text-anchor="middle">• Semantic Re-scoring</text>
+        <text x="715" y="177" fill="#94a3b8" font-size="8" text-anchor="middle">• Cross-Attention</text>
+        <text x="715" y="192" fill="#94a3b8" font-size="8" text-anchor="middle">• rerank-svc :8080</text>
+        <text x="715" y="216" fill="#fbbf24" font-size="7.5" text-anchor="middle">Filtered Top-K Chunks</text>
+
+        <!-- Confidence Gate -->
+        <rect x="650" y="280" width="130" height="130" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="650" y="280" width="130" height="130" rx="6" fill="rgba(136, 19, 55, 0.3)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="715" y="304" fill="white" font-size="11" font-weight="600" text-anchor="middle">Confidence Gate</text>
+        <text x="715" y="322" fill="#fb7185" font-size="8.5" font-weight="600" text-anchor="middle">Threshold = 0.75</text>
+        <text x="715" y="342" fill="#94a3b8" font-size="8" text-anchor="middle">&gt;= 0.75 : Answer (Direct)</text>
+        <text x="715" y="358" fill="#94a3b8" font-size="8" text-anchor="middle">&lt; 0.75 : Caution Policy</text>
+        <text x="715" y="385" fill="#34d399" font-size="7.5" text-anchor="middle">Hallucination Guard</text>
+
+        <!-- Arrow RRF to Reranker -->
+        <path d="M 585 365 L 615 365 Q 630 365 630 250 L 630 170 L 648 170" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- Arrow Reranker to Gate -->
+        <line x1="715" y1="235" x2="715" y2="278" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-amber)"/>
+
+        <!-- STAGE 5: PROMPT TEMPLATE -->
+        <rect x="830" y="30" width="140" height="420" rx="10" fill="rgba(8, 51, 68, 0.15)" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="842" y="52" fill="#22d3ee" font-size="10" font-weight="700">STAGE 5: PROMPT</text>
+
+        <rect x="845" y="100" width="110" height="310" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="845" y="100" width="110" height="310" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="900" y="124" fill="white" font-size="11" font-weight="600" text-anchor="middle">Prompt Builder</text>
+        <text x="900" y="144" fill="#22d3ee" font-size="8.5" text-anchor="middle">LCEL System</text>
+        <text x="900" y="170" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Role: IT Assistant</text>
+        <text x="900" y="188" fill="#94a3b8" font-size="7.5" text-anchor="middle">• KB = Data Only</text>
+        <text x="900" y="206" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Table Rule Formats</text>
+        <text x="900" y="224" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Match Language</text>
+        <text x="900" y="242" fill="#94a3b8" font-size="7.5" text-anchor="middle">• Source Citations</text>
+        
+        <rect x="855" y="270" width="90" height="120" rx="4" fill="rgba(15, 23, 42, 0.8)" stroke="#22d3ee" stroke-width="0.8"/>
+        <text x="900" y="292" fill="#22d3ee" font-size="8" font-weight="600" text-anchor="middle">Assembled</text>
+        <text x="900" y="310" fill="#94a3b8" font-size="7" text-anchor="middle">[SYSTEM PROMPT]</text>
+        <text x="900" y="328" fill="#34d399" font-size="7" text-anchor="middle">+ [CONTEXT CHUNKS]</text>
+        <text x="900" y="346" fill="#fbbf24" font-size="7" text-anchor="middle">+ [USER QUERY]</text>
+        <text x="900" y="368" fill="#a78bfa" font-size="6.5" text-anchor="middle">Single LCEL Chain</text>
+
+        <!-- Arrow Gate to Prompt -->
+        <line x1="780" y1="345" x2="843" y2="345" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="812" y="337" fill="#94a3b8" font-size="7.5" text-anchor="middle">Passed</text>
+
+        <!-- STAGE 6: LLM & FAILOVER -->
+        <rect x="1000" y="30" width="135" height="420" rx="10" fill="rgba(6, 78, 59, 0.15)" stroke="#34d399" stroke-width="1.2" stroke-dasharray="6,3"/>
+        <text x="1008" y="52" fill="#34d399" font-size="9" font-weight="700">STAGE 6: LLM</text>
+
+        <!-- Primary LLM -->
+        <rect x="1012" y="100" width="112" height="135" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="1012" y="100" width="112" height="135" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1068" y="122" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Primary LLM</text>
+        <text x="1068" y="138" fill="#34d399" font-size="8.5" font-weight="600" text-anchor="middle">H-Chat / Cloud</text>
+        <text x="1068" y="158" fill="#94a3b8" font-size="7.5" text-anchor="middle">OpenRouter API</text>
+        <text x="1068" y="172" fill="#94a3b8" font-size="7.5" text-anchor="middle">Gemini / DeepSeek</text>
+        <text x="1068" y="190" fill="#fbbf24" font-size="7.5" text-anchor="middle">Timeout = 15.0s</text>
+        <text x="1068" y="214" fill="#34d399" font-size="7.5" text-anchor="middle">High Performance</text>
+
+        <!-- Failover Arrow -->
+        <line x1="1068" y1="235" x2="1068" y2="278" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrow-rose)"/>
+        <text x="1075" y="258" fill="#fb7185" font-size="7">Failover</text>
+
+        <!-- Fallback LLM -->
+        <rect x="1012" y="280" width="112" height="130" rx="6" fill="#0f172a" stroke="none"/>
+        <rect x="1012" y="280" width="112" height="130" rx="6" fill="rgba(136, 19, 55, 0.3)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="1068" y="302" fill="white" font-size="10" font-weight="600" text-anchor="middle">Fallback LLM</text>
+        <text x="1068" y="318" fill="#fb7185" font-size="8.5" font-weight="600" text-anchor="middle">Llama 3.2 1B</text>
+        <text x="1068" y="338" fill="#94a3b8" font-size="7.5" text-anchor="middle">On-Premises Ollama</text>
+        <text x="1068" y="352" fill="#94a3b8" font-size="7.5" text-anchor="middle">Air-Gapped Resilient</text>
+        <text x="1068" y="368" fill="#94a3b8" font-size="7.5" text-anchor="middle">CPU Generation</text>
+        <text x="1068" y="392" fill="#fb7185" font-size="7.5" text-anchor="middle">Zero Cloud Dep</text>
+
+        <!-- Arrow Prompt to LLM -->
+        <line x1="955" y1="250" x2="1010" y2="170" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+
+        <!-- =================================================================
+             USER INTERACTION & CHATBOT CLIENT (LOWER SECTION)
+             ================================================================= -->
+        
+        <!-- User Box -->
+        <rect x="50" y="560" width="140" height="75" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="50" y="560" width="140" height="75" rx="8" fill="rgba(30, 41, 59, 0.6)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="120" y="586" fill="white" font-size="11" font-weight="600" text-anchor="middle">User / Browser</text>
+        <text x="120" y="604" fill="#22d3ee" font-size="8.5" text-anchor="middle">Question Input</text>
+        <text x="120" y="620" fill="#94a3b8" font-size="7.5" text-anchor="middle">Desktop / Web UI</text>
+
+        <!-- Input Guardrail -->
+        <rect x="240" y="560" width="150" height="75" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="240" y="560" width="150" height="75" rx="8" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="315" y="583" fill="white" font-size="11" font-weight="600" text-anchor="middle">Input Guardrails</text>
+        <text x="315" y="600" fill="#fb7185" font-size="8" text-anchor="middle">• Prompt Injection Block</text>
+        <text x="315" y="614" fill="#fb7185" font-size="8" text-anchor="middle">• Toxicity / Abuse Filter</text>
+        <text x="315" y="626" fill="#fb7185" font-size="7.5" text-anchor="middle">• Overflow Guard (4k chars)</text>
+
+        <!-- Arrow User to Guardrail -->
+        <line x1="190" y1="597" x2="238" y2="597" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="214" y="590" fill="#94a3b8" font-size="7.5" text-anchor="middle">Query</text>
+
+        <!-- Query Rewriter -->
+        <rect x="440" y="560" width="145" height="75" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="440" y="560" width="145" height="75" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="512" y="583" fill="white" font-size="11" font-weight="600" text-anchor="middle">Query Rewriter</text>
+        <text x="512" y="600" fill="#22d3ee" font-size="8" text-anchor="middle">• De-noise &amp; Normalize</text>
+        <text x="512" y="614" fill="#22d3ee" font-size="8" text-anchor="middle">• Follow-Up Subject Carry</text>
+        <text x="512" y="626" fill="#94a3b8" font-size="7.5" text-anchor="middle">Self-Contained Query</text>
+
+        <!-- Arrow Guardrail to Rewriter -->
+        <line x1="390" y1="597" x2="438" y2="597" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow-emerald)"/>
+        <text x="414" y="590" fill="#94a3b8" font-size="7.5" text-anchor="middle">Passed</text>
+
+        <!-- Arrow Rewriter up to Stage 2 (Query Vector) and Stage 3 (Keyword) -->
+        <path d="M 512 560 L 512 500 Q 512 470 380 470 L 300 470 L 300 240" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+        <text x="350" y="462" fill="#22d3ee" font-size="8">Query Embedding</text>
+
+        <path d="M 512 560 L 512 435" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-violet)"/>
+        <text x="525" y="455" fill="#a78bfa" font-size="7.5">Keyword Search</text>
+
+        <!-- STREAMING BACK TO CLIENT -->
+        <rect x="740" y="560" width="220" height="75" rx="8" fill="#0f172a" stroke="none"/>
+        <rect x="740" y="560" width="220" height="75" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="850" y="583" fill="white" font-size="11" font-weight="600" text-anchor="middle">SSE Streaming Response</text>
+        <text x="850" y="601" fill="#34d399" font-size="8.5" text-anchor="middle">HTTP EventStream (tokens + meta)</text>
+        <text x="850" y="617" fill="#94a3b8" font-size="7.5" text-anchor="middle">Grounded Answers &amp; Inline Citations</text>
+
+        <!-- Arrow LLM to SSE -->
+        <path d="M 1068 415 L 1068 520 Q 1068 597 965 597" fill="none" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+        <text x="1040" y="510" fill="#34d399" font-size="8">Tokens</text>
+
+        <!-- Arrow SSE back to User -->
+        <path d="M 740 610 L 650 610 Q 450 710 200 710 Q 120 710 120 640" fill="none" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
+        <text x="450" y="700" fill="#22d3ee" font-size="8.5" text-anchor="middle">Live Real-Time Stream to Desktop Chat Bubble</text>
+
+        <!-- =================================================================
+             LEGEND
+             ================================================================= -->
+        <rect x="30" y="735" width="1090" height="35" rx="6" fill="rgba(15, 23, 42, 0.8)" stroke="#1e293b" stroke-width="1"/>
+        
+        <rect x="45" y="747" width="12" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="63" y="756" fill="#94a3b8" font-size="8">Frontend / Ingestion / Prompt</text>
+
+        <rect x="235" y="747" width="12" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="253" y="756" fill="#94a3b8" font-size="8">Embedding / Primary LLM / Stream</text>
+
+        <rect x="470" y="747" width="12" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="488" y="756" fill="#94a3b8" font-size="8">PostgreSQL + pgvector (HNSW/GIN)</text>
+
+        <rect x="710" y="747" width="12" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="728" y="756" fill="#94a3b8" font-size="8">Reranker (Cross-Encoder)</text>
+
+        <rect x="910" y="747" width="12" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="928" y="756" fill="#94a3b8" font-size="8">Security / Guardrail / Fallback</text>
+      </svg>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>1 &amp; 2: Ingestion &amp; Embedding</h3>
+        </div>
+        <ul>
+          <li>• <strong>Multi-Source:</strong> Confluence, OpenProject, XWiki, Manual.</li>
+          <li>• <strong>Chunking:</strong> 800 tokens window, 10% overlap (80 tokens).</li>
+          <li>• <strong>Embedding:</strong> <code>nomic-embed-text</code> (768-dim) on local Ollama.</li>
+          <li>• <strong>Continuous Sync:</strong> Background Celery beat worker every 30m.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>3 &amp; 4: Hybrid Search &amp; Rerank</h3>
+        </div>
+        <ul>
+          <li>• <strong>Vector Search:</strong> HNSW Cosine Index (m=16, ef_c=64, ef_s=64).</li>
+          <li>• <strong>Keyword Search:</strong> PostgreSQL GIN index on <code>tsvector</code>.</li>
+          <li>• <strong>RRF Fusion:</strong> Reciprocal Rank Fusion blends vector + FTS.</li>
+          <li>• <strong>Reranker:</strong> <code>bge-reranker-base</code> cross-encoder + 0.75 gate.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>5 &amp; 6: Prompt &amp; Dual LLM</h3>
+        </div>
+        <ul>
+          <li>• <strong>Grounding:</strong> Strict prompt prevents hallucinations &amp; enforces tables.</li>
+          <li>• <strong>Primary LLM:</strong> Cloud OpenRouter (Gemini, DeepSeek, GLM).</li>
+          <li>• <strong>Fallback:</strong> On-Premise <code>Llama 3.2 1B</code> if primary times out (15s).</li>
+          <li>• <strong>Delivery:</strong> Token-by-token SSE streaming to desktop chat UI.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      IT Help Chatbot Platform • Production Architecture v1.6.4 • RKE2 Kubernetes HA
+    </p>
+  </div>
+</body>
+</html>
