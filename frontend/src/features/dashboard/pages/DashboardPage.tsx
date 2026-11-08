@@ -1,15 +1,4 @@
-import {
-  Activity,
-  CalendarDays,
-  ChevronDown,
-  LayoutDashboard,
-  Pencil,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Save,
-  X,
-} from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, LayoutDashboard, RefreshCw } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -43,42 +32,31 @@ import {
   type GatePoint,
   type SeriesPoint,
 } from "@/features/dashboard/panels/data";
-import PanelFrame from "@/features/dashboard/panels/PanelFrame";
-import { GridCanvas } from "@/features/dashboard/panels/GridCanvas";
-import { defaultHeightFor, movePanelTo, normaliseLayout, resizePanelTo } from "@/features/dashboard/panels/grid";
-import PanelEditor from "@/features/dashboard/panels/PanelEditor";
 import { renderPanelBody } from "@/features/dashboard/panels/PanelBodies";
 import {
-  getDashboardLayout,
-  resetDashboardLayout,
-  saveDashboardLayout,
-} from "@/features/dashboard/panels/layoutApi";
-import {
-  defaultLayoutFor,
-  newPanelId,
+  layoutFor,
+  panelHeight,
   panelTitle,
   type PanelSpec,
 } from "@/features/dashboard/panels/types";
 
 /**
- * Overview — a Grafana-style board of panels the operator arranges themselves.
+ * Overview — the board the rest of the app hangs off.
  *
- * WHY PANELS INSTEAD OF A FIXED LAYOUT: the page used to decide, for every deployment, that
- * "needs attention" belonged above the KPI tiles and that system health belonged in a right
- * rail. An admin who only watches the knowledge base still scrolled past five panels, and a
- * team that runs no Jira had a permanently empty "recent tickets" box. The layout is now data
- * (`dashboard_layouts.panels`), editable in place: move, resize, rename, duplicate, delete,
- * add, and reset.
+ * It is a fixed, curated page, not an arranger: the same PageHeader → rows rhythm as
+ * Knowledge, Tickets, Users and Domains, with full-width rows for the things you scan
+ * (attention, KPIs) and halves for the things you compare (trend vs outcome, tokens vs cost).
+ * There is no Customize mode — a board nobody has to arrange is one that is useful on the
+ * first visit, and every deployment gets the same honest reading.
  *
- * WHAT DID NOT CHANGE: the seven /api/dashboard* endpoints remain the only source of figures,
- * the reporting-window picker still governs every series, and a failed load still renders "—"
- * plus a banner — a panel must never invent a zero. Every panel reads one shared data object,
- * so ten panels cost the same seven requests as one, and a panel is never the reason a
- * figure is missing.
+ * The admin board adds the usage panels (tokens, spend, guardrail events); every other role
+ * gets the operational board. Panel *heights* are per type, so a chart is drawn into the box
+ * it needs rather than into whatever a user last dragged it to.
  *
- * The panels themselves live in ./panels: `types.ts` is the catalogue, `PanelBodies.tsx` the
- * renderers, `PanelFrame.tsx` the chrome, `PanelEditor.tsx` the form, `layoutApi.ts` the
- * storage. This file owns the data load and the editing state machine.
+ * WHAT DID NOT CHANGE: the /api/dashboard* endpoints remain the only source of figures, the
+ * reporting-window picker governs every series, and a failed load renders "—" plus a banner —
+ * a panel must never invent a zero. Every panel reads one shared data object, so twelve
+ * panels cost the same seven requests.
  */
 
 type Props = {
@@ -124,17 +102,9 @@ export default function Dashboard({ role, perms }: Props) {
     guardrailEvents: number;
   }>({ overall: "Healthy", down: [], guardrailEvents: 0 });
 
-  // Layout: `layout` is what is saved, `draft` is what edit mode is manipulating.
-  // The admin default carries the usage panels; a saved layout always wins over both.
-  const [layout, setLayout] = useState<PanelSpec[]>(() => defaultLayoutFor(role));
-  const [draft, setDraft] = useState<PanelSpec[]>(() => defaultLayoutFor(role));
-  const [custom, setCustom] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [layoutLabel, setLayoutLabel] = useState("Default layout");
-  const [layoutReady, setLayoutReady] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ index: number | null; panel: PanelSpec } | null>(null);
+  // The board is fixed. It is curated per role and positioned by the product, not the user:
+  // the admin board adds the usage panels, everyone else gets the operational ones.
+  const panels: PanelSpec[] = useMemo(() => layoutFor(role), [role]);
 
   // Poll every 60s so a dashboard left open does not show stale figures.
   const [nowTick, setNowTick] = useState(0);
@@ -163,26 +133,6 @@ export default function Dashboard({ role, perms }: Props) {
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const customInvalid = !!customFrom && !!customTo && (customFrom > customTo || customFrom > todayIso);
-
-  // ---- saved layout ---------------------------------------------------------------
-  useEffect(() => {
-    let alive = true;
-    getDashboardLayout()
-      .then((saved) => {
-        if (!alive) return;
-        if (saved.custom && Array.isArray(saved.panels) && saved.panels.length) {
-          setLayout(saved.panels as PanelSpec[]);
-          setCustom(true);
-          setLayoutLabel("Saved layout");
-        }
-      })
-      .catch(() => {
-        // No saved layout (or the endpoint is unreachable): the default board is the page.
-        // A failure here must not block the dashboard itself.
-      })
-      .finally(() => { if (alive) setLayoutReady(true); });
-    return () => { alive = false; };
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -398,78 +348,6 @@ export default function Dashboard({ role, perms }: Props) {
     usage, usageError, usageDenied, guardrailEvents, guardrailDenied,
   };
 
-  // ---- layout editing ------------------------------------------------------------
-  // Positions are derived, not required: a layout saved by the old stacked board has no x/y,
-  // and normalising here means every render path (read, edit, save) sees the same geometry.
-  const panels = useMemo(() => normaliseLayout(editing ? draft : layout), [editing, draft, layout]);
-
-  function beginEdit() {
-    setDraft(normaliseLayout(layout.map((p) => ({ ...p, options: { ...p.options } }))));
-    setEditing(true);
-    setLayoutMsg(null);
-  }
-
-  function cancelEdit() {
-    setEditing(false);
-    setLayoutMsg(null);
-  }
-
-  /**
-   * Keyboard/button movement in a grid is horizontal: the panel keeps its row and slides one
-   * panel-width left or right, landing beside its neighbour instead of shuffling the array.
-   */
-  function movePanel(index: number, direction: -1 | 1) {
-    const panel = panels[index];
-    if (!panel) return;
-    setDraft(movePanelTo(panels, panel.id, (panel.x ?? 0) + direction * panel.span, panel.y ?? 0));
-  }
-
-  async function saveLayout() {
-    setSaving(true);
-    setLayoutMsg(null);
-    try {
-      const saved = await saveDashboardLayout(panels);
-      setLayout(saved.panels as PanelSpec[]);
-      setCustom(true);
-      setLayoutLabel("Saved layout");
-      setEditing(false);
-      setLayoutMsg("Layout saved for your account.");
-    } catch (err) {
-      setLayoutMsg(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function resetLayout() {
-    setSaving(true);
-    setLayoutMsg(null);
-    try {
-      await resetDashboardLayout();
-      // Reset returns to THIS role's default, not to the read-only board's.
-      const fresh = defaultLayoutFor(role);
-      setLayout(fresh);
-      setDraft(fresh);
-      setCustom(false);
-      setLayoutLabel("Default layout");
-      setEditing(false);
-      setLayoutMsg("Reset to the default layout.");
-    } catch (err) {
-      setLayoutMsg(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const openNewPanel = () =>
-    setEditor({
-      index: null,
-      panel: {
-        id: newPanelId(), type: "attention", title: "", span: 6,
-        h: defaultHeightFor("attention"), options: {},
-      },
-    });
-
   return (
     <PageShell>
       <PageHeader
@@ -578,36 +456,6 @@ export default function Dashboard({ role, perms }: Props) {
             domains={domainsLive ?? []}
           />
 
-          {!editing ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-              onClick={beginEdit}
-              disabled={!layoutReady}
-              title="Move, resize, rename, add or remove panels"
-            >
-              <Pencil className="mr-2 size-3.5" /> Customize
-            </Button>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={saving}>
-                <X className="mr-2 size-3.5" /> Cancel
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetLayout}
-                disabled={saving || !custom}
-                title={custom ? "Delete your saved layout and use the default board" : "Already the default layout"}
-              >
-                <RotateCcw className="mr-2 size-3.5" /> Reset
-              </Button>
-              <Button size="sm" onClick={saveLayout} disabled={saving}>
-                <Save className="mr-2 size-3.5" /> {saving ? "Saving…" : "Save layout"}
-              </Button>
-            </>
-          )}
         </>}
       />
 
@@ -622,29 +470,7 @@ export default function Dashboard({ role, perms }: Props) {
           />
         )}
 
-        {editing && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-2xs text-muted-foreground">
-            <span className="font-medium text-foreground">Editing layout · {layoutLabel.toLowerCase()}</span>
-            <button
-              type="button"
-              onClick={openNewPanel}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-card px-2 py-1 font-medium text-foreground transition hover:bg-muted"
-            >
-              <Plus className="size-3" /> Add panel
-            </button>
-            <span className="hidden sm:inline">
-              Drag a header to move · drag a corner to resize · changes apply when you save
-            </span>
-          </div>
-        )}
-
-        {layoutMsg && (
-          <p role="status" className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-2xs text-muted-foreground">
-            {layoutMsg}
-          </p>
-        )}
-
-        {noActivity && !editing ? (
+        {noActivity ? (
           <EmptyState
             icon={<Activity className="size-5" />}
             title="No activity in this reporting window"
@@ -654,46 +480,27 @@ export default function Dashboard({ role, perms }: Props) {
           />
         ) : (
           <DashboardDataProvider value={data}>
-            <GridCanvas panels={panels} editing={editing} onChange={setDraft}>
-              {(panel, index, handles) => (
-                <PanelFrame
-                  panel={panel}
-                  index={index}
-                  count={panels.length}
-                  editing={editing}
-                  fixedHeight={!handles.stacked}
-                  onEdit={() => setEditor({ index, panel })}
-                  onDuplicate={() => {
-                    const copy: PanelSpec = {
-                      ...panel,
-                      id: newPanelId(),
-                      title: `${panelTitle(panel)} copy`,
-                      options: { ...panel.options },
-                      // A copy lands directly below the original, never on top of it.
-                      y: (panel.y ?? 0) + (panel.h ?? defaultHeightFor(panel.type)),
-                    };
-                    setDraft(next => movePanelTo([...next, copy], copy.id, copy.x ?? 0, copy.y ?? 0));
-                  }}
-                  onRemove={() => setDraft(draft.filter((p) => p.id !== panel.id))}
-                  onMove={(dir) => movePanel(index, dir)}
-                  onWidth={(span) => setDraft(resizePanelTo(panels, panel.id, span, panel.h ?? defaultHeightFor(panel.type)))}
-                  onHeight={(rows) => setDraft(resizePanelTo(panels, panel.id, panel.span, rows))}
-                  handles={handles}
+            {/* Same rhythm as the rest of the app: full-width rows for the things you scan,
+                halves for the things you compare. Heights are per panel type so a chart is
+                never rendered into a box it did not ask for. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+              {panels.map((panel) => (
+                <div
+                  key={panel.id}
+                  data-panel={panel.type}
+                  className="min-h-0 min-w-0"
+                  style={{ gridColumn: `span ${panel.span} / span ${panel.span}` }}
                 >
-                  {renderPanelBody(panel, panelTitle(panel))}
-                </PanelFrame>
-              )}
-            </GridCanvas>
-
-            {editing && (
-              <button
-                type="button"
-                onClick={openNewPanel}
-                className="mt-4 flex w-full min-h-20 items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] bg-card text-xs font-medium text-muted-foreground transition hover:border-[var(--primary)] hover:text-foreground"
-              >
-                <Plus className="size-4" /> Add panel
-              </button>
-            )}
+                  <div
+                    data-panel-body
+                    className="panel-surface h-full overflow-hidden rounded-2xl"
+                    style={{ height: panelHeight(panel) }}
+                  >
+                    {renderPanelBody(panel, panelTitle(panel))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </DashboardDataProvider>
         )}
       </main>
@@ -717,7 +524,7 @@ export default function Dashboard({ role, perms }: Props) {
           </span>
         </span>
         <span className="hidden sm:block">|</span>
-        <span>{panels.length} panels · {layoutLabel}</span>
+        <span>{panels.length} panels · live data</span>
         <button
           type="button"
           onClick={refreshDashboard}
@@ -729,18 +536,6 @@ export default function Dashboard({ role, perms }: Props) {
         </button>
       </div>
 
-      {editor && (
-        <PanelEditor
-          initial={editor.panel}
-          isNew={editor.index === null}
-          onCancel={() => setEditor(null)}
-          onSave={(panel) => {
-            if (editor.index === null) setDraft([...draft, panel]);
-            else setDraft(draft.map((p, i) => (i === editor.index ? panel : p)));
-            setEditor(null);
-          }}
-        />
-      )}
     </PageShell>
   );
 }

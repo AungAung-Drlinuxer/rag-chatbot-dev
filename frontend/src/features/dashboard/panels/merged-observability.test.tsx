@@ -24,12 +24,6 @@ vi.mock("@/features/dashboard/api", () => ({
   dashGateTrend: vi.fn(),
 }));
 
-vi.mock("@/features/dashboard/panels/layoutApi", () => ({
-  getDashboardLayout: vi.fn(),
-  saveDashboardLayout: vi.fn(),
-  resetDashboardLayout: vi.fn(),
-}));
-
 vi.mock("@/features/observability/api", () => ({
   getObservabilityOverview: vi.fn(),
   getGuardrailEvents: vi.fn(),
@@ -37,13 +31,11 @@ vi.mock("@/features/observability/api", () => ({
 }));
 
 import * as api from "@/features/dashboard/api";
-import * as layoutApi from "@/features/dashboard/panels/layoutApi";
 import * as obsApi from "@/features/observability/api";
 import Dashboard from "@/features/dashboard/pages/DashboardPage";
 import { DEFAULT_LAYOUT, DEFAULT_LAYOUT_ADMIN } from "@/features/dashboard/panels/types";
 
 const m = api as unknown as Record<string, any>;
-const l = layoutApi as unknown as Record<string, any>;
 const o = obsApi as unknown as Record<string, any>;
 
 let container: HTMLDivElement | null = null;
@@ -79,7 +71,6 @@ function happyPath() {
   m.dashRecentTickets.mockResolvedValue({ tickets: [] });
   m.dashHealth.mockResolvedValue({ services: [], overall: "Healthy", down: [], security: {} });
   m.dashGateTrend.mockResolvedValue({ series: [] });
-  l.getDashboardLayout.mockResolvedValue({ panels: [], custom: false, updated_at: null });
   o.getObservabilityOverview.mockResolvedValue(overview());
   o.getGuardrailEvents.mockResolvedValue({
     events: [
