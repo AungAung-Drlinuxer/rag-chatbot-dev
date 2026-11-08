@@ -81,6 +81,11 @@ def test_the_chat_path_records_usage():
     assert "record_usage(" in source
 
 
+def test_overview_is_gated_like_the_audit_log():
+    source = inspect.getsource(observability.observability_overview)
+    assert 'require_cap("manage_users")' in source
+
+
 def test_costs_are_cast_to_float_for_the_client():
     # NUMERIC serialises as a JSON string, and a string reaching a toFixed() call crashes the
     # page; the cast belongs in SQL, once, rather than in every formatter.

@@ -29,6 +29,12 @@ import { Button } from "@/components/ui/button";
 
 import type { Conversation, RecentTicket, Domain, HealthItem } from "@/features/dashboard/lib/dashboardTypes";
 import { healthIcon } from "@/features/dashboard/lib/dashboardUtils";
+import {
+  getGuardrailEvents,
+  getObservabilityOverview,
+  type GuardrailEvent,
+  type ObservabilityOverview,
+} from "@/features/observability/api";
 import { DashboardReportButtons } from "@/features/dashboard/components/DashboardBits";
 
 import {
@@ -46,7 +52,7 @@ import {
   saveDashboardLayout,
 } from "@/features/dashboard/panels/layoutApi";
 import {
-  DEFAULT_LAYOUT,
+  defaultLayoutFor,
   MAX_SPAN,
   MIN_SPAN,
   newPanelId,
@@ -78,9 +84,12 @@ import {
 type Props = {
   userName?: string;
   role?: string;
+  /** Capability map from the shell: cost is gated by the same cap as the Audit log. */
+  perms?: Record<string, boolean> | null;
 };
 
-export default function Dashboard({ role }: Props) {
+export default function Dashboard({ role, perms }: Props) {
+  const canSeeUsage = role === "admin" || !!(perms && perms.manage_users);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   // The COMMITTED reporting window is the state. The picker's controls are only ways to
@@ -103,6 +112,11 @@ export default function Dashboard({ role }: Props) {
   const [liveHealth, setLiveHealth] = useState<HealthItem[]>([]);
   const [gateTrend, setGateTrend] = useState<GatePoint[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [usage, setUsage] = useState<ObservabilityOverview | null>(null);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [usageDenied, setUsageDenied] = useState(false);
+  const [guardrailEvents, setGuardrailEvents] = useState<GuardrailEvent[]>([]);
+  const [guardrailDenied, setGuardrailDenied] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [healthSummary, setHealthSummary] = useState<{
     overall: string;
@@ -111,8 +125,9 @@ export default function Dashboard({ role }: Props) {
   }>({ overall: "Healthy", down: [], guardrailEvents: 0 });
 
   // Layout: `layout` is what is saved, `draft` is what edit mode is manipulating.
-  const [layout, setLayout] = useState<PanelSpec[]>(DEFAULT_LAYOUT);
-  const [draft, setDraft] = useState<PanelSpec[]>(DEFAULT_LAYOUT);
+  // The admin default carries the usage panels; a saved layout always wins over both.
+  const [layout, setLayout] = useState<PanelSpec[]>(() => defaultLayoutFor(role));
+  const [draft, setDraft] = useState<PanelSpec[]>(() => defaultLayoutFor(role));
   const [custom, setCustom] = useState(false);
   const [editing, setEditing] = useState(false);
   const [layoutLabel, setLayoutLabel] = useState("Default layout");
@@ -233,6 +248,37 @@ export default function Dashboard({ role }: Props) {
         } else {
           setLiveHealth([]);
         }
+
+        // Usage panels share this load, so merging the Observability page into the board did
+        // not add a request per panel. Non-admins never call it: the endpoint refuses them.
+        if (canSeeUsage) {
+          try {
+            const range = win.kind === "custom" ? { start: win.start, end: win.end } : { days: win.days };
+            const [ov, ev] = await Promise.all([
+              getObservabilityOverview(range),
+              getGuardrailEvents(10).catch(() => null),
+            ]);
+            if (!mounted) return;
+            setUsage(ov);
+            setUsageError(null);
+            setUsageDenied(false);
+            if (ev) {
+              setGuardrailEvents(ev.events);
+              setGuardrailDenied(false);
+            } else {
+              setGuardrailEvents([]);
+              setGuardrailDenied(true);
+            }
+          } catch (err) {
+            if (!mounted) return;
+            const msg = err instanceof Error ? err.message : String(err);
+            setUsage(null);
+            // Only a refusal is "you may not see this"; anything else is a failure to load,
+            // and telling an administrator they lack permission would be a lie.
+            setUsageDenied(msg.includes("403"));
+            setUsageError(msg);
+          }
+        }
       } catch (err) {
         // No sample fallbacks: a failure surfaces as a banner plus "—" values, never zeroes.
         setLoadError(err instanceof Error ? err.message : String(err));
@@ -246,7 +292,7 @@ export default function Dashboard({ role }: Props) {
 
     load();
     return () => { mounted = false; };
-  }, [refreshTick, win]);
+  }, [refreshTick, win, canSeeUsage]);
 
   function refreshDashboard() {
     setLoading(true);
@@ -350,6 +396,7 @@ export default function Dashboard({ role }: Props) {
     tickets: liveTickets, health: liveHealth, healthSummary,
     totals, needsReview, attention, healthDown, win, rangeLabel, deltaProps,
     refresh: refreshDashboard,
+    usage, usageError, usageDenied, guardrailEvents, guardrailDenied,
   };
 
   // ---- layout editing ------------------------------------------------------------
@@ -408,8 +455,10 @@ export default function Dashboard({ role }: Props) {
     setLayoutMsg(null);
     try {
       await resetDashboardLayout();
-      setLayout(DEFAULT_LAYOUT);
-      setDraft(DEFAULT_LAYOUT);
+      // Reset returns to THIS role's default, not to the read-only board's.
+      const fresh = defaultLayoutFor(role);
+      setLayout(fresh);
+      setDraft(fresh);
       setCustom(false);
       setLayoutLabel("Default layout");
       setEditing(false);

@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role
+from app.auth.rbac import get_role, require_cap
 from app.persistence.database import SessionLocal
 
 router = APIRouter(prefix="/api")
@@ -55,9 +55,13 @@ def observability_overview(
     days: int = Query(7, ge=1, le=90),
     start: str | None = None,
     end: str | None = None,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_cap("manage_users")),
 ) -> dict:
-    """Everything the Observability page renders, in one round trip."""
+    """Everything the usage panels render, in one round trip.
+
+    Gated by the same capability as the Audit log: the payload is platform-wide spend and
+    answer mix, not the caller's own activity.
+    """
     start_ts, end_ts, label = _window(days, start, end)
     params = {"s": start_ts, "e": end_ts}
 

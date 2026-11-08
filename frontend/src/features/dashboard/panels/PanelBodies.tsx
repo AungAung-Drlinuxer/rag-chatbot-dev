@@ -17,6 +17,7 @@ import { DomainRow, HealthRow, KpiCard } from "@/features/dashboard/components/D
 import { PriorityBadge, ResultBadge, StatusBadge } from "@/features/dashboard/components/DashboardBits";
 import { maskProfanity } from "@/features/dashboard/lib/dashboardUtils";
 import { useDashboardData } from "@/features/dashboard/panels/data";
+import { BarRow, DayColumns, fmtCost, fmtInt, fmtMs } from "@/features/dashboard/panels/charts";
 import type { PanelSpec } from "@/features/dashboard/panels/types";
 
 export type PanelBodyProps = { panel: PanelSpec; title: string };
@@ -384,16 +385,6 @@ function Health({ title }: PanelBodyProps) {
         ))}
       </div>
 
-      <div className="flex items-center gap-3 border-t border-[var(--border)] bg-muted/50 px-5 py-2.5">
-        <ShieldAlert className="size-3.5 shrink-0 text-[var(--warn)]" />
-        <span className="flex-1 text-2xs font-medium">
-          Guardrail activity
-          <span className="ml-1 font-normal text-muted-foreground">last 7 days</span>
-        </span>
-        <span className="text-2xs text-muted-foreground">
-          {healthSummary.guardrailEvents} event{healthSummary.guardrailEvents === 1 ? "" : "s"}
-        </span>
-      </div>
 
       <a
         href="http://10.10.10.18:3000/d/rag-platform-health"
@@ -423,6 +414,222 @@ function Note({ panel, title }: PanelBodyProps) {
   );
 }
 
+
+/**
+ * The four panels that used to be the Observability page.
+ *
+ * They read the same context as everything else, so merging the pages did not add a request
+ * per panel. Cost and guardrail data are administrator-only: the panel says so instead of
+ * rendering zeroes that look like "we spent nothing".
+ */
+const LoadingUsage = ({ title }: { title: string }) => (
+  <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+    <h2 className="text-sm font-semibold">{title}</h2>
+    <p className="mt-1 text-2xs text-muted-foreground">Loading usage…</p>
+  </section>
+);
+
+function LockedUsage({ title, reason }: { title: string; reason: string }) {
+  return (
+    <section className="rounded-2xl border border-dashed border-[var(--border)] bg-card p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <p className="mt-1 flex items-center gap-1.5 text-2xs text-muted-foreground">
+        <ShieldAlert className="size-3.5" /> {reason}
+      </p>
+    </section>
+  );
+}
+
+function UsageKpis({ title }: PanelBodyProps) {
+  const { usage, usageError, usageDenied } = useDashboardData();
+  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token and cost data." />;
+  const t = usage?.totals;
+  const tiles = [
+    { label: "Answers", value: t ? fmtInt(t.requests) : "—", icon: <MessageSquare className="size-3.5" /> },
+    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", icon: <Eye className="size-3.5" /> },
+    { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", icon: <Gauge className="size-3.5" /> },
+    { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", icon: <Activity className="size-3.5" /> },
+  ];
+  return (
+    <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <span className="text-2xs text-muted-foreground">{usage?.range.label ?? ""}</span>
+      </div>
+      {usageError && (
+        <p className="mt-2 flex items-center gap-1.5 text-2xs text-[var(--danger)]">
+          <AlertTriangle className="size-3.5" /> {usageError}
+        </p>
+      )}
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="rounded-xl border border-[var(--border)] bg-background/40 p-3">
+            <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-muted-foreground">
+              {tile.icon}{tile.label}
+            </div>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{tile.value}</p>
+          </div>
+        ))}
+      </div>
+      {t && t.p50_latency_ms > 0 && (
+        <p className="mt-2 text-2xs text-muted-foreground">
+          p50 {fmtMs(t.p50_latency_ms)} · max {fmtMs(t.max_latency_ms)} · {usage?.range.label}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function CostTrend({ title }: PanelBodyProps) {
+  const { usage, usageDenied } = useDashboardData();
+  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see spend." />;
+  if (!usage) return <LoadingUsage title={title} />;
+  const series = usage.series;
+  const tokens = series.reduce((a, d) => a + d.tokens_in + d.tokens_out, 0);
+  return (
+    <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {tokens === 0 ? (
+        <p className="mt-6 text-center text-2xs text-muted-foreground">No answers in this window.</p>
+      ) : (
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-2xs text-muted-foreground">Tokens / day</p>
+            <DayColumns data={series} pick={(d) => d.tokens_in + d.tokens_out} format={fmtInt} height={80} />
+          </div>
+          <div>
+            <p className="text-2xs text-muted-foreground">Cost / day</p>
+            <DayColumns data={series} pick={(d) => Number(d.cost)} format={fmtCost} height={80} />
+          </div>
+        </div>
+      )}
+      <p className="mt-2 text-2xs text-muted-foreground">
+        Estimate from the app&apos;s price table — not the provider invoice.
+      </p>
+    </section>
+  );
+}
+
+function ModelCost({ title }: PanelBodyProps) {
+  const { usage, usageDenied } = useDashboardData();
+  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see spend." />;
+  if (!usage) return <LoadingUsage title={title} />;
+  const models = (usage.by_model ?? []).slice(0, 6);
+  const max = Math.max(...models.map((m) => Number(m.cost)), 0);
+  return (
+    <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <span className="text-2xs text-muted-foreground">{fmtCost(usage?.totals.cost_usd ?? 0)} total</span>
+      </div>
+      <div className="mt-3 space-y-2.5">
+        {models.length === 0 && <p className="text-2xs text-muted-foreground">No usage recorded yet.</p>}
+        {models.map((m) => (
+          <BarRow
+            key={m.model}
+            label={m.model}
+            value={Number(m.cost)}
+            max={max}
+            format={fmtCost}
+            title={`${m.model}: ${fmtInt(m.requests)} answers · ${fmtInt(m.tokens_in)} in / ${fmtInt(m.tokens_out)} out`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OutcomeMix({ title }: PanelBodyProps) {
+  const { usage, totals, usageDenied } = useDashboardData();
+  const decisions = usage?.decisions ?? [];
+  const total = decisions.reduce((a, d) => a + d.n, 0);
+  return (
+    <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <p className="mt-0.5 text-2xs text-muted-foreground">
+        Gate pass rate {totals.gatePassPct == null ? "—" : `${totals.gatePassPct}%`}
+      </p>
+      <div className="mt-3 space-y-2">
+        {usageDenied && <p className="text-2xs text-muted-foreground">Outcome detail needs administrator access.</p>}
+        {!usageDenied && total === 0 && <p className="text-2xs text-muted-foreground">No answers in this window.</p>}
+        {!usageDenied && decisions.map((d) => (
+          <div key={d.decision} className="flex items-center justify-between gap-2 text-2xs">
+            <span className="flex items-center gap-1.5 capitalize text-muted-foreground">
+              <span className={[
+                "size-2 rounded-full",
+                d.decision === "answer" ? "bg-[var(--ok)]"
+                  : d.decision === "caution" ? "bg-[var(--warn)]"
+                    : d.decision === "escalate" ? "bg-[var(--danger)]" : "bg-[var(--border)]",
+              ].join(" ")} />
+              {d.decision}
+            </span>
+            <span className="font-medium tabular-nums">
+              {fmtInt(d.n)}
+              <span className="text-muted-foreground"> · {Math.round((d.n / total) * 1000) / 10}%</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-2xs">
+        <span className="text-muted-foreground">Resolved / escalated (conversations)</span>
+        <span className="font-medium tabular-nums">{fmtInt(totals.resolved)} / {fmtInt(totals.escalated)}</span>
+      </div>
+    </section>
+  );
+}
+
+function GuardrailEvents({ panel, title }: PanelBodyProps) {
+  const { guardrailEvents, guardrailDenied, usage } = useDashboardData();
+  const limit = Math.max(1, Math.min(panel.options.limit ?? 10, 25));
+  const rows = guardrailEvents.slice(0, limit);
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+      <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4">
+        <div>
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <p className="mt-0.5 text-2xs text-muted-foreground">
+            {guardrailDenied ? "Administrator permission required to list refusals." : "Newest refusals, from the audit trail."}
+          </p>
+        </div>
+        {!guardrailDenied && usage && (
+          <span className="shrink-0 rounded-md bg-[var(--warn)]/12 px-1.5 py-0.5 text-2xs font-medium text-[var(--warn)]">
+            {fmtInt(usage.guardrail_total)} events
+          </span>
+        )}
+      </div>
+      <div className="overflow-x-auto border-t border-[var(--border)]">
+        <table className="w-full text-left text-2xs">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <th className="px-4 py-1.5 font-medium">When</th>
+              <th className="px-4 py-1.5 font-medium">Type</th>
+              <th className="px-4 py-1.5 font-medium">User</th>
+              <th className="px-4 py-1.5 font-medium">Detail</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {rows.map((e, i) => (
+              <tr key={`${e.created_at}-${i}`}>
+                <td className="whitespace-nowrap px-4 py-1.5 text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
+                <td className="px-4 py-1.5">{e.action.replace("guardrail.", "")}</td>
+                <td className="px-4 py-1.5">{e.username || "—"}</td>
+                <td className="max-w-[36ch] truncate px-4 py-1.5 text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                  {guardrailDenied ? "Ask an administrator for access." : "No guardrail events recorded."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 const Empty = ({ title }: PanelBodyProps) => (
   <section className="rounded-2xl border border-dashed border-[var(--border)] bg-card p-4">
     <h2 className="text-sm font-semibold">{title}</h2>
@@ -443,6 +650,11 @@ export const PANEL_BODIES: Record<string, (props: PanelBodyProps) => JSX.Element
   knowledge: Workspace,
   health: Health,
   note: Note,
+  "usage-kpis": UsageKpis,
+  "cost-trend": CostTrend,
+  "model-cost": ModelCost,
+  "outcome-mix": OutcomeMix,
+  "guardrail-events": GuardrailEvents,
 };
 
 export function renderPanelBody(panel: PanelSpec, title: string) {

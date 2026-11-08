@@ -27,6 +27,12 @@ vi.mock("@/features/dashboard/api", () => ({
   dashGateTrend: vi.fn(),
 }));
 
+vi.mock("@/features/observability/api", () => ({
+  getObservabilityOverview: vi.fn(),
+  getGuardrailEvents: vi.fn(),
+  getServiceHealth: vi.fn(),
+}));
+
 vi.mock("@/features/dashboard/panels/layoutApi", () => ({
   getDashboardLayout: vi.fn(),
   saveDashboardLayout: vi.fn(),
@@ -35,11 +41,15 @@ vi.mock("@/features/dashboard/panels/layoutApi", () => ({
 
 import * as api from "@/features/dashboard/api";
 import * as layoutApi from "@/features/dashboard/panels/layoutApi";
+import * as obsApi from "@/features/observability/api";
 import Dashboard from "@/features/dashboard/pages/DashboardPage";
-import { DEFAULT_LAYOUT } from "@/features/dashboard/panels/types";
+import { defaultLayoutFor } from "@/features/dashboard/panels/types";
 
 const m = api as unknown as Record<string, any>;
 const l = layoutApi as unknown as Record<string, any>;
+const o = obsApi as unknown as Record<string, any>;
+// The board is rendered as an administrator, so its default is the admin layout.
+const DEFAULT_LAYOUT = defaultLayoutFor("admin");
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -58,6 +68,14 @@ function happyPath() {
   m.dashHealth.mockResolvedValue({ services: [], overall: "Healthy", down: [], security: {} });
   m.dashGateTrend.mockResolvedValue({ series: [] });
   l.getDashboardLayout.mockResolvedValue({ panels: [], custom: false, updated_at: null });
+  o.getObservabilityOverview.mockResolvedValue({
+    range: { start: "2026-11-01T00:00:00Z", end: "2026-11-08T00:00:00Z", label: "Last 7 days" },
+    totals: { requests: 0, tokens_in: 0, tokens_out: 0, cost_usd: 0, avg_latency_ms: 0, p50_latency_ms: 0, p95_latency_ms: 0, max_latency_ms: 0 },
+    series: [], by_model: [], decisions: [], domains: [], guardrails: [], guardrail_total: 0,
+    counts: { kb_articles: 9, tickets_open: 0, users: 1, sessions: 0 },
+    generated_at: "2026-11-08T02:00:00Z",
+  });
+  o.getGuardrailEvents.mockResolvedValue({ events: [] });
   l.saveDashboardLayout.mockImplementation(async (panels: any[]) => ({
     panels, custom: true, updated_at: "2026-11-08T10:00:00+00:00",
   }));

@@ -43,8 +43,17 @@ export type GuardrailEvent = {
   created_at: string | null;
 };
 
-export async function getObservabilityOverview(days = 7): Promise<ObservabilityOverview> {
-  const r = await apiFetch(`${BASE}/api/observability/overview?days=${days}`, {
+export type UsageRange = number | { days?: number; start?: string; end?: string };
+
+/** `7` or `{start, end}` — the Overview board passes whichever range its picker holds. */
+export async function getObservabilityOverview(range: UsageRange = 7): Promise<ObservabilityOverview> {
+  const qs =
+    typeof range === "number"
+      ? `days=${range}`
+      : range.start && range.end
+        ? `start=${range.start}&end=${range.end}`
+        : `days=${range.days ?? 7}`;
+  const r = await apiFetch(`${BASE}/api/observability/overview?${qs}`, {
     headers: authHeaders(),
   });
   if (!r.ok) throw new Error(`overview failed: HTTP ${r.status}`);

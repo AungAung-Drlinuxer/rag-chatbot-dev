@@ -1,8 +1,29 @@
 # Observability (in-app, no Grafana)
 
-`Operations → Observability` answers the questions the Grafana boards answered — tokens, cost,
-latency, guardrail activity, dependency health — using only tables this application writes.
-It needs no Prometheus, Loki, Tempo, Mimir or Grafana.
+The usage panels live **inside the Overview board**, not on a separate page. Overview answers
+both questions an operator has — "what needs me right now" and "what did this cost" — from
+tables this application writes. No Prometheus, Loki, Tempo, Mimir or Grafana is involved.
+
+## The merged board
+
+| Panel type | Shows | Default for |
+|---|---|---|
+| `attention` | failing deps, low-confidence answers, guardrail signals | both roles |
+| `usage-kpis` | answers, tokens in/out, estimated cost, p95 | admin |
+| `cost-trend` | tokens and spend per day, same window as the report picker | admin |
+| `model-cost` | which model took the spend | admin |
+| `outcome-mix` | answer/caution/escalate split + gate pass rate | admin |
+| `guardrail-events` | newest refusals from the audit log | admin |
+
+Every other panel (KPI tiles, conversation trend, needs review, recent tickets, domains,
+workspace, health, note) is unchanged and appears on both defaults.
+
+**Why roles get different defaults**: the usage endpoints are gated by `manage_users` because
+the payload is platform-wide spend. A non-administrator's board simply does not contain those
+panels rather than showing them locked. Both defaults still open with `attention`.
+
+**Nothing is fetched twice**: the usage data is one request shared by all four usage panels,
+loaded alongside the seven dashboard endpoints when the viewer is permitted to see it.
 
 ## Where every number comes from
 

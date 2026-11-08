@@ -16,7 +16,12 @@ export type PanelType =
   | "domains"
   | "knowledge"
   | "health"
-  | "note";
+  | "note"
+  | "usage-kpis"
+  | "cost-trend"
+  | "model-cost"
+  | "outcome-mix"
+  | "guardrail-events";
 
 export type PanelSpec = {
   id: string;
@@ -66,8 +71,25 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
     description: "Every dependency with latency, plus guardrail activity." },
   { type: "note", label: "Text note", defaultSpan: 6,
     description: "Your own note — runbook link, rotation reminder, anything.", repeatable: true },
+  // --- merged from the former Observability page ------------------------------------
+  { type: "usage-kpis", label: "Tokens, cost & latency", defaultSpan: 12,
+    description: "Answers, tokens in/out, estimated spend and p95 latency for the window." },
+  { type: "cost-trend", label: "Tokens & cost per day", defaultSpan: 6,
+    description: "Daily token volume and estimated spend, same window as the report selector." },
+  { type: "model-cost", label: "Cost by model", defaultSpan: 6,
+    description: "Which model took the spend (and how many requests each answered)." },
+  { type: "outcome-mix", label: "Outcome mix", defaultSpan: 4,
+    description: "How answers ended — answer, caution, escalate — with the confidence-gate pass rate." },
+  { type: "guardrail-events", label: "Guardrail events", defaultSpan: 6,
+    description: "Newest refusals from the audit trail (administrators only)." },
 ];
 
+/**
+ * Two defaults, because the same board serves two jobs: an operator opening the page in the
+ * morning needs the queue and the health strip; the same operator at month end needs tokens
+ * and spend. Cost is administrator-only (the API refuses it for everyone else), so the tiles
+ * are in the admin default and absent from the user default rather than rendering locked.
+ */
 export const DEFAULT_LAYOUT: PanelSpec[] = [
   { id: "attention", type: "attention", title: "", span: 12, options: {} },
   { id: "kpis", type: "kpis", title: "", span: 12, options: {} },
@@ -79,6 +101,29 @@ export const DEFAULT_LAYOUT: PanelSpec[] = [
   { id: "knowledge", type: "knowledge", title: "", span: 6, options: {} },
   { id: "health", type: "health", title: "", span: 6, options: {} },
 ];
+
+export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
+  { id: "attention", type: "attention", title: "", span: 12, options: {} },
+  { id: "usage", type: "usage-kpis", title: "", span: 12, options: {} },
+  { id: "kpis", type: "kpis", title: "", span: 12, options: {} },
+  { id: "trend", type: "trend", title: "", span: 8, options: {} },
+  { id: "outcome", type: "outcome-mix", title: "", span: 4, options: {} },
+  { id: "cost", type: "cost-trend", title: "", span: 6, options: {} },
+  { id: "model-cost", type: "model-cost", title: "", span: 6, options: {} },
+  { id: "review", type: "needs-review", title: "", span: 6, options: { limit: 5 } },
+  { id: "tickets", type: "recent-tickets", title: "", span: 6, options: { limit: 5 } },
+  { id: "domains", type: "domains", title: "", span: 6, options: {} },
+  { id: "knowledge", type: "knowledge", title: "", span: 6, options: {} },
+  { id: "health", type: "health", title: "", span: 6, options: {} },
+  { id: "guardrails", type: "guardrail-events", title: "", span: 12, options: { limit: 10 } },
+];
+
+/** Panels that read the observability endpoints — administrator only, like the Audit log. */
+export const ADMIN_ONLY_PANELS: readonly string[] = ["usage-kpis", "cost-trend", "model-cost", "guardrail-events"];
+
+export function defaultLayoutFor(role?: string): PanelSpec[] {
+  return role === "admin" ? DEFAULT_LAYOUT_ADMIN : DEFAULT_LAYOUT;
+}
 
 export function catalogueFor(type: string): PanelCatalogueEntry | undefined {
   return PANEL_CATALOGUE.find((entry) => entry.type === type);
