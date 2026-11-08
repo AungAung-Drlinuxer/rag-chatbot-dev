@@ -86,6 +86,13 @@ export async function ticketUpdate(ref: string, patch: {
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(patch),
   });
+  // A refused status change is a 409 with the reason (Jira declined, or no such
+  // transition). Returning the body regardless made the page treat it as success and keep
+  // the optimistic status, which is how the board drifted away from Jira.
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({} as { detail?: string }));
+    throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  }
   return r.json();
 }
 

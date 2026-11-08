@@ -211,6 +211,7 @@ def _create_via_issue_rest(summary, description, reporter, project, assignee):
 from app.integrations.ticket_status import (  # noqa: E402
     JIRA_TRANSITIONS_BY_CANONICAL as STATUS_TRANSITIONS,
     canonical_from_jira_status as _canonical_from_jira_status,
+    is_terminal,
 )
 
 
@@ -318,7 +319,8 @@ def transition_issue(issue_key: str, status: str) -> dict:
     if not (cfg["base_url"] and cfg["email"] and cfg["api_token"]):
         return {"ok": False, "detail": "Jira not configured"}
 
-    names = STATUS_TRANSITIONS.get((status or "").lower(), [])
+    target = (status or "").lower()
+    names = STATUS_TRANSITIONS.get(target, [])
     auth = _auth_header()
 
     try:
@@ -326,6 +328,18 @@ def transition_issue(issue_key: str, status: str) -> dict:
 
         with httpx.Client(timeout=20,
                           headers={"Authorization": auth, "Accept": "application/json"}) as client:
+            # 0) Already where we want to be? A Jira project has ONE terminal status here
+            # (Done), so "closed" on a Done issue has no transition to find — the correct
+            # answer is "already done", not "no matching transition".
+            live = fetch_issue_status(issue_key)
+            if live.get("ok"):
+                live_canon = _canonical_from_jira_status(live.get("status") or "")
+                if live_canon == target or (
+                    is_terminal(live_canon) and is_terminal(target)
+                ):
+                    return {"ok": True,
+                            "detail": f"already '{live.get('status')}' in Jira"}
+
             # 1) list available transitions
             r = client.get(f"{cfg['base_url'].rstrip('/')}/rest/api/3/issue/{issue_key}/transitions")
             r.raise_for_status()

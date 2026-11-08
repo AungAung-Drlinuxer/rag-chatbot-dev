@@ -115,6 +115,18 @@ def _rows(sql: str, params: dict | None = None) -> list[dict]:
 _jira_status_cache: dict[str, tuple[float, str]] = {}  # jira_key -> (ts, mapped_local_status)
 _JIRA_SYNC_TTL = 60  # seconds
 
+def _respect_local_closed(current: str | None, live: str) -> str:
+    """Keep a locally closed row closed when Jira reports its single terminal status.
+
+    Jira here has one terminal state (Done -> "resolved"), so a plain assignment pulled every
+    row the operator had closed back to "resolved" on each page load — the board looked like it
+    refused to close anything. A real reopen still wins, because that target is "open".
+    """
+    if live == "resolved" and (current or "").strip().lower() == "closed":
+        return "closed"
+    return live
+
+
 def _persist_status_changes(s, mapped_by_key: dict[str, str]) -> None:
     """Persist canonical statuses for many tickets with TWO statements, not 2N.
 
@@ -133,6 +145,7 @@ def _persist_status_changes(s, mapped_by_key: dict[str, str]) -> None:
     by_status: dict[str, list[int]] = {}
     for row_id, key, current in found:
         want = mapped_by_key.get(key)
+        want = _respect_local_closed(current, want) if want else want
         if want and want != current and row_id is not None:
             by_status.setdefault(want, []).append(row_id)
     for status, ids in by_status.items():
@@ -165,7 +178,9 @@ def _bulk_upstream_status_refresh(rows: list[dict]) -> None:
             continue
         cached = _jira_status_cache.get(jk)
         if cached and (time.time() - cached[0]) < _JIRA_SYNC_TTL:
-            r["status"] = cached[1]
+            # The cache holds the upstream canonical status; the closed-preserving rule still
+            # applies, otherwise a warm cache re-opens what the DB correctly kept closed.
+            r["status"] = _respect_local_closed(r.get("status"), cached[1])
             continue
         jira_keys.append(jk)
 
@@ -185,8 +200,11 @@ def _bulk_upstream_status_refresh(rows: list[dict]) -> None:
         with SessionLocal() as s:
             _persist_status_changes(s, mapped_by_key)
         for r in rows:
-            if r.get("jira_key") in mapped_by_key:
-                r["status"] = mapped_by_key[r["jira_key"]]
+            key = r.get("jira_key")
+            if key in mapped_by_key:
+                mapped = mapped_by_key[key]
+                r["status"] = _respect_local_closed(r.get("status"), mapped)
+                mapped_by_key[key] = r["status"]
 
 
 
@@ -473,6 +491,24 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
     if row is None:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="ticket not found")
     changes: list[str] = []
+
+    # Push the status to Jira FIRST. The old order committed locally and then reported
+    # "Jira sync failed (…)" in a comment, so the board could sit in a state Jira never
+    # accepted — the exact drift this endpoint exists to prevent. A refusal is now a 409
+    # and nothing changes here.
+    sync_notes: list[str] = []
+    if req.status and getattr(row, "jira_key", None):
+        from app.integrations.jira import transition_issue
+
+        tr = transition_issue(row.jira_key, req.status)
+        if not tr.get("ok"):
+            logger.warning("jira transition refused for %s: %s", row.jira_key, tr.get("detail"))
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail=f"Jira refused the status change: {tr.get('detail')}",
+            )
+        sync_notes.append("synced to Jira")
+
     with SessionLocal() as s:
         s.add(row)
         s.refresh(row)
@@ -496,20 +532,7 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
 
         from app.persistence.models import TicketComment
 
-        # v1.6.9 — push status change to BOTH integrations (best-effort each).
-        # The canonical status model (ticket_status.py) maps open/pending/resolved/
-        # closed onto real Jira transitions, so a change made here and a change made in
-        # Jira agree.
-        sync_notes: list[str] = []
-        if req.status and row.jira_key:
-            from app.integrations.jira import transition_issue
-
-            tr = transition_issue(row.jira_key, req.status)
-            if tr.get("ok"):
-                sync_notes.append("synced to Jira")
-            else:
-                sync_notes.append(f"Jira sync failed ({tr.get('detail')})")
-                logger.warning("jira transition failed for %s: %s", row.jira_key, tr.get("detail"))
+        # The transition already happened above, before the local write.
         jira_note = (" · " + " · ".join(sync_notes)) if sync_notes else ""
 
         if changes or jira_note:
@@ -658,9 +681,14 @@ def jira_sync(user: str = Depends(require_cap("manage_kb"))) -> dict:
                 {"k": key},
             ).first()
             if existing:
+                # Jira has one terminal status (Done). A row the operator explicitly closed
+                # must not be pulled back to "resolved" by every sync — that flip-flop is
+                # what made "Closed" look like it never stuck.
                 s.execute(text(
-                    "UPDATE jira_tickets SET status=:st, subject=:sj, description=:ds, "
-                    "assignee=:asg WHERE jira_key=:k"
+                    "UPDATE jira_tickets SET "
+                    "status = CASE WHEN :st = 'resolved' AND status = 'closed' "
+                    "              THEN 'closed' ELSE :st END, "
+                    "subject=:sj, description=:ds, assignee=:asg WHERE jira_key=:k"
                 ), {"st": canonical_from_jira_status(t["status"]),
                     "sj": t["title"], "ds": t["body"],
                     "asg": t["assignee"] or None, "k": key})

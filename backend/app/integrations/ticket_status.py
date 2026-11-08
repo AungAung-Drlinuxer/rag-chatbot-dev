@@ -74,5 +74,15 @@ def canonical_from_jira_status(name: str) -> str:
     return "open"
 
 
+#: Statuses that mean "the workflow is finished". Jira's project here has a single terminal
+#: status (Done), so resolved and closed are the same upstream state — which is why asking for
+#: "closed" on a Done issue must be an accepted no-op, not a transition hunt.
+TERMINAL_STATUSES = frozenset({"resolved", "closed"})
+
+
+def is_terminal(status: str) -> bool:
+    return (status or "").strip().lower() in TERMINAL_STATUSES
+
+
 def canonical_statuses() -> list[str]:
     return ["open", "pending", "resolved", "closed"]

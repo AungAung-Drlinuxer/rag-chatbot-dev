@@ -221,9 +221,15 @@ export default function Tickets({ role, userName, onToast }: Props) {
       if (synced) onToast("Status updated in Jira");
       else onToast("Saved in the queue — Jira did not accept the transition", "err");
       void loadTickets();
-    } catch {
+    } catch (err) {
       setSelected({ ...selected, status: previous });
-      onToast("Jira rejected the transition — the status is unchanged", "err");
+      const why = err instanceof Error ? err.message : "";
+      onToast(
+        why
+          ? `Jira rejected the transition — status unchanged. ${why}`
+          : "Jira rejected the transition — the status is unchanged",
+        "err",
+      );
     } finally {
       setStatusBusy(null);
     }

@@ -61,7 +61,13 @@ def decide(
         was_deleted = (row.get("status") or "").lower() == DELETED_STATUS
         if was_deleted:
             revive.append(int(row["id"]))
-        if target and target != row.get("status"):
+        current = (row.get("status") or "").lower()
+        # Jira's terminal status is singular (Done → "resolved"). A row the operator closed
+        # must stay closed instead of being pulled back to "resolved" on every run; a real
+        # reopen still wins, because that target is "open", not "resolved".
+        if target == "resolved" and current == "closed":
+            target = ""
+        if target and target != current:
             by_status.setdefault(target, []).append(int(row["id"]))
 
     return {

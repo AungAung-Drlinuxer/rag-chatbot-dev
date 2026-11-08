@@ -49,3 +49,29 @@ kubectl -n rag-chatbot-dev exec postgres-dev-1 -c postgres -- \
 
 The Tickets page shows the same row under **Awaiting your decision**. Approving logs
 `approval resumed: approved=true` in the backend log and stores the Jira key on the row.
+
+## Status mapping, and why "Closed" used to bounce
+
+The Jira project behind this deployment has **one** terminal status, `Done`, and once an issue
+is there the only available transition is `Reopen issue`. The board keeps four steps
+(`open / pending / resolved / closed`), so:
+
+| Board | Jira |
+|---|---|
+| Open | To Do / Open / Reopened / Pending (waiting on reporter) |
+| Pending | Work in progress |
+| Resolved | **Done** |
+| Closed | **Done** (same upstream state) |
+
+Consequences, all enforced now:
+
+- Closing an issue that is already `Done` is accepted as a no-op (`already 'done' in Jira`)
+  instead of hunting for a `Close` transition that does not exist.
+- The status is pushed to Jira **before** the local row is written. A refusal returns
+  `409` with Jira's own reason and changes nothing — the board cannot claim a state Jira
+  never accepted.
+- A row the operator closed stays `closed` through list refreshes, the pull-sync and the
+  nightly reconcile; only a real reopen (`Reopened` → `open`) moves it.
+
+If a Jira status the board does not know appears, it falls back to `open` rather than
+displaying a raw name.

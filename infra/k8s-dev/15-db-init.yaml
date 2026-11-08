@@ -35,7 +35,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: db-init
-          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.29
+          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.34
           imagePullPolicy: Always
           command: ["python", "-m", "app.bootstrap"]
           args: ["--init", "--json"]
