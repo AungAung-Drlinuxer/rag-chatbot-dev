@@ -34,8 +34,9 @@ import {
 } from "@/features/dashboard/panels/data";
 import { renderPanelBody } from "@/features/dashboard/panels/PanelBodies";
 import {
+  BOARD_ROWS_ADMIN,
+  BOARD_ROWS_USER,
   layoutFor,
-  panelHeight,
   panelTitle,
   type PanelSpec,
 } from "@/features/dashboard/panels/types";
@@ -349,7 +350,8 @@ export default function Dashboard({ role, perms }: Props) {
   };
 
   return (
-    <PageShell>
+    <PageShell fill>
+      <div className="flex h-full min-h-0 flex-col gap-2">
       <PageHeader
         breadcrumbs={["Workspace", "Overview"]}
         eyebrow="Workspace"
@@ -357,6 +359,7 @@ export default function Dashboard({ role, perms }: Props) {
         badge={role === "admin" ? "Administrator" : "User"}
         title="Overview"
         description="What the assistant did, who it helped, and what still needs a human."
+        dense
         actions={<>
           <div className="relative hidden sm:block">
             <button
@@ -459,7 +462,7 @@ export default function Dashboard({ role, perms }: Props) {
         </>}
       />
 
-      <main className="space-y-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-2">
         {loadError && !loading && (
           <ErrorState
             banner
@@ -480,33 +483,46 @@ export default function Dashboard({ role, perms }: Props) {
           />
         ) : (
           <DashboardDataProvider value={data}>
-            {/* Same rhythm as the rest of the app: full-width rows for the things you scan,
-                halves for the things you compare. Heights are per panel type so a chart is
-                never rendered into a box it did not ask for. */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
-              {panels.map((panel) => (
-                <div
-                  key={panel.id}
-                  data-panel={panel.type}
-                  className="min-h-0 min-w-0"
-                  style={{ gridColumn: `span ${panel.span} / span ${panel.span}` }}
-                >
+            {/* One screen, five bands. The header and the attention/KPI strip take what they
+                need; the rest share the leftover height by weight, so 1920×1080 and 1440×900
+                both fit without a page scrollbar. Below lg the board stacks and the page
+                scrolls again — a phone should not be squeezed to fit a desktop board. */}
+            <div
+              data-board="fill"
+              className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden max-lg:overflow-visible lg:grid-cols-12"
+              style={{ ["--board-rows" as string]: role === "admin" ? BOARD_ROWS_ADMIN : BOARD_ROWS_USER }}
+            >
+              {panels.map((panel) => {
+                const tall = panel.type !== "attention" && panel.type !== "kpis";
+                return (
                   <div
-                    data-panel-body
-                    className="panel-surface h-full overflow-hidden rounded-2xl"
-                    style={{ height: panelHeight(panel) }}
+                    key={panel.id}
+                    data-panel={panel.type}
+                    className={[
+                      "flex min-h-0 min-w-0 flex-col",
+                      tall ? "max-lg:h-[300px]" : "",
+                    ].join(" ")}
+                    style={{
+                      ["--span" as string]: panel.span,
+                      ["--row" as string]: panel.row,
+                    }}
                   >
-                    {renderPanelBody(panel, panelTitle(panel))}
+                    <div
+                      data-panel-body
+                      className="panel-surface h-full min-h-0 overflow-hidden rounded-2xl"
+                    >
+                      {renderPanelBody(panel, panelTitle(panel))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </DashboardDataProvider>
         )}
       </main>
 
       {/* ---------------- FOOTER ---------------- */}
-      <div className="flex flex-col items-center justify-center gap-2 pt-2 text-3xs text-muted-foreground sm:flex-row">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-2 text-3xs text-muted-foreground sm:flex-row">
         <span title={windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}>
           {windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}
         </span>
@@ -536,6 +552,7 @@ export default function Dashboard({ role, perms }: Props) {
         </button>
       </div>
 
+      </div>
     </PageShell>
   );
 }

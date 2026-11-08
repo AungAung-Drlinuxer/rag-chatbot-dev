@@ -28,8 +28,8 @@ export type PanelSpec = {
   title: string;
   /** Width in a 12-column grid. 12 = full width, 6 = half, 4 = third. */
   span: number;
-  /** Height in grid rows. Absent = the type's natural height. */
-  h?: number;
+  /** Band (1-based) on the single-screen board. */
+  row?: number;
   options: {
     /** Recent-list panels: how many rows to show. */
     limit?: number;
@@ -49,33 +49,6 @@ export type PanelCatalogueEntry = {
 };
 
 export const MAX_SPAN = 12;
-
-/** One grid row, in pixels, including the gap between rows. */
-export const ROW_H = 92;
-const GAP = 8;
-
-/** The height a panel type wants, in rows. Charts need room; a KPI strip does not. */
-export const PANEL_HEIGHTS: Partial<Record<PanelType, number>> = {
-  attention: 2,
-  "usage-kpis": 2,
-  kpis: 3,
-  trend: 5,
-  quality: 5,
-  "outcome-mix": 5,
-  "cost-trend": 5,
-  "token-breakdown": 5,
-  "model-cost": 4,
-  domains: 4,
-  knowledge: 4,
-  health: 4,
-  "guardrail-events": 4,
-  note: 3,
-};
-
-export function panelHeight(panel: PanelSpec): number {
-  const rows = panel.h ?? PANEL_HEIGHTS[panel.type] ?? 4;
-  return rows * ROW_H - GAP;
-}
 
 export function panelTitle(panel: PanelSpec): string {
   if (panel.title) return panel.title;
@@ -126,46 +99,55 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
  * are in the admin default and absent from the user default rather than rendering locked.
  */
 /**
- * The board is curated, not a pile of every panel: an operator opening it in the morning
- * gets the queue, the volume, and the token/spend detail — in an order that already reads
- * top-down. There is no arrange mode; the page is the layout.
+ * The single-screen board.
  *
- * `needs-review` and `recent-tickets` were removed by request: that work happens on the
- * Conversations and Tickets pages, not on a dashboard.
+ * Bands, top to bottom: what needs a human, what the assistant did, what it cost, what it
+ * knows, and what it refused. Admin sees the usage/policy bands; everyone else gets the
+ * operational ones. Placement is data so the same panel vocabulary renders both boards.
  */
 const p = (
-  id: string, type: PanelType, span: number, options: PanelSpec["options"] = {},
-): PanelSpec => ({ id, type, title: "", span, options });
+  id: string, type: PanelType, span: number, row: number, options: PanelSpec["options"] = {},
+): PanelSpec => ({ id, type, title: "", span, row, options });
 
 export const DEFAULT_LAYOUT: PanelSpec[] = [
-  p("attention", "attention", 12),
-  p("kpis", "kpis", 12),
-  p("trend", "trend", 8),
-  p("quality", "quality", 4),
-  p("domains", "domains", 6),
-  p("knowledge", "knowledge", 6),
-  p("health", "health", 12),
+  p("attention", "attention", 6, 1),
+  p("kpis", "kpis", 6, 1),
+  p("trend", "trend", 8, 2),
+  p("quality", "quality", 4, 2),
+  p("domains", "domains", 6, 3),
+  p("knowledge", "knowledge", 6, 3),
+  p("health", "health", 12, 4),
 ];
 
 export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
-  p("attention", "attention", 12),
-  p("usage", "usage-kpis", 12),
-  p("kpis", "kpis", 12),
-  p("trend", "trend", 8),
-  p("outcome", "outcome-mix", 4),
-  p("cost", "cost-trend", 6),
-  p("tokens", "token-breakdown", 6),
-  p("model-cost", "model-cost", 6),
-  p("domains", "domains", 6),
-  p("knowledge", "knowledge", 6),
-  p("health", "health", 6),
-  p("guardrails", "guardrail-events", 12, { limit: 8 }),
+  p("attention", "attention", 4, 1),
+  p("kpis", "kpis", 8, 1),
+  p("usage", "usage-kpis", 3, 2),
+  p("trend", "trend", 6, 2),
+  p("outcome", "outcome-mix", 3, 2),
+  p("cost", "cost-trend", 4, 3),
+  p("tokens", "token-breakdown", 4, 3),
+  p("model-cost", "model-cost", 4, 3),
+  p("domains", "domains", 4, 4),
+  p("knowledge", "knowledge", 4, 4),
+  p("health", "health", 4, 4),
+  p("guardrails", "guardrail-events", 12, 5, { limit: 8 }),
 ];
 
 /** The board for a role. Agents see operations; administrators also see usage and spend. */
 export function layoutFor(role: string | undefined): PanelSpec[] {
   return role === "admin" ? DEFAULT_LAYOUT_ADMIN : DEFAULT_LAYOUT;
 }
+
+/**
+ * Band heights. `auto` for the header-adjacent band (it only holds tiles and a one-line
+ * alert strip); the rest share the leftover space by weight, so the board fits any desktop
+ * height instead of being taller than the screen.
+ */
+export const BOARD_ROWS_ADMIN =
+  "minmax(96px,auto) minmax(140px,1.55fr) minmax(124px,1.2fr) minmax(104px,1fr) minmax(120px,0.85fr)";
+export const BOARD_ROWS_USER =
+  "minmax(96px,auto) minmax(140px,1.6fr) minmax(124px,1.1fr) minmax(104px,0.9fr)";
 
 export const ADMIN_ONLY_PANELS: readonly string[] = [
   "usage-kpis", "cost-trend", "model-cost", "token-breakdown", "guardrail-events",

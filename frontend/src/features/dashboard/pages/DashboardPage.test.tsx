@@ -188,6 +188,26 @@ describe("DashboardPage — data rendering", () => {
     expect(text).not.toContain("Needs review");
   });
 
+  /**
+   * The board is one screen: five bands whose heights come from the page, not from the
+   * content. Both halves matter — the rows are positioned on lg, and there is no arrange
+   * mode to drift away from the documented layout.
+   */
+  it("lays the board out as fixed bands and offers no customize mode", async () => {
+    const rootEl = await mount("admin");
+    const board = rootEl.querySelector("[data-board='fill']") as HTMLElement;
+    expect(board).toBeTruthy();
+    expect(board.style.getPropertyValue("--board-rows")).toContain("minmax");
+
+    const bands = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--row"));
+    expect(new Set(bands)).toEqual(new Set(["1", "2", "3", "4", "5"]));
+
+    const text = rootEl.textContent!;
+    expect(text).not.toContain("Customize");
+    expect(text).toContain("Export CSV");
+    expect(text).toContain("Report");
+  });
+
   it("names the failing dependency and the guardrail counter separately", async () => {
     const text = (await mount("admin")).textContent!;
     expect(text).toContain("Failing: Redis");

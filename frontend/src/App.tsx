@@ -171,7 +171,7 @@ export default function App() {
 
   const shell = (active: string, children: React.ReactNode) => (
     <>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-[100dvh] overflow-hidden">
         <PageSidebar active={active} onNavigate={setNav} userName={userName} role={role}
           displayRole={meDisplay} perms={perms} onLogout={onLogout}
           collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />

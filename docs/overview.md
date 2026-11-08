@@ -3,22 +3,33 @@
 The landing page of the assistant. It answers three questions at a glance: *is anything
 broken*, *what did the assistant do*, and *what is it costing*.
 
-## The board is fixed
+## One screen
 
-There is no arrange mode. The page uses the same shell as every other screen —
-`PageHeader` (breadcrumbs, eyebrow, icon, role badge, reporting window, Refresh, reports) and
-then a 12-column row grid — so it reads like Knowledge, Tickets, Users and Domains.
+The board is sized to the viewport, not to its content: the shell is `100dvh`, the page is a
+flex column, and the five bands take the leftover height by weight. On a 1920×1080 desktop
+every band is visible at once and there is **no page scroll**; at 1440×900 it still fits
+(measured: document height == viewport height). Below `lg`, or in a very short window, the
+page falls back to scrolling — a phone must not be squeezed into a desktop board.
 
 ```
-Needs attention                        12
-Tokens, cost & latency                 12   (administrators)
-Volume KPIs                            12
-Conversations over time                 8   +  Answer quality                4
-Tokens & cost per day                   6   +  Tokens by model               6
-Cost by model                           6   +  Knowledge by domain           6
-Workspace                               6   +  System health                 6
-Guardrail events                       12   (administrators)
+Band 1  Needs attention                    4  +  Volume KPIs                 8
+Band 2  Tokens, cost & latency             3  +  Conversations over time    6  +  Outcome mix   3
+Band 3  Tokens & cost per day              4  +  Tokens by model            4  +  Cost by model 4
+Band 4  Knowledge by domain                4  +  Workspace                  4  +  System health 4
+Band 5  Guardrail events                  12
 ```
+
+There is no arrange mode: the page uses the same shell as every other screen — `PageHeader`
+(breadcrumbs, eyebrow, icon, role badge, reporting window, Refresh, Export CSV, Report),
+with `dense` set so the header costs one compact row.
+
+## Height policy
+
+- Bands use `minmax(<min>, <weight>fr)`, so a chart never collapses to a strip: if the
+  window is shorter than the minimums, the board scrolls **inside its own frame** (header and
+  footer stay put) instead of clipping a panel.
+- Lists and tables scroll inside their card; a card is never taller than its band.
+- Charts measure their box (`useChartSize` + `ResizeObserver`) and redraw at that size.
 
 Two panels were removed by request: **Needs review** and **Recent tickets**. Their work
 belongs on the Conversations and Tickets pages; on the board they only made it longer.

@@ -96,7 +96,7 @@ export function ConversationChart({
   const max = niceStep * 4;
 
   const width = Math.max(320, Math.round(boxWidth ?? 620));
-  const height = Math.max(160, Math.round(boxHeight ?? 240));
+  const height = Math.max(96, Math.round(boxHeight ?? 240));
 
   const left = 40;
   const right = 15;

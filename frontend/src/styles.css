@@ -942,12 +942,47 @@ code, pre, .mono { font-family: var(--mono); }
 .panel-surface > div > * {
   min-height: 0;
 }
+/* Dense board: a panel that shares one screen cannot spend 20px of padding on a 240px band. */
+[data-board="fill"] .panel-surface > section {
+  padding: 0.7rem 0.85rem;
+}
+[data-board="fill"] .panel-surface h2 {
+  font-size: 0.78rem;
+  line-height: 1.15rem;
+}
+
+/* The Overview board: five bands that share one viewport. Heights come from the page as a
+   CSS variable so the same markup works for both role boards. */
+/* Placement is a desktop concept: on a phone every panel is one column wide and flows in
+   reading order. (A `span 4` with a one-column template would create implicit tracks and
+   squeeze the board into 12 slivers.) */
+@media (min-width: 1024px) {
+  [data-board="fill"] {
+    grid-template-rows: var(--board-rows);
+  }
+  [data-board="fill"] > [data-panel] {
+    grid-column: span var(--span) / span var(--span);
+    grid-row: var(--row);
+  }
+}
+/* A short laptop window (or a browser with a lot of chrome) is not a reason to crush a
+   chart to 60px: the bands keep their minimums and the board scrolls inside its own frame,
+   leaving the header and the footer where they are. */
+@media (min-width: 1024px) and (max-height: 880px) {
+  [data-board="fill"] {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
 /* The last block in a panel body (the plot or the list) takes the remaining height, so the
    chart's own wrapper can measure a real box instead of its content height. */
 .panel-surface > section > :last-child,
 .panel-surface > div > :last-child {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 /* The scrollable list inside a list panel takes the leftover room instead of a fixed 300px. */
 .panel-surface [data-list-scroll] {

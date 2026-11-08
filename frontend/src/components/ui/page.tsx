@@ -28,7 +28,9 @@ export function PageShell({ children, fill = false }: { children: ReactNode; fil
            dashboard uses it: its bands share one screen so nothing has to be scrolled to
            be read, and the tables scroll INSIDE their own cards instead. Pages that keep
            the default keep today's behaviour exactly. */
-        fill ? "h-full overflow-hidden" : "min-h-screen",
+        /* Below lg the filled page stacks and scrolls normally: a phone must not be
+           squeezed into a desktop board. */
+        fill ? "h-full overflow-hidden max-lg:h-auto max-lg:overflow-visible" : "min-h-screen",
       ].join(" ")}
     >
       {/* 1400px, deliberately NOT the chat page's 900px. The chat column holds prose and
@@ -56,6 +58,7 @@ export function PageHeader({
   icon,
   eyebrow,
   breadcrumbs,
+  dense = false,
 }: {
   title: string;
   badge?: string;
@@ -72,9 +75,19 @@ export function PageHeader({
   breadcrumbs?: string[];
   /** Optional uppercase kicker above the title, e.g. "ADMINISTRATION". */
   eyebrow?: string;
+  /**
+   * Dense header for a page locked to one screen: no bottom margin, a smaller icon chip
+   * and title, and the description kept to one short line.
+   */
+  dense?: boolean;
 }) {
   return (
-    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <header
+      className={[
+        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        dense ? "mb-0" : "mb-6",
+      ].join(" ")}
+    >
       <div className="min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-2xs text-muted-foreground">
@@ -94,13 +107,16 @@ export function PageHeader({
         <div className="flex items-center gap-3">
         {/* v0.21.67 — standardized page icon chip (every page, both themes) */}
         {icon && (
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--accent-foreground)]">
+          <div className={[
+            "grid shrink-0 place-items-center rounded-xl bg-[var(--accent)] text-[var(--accent-foreground)]",
+            dense ? "size-9" : "size-11",
+          ].join(" ")}>
             {icon}
           </div>
         )}
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+            <h1 className={["font-semibold tracking-tight", dense ? "text-lg" : "text-xl"].join(" ")}>{title}</h1>
             {badge && (
               <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-2xs font-semibold text-[var(--accent-foreground)]">
                 {badge}
@@ -108,7 +124,9 @@ export function PageHeader({
             )}
           </div>
           {description && (
-            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+            <p className={["text-muted-foreground", dense ? "text-2xs" : "mt-1 text-xs"].join(" ")}>
+              {description}
+            </p>
           )}
         </div>
       </div>

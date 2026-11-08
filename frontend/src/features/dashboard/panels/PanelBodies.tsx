@@ -34,7 +34,7 @@ function Attention({ title }: PanelBodyProps) {
   const { attention, loading, health, totals } = useDashboardData();
   return (
     <section aria-label="Needs attention" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+      <div className="flex items-start justify-between gap-3 px-3.5 pb-2 pt-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             {(attention ?? []).length ? (
@@ -58,7 +58,7 @@ function Attention({ title }: PanelBodyProps) {
       </div>
 
       {!loading && attention.length === 0 ? (
-        <div className="flex items-start gap-3 border-t border-[var(--border)] px-5 py-3.5">
+        <div className="flex items-start gap-3 border-t border-[var(--border)] px-3.5 py-2.5">
           <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-[var(--ok)]/12 text-[var(--ok)]">
             <CheckCircle2 className="size-4" />
           </span>
@@ -73,7 +73,7 @@ function Attention({ title }: PanelBodyProps) {
       ) : (
         <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
           {attention.slice(0, 3).map((a) => (
-            <div key={a.key} className="flex items-start gap-3 px-5 py-3">
+            <div key={a.key} className="flex items-start gap-3 px-3.5 py-2">
               <span
                 className={[
                   "mt-1.5 size-2 shrink-0 rounded-full",
@@ -139,7 +139,7 @@ function Trend({ title }: PanelBodyProps) {
   const [chartRef, chartSize] = useChartSize(620, 240);
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex flex-wrap items-start justify-between gap-2 px-5 pb-3 pt-4">
+      <div className="flex flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">{title}</h2>
           <p className="mt-0.5 text-2xs text-muted-foreground">
@@ -280,13 +280,13 @@ function Domains({ title }: PanelBodyProps) {
   const s = stats as any;
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4">
+      <div className="flex items-center justify-between gap-2 px-3.5 pb-2 pt-3">
         <h2 className="text-sm font-semibold">{title}</h2>
         <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
           {s?.kb_pages != null ? `${s.kb_pages} articles` : "—"}
         </span>
       </div>
-      <div className="space-y-3 px-5 pb-4">
+      <div className="space-y-2 px-3.5 pb-3">
         {(domains ?? []).length === 0 && (
           <div className="py-4 text-center text-2xs text-muted-foreground">No domain data yet.</div>
         )}
@@ -332,7 +332,7 @@ function Health({ title }: PanelBodyProps) {
   const { health, healthSummary, healthDown } = useDashboardData();
   return (
     <section aria-label="System health" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+      <div className="flex items-start justify-between gap-3 px-3.5 pb-2 pt-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold leading-tight">{title}</h2>
           <p className="mt-0.5 truncate text-2xs leading-tight text-muted-foreground">
@@ -440,21 +440,24 @@ function UsageKpis({ title }: PanelBodyProps) {
           <AlertTriangle className="size-3.5" /> {usageError}
         </p>
       )}
-      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+      {/* Four tiles, not a stack of stat cards: this band is 150–250px tall on a one-screen
+          board, so the labels drop to 10px and the numbers stay the largest thing in the tile. */}
+      <div className="mt-2 grid grid-cols-2 gap-1.5 lg:grid-cols-4">
         {tiles.map((tile) => (
-          <div key={tile.label} className="rounded-xl border border-[var(--border)] bg-background/40 p-3">
-            <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-muted-foreground">
+          <div
+            key={tile.label}
+            className="rounded-lg border border-[var(--border)] bg-background/40 px-2 py-1.5"
+            title={tile.label === "p95 latency" && t && t.p50_latency_ms > 0
+              ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}`
+              : undefined}
+          >
+            <div className="flex items-center gap-1 text-[10px] uppercase leading-tight tracking-wide text-muted-foreground">
               {tile.icon}{tile.label}
             </div>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{tile.value}</p>
+            <p className="mt-0.5 truncate text-base font-semibold tabular-nums">{tile.value}</p>
           </div>
         ))}
       </div>
-      {t && t.p50_latency_ms > 0 && (
-        <p className="mt-2 text-2xs text-muted-foreground">
-          p50 {fmtMs(t.p50_latency_ms)} · max {fmtMs(t.max_latency_ms)} · {usage?.range.label}
-        </p>
-      )}
     </section>
   );
 }
