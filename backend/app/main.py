@@ -16,6 +16,7 @@ from app.api.health import router as health_router
 from app.api.knowledge import router as knowledge_router
 from app.api.settings import router as settings_router
 from app.api.setup import router as setup_router
+from app.api.observability import router as observability_router
 from app.api.tickets import router as tickets_router
 from app.api.users import router as users_router
 from app.config import SETTINGS
@@ -72,6 +73,7 @@ app.include_router(tickets_router)
 app.include_router(users_router)
 app.include_router(settings_router)
 app.include_router(setup_router)
+app.include_router(observability_router)
 from app.api.domain_rename import router as domain_rename_router
 app.include_router(domain_rename_router)
 

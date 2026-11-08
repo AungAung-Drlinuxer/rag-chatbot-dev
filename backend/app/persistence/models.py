@@ -17,6 +17,7 @@ from sqlalchemy import (
     BigInteger,
     DateTime,
     Float,
+    Numeric,
     ForeignKey,
     SmallInteger,
     String,
@@ -162,6 +163,31 @@ class RuntimeKv(Base):
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class LlmUsage(Base):
+    """One row per answered question — the in-app replacement for Prometheus counters.
+
+    The Prometheus token/cost counters live in process memory: they reset on every pod
+    restart and are per-pod, so they can never answer "what did we spend this month". This
+    table is the durable record, written once per answer with the same numbers the metrics
+    endpoint reports, and it is what /api/observability/overview aggregates.
+    """
+    __tablename__ = "llm_usage"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=True))
+    username: Mapped[str | None] = mapped_column(String(64))
+    model: Mapped[str | None] = mapped_column(String(96))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cost_usd: Mapped[float] = mapped_column(Numeric(12, 6), default=0, server_default="0")
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    decision: Mapped[str | None] = mapped_column(String(16))
+    domain: Mapped[str | None] = mapped_column(String(64))
+    stages: Mapped[str | None] = mapped_column(Text)  # JSON: stage -> ms
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class AuditLog(Base):

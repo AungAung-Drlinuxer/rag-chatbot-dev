@@ -35,6 +35,7 @@ import { PageFallback } from "@/components/PageFallback";
  * else is fetched the first time its nav item is selected.
  */
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
+const ObservabilityPage = lazy(() => import("@/features/observability/pages/ObservabilityPage"));
 const KnowledgePage = lazy(() => import("@/features/knowledge/pages/KnowledgePage"));
 const TicketsPage = lazy(() => import("@/features/tickets/pages/TicketsPage"));
 const DomainsPage = lazy(() => import("@/features/domains/pages/DomainsPage"));
@@ -222,6 +223,8 @@ export default function App() {
       return shell("chat", <ChatPage userName={userName} role={role} displayRole={meDisplay} perms={perms} onNavigate={setNav} onLogout={onLogout} />);
     case "dashboard":
       return shell("dashboard", <DashboardPage userName={userName} role={role} />);
+    case "observability":
+      return shell("observability", <ObservabilityPage role={role} />);
     case "articles":
       return shell("articles", <KnowledgePage role={role} userName={userName} perms={perms} onToast={toast.push} />);
     case "tickets":

@@ -512,6 +512,23 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
         except Exception as exc:
             logger.debug("Failed to update observability metrics: %s", exc)
 
+        # Durable copy for the in-app observability page: the Prometheus counters above are
+        # per-process and reset on restart, so they cannot answer "what did this month cost".
+        try:
+            from app.observability.usage import record_usage
+            record_usage(
+                model=active_llm_model,
+                input_tokens=int((last_usage or {}).get("input_tokens", 0)),
+                output_tokens=int((last_usage or {}).get("output_tokens", 0)),
+                latency_ms=int((time.time() - t0) * 1000),
+                decision=result.decision,
+                domain=result.domain,
+                session_id=session_id,
+                username=user,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("usage row skipped: %s", exc)
+
         # Echo LLM usage + RAG tunables on the terminal event so the frontend can
         # show a compact "Usage" pill under the answer.
         done_payload: dict = {"message_id": message_id, "latency_ms": int((time.time() - t0) * 1000)}

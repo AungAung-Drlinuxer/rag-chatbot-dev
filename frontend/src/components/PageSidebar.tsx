@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
 import { useBranding } from "@/app/useBranding";
-import { BookOpen, Bot, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
+import { Activity, BookOpen, Bot, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { useNotifications, NotificationBell } from "@/components/NotificationBell";
 import {
   listConversations,
@@ -123,6 +123,7 @@ export default function PageSidebar({
   const items: Array<{ id: string; label: string; icon: React.ReactNode; cap?: string; capLabel?: string }> = [
     { id: "chat", label: "Chat", icon: <MessageSquare className="size-4" />, cap: "chatbot", capLabel: "Ask the AI assistant" },
     { id: "dashboard", label: "Overview", icon: <Home className="size-4" /> },
+    { id: "observability", label: "Observability", icon: <Activity className="size-4" />, cap: "manage_users", capLabel: "View usage, cost and guardrail metrics" },
     { id: "articles", label: "Knowledge", icon: <BookOpen className="size-4" />, cap: "kb_search", capLabel: "Search the knowledge base" },
     { id: "domains", label: "Domains & Routing", icon: <Layers className="size-4" />, cap: "manage_domains", capLabel: "Manage classification domains & Jira routing" },
     { id: "tickets", label: "Tickets", icon: <TicketIcon className="size-4" /> },
