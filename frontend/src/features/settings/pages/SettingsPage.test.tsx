@@ -28,6 +28,11 @@ vi.mock("@/features/settings/api", () => ({
   getMySettings: vi.fn(),
   updateMySettings: vi.fn(),
   getIntegrationSettings: vi.fn(),
+  getSetupReadiness: vi.fn(async () => ({
+    ready: true, steps: [],
+    database: { tables: 29, vector_version: "0.8.0", checkpoints: true, ok: true },
+    knowledge: { confluence_configured: false, spaces: [], articles: 0, domains: 0, last_sync: null },
+  })),
   getSmtpSettings: vi.fn(),
   putSmtpSettings: vi.fn(),
   sendTestEmail: vi.fn(),

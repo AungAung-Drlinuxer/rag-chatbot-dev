@@ -317,3 +317,28 @@ export async function deleteClassifierDomain(id: number): Promise<{ status: stri
   }
   return r.json();
 }
+
+export type SetupStep = {
+  key: string;
+  label: string;
+  status: "done" | "todo" | "blocked";
+  detail: string;
+  hint?: string;
+};
+
+export type SetupReadiness = {
+  ready: boolean;
+  steps: SetupStep[];
+  database: { tables: number; vector_version: string | null; checkpoints: boolean; ok: boolean };
+  knowledge: {
+    confluence_configured: boolean; spaces: string[]; articles: number; domains: number;
+    last_sync: { at?: string; inserted?: number; updated?: number; skipped?: number } | null;
+  };
+};
+
+/** What is still missing before this install is usable (GET /api/setup/readiness). */
+export async function getSetupReadiness(): Promise<SetupReadiness> {
+  const r = await apiFetch(`${BASE}/api/setup/readiness`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`setup readiness failed: ${r.status}`);
+  return r.json();
+}

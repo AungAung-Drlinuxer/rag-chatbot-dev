@@ -17,6 +17,7 @@ import { Panel, Row, Segmented } from "../components/SettingsKit";
 
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
+import SetupChecklist from "../components/SetupChecklist";
 import { BrandingSettings } from "../components/BrandingSettings";
 import { AiServiceSettings } from "../components/AiServiceSettings";
 import { EmailServerSettings } from "../components/EmailServerSettings";
@@ -512,8 +513,11 @@ export default function Settings({ role }: { role?: string }) {
             {active === "integrations" && (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               {/* The catalogue and the provider editor are the work; the header card that
-                  used to sit above them only repeated the tab's own name. */}
+                  used to sit above them only repeated the tab's own name. The readiness
+                  strip answers the only question that matters after a fresh install:
+                  is anything still missing? */}
               <div className="space-y-4">
+                <SetupChecklist />
                 <IntegrationsConfig />
               </div>
 

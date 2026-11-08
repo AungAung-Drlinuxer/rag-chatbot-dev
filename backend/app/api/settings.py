@@ -449,7 +449,68 @@ def put_integration_settings(key: str, payload: dict, user: str = Depends(get_cu
         ), {"k": key, "v": json.dumps(current)})
         s.commit()
     _reload_after_change(key)
-    return {"ok": True}
+    result: dict = {"ok": True}
+    # Saving Confluence credentials is the moment the KB becomes usable; start the first
+    # sync here instead of making the admin discover the Sync button on another page.
+    if key == "confluence":
+        result["sync"] = _kickoff_kb_sync()
+    return result
+
+def _kickoff_kb_sync() -> str:
+    """Queue one background sync after Confluence credentials are saved.
+
+    WHY: an administrator who has just entered valid Confluence credentials expects the
+    product to start working, not to be told to go and press Sync somewhere else. The sync
+    already existed; saving credentials is the event that should trigger the first run.
+
+    Deliberately deduplicated and non-fatal: a click-happy admin saving twice must not queue
+    two 9-minute embedding jobs, and a broker outage must not fail the save that the
+    operator just made.
+    """
+    import logging
+    from datetime import UTC, datetime
+
+    from app.integrations.confluence import confluence_cfg
+
+    log = logging.getLogger("it-help-chatbot")
+    try:
+        cfg = confluence_cfg()
+    except Exception as exc:  # noqa: BLE001 — half-configured is a normal state here
+        log.info("kb sync not queued: %s", exc)
+        return "not-configured"
+    if not (cfg.get("base_url") and (cfg.get("api_token") or cfg.get("token"))):
+        return "not-configured"
+
+    with SessionLocal() as s:
+        from sqlalchemy import text as _t
+        row = s.execute(_t("SELECT value FROM runtime_kv WHERE key = 'kb_sync_kick'")).first()
+        last = row[0] if row else None
+        now = datetime.now(UTC)
+        if last:
+            try:
+                import json as _json
+                prev = _json.loads(last) if isinstance(last, str) else last
+                at = datetime.fromisoformat(str(prev.get("at")))
+                if (now - at).total_seconds() < 120:
+                    return "already-pending"
+            except Exception:  # noqa: BLE001
+                pass
+        s.execute(_t(
+            "INSERT INTO runtime_kv (key, value) VALUES ('kb_sync_kick', :v) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+        ), {"v": __import__("json").dumps({"at": now.isoformat()})})
+        s.commit()
+
+    try:
+        from workers.sync_tasks import sync_kb
+
+        sync_kb.delay()
+        log.info("kb sync queued after a credential change")
+        return "queued"
+    except Exception as exc:  # noqa: BLE001
+        log.warning("kb sync not queued (%s): %s", type(exc).__name__, exc)
+        return "unavailable"
+
 
 @router.post("/settings/integrations/{key}/test")
 def test_integration(key: str, user: str = Depends(get_current_user)) -> dict:

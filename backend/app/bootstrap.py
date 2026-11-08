@@ -1,4 +1,4 @@
-"""Create the schema for a brand-new installation — and nothing else.
+"""Prepare a brand-new installation: database, role, extensions, schema, tables.
 
 WHY THIS EXISTS
 ---------------
@@ -10,8 +10,23 @@ is deliberately the only thing that writes a row an operator did not create in t
 It never seeds content: no demo users, no sample articles, no placeholder domains, no
 pre-filled settings. A fresh install is an empty workspace with one administrator.
 
+WHAT `--init` DOES (in order, every step idempotent)
+----------------------------------------------------
+1. creates the login role and the database if `BOOTSTRAP_SUPERUSER_URL` is supplied
+2. installs the `vector` extension
+3. creates every table the application uses (ORM models + hand-written core tables)
+4. hands ownership of every table and sequence to the application role
+5. creates LangGraph's checkpoint tables, so approvals survive a pod restart from day one
+6. verifies the result and reports what is still missing
+
 USAGE
 -----
+    # full install against an empty Postgres server
+    BOOTSTRAP_SUPERUSER_URL=postgresql://postgres:***@host:5432/postgres \
+    BOOTSTRAP_APP_PASSWORD=*** \
+    DATABASE_URL=postgresql://app:***@host:5432/assistant \
+    python -m app.bootstrap --init
+
     # what is in this database? (tables, users, admins — no values from settings)
     DATABASE_URL=... python -m app.bootstrap --check
 
@@ -29,6 +44,7 @@ import argparse
 import getpass
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import sys
@@ -36,6 +52,28 @@ import sys
 from sqlalchemy import text
 
 MIN_PASSWORD = 12
+
+# Tables created by hand (they predate the ORM, or they are key/value shapes). Kept in sync
+# with `app.persistence.database.init_db` by hand — `verify()` compares the two and reports
+# any drift, because a table missing from one list only surfaces at first use in production.
+CORE_TABLES = [
+    "system_settings",
+    "approvals",
+    "chat_attachments",
+    "semantica_entities",
+    "semantica_relations",
+]
+
+# Created on first use rather than at install: the vector store by LangChain's PGVector,
+# the checkpoint tables by LangGraph (this module creates those in step 5).
+LAZY_TABLES = [
+    "langchain_pg_collection",
+    "langchain_pg_embedding",
+    "checkpoints",
+    "checkpoint_blobs",
+    "checkpoint_writes",
+    "checkpoint_migrations",
+]
 
 
 def _hash_password(password: str) -> str:
@@ -78,6 +116,189 @@ def ensure_schema() -> None:
             init_db()
             return
         raise SystemExit(str(exc)) from exc
+
+
+# --------------------------------------------------------------------------------------
+# --init: role, database, ownership, verification
+# --------------------------------------------------------------------------------------
+
+def _target() -> tuple[str, str, str, str]:
+    """(dbname, role, password, host) parsed from DATABASE_URL. Never printed."""
+    from sqlalchemy.engine import make_url
+
+    from app.config import SETTINGS
+
+    url = make_url(SETTINGS.database_url)
+    dbname = url.database or "assistant"
+    role = url.username or "app"
+    password = os.environ.get("BOOTSTRAP_APP_PASSWORD") or url.password or ""
+    host = f"{url.host or 'localhost'}:{url.port or 5432}"
+    return dbname, role, password, host
+
+
+def _literal(value: str) -> str:
+    """Quote a string literal for a DDL statement (never a value from a user row)."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+def provision_role_and_database() -> dict:
+    """CREATE ROLE / CREATE DATABASE when they do not exist. Never alters an existing role.
+
+    An existing role keeps its password on purpose: this runs from CI, cron and install
+    jobs, and silently resetting a live password would lock every running pod out.
+    """
+    admin_url = os.environ.get("BOOTSTRAP_SUPERUSER_URL", "").strip()
+    dbname, role, password, host = _target()
+    if not admin_url:
+        return {"skipped": "BOOTSTRAP_SUPERUSER_URL not set — assuming role and database exist"}
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
+
+    # Connect to the maintenance database: CREATE DATABASE cannot run inside the database
+    # it creates.
+    engine = create_engine(
+        make_url(admin_url).set(database="postgres"), future=True, isolation_level="AUTOCOMMIT"
+    )
+    created: dict = {"role_created": False, "database_created": False, "host": host}
+    try:
+        with engine.connect() as conn:
+            if not conn.execute(text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": role}).first():
+                if not password:
+                    raise SystemExit(
+                        "the application role does not exist and no password was supplied: set "
+                        "BOOTSTRAP_APP_PASSWORD (or put the password in DATABASE_URL)"
+                    )
+                conn.execute(text(f'CREATE ROLE "{role}" LOGIN PASSWORD {_literal(password)}'))
+                created["role_created"] = True
+            if not conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :d"), {"d": dbname}
+            ).first():
+                conn.execute(text(f'CREATE DATABASE "{dbname}" OWNER "{role}"'))
+                created["database_created"] = True
+            conn.execute(text(f'GRANT ALL PRIVILEGES ON DATABASE "{dbname}" TO "{role}"'))
+    finally:
+        engine.dispose()
+
+    # On Postgres 15+ the public schema is separate from the database privileges: a new
+    # database's schema belongs to pg_database_owner, which the app role may not be part of.
+    app_engine = create_engine(
+        make_url(admin_url).set(database=dbname), future=True, isolation_level="AUTOCOMMIT"
+    )
+    try:
+        with app_engine.connect() as conn:
+            conn.execute(text(f'GRANT ALL ON SCHEMA public TO "{role}"'))
+    except Exception as exc:  # noqa: BLE001
+        print(f"note: could not grant schema rights ({type(exc).__name__}): {exc}", file=sys.stderr)
+    finally:
+        app_engine.dispose()
+    return created
+
+
+def _expected_tables() -> list[str]:
+    from app.persistence.models import Base
+
+    return sorted(set(Base.metadata.tables) | set(CORE_TABLES))
+
+
+def ensure_checkpoint_tables() -> bool:
+    """Create LangGraph's checkpoint tables. Returns False when langgraph is unavailable."""
+    try:
+        import psycopg
+        from langgraph.checkpoint.postgres import PostgresSaver
+    except Exception:  # noqa: BLE001
+        return False
+    from app.config import SETTINGS
+
+    url = SETTINGS.database_url
+    for scheme in ("postgresql+psycopg2://", "postgresql+psycopg://"):
+        url = url.replace(scheme, "postgresql://")
+    try:
+        with psycopg.connect(url, autocommit=True, connect_timeout=10) as conn:
+            PostgresSaver(conn).setup()  # type: ignore[arg-type]
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"note: checkpoint tables not created ({type(exc).__name__}: {exc})", file=sys.stderr)
+        return False
+
+
+def ensure_ownership() -> dict:
+    """Hand every public table/sequence to the application role.
+
+    A database restored with `pg_dump -O` is owned by whoever ran the restore. The app then
+    boots fine and fails at the first ALTER or index build it does not own. Fixing ownership
+    at install time makes that failure impossible.
+    """
+    admin_url = os.environ.get("BOOTSTRAP_SUPERUSER_URL", "").strip()
+    if not admin_url:
+        return {"skipped": "BOOTSTRAP_SUPERUSER_URL not set"}
+    dbname, role, _password, _host = _target()
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
+
+    engine = create_engine(
+        make_url(admin_url).set(database=dbname), future=True, isolation_level="AUTOCOMMIT"
+    )
+    changed = {"tables": 0, "sequences": 0}
+    try:
+        with engine.connect() as conn:
+            for name in [r[0] for r in conn.execute(text(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))]:
+                owner = conn.execute(text(
+                    "SELECT tableowner FROM pg_tables WHERE schemaname='public' AND tablename=:t"
+                ), {"t": name}).scalar()
+                if owner != role:
+                    conn.execute(text(f'ALTER TABLE public."{name}" OWNER TO "{role}"'))
+                    changed["tables"] += 1
+            for name in [r[0] for r in conn.execute(text(
+                    "SELECT sequencename FROM pg_sequences WHERE schemaname = 'public'"))]:
+                owner = conn.execute(text(
+                    "SELECT sequenceowner::regrole::text FROM pg_sequences "
+                    "WHERE schemaname='public' AND sequencename=:s"
+                ), {"s": name}).scalar()
+                if owner and owner.strip('"') != role:
+                    conn.execute(text(f'ALTER SEQUENCE public."{name}" OWNER TO "{role}"'))
+                    changed["sequences"] += 1
+    finally:
+        engine.dispose()
+    return changed
+
+
+def verify() -> dict:
+    """Facts an operator can act on: what exists, what is missing, who owns it."""
+    from app.persistence.database import SessionLocal
+
+    expected = _expected_tables()
+    dbname, role, _password, _host = _target()
+    report: dict = {
+        "database": dbname,
+        "role": role,
+        "tables_expected": len(expected),
+        "tables_present": 0,
+        "missing_tables": [],
+    }
+    with SessionLocal() as s:
+        present = [r[0] for r in s.execute(text(
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))]
+        report["tables_present"] = len(present)
+        report["missing_tables"] = sorted(set(expected) - set(present))
+        report["lazy_tables_missing"] = sorted(set(LAZY_TABLES) - set(present))
+        report["vector_version"] = s.execute(text(
+            "SELECT extversion FROM pg_extension WHERE extname = 'vector'")).scalar()
+        report["table_owners"] = {
+            r[0]: int(r[1]) for r in s.execute(text(
+                "SELECT tableowner, count(*) FROM pg_tables WHERE schemaname='public' "
+                "GROUP BY tableowner ORDER BY 2 DESC"))
+        }
+        report["admins"] = int(s.execute(text(
+            "SELECT count(*) FROM users WHERE role_override = 'admin'")).scalar() or 0)
+    report["owned_by_app"] = report["table_owners"].get(role, 0) == report["tables_present"]
+    report["ready"] = (
+        not report["missing_tables"]
+        and report["vector_version"] is not None
+        and report["owned_by_app"]
+    )
+    return report
 
 
 def create_admin(username: str, password: str) -> None:
@@ -156,27 +377,58 @@ def _read_password() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Prepare a fresh database for this app.")
-    parser.add_argument("--check", action="store_true", help="create the schema if missing, then report counts")
-    parser.add_argument("--admin", metavar="USERNAME", help="create or promote this administrator")
+    parser.add_argument("--init", action="store_true",
+                        help="create role, database, extensions, schema, ownership; then verify")
+    parser.add_argument("--check", action="store_true",
+                        help="create the schema if missing, then report counts")
+    parser.add_argument("--admin", metavar="USERNAME",
+                        help="create or promote this administrator")
+    parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)
 
-    if not args.check and not args.admin:
+    if not (args.init or args.check or args.admin):
         parser.print_help()
         return 2
 
-    ensure_schema()
+    steps: dict = {}
+    if args.init:
+        steps["provision"] = provision_role_and_database()
+        ensure_schema()
+        steps["checkpoints"] = ensure_checkpoint_tables()
+        steps["ownership"] = ensure_ownership()
+    else:
+        ensure_schema()
 
     if args.admin:
         create_admin(args.admin, _read_password())
 
     counts = summary()
-    print(
-        "database ready: "
-        + ", ".join(f"{k}={v}" for k, v in counts.items())
-    )
+    report = verify()
+
+    if args.json:
+        print(json.dumps({"steps": steps, "counts": counts, "schema": report},
+                         indent=2, default=str))
+        return 0 if report["ready"] else 1
+
+    print("database ready: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
+    print(f"schema: {report['tables_present']}/{report['tables_expected']} tables, "
+          f"pgvector {report['vector_version'] or 'MISSING'}")
+    if report["missing_tables"]:
+        print("  missing: " + ", ".join(report["missing_tables"]))
+    print("  owners: " + ", ".join(f"{k}={v}" for k, v in report["table_owners"].items()))
+    if args.init:
+        prov = steps.get("provision", {})
+        if prov.get("role_created"):
+            print("  created role " + report["role"])
+        if prov.get("database_created"):
+            print("  created database " + report["database"])
+        own = steps.get("ownership", {})
+        if own.get("tables") or own.get("sequences"):
+            print(f"  reassigned ownership: {own.get('tables', 0)} tables, "
+                  f"{own.get('sequences', 0)} sequences")
     if counts["admins"] == 0:
         print("note: no administrator yet — run with --admin <username> before using the UI")
-    return 0
+    return 0 if report["ready"] else 1
 
 
 if __name__ == "__main__":

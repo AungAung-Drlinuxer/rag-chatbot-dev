@@ -3,15 +3,18 @@
 Everything the dev workspace needs, and nothing else. Apply in filename order:
 
 ```bash
-kubectl apply -f 05-config.yaml -f 20-database.yaml -f 40-redis.yaml \
-  -f 41-ollama.yaml -f 42-rerank.yaml -f 43-celery.yaml \
-  -f 30-backend.yaml -f 10-preview.yaml
+kubectl apply -f 05-config.yaml -f 20-database.yaml
+# wait for the cluster, then create every table/extension (idempotent Job)
+kubectl apply -f 15-db-init.yaml
+kubectl apply -f 40-redis.yaml -f 41-ollama.yaml -f 42-rerank.yaml \
+  -f 43-celery.yaml -f 30-backend.yaml -f 10-preview.yaml
 ```
 
 | File | What it creates | Notes |
 | --- | --- | --- |
 | `05-config.yaml` | `backend-config` ConfigMap | the complete runtime config; all URLs point inside this namespace |
 | `20-database.yaml` | CloudNativePG cluster `postgres-dev` | see `docs/database-setup.md` for the first-admin step |
+| `15-db-init.yaml` | Job `db-init` | runs `python -m app.bootstrap --init`: role, database, pgvector, every table, checkpoint tables, ownership, verification. Idempotent |
 | `40-redis.yaml` | Redis master + Sentinel + 3 Services | password from `backend-secrets`; Sentinel config templated at boot |
 | `41-ollama.yaml` | Ollama (embedding runtime) | image ships `nomic-embed-text`; no PVC (a mount would hide the bundled models) |
 | `42-rerank.yaml` | `rerank-svc` | CPU cross-encoder, `bge-reranker-base` |

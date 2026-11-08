@@ -13,7 +13,7 @@ dev/prod database ရဲ့ schema (PostgreSQL 16 + pgvector 0.8.0, tables ၃�
 | --- | --- | --- |
 | PostgreSQL | **16** | CNPG/cluster သို့မဟုတ် managed Postgres ဖြစ်နိုင် |
 | pgvector | **0.8.0** (>= 0.5 ရ) | `langchain_pg_embedding.embedding` က `vector` type သုံး |
-| Database | အသစ်၊ အလွတ် | `CREATE DATABASE assistant OWNER app` |
+| Database | အသစ်၊ အလွတ် | `--init` က `CREATE DATABASE assistant OWNER app` ကို အလိုအလျောက် လုပ်တယ် |
 | App credentials | non-superuser role | extension တစ်ခုတည်းကို superuser နဲ့ လုပ်မယ် |
 
 Application role ကို **superuser မပေးပါနဲ့**။ `CREATE EXTENSION vector` တစ်ကြိမ်တည်း
@@ -43,57 +43,79 @@ Schema ကို ဒီနေရာမှာ အပြည့်အစုံ သ�
 
 ---
 
-## 3. အဆင့် ၁ — Database အသစ် ဖန်တီး
+## 3. အဆင့် ၁ — Installer တစ်ခုတည်းနဲ့ database တစ်ခုလုံး ဆောက်
+
+`app.bootstrap --init` က **role, database, pgvector extension, tables အားလုံး, table ownership,
+LangGraph checkpoint tables** တွေကို အစဉ်လိုက် ဖန်တီးပြီး နောက်ဆုံးမှာ verify လုပ်ပေးတယ်။
+အဆင့်တိုင်း idempotent ဖြစ်လို့ ပြန် run လည်း ဘာမှ မပျက်ပါ။
+
+```bash
+BOOTSTRAP_SUPERUSER_URL='postgresql://postgres:<superuser-pw>@<host>:5432/postgres' \
+BOOTSTRAP_APP_PASSWORD='<app-role-password>' \
+DATABASE_URL='postgresql+psycopg2://app:<app-role-password>@<host>:5432/assistant' \
+  python -m app.bootstrap --init
+```
+
+ထွက်လာတဲ့ report (ဥပမာ):
+
+```
+database ready: tables=29, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
+schema: 29/25 tables, pgvector 0.8.0
+  owners: app=29
+note: no administrator yet — run with --admin <username> before using the UI
+```
+
+| Flag / env | လုပ်ဆောင်ချက် |
+| --- | --- |
+| `BOOTSTRAP_SUPERUSER_URL` | role/database ဖန်တီးခြင်း၊ `CREATE EXTENSION vector`၊ ownership ပြောင်းခြင်း — မပေးရင် ဒီအဆင့်တွေ ကျော်ပြီး schema ကို app role နဲ့ပဲ ဆောက်တယ် |
+| `BOOTSTRAP_APP_PASSWORD` | app role အသစ် ဆောက်ရာမှာ သုံးမယ့် password (role ရှိပြီးသားဆိုရင် မ ပြောင်းပါ) |
+| `--json` | CI/Job အတွက် machine-readable report |
+| `--check` | ဘာမှ မ ဆောက်ဘဲ (လိုအပ်ရင် schema ဆောက်ပြီး) လက်ရှိ state ကို report |
+
+`tables=29` ဖြစ်တာက **25 required + 4 LangGraph checkpoint**။ Vector store ရဲ့
+`langchain_pg_collection`/`langchain_pg_embedding` ကို ပထမဆုံး ingest လုပ်တဲ့အခါ LangChain
+က ဖန်တီးတယ် — installer က အဲဒီနှစ်ခုကို `lazy_tables_missing` အနေနဲ့ report လုပ်တယ်၊ error မ ဟုတ်ပါ။
+
+### Kubernetes မှာ run လုပ်ခြင်း
+
+```bash
+kubectl apply -f infra/k8s-dev/15-db-init.yaml
+kubectl -n rag-chatbot-dev wait --for=condition=complete job/db-init --timeout=180s
+kubectl -n rag-chatbot-dev logs job/db-init
+```
+
+Job ကို apply order မှာ `20-database.yaml` ပြီးနောက်၊ backend မတင်ခင် run ပါ။ Superuser URL
+လိုတဲ့အခါ `db-init-superuser` Secret (`url` key) ကို ဖန်တီးပါ; မရှိရင် Job က schema-only
+အဆင့်တွေကို ဆက်လုပ်တယ်။
+
+---
+
+## 4. Manual လမ်း (DBA က ကိုယ်တိုင် လုပ်ချင်ရင်)
 
 ```sql
 -- superuser နဲ့ တစ်ကြိမ်
 CREATE ROLE app LOGIN PASSWORD '<strong-password>';
 CREATE DATABASE assistant OWNER app;
 \c assistant
-CREATE EXTENSION IF NOT EXISTS vector;   -- pgvector; app role က မလုပ်နိုင်လို့
+CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-Password ကို repo မှာ မ ထည့်ပါ။ Kubernetes ဆိုရင် Secret နဲ့၊ local ဆိုရင် shell env နဲ့
-ပေးပါ။
-
----
-
-## 4. အဆင့် ၂ — Schema ထည့်နည်း (နှစ်လမ်း)
-
-**(A) Application ကနေ ဖန်တီးခိုင်း** (အလွယ်ဆုံး၊ upgrade လုပ်တိုင်း အလိုအလျောက် ဖြည့်ပေး)
+ပြီးရင် schema ကို application ကနေ ဆောက်ခိုင်းပါ (upgrade တိုင်း အလိုအလျောက် ဖြည့်ပေးတယ်):
 
 ```bash
 DATABASE_URL='postgresql+psycopg2://app:<pw>@<host>:5432/assistant' \
   python -m app.bootstrap --check
 ```
 
-`init_db()` က extension, ORM tables ၂၀, နဲ့ hand-written tables ၅ ခု (`system_settings`,
-`approvals`, `chat_attachments`, `semantica_entities`, `semantica_relations`,
-`ticket_comments`, `ticket_attachments`) တွေကို ဖန်တီးပြီး၊ နောက်ပိုင်း ထပ်တိုးထားတဲ့ columns
-(ALTER ... IF NOT EXISTS) တွေကို **statement တစ်ခုချင်း** idempotent ဖြစ်အောင် လုပ်ပေးတယ်။
-
-ဒီလမ်းနဲ့ ရလာတဲ့ fresh database မှာ **tables ၂၅ ခု** ရှိမယ်။ ကျန်တဲ့ ၆ ခု
-(`langchain_pg_collection`, `langchain_pg_embedding`, `checkpoints*` ၄ ခု) ကို library
-တွေက ပထမဆုံး embed / graph run လုပ်တဲ့အခါ အလိုအလျောက် ဖန်တီးတယ် (HNSW/FTS index ကို
-နောက် boot တစ်ခါမှာ ဖန်တီးပေးတယ်)။ ၃၁ ခုလုံးကို ချက်ချင်း လိုချင်ရင် လမ်း (B) ကို သုံးပါ။
-
-**(B) Reference dump ကို တိုက်ရိုက် apply** (schema ကို အတိအကျ လိုချင်ရင်၊ ဒါမှမဟုတ်
-application ကို မ run ခင် DBA က စစ်ချင်ရင်)
+သို့မဟုတ် reference dump ကို တိုက်ရိုက် apply လုပ်နိုင်တယ် (`data` မပါ၊ schema သက်သက်):
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/schema.sql
 ```
 
-Verify (ဒီ dump ကို clean database ပေါ် apply လုပ်ပြီး စစ်ထားတာပါ):
-
-```
-tables=31  indexes=48  vector=0.8.0
-```
-
-လမ်း (A) နဲ့ ရတဲ့ ပထမ output က `tables=25, users=0, admins=0, kb_articles=0, tickets=0`
-ဖြစ်တယ် — vector store နဲ့ checkpoint tables က အသုံးပြုတဲ့အခါမှ ပေါ်လာတာမို့ပါ။
-
-နှစ်လမ်းစလုံးမှာ **data မပါ**၊ seed/demo record မရှိ။
+နှစ်လမ်းစလုံးမှာ **data မပါ**၊ seed/demo record မရှိ။ Manual လမ်းသုံးရင် ownership ကို
+သေချာစစ်ပါ — `ALTER TABLE ... OWNER TO app` မ လုပ်ထားရင် နောက် migration တွေ ကျမယ်
+(`--init` က ဒါကို အလိုအလျောက် လုပ်ပေးတယ်)။
 
 ---
 
@@ -135,10 +157,46 @@ curl -s https://<host>/api/dashboard/health                               # 401 
 
 ---
 
-## 7. Verification queries (fresh install မှန်/မမှန်)
+## 7. Frontend ကနေ setup လုပ်ပြီးတာနဲ့ ready ဖြစ်ခြင်း
+
+Database ကို `--init` နဲ့ ဆောက်ပြီး admin တစ်ခု ရှိပြီးဆိုရင် ကျန်တာအားလုံး **UI ထဲကနေပဲ**
+ပြီးရမယ် — server ပေါ် ပြန် login လုပ်စရာ မ လိုပါ။
+
+| Admin လုပ်တာ (Settings → Integrations) | အလိုအလျောက် ဖြစ်သွားတာ |
+| --- | --- |
+| **Confluence** base URL + account email + API token သိမ်း | သိမ်းပြီးတာနဲ့ KB sync တစ်ခု background (Celery) မှာ queue ဝင်တယ်။ ၂ မိနစ်အတွင်း ထပ်သိမ်းရင် ထပ် မ queue ပါ (dedupe)။ Articles ဝင်ပြီး domains တွေ အလိုအလျောက် register ဖြစ်တယ် |
+| **Jira** base URL + email + token သိမ်း | Tickets page က live Jira ကို ဖတ်တယ် (test connection နဲ့ အတည်ပြုနိုင်) |
+| **LDAP/AD** server, base DN, bind DN + password သိမ်း | Directory login အလုပ်လုပ်တယ် (first login မှာ user row ဖန်တီး၊ admin approve လိုအပ်ရင် approve လုပ်ရန်) |
+| **Keycloak** issuer, client id/secret, redirect URI သိမ်း | `/api/auth/sso/enabled` → `true`; login page မှာ “Sign in with SSO” ပေါ်လာတယ် |
+
+**Readiness check** — `GET /api/setup/readiness` (login လိုတယ်) က အောက်ပါအချက်တွေကို
+database ကနေ တိုက်ရိုက် ဖတ်ပြီး ပြန်ပေးတယ်:
+
+```json
+{
+  "ready": false,
+  "steps": [
+    {"key": "database",      "status": "done", "detail": "29 tables · pgvector 0.8.0"},
+    {"key": "administrator", "status": "done", "detail": "1 admin account"},
+    {"key": "knowledge",     "status": "todo", "detail": "Confluence connected, nothing indexed yet",
+     "hint": "Open Knowledge and press Sync — or wait for the sync queued by saving credentials"},
+    {"key": "ticketing",     "status": "done", "detail": "Jira connected"},
+    {"key": "identity",      "status": "todo", "detail": "neither configured"}
+  ]
+}
+```
+
+Settings → Integrations ရဲ့ ထိပ်မှာ ဒီ step တွေကို “Finish setting up” card အနေနဲ့ ပြတယ်;
+အားလုံး done ဖြစ်ရင် တစ်လိုင်းတည်း (“Installation ready — …”) အဖြစ် ကျုံ့သွားတယ်။
+`blocked` ဆိုတာ UI ကနေ မ ပြင်နိုင်တာ (ဥပမာ admin မရှိသေး / pgvector မရှိ) — အဲဒီအခါ
+ဘာ command run ရမလဲ ကို hint မှာ တိုက်ရိုက် ပြထားတယ်။
+
+---
+
+## 8. Verification queries (fresh install မှန်/မမှန်)
 
 ```sql
-SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 25 (A) / 31 (B)
+SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 29 (--init) / 31 (after first ingest)
 SELECT extversion FROM pg_extension WHERE extname='vector';                       -- 0.8.0
 SELECT indexname FROM pg_indexes WHERE indexname='langchain_pg_embedding_hnsw_idx';
 SELECT count(*) FROM users;             -- 1 (ပထမ admin) — demo user မရှိ
@@ -150,7 +208,7 @@ SELECT key FROM system_settings;        -- llm/integrations/smtp/security ... UI
 
 ---
 
-## 8. ဖြစ်လေ့ရှိတဲ့ ပြဿနာများ
+## 9. ဖြစ်လေ့ရှိတဲ့ ပြဿနာများ
 
 | လက္ခဏာ | အကြောင်း | ဖြေရှင်း |
 | --- | --- | --- |
@@ -161,7 +219,7 @@ SELECT key FROM system_settings;        -- llm/integrations/smtp/security ... UI
 
 ---
 
-## 9. Backup / ရွှေ့ပြောင်း
+## 10. Backup / ရွှေ့ပြောင်း
 
 ```bash
 # data ပါ အပြည့် (schema + data) — တခြား environment ကို ရွှေ့ရန်
@@ -178,7 +236,7 @@ pg_dump -s -O -x -U postgres assistant > backend/db/schema.sql
 
 ---
 
-## 10. Upgrade လုပ်တဲ့အခါ
+## 11. Upgrade လုပ်တဲ့အခါ
 
 ကုဒ်အသစ်ကို deploy လုပ်တာနဲ့ `init_db()` က လိုအပ်တဲ့ tables/columns တွေကို ဖြည့်ပေးတယ်
 (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`)။ Migration tool

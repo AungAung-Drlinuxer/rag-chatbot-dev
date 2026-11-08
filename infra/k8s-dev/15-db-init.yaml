@@ -1,0 +1,63 @@
+# Database initialisation for a fresh installation.
+#
+# Runs the same installer an operator runs by hand:
+#     python -m app.bootstrap --init
+# which creates the role/database (only when a superuser URL is supplied), the pgvector
+# extension, every table the app uses, LangGraph's checkpoint tables, and then verifies the
+# result. Every step is idempotent, so this Job is safe to re-run and safe to leave in the
+# apply order for upgrades.
+#
+# WHY A JOB AND NOT AN initContainer ON THE BACKEND
+# The backend already calls init_db() on startup, but that cannot install pgvector and it
+# gives an operator no readable verdict. This prints a JSON report (kubectl logs job/...)
+# and fails loudly when a table is missing, instead of letting the app come up half-created.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  namespace: rag-chatbot-dev
+  labels:
+    app.kubernetes.io/name: db-init
+    app.kubernetes.io/part-of: rag-chatbot
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: db-init
+        app.kubernetes.io/part-of: rag-chatbot
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: db-init
+          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.22
+          imagePullPolicy: Always
+          command: ["python", "-m", "app.bootstrap"]
+          args: ["--init", "--json"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: DATABASE_URL
+            # Only needed on a server where the role/database do not exist yet, or where
+            # tables are owned by another role. When the secret is absent the installer
+            # skips those steps and still creates the schema as the application role.
+            - name: BOOTSTRAP_SUPERUSER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-init-superuser
+                  key: url
+                  optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
