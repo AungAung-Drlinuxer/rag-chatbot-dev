@@ -293,9 +293,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(pane.querySelector('input[type="file"]')).toBeNull();
     expect(pane.textContent).toContain("Read-only. Edit to comment, move the workflow or attach a file.");
 
-    const steps = [...pane.querySelectorAll("button")].filter((b) =>
-      ["Open", "Pending", "In progress", "Done"].includes(b.textContent?.trim() ?? ""),
-    ) as HTMLButtonElement[];
+    const steps = [...pane.querySelectorAll("button[data-step]")] as HTMLButtonElement[];
     expect(steps.length).toBe(4);
     expect(steps.every((s) => s.disabled)).toBe(true);
 
@@ -349,9 +347,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(text).toContain("read-only until Jira is connected");
     expect(text).toContain("Jira is not connected");
     const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-    const step = [...pane.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "Pending",
-    ) as HTMLButtonElement;
+    const step = pane.querySelector('button[data-step="pending"]') as HTMLButtonElement;
     expect(step.disabled).toBe(true);
   });
 
@@ -364,9 +360,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     // Workflow, comments and attachments unlock only after Edit.
     await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
     await Promise.resolve();
-    const step = [...pane.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "In progress",
-    ) as HTMLButtonElement;
+    const step = pane.querySelector('button[data-step="in_progress"]') as HTMLButtonElement;
 
     // Selecting a step is not a save: nothing reaches Jira until the operator says so.
     await click(step);

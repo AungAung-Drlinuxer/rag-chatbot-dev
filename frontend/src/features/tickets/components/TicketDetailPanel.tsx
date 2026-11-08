@@ -14,6 +14,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ExternalLink,
+  Lock,
   MessageSquare,
   Paperclip,
   Pencil,
@@ -248,32 +249,30 @@ export function TicketDetailPanel({
                       onClick={() => setTarget(s)}
                       aria-pressed={target === s || active}
                       aria-label={`${m.label} — selects this step for the next update`}
+                      data-step={s}
                       aria-disabled={!editing || !jiraReady || !!statusBusy || active}
                       className="group flex w-1/4 flex-col items-center gap-1.5 disabled:cursor-default"
                     >
-                      <span className="relative grid size-7 place-items-center">
+                      {/* Numbered steps, the way the Jira board draws them: the position is
+                          legible at a glance, without reading four labels. */}
+                      <span className="relative grid size-6 place-items-center">
                         {active && (
                           <>
-                            <span className="absolute inset-0 animate-ping rounded-full bg-[var(--primary)]/25" aria-hidden />
-                            <span className="absolute inset-0 rounded-full bg-[var(--primary)]/10" aria-hidden />
+                            <span className="absolute inset-[-4px] animate-ping rounded-full bg-[var(--primary)]/20" aria-hidden />
+                            <span className="absolute inset-[-4px] rounded-full bg-[var(--primary)]/15" aria-hidden />
                           </>
                         )}
                         <span
                           className={[
-                            "relative grid size-[19px] place-items-center rounded-full border-2 bg-card transition-all duration-500",
+                            "relative grid size-6 place-items-center rounded-full border text-[10px] font-bold transition-all duration-500",
                             active
-                              ? "scale-110 border-[var(--primary)]"
+                              ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] ring-4 ring-[var(--primary)]/20"
                               : done
-                                ? "border-[var(--primary)]/70"
-                                : "border-[var(--border)] group-hover:border-[var(--primary)]/50",
+                                ? "border-[var(--primary)]/60 bg-[var(--primary)]/10 text-[var(--accent-foreground)]"
+                                : "border-[var(--border)] bg-[var(--muted)] text-muted-foreground group-hover:border-[var(--primary)]/50",
                           ].join(" ")}
                         >
-                          <span
-                            className={[
-                              "size-[7px] rounded-full transition-all duration-500",
-                              active ? "bg-[var(--primary)]" : done ? "bg-[var(--primary)]/70" : "bg-[var(--border)]",
-                            ].join(" ")}
-                          />
+                          {i + 1}
                         </span>
                       </span>
                       <span
@@ -305,10 +304,13 @@ export function TicketDetailPanel({
             ) : !editing ? (
               /* Locked: the rail still shows where the ticket sits, but there is nothing to
                  click and no note box to type into until Edit is pressed. */
-              <p className="mt-3 flex items-center gap-1.5 text-[10px] leading-4 text-muted-foreground">
-                <Pencil className="size-3 shrink-0" />
-                Read-only. Press Edit to move this ticket in Jira, or to comment.
-              </p>
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-2 text-[10.5px] leading-4 text-muted-foreground">
+                <Lock className="mt-0.5 size-3.5 shrink-0 text-[var(--accent-foreground)]" />
+                <span>
+                  Read-only. Press <strong className="font-semibold text-foreground">Edit</strong> to move
+                  this ticket in Jira, or to comment.
+                </span>
+              </div>
             ) : (
               /* One action: pick a step, say why, save once. The old rail fired a transition
                  on click, so the comment explaining it had to be sent separately — or never. */
@@ -519,7 +521,7 @@ export function TicketDetailPanel({
         ) : (
           <div className="flex items-center justify-between gap-3">
             <p className="flex items-center gap-1.5 text-[10.5px] leading-4 text-muted-foreground">
-              <MessageSquare className="size-3 shrink-0" />
+              <Lock className="size-3 shrink-0" />
               Read-only. Edit to comment, move the workflow or attach a file.
             </p>
             {canManage && (

@@ -8,8 +8,9 @@
  */
 import {
   Activity, AlertTriangle, BookOpen, CheckCircle2, Eye, ExternalLink, Gauge,
-  MessageSquare, ShieldAlert, Ticket, Users,
+  MessageSquare, ShieldAlert, Ticket, Users, X,
 } from "lucide-react";
+import { useState } from "react";
 
 import { ConversationChart, DonutChart, Legend, useChartSize } from "@/features/dashboard/components/DashboardCharts";
 import { DomainRow, HealthRow, KpiCard } from "@/features/dashboard/components/DashboardRows";
@@ -137,6 +138,14 @@ function Kpis() {
 function Trend({ title }: PanelBodyProps) {
   const { series, win, rangeLabel } = useDashboardData();
   const [chartRef, chartSize] = useChartSize(620, 240);
+  const totals = series.reduce(
+    (acc, d) => ({
+      total: acc.total + (d.total ?? 0),
+      resolved: acc.resolved + (d.resolved ?? 0),
+      escalated: acc.escalated + (d.escalated ?? 0),
+    }),
+    { total: 0, resolved: 0, escalated: 0 },
+  );
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
       <div className="flex flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
@@ -147,9 +156,9 @@ function Trend({ title }: PanelBodyProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-2xs text-muted-foreground">
-          <Legend label="Total conversations" className="bg-[var(--primary)]" />
-          <Legend label="Resolved by Bot" className="bg-[var(--ok)]" />
-          <Legend label="Escalated" className="bg-[var(--warn)]" />
+          <Legend label={`Total (${fmtInt(totals.total)})`} className="bg-[var(--primary)]" />
+          <Legend label={`Resolved (${fmtInt(totals.resolved)})`} className="bg-[var(--ok)]" />
+          <Legend label={`Escalated (${fmtInt(totals.escalated)})`} className="bg-[var(--warn)]" />
         </div>
       </div>
       {/* The chart measures its own box, so dragging the panel taller redraws a taller plot
@@ -303,27 +312,51 @@ function Domains({ title }: PanelBodyProps) {
 
 function Workspace({ title }: PanelBodyProps) {
   const { stats, role } = useDashboardData();
+  const kb = stats ? String((stats as any).kb_pages ?? "—") : "—";
+  const blocked = stats ? String((stats as any).attacks_blocked_7d ?? 0) : "—";
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-2xs text-muted-foreground">
-            <BookOpen className="size-3.5" /> KB Articles
-          </span>
-          <span className="text-xs font-semibold tabular-nums">{stats ? String((stats as any).kb_pages ?? "—") : "—"}</span>
+    <section className="flex flex-col rounded-2xl border border-[var(--border)] bg-card p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <span className="text-2xs text-muted-foreground">live</span>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
+              <BookOpen className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-2xs font-medium">KB Articles</div>
+              <div className="truncate text-[10px] text-muted-foreground">indexed &amp; searchable</div>
+            </div>
+          </div>
+          <span className="text-xl font-bold tabular-nums">{kb}</span>
         </div>
+
         {role === "admin" && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-2xs text-muted-foreground">
-              <ShieldAlert className="size-3.5" /> Attacks Blocked (7d)
-            </span>
-            <span className="text-xs font-semibold tabular-nums">
-              {stats ? String((stats as any).attacks_blocked_7d ?? 0) : "—"}
-            </span>
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--ok)]/12 text-[var(--ok)]">
+                <ShieldAlert className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="truncate text-2xs font-medium">Attacks Blocked (7d)</div>
+                <div className="truncate text-[10px] text-muted-foreground">prompt injections</div>
+              </div>
+            </div>
+            <span className="text-xl font-bold tabular-nums text-[var(--ok)]">{blocked}</span>
           </div>
         )}
       </div>
+
+      <p className="mt-auto flex items-center justify-between gap-2 pt-2.5 text-[10px] text-muted-foreground">
+        <span>Guardrail status</span>
+        <span className="inline-flex items-center gap-1 font-medium text-[var(--ok)]">
+          <span className="size-1.5 rounded-full bg-[var(--ok)]" aria-hidden /> active
+        </span>
+      </p>
     </section>
   );
 }
@@ -423,11 +456,12 @@ function UsageKpis({ title }: PanelBodyProps) {
   const { usage, usageError, usageDenied } = useDashboardData();
   if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token and cost data." />;
   const t = usage?.totals;
+  const perAnswer = t && t.requests > 0 ? t.cost_usd / t.requests : 0;
   const tiles = [
-    { label: "Answers", value: t ? fmtInt(t.requests) : "—", icon: <MessageSquare className="size-3.5" /> },
-    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", icon: <Eye className="size-3.5" /> },
-    { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", icon: <Gauge className="size-3.5" /> },
-    { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", icon: <Activity className="size-3.5" /> },
+    { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "queries resolved", icon: <MessageSquare className="size-3.5" />, hint: undefined },
+    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, hint: undefined },
+    { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", caption: t ? `avg ${fmtCost(perAnswer)} / answer` : "no usage in this window", icon: <Gauge className="size-3.5" />, hint: undefined },
+    { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", caption: "LLM generation", icon: <Activity className="size-3.5" />, hint: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : undefined },
   ];
   return (
     <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
@@ -440,21 +474,21 @@ function UsageKpis({ title }: PanelBodyProps) {
           <AlertTriangle className="size-3.5" /> {usageError}
         </p>
       )}
-      {/* Four tiles, not a stack of stat cards: this band is 150–250px tall on a one-screen
-          board, so the labels drop to 10px and the numbers stay the largest thing in the tile. */}
-      <div className="mt-2 grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+      {/* Four tiles, each with its own icon and caption: the number is the headline, the
+          caption says what it counts, and the icons keep a glance cheap. */}
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className="rounded-lg border border-[var(--border)] bg-background/40 px-2 py-1.5"
-            title={tile.label === "p95 latency" && t && t.p50_latency_ms > 0
-              ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}`
-              : undefined}
+            className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2.5 transition-colors hover:border-[var(--primary)]/30"
+            title={tile.hint}
           >
-            <div className="flex items-center gap-1 text-[10px] uppercase leading-tight tracking-wide text-muted-foreground">
-              {tile.icon}{tile.label}
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              <span className="text-[var(--accent-foreground)]">{tile.icon}</span>
+              <span className="truncate">{tile.label}</span>
             </div>
-            <p className="mt-0.5 truncate text-base font-semibold tabular-nums">{tile.value}</p>
+            <p className="mt-1.5 truncate text-2xl font-bold tabular-nums leading-none">{tile.value}</p>
+            <p className="mt-1 truncate text-[10px] text-muted-foreground">{tile.caption}</p>
           </div>
         ))}
       </div>
@@ -564,43 +598,68 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
   const { guardrailEvents, guardrailDenied, usage } = useDashboardData();
   const limit = Math.max(1, Math.min(panel.options.limit ?? 10, 25));
   const rows = guardrailEvents.slice(0, limit);
+  const [open, setOpen] = useState<(typeof guardrailEvents)[number] | null>(null);
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4">
-        <div>
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="mt-0.5 text-2xs text-muted-foreground">
-            {guardrailDenied ? "Administrator permission required to list refusals." : "Newest refusals, from the audit trail."}
-          </p>
+    <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+      <div className="flex items-start justify-between gap-3 px-4 pb-2.5 pt-3.5">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--danger)]/10 text-[var(--danger)]">
+            <ShieldAlert className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold leading-tight">{title}</h2>
+            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+              {guardrailDenied
+                ? "Administrator permission required to list refusals."
+                : "Newest refusals and security flags from the audit trail."}
+            </p>
+          </div>
         </div>
         {!guardrailDenied && usage && (
-          <span className="shrink-0 rounded-md bg-[var(--warn)]/12 px-1.5 py-0.5 text-2xs font-medium text-[var(--warn)]">
-            {fmtInt(usage.guardrail_total)} events
+          <span className="shrink-0 rounded-full border border-[var(--warn)]/30 bg-[var(--warn)]/10 px-2 py-0.5 text-[10px] font-medium text-[var(--warn)]">
+            {fmtInt(usage.guardrail_total)} events logged
           </span>
         )}
       </div>
-      <div className="overflow-x-auto border-t border-[var(--border)]">
+
+      <div data-list-scroll className="min-h-0 flex-1 overflow-auto border-t border-[var(--border)]">
         <table className="w-full text-left text-2xs">
-          <thead className="bg-muted/40 text-muted-foreground">
+          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground">
             <tr>
               <th className="px-4 py-1.5 font-medium">When</th>
               <th className="px-4 py-1.5 font-medium">Type</th>
               <th className="px-4 py-1.5 font-medium">User</th>
               <th className="px-4 py-1.5 font-medium">Detail</th>
+              <th className="px-4 py-1.5 text-right font-medium">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {rows.map((e, i) => (
-              <tr key={`${e.created_at}-${i}`}>
+              <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
                 <td className="whitespace-nowrap px-4 py-1.5 text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
-                <td className="px-4 py-1.5">{e.action.replace("guardrail.", "")}</td>
+                <td className="whitespace-nowrap px-4 py-1.5">
+                  <span className="inline-block rounded border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--danger)]">
+                    {e.action.replace("guardrail.", "")}
+                  </span>
+                </td>
                 <td className="px-4 py-1.5">{e.username || "—"}</td>
                 <td className="max-w-[36ch] truncate px-4 py-1.5 text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
+                <td className="px-4 py-1.5 text-right">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(e)}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
+                    aria-label={`View detail for the ${e.action.replace("guardrail.", "")} event`}
+                  >
+                    <Eye className="size-3" /> View
+                  </button>
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
                   {guardrailDenied ? "Ask an administrator for access." : "No guardrail events recorded."}
                 </td>
               </tr>
@@ -608,6 +667,70 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
           </tbody>
         </table>
       </div>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Guardrail event detail"
+          onClick={() => setOpen(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--popover)] p-5 shadow-2xl"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-9 place-items-center rounded-lg bg-[var(--danger)]/10 text-[var(--danger)]">
+                  <ShieldAlert className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold">Guardrail trigger</h3>
+                  <p className="text-2xs text-muted-foreground">{fmtTime(open.created_at ?? "") || "—"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                aria-label="Close guardrail detail"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 p-3 text-2xs">
+              <div>
+                <dt className="text-muted-foreground">Event type</dt>
+                <dd className="mt-0.5 font-semibold text-[var(--danger)]">{open.action.replace("guardrail.", "")}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">User</dt>
+                <dd className="mt-0.5 font-medium">{open.username || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Domain</dt>
+                <dd className="mt-0.5 font-medium">{open.domain || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Decision</dt>
+                <dd className="mt-0.5 font-medium">{open.decision || "blocked"}</dd>
+              </div>
+            </dl>
+
+            <p className="mt-3 text-2xs font-medium text-muted-foreground">Refusal context</p>
+            <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 font-mono text-[11px] leading-relaxed text-foreground">
+{open.detail || "No detail recorded for this event."}
+            </pre>
+
+            <p className="mt-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] p-3 text-[11px] leading-relaxed text-[var(--accent-foreground)]">
+              The request was stopped before it reached the model. A standard refusal was returned
+              to the user and the event was written to the audit trail.
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
