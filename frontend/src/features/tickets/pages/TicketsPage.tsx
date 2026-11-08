@@ -20,6 +20,7 @@ import {
   listTicketDestinations,
   listTickets,
   syncJiraTickets,
+  reconcileJiraTickets,
   ticketAddComment,
   ticketAttachmentAdd,
   ticketAttachments,
@@ -100,6 +101,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
   ]);
 
   const [syncBusy, setSyncBusy] = useState(false);
+  const [reconcileBusy, setReconcileBusy] = useState(false);
   const [jiraReady, setJiraReady] = useState<boolean | null>(null);
 
   /* ---------------------------------------------------------------- loading */
@@ -337,6 +339,27 @@ export default function Tickets({ role, userName, onToast }: Props) {
     }
   }
 
+  async function reconcileTickets() {
+    setReconcileBusy(true);
+    try {
+      const res = await reconcileJiraTickets();
+      if (res.unreachable > 0 && res.checked === res.unreachable) {
+        onToast("Jira is unreachable — nothing was changed", "err");
+        return;
+      }
+      onToast(
+        res.missing
+          ? `Checked ${res.checked}: ${res.missing} ticket${res.missing === 1 ? "" : "s"} deleted in Jira removed, ${res.updated} status${res.updated === 1 ? "" : "es"} updated`
+          : `Checked ${res.checked}: everything matches Jira${res.updated ? ` (${res.updated} updated)` : ""}`,
+      );
+      await loadTickets(100);
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Reconciliation failed", "err");
+    } finally {
+      setReconcileBusy(false);
+    }
+  }
+
   async function createTicket() {
     if (!newTicket.subject.trim()) {
       onToast("Ticket subject is required", "err");
@@ -471,17 +494,30 @@ export default function Tickets({ role, userName, onToast }: Props) {
         actions={
           <div className="flex items-center gap-2">
             {canManage && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-lg"
-                disabled={syncBusy}
-                onClick={syncTickets}
-                title="Import the latest issues from Jira"
-              >
-                <RefreshCw className={`mr-2 size-3.5 ${syncBusy ? "animate-spin" : ""}`} />
-                {syncBusy ? "Syncing…" : "Sync Jira"}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg"
+                  disabled={syncBusy}
+                  onClick={syncTickets}
+                  title="Import the latest issues from Jira"
+                >
+                  <RefreshCw className={`mr-2 size-3.5 ${syncBusy ? "animate-spin" : ""}`} />
+                  {syncBusy ? "Syncing…" : "Sync Jira"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg"
+                  disabled={reconcileBusy}
+                  onClick={reconcileTickets}
+                  title="Check every ticket against Jira: remove issues deleted there, adopt changed statuses"
+                >
+                  <RefreshCw className={`mr-2 size-3.5 ${reconcileBusy ? "animate-spin" : ""}`} />
+                  {reconcileBusy ? "Reconciling…" : "Reconcile"}
+                </Button>
+              </>
             )}
             <Button size="sm" className="rounded-lg" onClick={() => setCreateOpen(true)}>
               <Plus className="mr-1.5 size-4" />

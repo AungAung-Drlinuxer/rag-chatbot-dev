@@ -19,6 +19,9 @@ celery_app.conf.result_backend_transport_options = transport_options()
 
 celery_app.conf.beat_schedule = {
     "sync-kb": {"task": "workers.sync_tasks.sync_kb", "schedule": crontab(minute="*/30")},
+    # 03:15 UTC — after the 19:30 nightly database backup, before the working day. Cheap:
+    # one GET per mirrored key, with no model calls.
+    "reconcile-jira": {"task": "workers.sync_tasks.reconcile_jira", "schedule": crontab(hour="3", minute="15")},
 }
 celery_app.conf.timezone = "UTC"
 celery_app.conf.task_serializer = "json"

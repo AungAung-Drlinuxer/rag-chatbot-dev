@@ -59,11 +59,6 @@ export async function listUsers() {
   return r.json();
 }
 
-export async function listDepartments() {
-  const r = await apiFetch(`${BASE}/api/departments`, { headers: authHeaders() });
-  return r.ok ? r.json() : null; // supporting data — non-fatal
-}
-
 export async function getUserPermissions(username: string) {
   const r = await apiFetch(`${BASE}/api/users/${encodeURIComponent(username)}/permissions`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);

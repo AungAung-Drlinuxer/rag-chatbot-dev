@@ -201,6 +201,56 @@ def _expected_tables() -> list[str]:
     return sorted(set(Base.metadata.tables) | set(CORE_TABLES))
 
 
+# Objects created by features this build no longer has. A fresh install never creates them,
+# but an install that was upgraded still carries the table/column — and a column nobody reads
+# is still a column that can hold stale data and confuse the next person reading the schema.
+# Removing them here (not in `init_db`) keeps the destructive step behind an explicit `--init`.
+OBSOLETE_OBJECTS: list[tuple[str, str]] = [
+    ("chat_sessions.connector_scope",
+     "ALTER TABLE IF EXISTS chat_sessions DROP COLUMN IF EXISTS connector_scope"),
+    ("department_members", "DROP TABLE IF EXISTS department_members"),
+    ("departments", "DROP TABLE IF EXISTS departments"),
+]
+
+
+def drop_obsolete_objects() -> dict:
+    """Drop schema left by removed features. Idempotent; returns what is still present."""
+    from app.persistence.database import SessionLocal
+
+    dropped: list[str] = []
+    failed: dict[str, str] = {}
+    with SessionLocal() as s:
+        for label, statement in OBSOLETE_OBJECTS:
+            try:
+                s.execute(text(statement))
+                s.commit()
+                dropped.append(label)
+            except Exception as exc:  # noqa: BLE001
+                s.rollback()
+                failed[label] = f"{type(exc).__name__}: {exc}"
+    return {"dropped": dropped, "failed": failed, "still_present": _obsolete_present()}
+
+
+def _obsolete_present() -> list[str]:
+    from app.persistence.database import SessionLocal
+
+    present: list[str] = []
+    with SessionLocal() as s:
+        column = s.execute(text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema='public' AND table_name='chat_sessions' "
+            "AND column_name='connector_scope'"
+        )).scalar()
+        if column:
+            present.append("chat_sessions.connector_scope")
+        for table in ("departments", "department_members"):
+            exists = s.execute(text(
+                "SELECT to_regclass(:t)"), {"t": f"public.{table}"}).scalar()
+            if exists:
+                present.append(table)
+    return present
+
+
 def ensure_checkpoint_tables() -> bool:
     """Create LangGraph's checkpoint tables. Returns False when langgraph is unavailable."""
     try:
@@ -292,11 +342,13 @@ def verify() -> dict:
         }
         report["admins"] = int(s.execute(text(
             "SELECT count(*) FROM users WHERE role_override = 'admin'")).scalar() or 0)
+    report["obsolete_present"] = _obsolete_present()
     report["owned_by_app"] = report["table_owners"].get(role, 0) == report["tables_present"]
     report["ready"] = (
         not report["missing_tables"]
         and report["vector_version"] is not None
         and report["owned_by_app"]
+        and not report["obsolete_present"]
     )
     return report
 
@@ -395,6 +447,7 @@ def main(argv: list[str] | None = None) -> int:
         steps["provision"] = provision_role_and_database()
         ensure_schema()
         steps["checkpoints"] = ensure_checkpoint_tables()
+        steps["obsolete"] = drop_obsolete_objects()
         steps["ownership"] = ensure_ownership()
     else:
         ensure_schema()
@@ -415,6 +468,8 @@ def main(argv: list[str] | None = None) -> int:
           f"pgvector {report['vector_version'] or 'MISSING'}")
     if report["missing_tables"]:
         print("  missing: " + ", ".join(report["missing_tables"]))
+    if report.get("obsolete_present"):
+        print("  obsolete objects still present: " + ", ".join(report["obsolete_present"]))
     print("  owners: " + ", ".join(f"{k}={v}" for k, v in report["table_owners"].items()))
     if args.init:
         prov = steps.get("provision", {})

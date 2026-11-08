@@ -199,11 +199,14 @@ def list_tickets(
     limit = max(1, min(limit, 200))
     privileged = role in ("admin", "agent")
 
+    # Tickets reconciliation found gone from Jira stay in the table (status='deleted') so the
+    # escalation history survives, but they must not appear on the board.
     sql = (
         "SELECT id, jira_key, session_id, domain, status, created_by, created_at, "
         "subject, description, priority, assignee, due_date "
         "FROM jira_tickets "
-        + ("WHERE created_by = :user " if not privileged else "")
+        "WHERE COALESCE(status, '') <> 'deleted' "
+        + ("AND created_by = :user " if not privileged else "")
         + "ORDER BY created_at DESC LIMIT :limit"
     )
     params: dict = {"limit": limit}
@@ -680,3 +683,30 @@ def jira_sync(user: str = Depends(require_cap("manage_kb"))) -> dict:
 
 # === v0.21.14 — RBAC role/permission matrix (admin-editable) ===
 
+
+
+# === Jira reconciliation (mirror -> Jira, including deleted issues) ==========
+@router.post("/tickets/reconcile")
+def reconcile_tickets(
+    limit: int = 200,
+    user: str = Depends(require_cap("manage_kb")),
+) -> dict:
+    """Ask Jira about every mirrored ticket and fix the mirror.
+
+    Three outcomes, and only one of them is destructive:
+      * Jira answers 404        -> the row is marked `deleted` and drops off the board,
+      * Jira answers a status   -> the canonical status is adopted,
+      * Jira cannot be reached  -> nothing changes (an outage is not a deletion).
+
+    The nightly Celery task runs the same function; this endpoint exists so an operator can
+    fix the board immediately after deleting an issue in Jira instead of waiting for 03:15.
+    """
+    from app.integrations.jira_reconcile import reconcile_jira
+    from app.observability.audit import audit
+
+    result = reconcile_jira(limit=limit)
+    try:
+        audit("tickets.reconcile", user, detail=f" checked={result['checked']} missing={result['missing']}")
+    except Exception:
+        pass
+    return {"ok": True, **result}

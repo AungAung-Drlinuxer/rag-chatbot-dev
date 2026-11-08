@@ -16,7 +16,6 @@ from app.auth.rbac import get_role, require_role, require_cap
 from app.config import SETTINGS
 from app.persistence.database import SessionLocal, engine
 from app.observability.audit import audit
-from app.persistence.models import Department, DepartmentMember
 
 logger = logging.getLogger("dashboard")
 
@@ -88,9 +87,10 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
     if role not in ("admin", "agent"):
         raise HTTPException(status_code=403, detail="Forbidden")
     out: dict[str, dict] = {}
-    # v0.21.58 — attach admin-managed groups + departments to every user record
+    # Admin-managed app groups; a user's DEPARTMENT comes from the directory (`users.department`),
+    # not from a groups table — the departments feature was removed, and the old join meant a
+    # user could show a department that no longer existed anywhere.
     app_group_map: dict[str, list[str]] = {}
-    dept_map: dict[str, str] = {}
     try:
         from sqlalchemy import text as _t
 
@@ -99,10 +99,6 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
         with _SL() as s:
             for m in s.execute(_t("SELECT group_name, username FROM app_group_members")).mappings():
                 app_group_map.setdefault(m["username"], []).append(m["group_name"])
-            for m in s.execute(_t(
-                "SELECT department, member_name FROM department_members WHERE member_type = 'user'"
-            )).mappings():
-                dept_map[m["member_name"]] = m["department"]
     except Exception:
         pass
 
@@ -124,7 +120,7 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                     "name": u,
                     "username": u,
                     "email": r.get("email") or _synthetic_email(u),
-                    "department": dept_map.get(u) or r.get("department") or "Internal",
+                    "department": r.get("department") or "Internal",
                     "role": role,
                     "roleOverride": r.get("role_override"),
                     "status": r.get("status") or "Active",
@@ -212,7 +208,7 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                     "name": str(e.displayName) if e.displayName else u,
                     "username": u,
                     "email": str(e.mail) if e.mail else _synthetic_email(u),
-                    "department": dept_map.get(u) or merged_dept,
+                    "department": merged_dept,
                     "role": merged_role,
                     "roleOverride": local.get("roleOverride"),
                     "status": merged_status,
@@ -352,73 +348,5 @@ def set_local_password(username: str, payload: dict, user: str = Depends(get_cur
         pass
     return {"ok": True}
 
-
-
-@router.get("/departments")
-def list_departments(user: str = Depends(get_current_user)) -> dict:
-    with SessionLocal() as s:
-        deps = s.query(Department).order_by(Department.name).all()
-        members = s.query(DepartmentMember).all()
-    out = []
-    for d in deps:
-        out.append({
-            "name": d.name,
-            "description": d.description,
-            "users": [m.member_name for m in members if m.department == d.name and m.member_type == "user"],
-            "groups": [m.member_name for m in members if m.department == d.name and m.member_type == "group"],
-        })
-    return {"departments": out}
-
-
-@router.post("/departments")
-def create_department(payload: dict, user: str = Depends(get_current_user)) -> dict:
-    if get_role(user) != "admin":
-        raise HTTPException(status_code=403, detail="Administrator permission required.")
-    name = (payload.get("name") or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Department name is required")
-    with SessionLocal() as s:
-        if s.get(Department, name):
-            raise HTTPException(status_code=409, detail=f"Department '{name}' already exists")
-        s.add(Department(name=name, description=payload.get("description"), created_by=user))
-        s.commit()
-    try:
-        audit("department.create", user, detail=f" name={name}")
-    except Exception:
-        pass
-    return {"ok": True, "name": name}
-
-
-@router.put("/departments/{name}")
-def update_department(name: str, payload: dict, user: str = Depends(get_current_user)) -> dict:
-    if get_role(user) != "admin":
-        raise HTTPException(status_code=403, detail="Administrator permission required.")
-    with SessionLocal() as s:
-        d = s.get(Department, name)
-        if not d:
-            raise HTTPException(status_code=404, detail="Department not found")
-        if "description" in payload:
-            d.description = payload["description"]
-        if "users" in payload or "groups" in payload:
-            s.query(DepartmentMember).filter(DepartmentMember.department == name).delete()
-            for u in payload.get("users", []):
-                s.add(DepartmentMember(department=name, member_type="user", member_name=u))
-            for g in payload.get("groups", []):
-                s.add(DepartmentMember(department=name, member_type="group", member_name=g))
-        s.commit()
-    return {"ok": True, "name": name}
-
-
-@router.delete("/departments/{name}")
-def delete_department(name: str, user: str = Depends(get_current_user)) -> dict:
-    if get_role(user) != "admin":
-        raise HTTPException(status_code=403, detail="Administrator permission required.")
-    with SessionLocal() as s:
-        s.query(DepartmentMember).filter(DepartmentMember.department == name).delete()
-        d = s.get(Department, name)
-        if d:
-            s.delete(d)
-        s.commit()
-    return {"ok": True}
 
 

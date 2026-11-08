@@ -8,3 +8,11 @@ from workers.celery_app import celery_app
 @celery_app.task(name="workers.sync_tasks.sync_kb")
 def sync_kb() -> dict:
     return sync_all()
+
+
+@celery_app.task(name="workers.sync_tasks.reconcile_jira")
+def reconcile_jira_task() -> dict:
+    """Nightly: drop tickets deleted in Jira, adopt statuses changed there."""
+    from app.integrations.jira_reconcile import reconcile_jira
+
+    return reconcile_jira(limit=500)

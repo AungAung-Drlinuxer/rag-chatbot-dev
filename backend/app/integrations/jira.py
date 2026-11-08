@@ -363,6 +363,10 @@ def fetch_issue_status(issue_key: str) -> dict:
                 f"{cfg['base_url'].rstrip('/')}/rest/api/3/issue/{issue_key}",
                 params={"fields": "status,assignee"},
             )
+            if r.status_code == 404:
+                # The ONLY answer that means "this ticket no longer exists in Jira". Callers
+                # that mirror Jira (reconciliation) must not treat a timeout as a deletion.
+                return {"ok": False, "missing": True, "detail": "issue not found (404)"}
             r.raise_for_status()
             f = r.json().get("fields", {})
             return {

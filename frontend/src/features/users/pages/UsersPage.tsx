@@ -40,7 +40,6 @@ import {
 
 import {
   listUsers,
-  listDepartments,
   getUserPermissions,
   createUser as createUserApi,
   resetUserAccess,
@@ -191,7 +190,6 @@ export default function Users() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
-  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,13 +216,6 @@ export default function Users() {
     }
   }
 
-  async function loadSupportingData() {
-    try {
-      const departmentData = await listDepartments();
-      if (departmentData) setDepartments(departmentData.departments ?? []);
-    } catch { /* Ignore supporting-data failures. */ }
-  }
-
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -237,8 +228,6 @@ export default function Users() {
       } finally {
         if (mounted) setLoading(false);
       }
-      if (!mounted) return;
-      loadSupportingData();
     }
     load();
     return () => { mounted = false; };
@@ -267,14 +256,14 @@ export default function Users() {
     });
   }, [users, search, statusFilter, roleFilter, departmentFilter]);
 
+  // Options come from the users actually listed. They used to be merged with an
+  // admin-managed departments table, which could offer a filter that matched nobody.
   const departmentOptions = useMemo(() => {
-    const values = [
-      ...(departments ?? []).map((department: any) => department.name),
-      ...users.map((user) => user.department).filter(
-        (department) => department && department !== "—" && department !== "Internal"),
-    ];
+    const values = users
+      .map((user) => user.department)
+      .filter((department) => department && department !== "—" && department !== "Internal");
     return ["All", ...Array.from(new Set(values))];
-  }, [departments, users]);
+  }, [users]);
 
   function exportCsv() {
     const header = "Name,Username,Email,Department,Role,Status,Last login,Joined";

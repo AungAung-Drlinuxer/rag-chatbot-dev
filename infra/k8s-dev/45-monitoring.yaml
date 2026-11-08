@@ -1,0 +1,174 @@
+# === rag-chatbot DEV — metrics collector =====================================
+# Production is scraped by the platform's Grafana Alloy in the `monitoring` namespace, which
+# remote-writes to Prometheus at http://10.10.10.18:9090. That collector deliberately selects
+# namespace=rag-chatbot only, so dev never reported anywhere.
+#
+# WHY ITS OWN ALLOY INSTEAD OF EDITING THE PLATFORM CONFIG: the shared `alloy-config`
+# ConfigMap is the platform team's file. Adding a dev scrape job there means a dev change can
+# break prod's metrics pipeline, and a platform upgrade silently drops it. Instead dev runs a
+# one-purpose collector in its OWN namespace, writing to the SAME Prometheus with the same
+# metric names plus `namespace`/`environment` labels — so one Grafana can chart both, and
+# `environment="dev"` keeps the series apart.
+#
+# ONLY the backend is scraped here. Node/cAdvisor/kube-state metrics are cluster-wide and the
+# platform collector already covers them for every namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  namespace: rag-chatbot-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alloy
+  namespace: rag-chatbot-dev
+rules:
+  # Pod discovery only. No secrets, no writes — a metrics collector needs neither.
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alloy
+  namespace: rag-chatbot-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alloy
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+    namespace: rag-chatbot-dev
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-dev-config
+  namespace: rag-chatbot-dev
+data:
+  config.alloy: |
+    // Same remote_write target as production: dev series land in the same Prometheus,
+    // labelled environment="dev" so a dashboard can switch between them.
+    prometheus.remote_write "external_prom" {
+      endpoint {
+        url = "http://10.10.10.18:9090/api/v1/write"
+      }
+    }
+
+    discovery.kubernetes "backend_pods" {
+      role = "pod"
+      // The RBAC Role is namespaced, so a cluster-wide list is refused (403) and discovery
+      // would silently return zero targets. Scoping the discovery to this namespace is what
+      // makes the namespaced permission sufficient.
+      namespaces {
+        names = ["rag-chatbot-dev"]
+      }
+      selectors {
+        role  = "pod"
+        field = "metadata.namespace=rag-chatbot-dev"
+        label = "app.kubernetes.io/name=backend"
+      }
+    }
+
+    // Kubernetes discovery exposes namespace/pod only as __meta_* labels. Copy them to real
+    // labels so a query does not have to remember the discovery prefix.
+    discovery.relabel "backend_dev" {
+      targets = discovery.kubernetes.backend_pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "app"
+      }
+      rule {
+        target_label = "environment"
+        replacement  = "dev"
+      }
+    }
+
+    // Component name IS the job label in Alloy (prod shows up as
+    // job="prometheus.scrape.chatbot_backend"), so this one arrives as
+    // job="prometheus.scrape.chatbot_backend_dev".
+    prometheus.scrape "chatbot_backend_dev" {
+      targets         = discovery.relabel.backend_dev.output
+      metrics_path    = "/metrics"
+      forward_to      = [prometheus.remote_write.external_prom.receiver]
+      scrape_interval = "15s"
+    }
+
+    // The collector's own health: if this stops, dev dashboards go empty and nothing else
+    // would say why.
+    prometheus.scrape "self" {
+      targets = [{ "__address__" = "127.0.0.1:12345" }]
+      forward_to        = [prometheus.remote_write.external_prom.receiver]
+      scrape_interval   = "30s"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  namespace: rag-chatbot-dev
+  labels:
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/component: metrics
+spec:
+  replicas: 1
+  # Two collectors scraping identical targets produce duplicate samples with conflicting
+  # timestamps, which remote_write rejects — so recreate, never roll.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alloy
+        app.kubernetes.io/component: metrics
+    spec:
+      serviceAccountName: alloy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 473
+        fsGroup: 473
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.0.0
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/var/lib/alloy/data
+            - --server.http.listen-addr=0.0.0.0:12345
+          ports:
+            - name: http
+              containerPort: 12345
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits:   { cpu: 250m, memory: 256Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+            - name: data
+              mountPath: /var/lib/alloy/data
+          readinessProbe:
+            httpGet: { path: /-/ready, port: 12345 }
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet: { path: /-/healthy, port: 12345 }
+            initialDelaySeconds: 15
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-dev-config
+        - name: data
+          emptyDir: {}

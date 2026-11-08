@@ -1,0 +1,173 @@
+{
+  "uid": "rag-chatbot-dev-overview",
+  "title": "RAG Chatbot — Dev",
+  "tags": ["rag-chatbot", "dev"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "DS",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Backend scrape",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"prometheus.scrape.chatbot_backend_dev\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 } } },
+            { "type": "value", "options": { "1": { "text": "UP", "color": "green", "index": 1 } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Chat requests / s by decision",
+      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (decision) (rate(chat_requests_total{job=\"prometheus.scrape.chatbot_backend_dev\"}[5m]))",
+          "legendFormat": "{{decision}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 12, "lineWidth": 2 } }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Chat latency p50 / p95",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(chat_latency_seconds_bucket{job=\"prometheus.scrape.chatbot_backend_dev\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(chat_latency_seconds_bucket{job=\"prometheus.scrape.chatbot_backend_dev\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "RAG stage latency p95",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (stage, le) (rate(rag_stage_latency_seconds_bucket{job=\"prometheus.scrape.chatbot_backend_dev\"}[5m])))",
+          "legendFormat": "{{stage}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Confidence gate decisions / s",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (decision) (rate(rag_gate_decisions_total{job=\"prometheus.scrape.chatbot_backend_dev\"}[10m]))",
+          "legendFormat": "{{decision}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Guardrail events / s",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind) (rate(guardrail_events_total{job=\"prometheus.scrape.chatbot_backend_dev\"}[10m]))",
+          "legendFormat": "{{kind}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(security_events_db_total{job=\"prometheus.scrape.chatbot_backend_dev\"}[10m]))",
+          "legendFormat": "persisted events"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Process RSS",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=\"prometheus.scrape.chatbot_backend_dev\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "Scrape duration",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "scrape_duration_seconds{job=\"prometheus.scrape.chatbot_backend_dev\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM tokens / s",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind) (rate(llm_tokens_total{job=\"prometheus.scrape.chatbot_backend_dev\"}[5m]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    }
+  ]
+}

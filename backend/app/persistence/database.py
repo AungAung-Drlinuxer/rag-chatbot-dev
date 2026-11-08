@@ -125,10 +125,6 @@ def init_db() -> None:
     # first ingest) must not abort the rest of the plan.
     _migrations = [
         ("chat_messages.meta", "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS meta TEXT"),
-        (
-            "chat_sessions.connector_scope",
-            "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS connector_scope TEXT",
-        ),
         ("kb_meta.body", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS body TEXT"),
         ("kb_meta.updated_by", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS updated_by VARCHAR(64)"),
         ("jira_tickets.subject", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(200)"),
@@ -136,6 +132,10 @@ def init_db() -> None:
         ("jira_tickets.priority", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS priority VARCHAR(16)"),
         ("jira_tickets.assignee", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS assignee VARCHAR(64)"),
         ("jira_tickets.due_date", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ"),
+        (
+            "jira_tickets.remote_missing_at",
+            "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS remote_missing_at TIMESTAMPTZ",
+        ),
         (
             "ticket_comments index",
             "CREATE INDEX IF NOT EXISTS ix_ticket_comments_ticket ON ticket_comments(ticket_id)",

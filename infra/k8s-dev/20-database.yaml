@@ -25,6 +25,17 @@ metadata:
 spec:
   instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  # Backups (21-backup.yaml): the plugin is the WAL archiver, and archive_mode must be on for
+  # continuous WAL — without it a restore can only reach the last nightly base backup.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: cnpg-backup-store
+  postgresql:
+    parameters:
+      archive_mode: "on"
+      archive_timeout: 5min
   storage:
     size: 5Gi
   bootstrap:

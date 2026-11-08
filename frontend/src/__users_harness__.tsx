@@ -8,7 +8,7 @@
  * `fetch` stubbed to a fixture whose SHAPE is copied field-for-field from
  * `list_users` in `backend/app/api/users.py`
  * (users[{id,name,username,email,department,role,roleOverride,status,groups,lastLogin,joined,source}])
- * plus `{ users: [...] }`, `/api/departments`, and `/api/users/{u}/permissions`
+ * plus `{ users: [...] }` and `/api/users/{u}/permissions`
  * ({username, effective, overrides} from admin_ops.get_user_permissions).
  * Nothing about the component is mocked — only its data source is.
  *
@@ -104,9 +104,6 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (method === "GET" && path === "/api/users") {
     // The endpoint sorts by username (users.py: sorted(..., key=username.lower())).
     return json({ users: [...USERS].sort((a, b) => a.username.localeCompare(b.username)) });
-  }
-  if (method === "GET" && path === "/api/departments") {
-    return json({ departments: [{ name: "IT Operations" }, { name: "Finance" }, { name: "Sales" }] });
   }
   const perm = path.match(/^\/api\/users\/([^/]+)\/permissions$/);
   if (method === "GET" && perm) {

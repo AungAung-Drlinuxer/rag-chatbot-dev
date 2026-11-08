@@ -118,12 +118,10 @@ def put_rbac_matrix(payload: dict, user: str = Depends(get_current_user)) -> dic
     return {"ok": True, "count": len(matrix)}
 
 
-# --- v0.21.58 — per-user permission overrides + groups + departments ----------
+# --- v0.21.58 — per-user permission overrides + groups ------------------------
 
 from app.persistence.models import (
     AppGroup,
-    Department,
-    DepartmentMember,
     GroupMember,
     UserPermissionOverride,
 )

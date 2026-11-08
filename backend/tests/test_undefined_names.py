@@ -1,35 +1,24 @@
-"""Handlers that referenced names they never imported.
+"""Handlers that referenced names they never imported, and routes that must stay gone.
 
-`/api/departments` answered 500 with `NameError: name 'Department' is not defined` because the
-module imported the session helper but not the model, and the escalation path called
-`jira_route`/`build_context` the same way. Import-time checks cannot see these, so each fixed
-handler gets called once here.
+`/api/departments` once answered 500 with `NameError: name 'Department' is not defined`
+because the module imported the session helper but not the model, and the escalation path
+called `jira_route`/`build_context` the same way. Import-time checks cannot see these, so
+each handler that still exists gets called once here.
+
+The departments feature itself has since been removed (the directory's `users.department`
+column is the only source of a user's department), so the test that used to call its handler
+now pins that the routes are absent — a deleted feature that still answers 200 behind an auth
+guard looks like a working feature to whoever finds the URL.
 """
 from __future__ import annotations
 
-import app.persistence.database as db
 
-
-class _Query:
-    def order_by(self, *a): return self
-    def all(self): return []
-
-
-class _Session:
-    def __enter__(self): return self
-    def __exit__(self, *a): return False
-    def query(self, *a): return _Query()
-
-
-def test_departments_handler_resolves_its_models(monkeypatch):
+def test_department_routes_are_gone():
     from app.api import users
 
-    # users.py binds SessionLocal at import time, so patch the module's own name — patching
-    # the source module only works when users.py has not been imported yet.
-    monkeypatch.setattr(users, "SessionLocal", lambda: _Session())
-    list_departments = users.list_departments
-
-    assert list_departments(user="diag") == {"departments": []}
+    paths = {getattr(r, "path", "") for r in users.router.routes}
+    assert not any(p.startswith("/api/departments") for p in paths)
+    assert not any("department" in p for p in paths)
 
 
 def test_chat_module_imports_its_helpers():
