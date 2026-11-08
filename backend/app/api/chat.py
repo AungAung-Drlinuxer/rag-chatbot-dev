@@ -195,7 +195,10 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                     "rerank_used": False, "acl_scoped": False,
                     "role": get_role(user),
                 },
-                "mode": (req.mode or "auto").strip().lower(),
+                # ChatRequest carries llm_provider, not "mode": reading an attribute the
+                # schema never defines raised inside the generator, after the response had
+                # started, which surfaced to the browser as an empty stream (HTTP 520).
+                "mode": (req.llm_provider or "auto").strip().lower(),
                 "small_talk": _st,
             }
             yield _sse("meta", _st_meta)
