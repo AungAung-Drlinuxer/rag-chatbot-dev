@@ -226,11 +226,31 @@ def create_domain(req: DomainCreateRequest,
         s.add(d)
         s.commit()
         s.refresh(d)
+
+        # A brand-new domain has no profile, and an empty one is silently unroutable on the
+        # keyword fallback. Draft description + keywords now, on the same model that routes
+        # questions; a model outage must not block creating the domain, so this is best-effort.
+        auto_profile = False
+        if not cleaned_keywords or not (req.description or "").strip():
+            from app.classifier.profile_suggest import suggest_profile
+
+            suggested = suggest_profile(key=key, name=req.display_name.strip(),
+                                        description=req.description or "",
+                                        keywords=cleaned_keywords)
+            if suggested:
+                if not cleaned_keywords and suggested.get("keywords"):
+                    d.keywords = suggested["keywords"]
+                if not (req.description or "").strip() and suggested.get("description"):
+                    d.description = suggested["description"]
+                s.commit()
+                auto_profile = True
+
         new_id = d.id
 
     reload_rules_cache()
-    audit("domain_created", user, detail=f"domain={key}")
-    return {"status": "ok", "id": new_id, "domain_key": key}
+    audit("domain_created", user,
+          detail=f"domain={key}" + (" (profile auto-drafted)" if auto_profile else ""))
+    return {"status": "ok", "id": new_id, "domain_key": key, "auto_profile": auto_profile}
 
 
 @router.put("/api/admin/domains/{domain_id}")

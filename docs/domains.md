@@ -20,6 +20,17 @@ than claiming the domain can never match.
 - a one-sentence **description** (≤280 chars) of what belongs in the domain,
 - 10–18 **keywords** a user would type.
 
+**When it runs automatically**
+
+- **On create** — `POST /api/admin/domains` drafts the profile when the request left the
+  description or keywords blank, and reports `auto_profile: true`. A model outage never blocks
+  the create: the domain is saved and can be filled later.
+- **Nightly at 04:10 UTC** — `workers.sync_tasks.backfill_domain_profiles` fills blanks only
+  (description empty or keywords empty), up to 10 LLM calls per run. Anything an admin wrote is
+  never overwritten.
+- **Manually** — "Suggest with AI" in the Edit sheet, which *does* replace the fields in the
+  form (saving stays explicit).
+
 It is grounded in the titles of the articles already classified into that domain
 (`kb_meta.title` where `lower(domain) = key`, newest 25), so the vocabulary is this workspace's
 own. The admin UI exposes it as **Suggest with AI** in the Edit sheet — the values land in the

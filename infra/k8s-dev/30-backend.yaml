@@ -33,7 +33,7 @@ spec:
             name: backend-config
         - secretRef:
             name: backend-secrets
-        image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.38
+        image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.39
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3

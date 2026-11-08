@@ -22,6 +22,9 @@ celery_app.conf.beat_schedule = {
     # 03:15 UTC — after the 19:30 nightly database backup, before the working day. Cheap:
     # one GET per mirrored key, with no model calls.
     "reconcile-jira": {"task": "workers.sync_tasks.reconcile_jira", "schedule": crontab(hour="3", minute="15")},
+    # 04:10 UTC — after the KB sync, fill only the blanks in newly created domains.
+    "backfill-domain-profiles": {"task": "workers.sync_tasks.backfill_domain_profiles",
+                                 "schedule": crontab(hour="4", minute="10")},
 }
 celery_app.conf.timezone = "UTC"
 celery_app.conf.task_serializer = "json"
