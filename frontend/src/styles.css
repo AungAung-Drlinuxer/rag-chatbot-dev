@@ -927,8 +927,16 @@ code, pre, .mono { font-family: var(--mono); }
 .panel-surface > div {
   height: 100%;
   min-height: 0;
+}
+/* Cards are columns; a KPI row is a grid and must keep its columns (forcing flex stacked four
+   tiles into one column and clipped the last two). */
+.panel-surface > section:not([class*="grid"]) {
   display: flex;
   flex-direction: column;
+}
+.panel-surface > section[class*="grid"] {
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
 }
 .panel-surface > section > *,
 .panel-surface > div > * {

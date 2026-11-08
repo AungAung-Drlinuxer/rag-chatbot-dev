@@ -176,13 +176,16 @@ describe("DashboardPage — data rendering", () => {
     expect(text).toContain("no escalations this week");
   });
 
-  it("renders the domain breakdown, recent tickets and recent conversations", async () => {
+  it("renders the domain breakdown and the token detail, not the ticket queue", async () => {
     const text = (await mount("admin")).textContent!;
     expect(text).toContain("database");
     expect(text).toContain("40%");
-    expect(text).toContain("IT-1");
-    expect(text).toContain("VPN down");
-    expect(text).toContain("alice");
+    // Tokens are broken down per model on the board (who spent the window's tokens).
+    expect(text).toContain("Tokens by model");
+    expect(text).toContain("openai/gpt-4o-mini");
+    // The ticket queue and the review queue live on their own pages, by request.
+    expect(text).not.toContain("IT-1");
+    expect(text).not.toContain("Needs review");
   });
 
   it("names the failing dependency and the guardrail counter separately", async () => {

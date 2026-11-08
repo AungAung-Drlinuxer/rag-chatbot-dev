@@ -11,8 +11,6 @@ export type PanelType =
   | "kpis"
   | "trend"
   | "quality"
-  | "needs-review"
-  | "recent-tickets"
   | "domains"
   | "knowledge"
   | "health"
@@ -21,7 +19,8 @@ export type PanelType =
   | "cost-trend"
   | "model-cost"
   | "outcome-mix"
-  | "guardrail-events";
+  | "guardrail-events"
+  | "token-breakdown";
 
 export type PanelSpec = {
   id: string;
@@ -68,10 +67,6 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
     description: "Daily volume split by outcome, for the selected reporting window." },
   { type: "quality", label: "Answer quality", defaultSpan: 4,
     description: "Resolved / escalated split plus the confidence-gate pass rate." },
-  { type: "needs-review", label: "Needs review", defaultSpan: 6,
-    description: "Conversations that were escalated or answered with caution." },
-  { type: "recent-tickets", label: "Recent tickets", defaultSpan: 6,
-    description: "Latest Jira tickets with status and priority." },
   { type: "domains", label: "Knowledge by domain", defaultSpan: 6,
     description: "How the indexed knowledge base is distributed across domains." },
   { type: "knowledge", label: "Workspace", defaultSpan: 6,
@@ -91,6 +86,8 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
     description: "How answers ended — answer, caution, escalate — with the confidence-gate pass rate." },
   { type: "guardrail-events", label: "Guardrail events", defaultSpan: 6,
     description: "Newest refusals from the audit trail (administrators only)." },
+  { type: "token-breakdown", label: "Tokens by model", defaultSpan: 6,
+    description: "Answers, tokens in/out and spend per model — the detail behind the total." },
 ];
 
 /**
@@ -99,36 +96,48 @@ export const PANEL_CATALOGUE: PanelCatalogueEntry[] = [
  * and spend. Cost is administrator-only (the API refuses it for everyone else), so the tiles
  * are in the admin default and absent from the user default rather than rendering locked.
  */
+/**
+ * The board is curated, not a pile of every panel: an operator opening it in the morning gets
+ * the queue, the volume, and the token/spend detail they asked for — in a layout that is
+ * already right, so nothing needs rearranging before it is useful.
+ *
+ * `needs-review` and `recent-tickets` were removed by request; their work happens on the
+ * Tickets and Conversations pages, not on a dashboard.
+ */
+const p = (
+  id: string, type: PanelType, span: number, x: number, y: number, h: number,
+  options: PanelSpec["options"] = {},
+): PanelSpec => ({ id, type, title: "", span, x, y, h, options });
+
 export const DEFAULT_LAYOUT: PanelSpec[] = [
-  { id: "attention", type: "attention", title: "", span: 12, options: {} },
-  { id: "kpis", type: "kpis", title: "", span: 12, options: {} },
-  { id: "trend", type: "trend", title: "", span: 8, options: {} },
-  { id: "quality", type: "quality", title: "", span: 4, options: {} },
-  { id: "review", type: "needs-review", title: "", span: 6, options: { limit: 5 } },
-  { id: "tickets", type: "recent-tickets", title: "", span: 6, options: { limit: 5 } },
-  { id: "domains", type: "domains", title: "", span: 6, options: {} },
-  { id: "knowledge", type: "knowledge", title: "", span: 6, options: {} },
-  { id: "health", type: "health", title: "", span: 6, options: {} },
+  p("attention", "attention", 12, 0, 0, 2),
+  p("kpis", "kpis", 12, 0, 2, 3),
+  p("trend", "trend", 8, 0, 5, 5),
+  p("quality", "quality", 4, 8, 5, 5),
+  p("domains", "domains", 6, 0, 10, 4),
+  p("knowledge", "knowledge", 6, 6, 10, 4),
+  p("health", "health", 12, 0, 14, 5),
 ];
 
 export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
-  { id: "attention", type: "attention", title: "", span: 12, options: {} },
-  { id: "usage", type: "usage-kpis", title: "", span: 12, options: {} },
-  { id: "kpis", type: "kpis", title: "", span: 12, options: {} },
-  { id: "trend", type: "trend", title: "", span: 8, options: {} },
-  { id: "outcome", type: "outcome-mix", title: "", span: 4, options: {} },
-  { id: "cost", type: "cost-trend", title: "", span: 6, options: {} },
-  { id: "model-cost", type: "model-cost", title: "", span: 6, options: {} },
-  { id: "review", type: "needs-review", title: "", span: 6, options: { limit: 5 } },
-  { id: "tickets", type: "recent-tickets", title: "", span: 6, options: { limit: 5 } },
-  { id: "domains", type: "domains", title: "", span: 6, options: {} },
-  { id: "knowledge", type: "knowledge", title: "", span: 6, options: {} },
-  { id: "health", type: "health", title: "", span: 6, options: {} },
-  { id: "guardrails", type: "guardrail-events", title: "", span: 12, options: { limit: 10 } },
+  p("attention", "attention", 12, 0, 0, 2),
+  p("usage", "usage-kpis", 12, 0, 2, 2),
+  p("kpis", "kpis", 12, 0, 4, 3),
+  p("trend", "trend", 8, 0, 7, 5),
+  p("outcome", "outcome-mix", 4, 8, 7, 5),
+  p("cost", "cost-trend", 6, 0, 12, 5),
+  p("tokens", "token-breakdown", 6, 6, 12, 5),
+  p("model-cost", "model-cost", 6, 0, 17, 4),
+  p("domains", "domains", 6, 6, 17, 4),
+  p("knowledge", "knowledge", 6, 0, 21, 4),
+  p("health", "health", 6, 6, 21, 4),
+  p("guardrails", "guardrail-events", 12, 0, 25, 4, { limit: 8 }),
 ];
 
 /** Panels that read the observability endpoints — administrator only, like the Audit log. */
-export const ADMIN_ONLY_PANELS: readonly string[] = ["usage-kpis", "cost-trend", "model-cost", "guardrail-events"];
+export const ADMIN_ONLY_PANELS: readonly string[] = [
+  "usage-kpis", "cost-trend", "model-cost", "token-breakdown", "guardrail-events",
+];
 
 export function defaultLayoutFor(role?: string): PanelSpec[] {
   return role === "admin" ? DEFAULT_LAYOUT_ADMIN : DEFAULT_LAYOUT;

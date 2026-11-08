@@ -37,13 +37,12 @@ const DEFAULT_HEIGHT: Partial<Record<PanelType, number>> = {
   "cost-trend": 5,
   "model-cost": 4,
   "outcome-mix": 4,
-  "needs-review": 5,
-  "recent-tickets": 5,
   domains: 4,
   knowledge: 3,
   health: 5,
   note: 3,
   "guardrail-events": 4,
+  "token-breakdown": 5,
 };
 
 export function defaultHeightFor(type: string): number {

@@ -11,11 +11,8 @@ import {
   MessageSquare, ShieldAlert, Ticket, Users,
 } from "lucide-react";
 
-import { Card } from "@/components/ui/card";
 import { ConversationChart, DonutChart, Legend, useChartSize } from "@/features/dashboard/components/DashboardCharts";
 import { DomainRow, HealthRow, KpiCard } from "@/features/dashboard/components/DashboardRows";
-import { PriorityBadge, ResultBadge, StatusBadge } from "@/features/dashboard/components/DashboardBits";
-import { maskProfanity } from "@/features/dashboard/lib/dashboardUtils";
 import { useDashboardData } from "@/features/dashboard/panels/data";
 import { BarRow, DayColumns, fmtCost, fmtInt, fmtMs } from "@/features/dashboard/panels/charts";
 import type { PanelSpec } from "@/features/dashboard/panels/types";
@@ -218,84 +215,63 @@ function Quality({ title }: PanelBodyProps) {
   );
 }
 
-function NeedsReview({ panel, title }: PanelBodyProps) {
-  const { needsReview, conversations } = useDashboardData();
-  const limit = Math.max(1, Math.min(20, panel.options.limit ?? 5));
-  const rows = needsReview.slice(0, limit);
-  return (
-    <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)]">
-      <div className="flex items-center justify-between px-5 pb-3 pt-4">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-          {conversations ? rows.length : "—"}
-        </span>
-      </div>
-      <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
-        {rows.length === 0 && (
-          <p className="px-5 py-8 text-center text-2xs text-muted-foreground">
-            No conversations yet — data appears as users chat.
-          </p>
-        )}
-        {rows.map((conversation) => (
-          <div key={`${conversation.time}-${conversation.user}`} className="space-y-1 px-5 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-2">
-                <ResultBadge result={conversation.result} />
-                <span className="truncate text-xs font-medium" title={conversation.user}>{conversation.user}</span>
-              </span>
-              <span className="shrink-0 text-2xs text-muted-foreground" title={conversation.time}>
-                {fmtTime(conversation.time)}
-              </span>
-            </div>
-            <p className="truncate text-xs text-muted-foreground" title={maskProfanity(conversation.question)}>
-              {maskProfanity(conversation.question)}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("ith:view-conversation", {
-                  detail: { user: conversation.user, question: conversation.question },
-                }));
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-medium text-[var(--accent-foreground)] transition hover:bg-accent"
-            >
-              <Eye className="size-3.5" /> View
-            </button>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
+/**
+ * Tokens by model — the detail behind the "Tokens in / out" tile.
+ *
+ * The board said how many tokens the window used but not WHO used them; a model that answers a
+ * third of the questions and takes half the tokens is exactly what someone watching spend needs
+ * to see. Tokens per answer is the column that makes two models comparable at a glance.
+ */
+function TokenBreakdown({ title }: PanelBodyProps) {
+  const { usage, usageDenied } = useDashboardData();
+  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token usage." />;
+  if (!usage) return <LoadingUsage title={title} />;
 
-function RecentTickets({ panel, title }: PanelBodyProps) {
-  const { tickets, totals } = useDashboardData();
-  const limit = Math.max(1, Math.min(20, panel.options.limit ?? 5));
-  const rows = (tickets ?? []).slice(0, limit);
+  const rows = (usage.by_model ?? []).slice(0, 8);
+  const t = usage.totals;
+  const perAnswer = t.requests > 0 ? Math.round((t.tokens_in + t.tokens_out) / t.requests) : 0;
+
   return (
-    <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)]">
-      <div className="flex items-center justify-between px-5 pb-3 pt-4">
+    <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+      <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-          {tickets ? `${totals.openTickets} open` : "—"}
+        <span className="text-2xs text-muted-foreground">
+          {fmtInt(perAnswer)} tokens / answer
         </span>
       </div>
-      <div className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
-        {rows.length === 0 && (
-          <div className="px-5 py-8 text-center text-2xs text-muted-foreground">
-            No tickets yet — escalations will appear here.
-          </div>
+      <p className="mt-0.5 text-2xs text-muted-foreground">
+        {fmtInt(t.tokens_in)} in · {fmtInt(t.tokens_out)} out · {fmtInt(t.requests)} answers
+      </p>
+
+      <div data-list-scroll className="mt-2 min-h-0 overflow-auto">
+        {rows.length === 0 ? (
+          <p className="py-4 text-2xs text-muted-foreground">No usage recorded in this window.</p>
+        ) : (
+          <table className="w-full text-2xs">
+            <thead className="sticky top-0 bg-card text-muted-foreground">
+              <tr className="border-b border-[var(--border)]">
+                <th className="py-1 pr-2 text-left font-medium">Model</th>
+                <th className="px-1 py-1 text-right font-medium">Ans</th>
+                <th className="px-1 py-1 text-right font-medium">In</th>
+                <th className="px-1 py-1 text-right font-medium">Out</th>
+                <th className="py-1 pl-2 text-right font-medium">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((m) => (
+                <tr key={m.model} className="border-b border-[var(--border)]/60 last:border-0">
+                  <td className="max-w-[9rem] truncate py-1 pr-2" title={m.model}>{m.model}</td>
+                  <td className="px-1 py-1 text-right tabular-nums">{fmtInt(m.requests)}</td>
+                  <td className="px-1 py-1 text-right tabular-nums">{fmtInt(m.tokens_in)}</td>
+                  <td className="px-1 py-1 text-right tabular-nums">{fmtInt(m.tokens_out)}</td>
+                  <td className="py-1 pl-2 text-right tabular-nums">{fmtCost(Number(m.cost))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-        {rows.map((ticket) => (
-          <div key={ticket.id} className="flex items-center gap-3 px-5 py-3 transition hover:bg-muted/50">
-            <div className="w-14 shrink-0 font-mono text-2xs font-semibold text-[var(--accent-foreground)]">{ticket.id}</div>
-            <div className="min-w-0 flex-1 truncate text-xs font-medium">{ticket.subject}</div>
-            <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
-          </div>
-        ))}
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -647,8 +623,6 @@ export const PANEL_BODIES: Record<string, (props: PanelBodyProps) => JSX.Element
   kpis: Kpis,
   trend: Trend,
   quality: Quality,
-  "needs-review": NeedsReview,
-  "recent-tickets": RecentTickets,
   domains: Domains,
   knowledge: Workspace,
   health: Health,
@@ -656,6 +630,7 @@ export const PANEL_BODIES: Record<string, (props: PanelBodyProps) => JSX.Element
   "usage-kpis": UsageKpis,
   "cost-trend": CostTrend,
   "model-cost": ModelCost,
+  "token-breakdown": TokenBreakdown,
   "outcome-mix": OutcomeMix,
   "guardrail-events": GuardrailEvents,
 };
