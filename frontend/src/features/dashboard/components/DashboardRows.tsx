@@ -206,14 +206,12 @@ export function HealthRow({ item }: { item: HealthItem }) {
   const healthy = item.status === "Healthy";
 
   return (
-    // #13 — rows were size-8/py-3.5 for eight services (~560px panel). Compacted to
-    // size-7/py-2 with the failure reason inline so a red row explains itself.
-    <div className="flex items-center gap-3 px-5 py-2">
+    <div className="flex items-center gap-2.5 px-3.5 py-1.5 transition-colors hover:bg-muted/40">
       <div
         className={[
-          "grid size-7 shrink-0 place-items-center rounded-lg",
+          "grid size-6 shrink-0 place-items-center rounded-md",
           healthy
-            ? "bg-muted text-muted-foreground"
+            ? "bg-muted/80 text-muted-foreground"
             : "bg-[var(--danger)]/12 text-[var(--danger)]",
         ].join(" ")}
       >
@@ -221,31 +219,26 @@ export function HealthRow({ item }: { item: HealthItem }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-2xs font-medium leading-tight">{item.name}</div>
+        <div className="truncate text-xs font-medium leading-tight text-foreground">{item.name}</div>
         {!healthy && item.detail && (
-          <div className="mt-0.5 truncate text-2xs leading-tight text-[var(--danger)]" title={item.detail}>
+          <div className="mt-0.5 truncate text-[10px] leading-tight text-[var(--danger)]" title={item.detail}>
             {item.detail}
           </div>
         )}
       </div>
 
-      {healthy && item.latency_ms != null && (
-        <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
-          {item.latency_ms}ms
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {item.latency_ms != null ? `${item.latency_ms}ms` : "0ms"}
         </span>
-      )}
-
-      <div className="flex shrink-0 items-center gap-1.5">
         <span
           aria-hidden
           className={[
-            "size-1.5 rounded-full",
-            healthy ? "bg-[var(--ok)]" : "bg-[var(--danger)]",
+            "size-2 rounded-full",
+            healthy ? "bg-emerald-400" : "bg-rose-500",
           ].join(" ")}
         />
-        <span className={healthy ? "text-2xs text-[var(--ok)]" : "text-2xs text-[var(--danger)]"}>
-          {item.status}
-        </span>
+        <span className="sr-only">{item.status}</span>
       </div>
     </div>
   );

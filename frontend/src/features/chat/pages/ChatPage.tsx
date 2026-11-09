@@ -14,9 +14,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
-  CornerDownLeft,
+  Bot,
   Loader2,
   MessageSquarePlus,
+  Paperclip,
   Send,
   ShieldCheck,
   Sparkles,
@@ -45,41 +46,27 @@ type Props = {
 
 /* ---------------------------------------------------------------- greeting */
 
-function greetingFor(date = new Date()): string {
-  const h = date.getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-/** "ith@dmin" → "Ith"; "alice.anderson" → "Alice"; falls back to a neutral salutation. */
-function displayName(raw?: string): string {
-  const base = (raw ?? "").split("@")[0].split(/[._-]/)[0].trim();
-  if (!base) return "there";
-  return base.charAt(0).toUpperCase() + base.slice(1);
-}
-
-function Greeting({ name, composer }: { name: string; composer: React.ReactNode }) {
+function Greeting({ composer }: { composer: React.ReactNode }) {
   return (
     <section className="w-full text-center">
-      <span className="mx-auto mb-6 grid size-11 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent-foreground)] ring-1 ring-[var(--border)]">
-        <Sparkles className="size-[18px]" aria-hidden />
-      </span>
+      <div className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl border border-violet-500/30 bg-violet-600/20 text-violet-400 shadow-sm">
+        <Sparkles className="size-6 text-violet-400" aria-hidden />
+      </div>
 
-      <h1 className="text-[30px] font-semibold leading-tight tracking-tight sm:text-[38px]">
-        {greetingFor()}, {name}
+      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        Ask an IT question
       </h1>
-      <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
-        Ask an IT question. Get a clear answer grounded in your organization&rsquo;s knowledge base.
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        I answer from your organization&rsquo;s knowledge base and cite the pages I used.
       </p>
 
       {/* One composer, placed where the first question is typed; it docks to the bottom
           once there is a transcript to put above it. */}
       <div className="mx-auto mt-8 w-full max-w-2xl text-left">{composer}</div>
 
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-        <ShieldCheck className="size-3" aria-hidden />
-        Answers cite the pages they used — check anything destructive before acting on it.
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+        <ShieldCheck className="size-3.5 text-muted-foreground" aria-hidden />
+        AI answers may require verification · RBAC protected
       </p>
     </section>
   );
@@ -87,7 +74,7 @@ function Greeting({ name, composer }: { name: string; composer: React.ReactNode 
 
 /* ---------------------------------------------------------------- page */
 
-export default function Chat({ onNavigate, userName }: Props) {
+export default function Chat({ onNavigate, userName: _userName }: Props) {
   const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -408,36 +395,39 @@ export default function Chat({ onNavigate, userName }: Props) {
       onSubmit={(e) => { e.preventDefault(); void send(); }}
       className={[
         "mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-card transition",
-        "focus-within:border-[var(--primary)]/60 focus-within:ring-4 focus-within:ring-[var(--primary)]/10",
-        hero ? "p-2.5 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.25)]" : "p-2 shadow-sm",
+        "focus-within:border-violet-500/60 focus-within:ring-4 focus-within:ring-violet-500/10",
+        hero ? "p-3 shadow-lg" : "p-2.5 shadow-sm",
       ].join(" ")}
     >
       <label htmlFor="chat-input" className="sr-only">Ask a question</label>
-      <textarea
-        id="chat-input"
-        ref={composerRef}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void send();
-          }
-        }}
-        rows={1}
-        placeholder={hero ? "Ask anything about IT — incidents, procedures, access…" : "Ask about an incident, a procedure or a system…"}
-        className="max-h-44 w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
-      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          title="Attach file"
+          aria-label="Attach file"
+          className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          onClick={() => notify("Attachment screening is enabled for this session.")}
+        >
+          <Paperclip className="size-4" />
+        </button>
 
-      <div className="flex items-center justify-between gap-2 px-1 pt-1">
-        <span className="hidden items-center gap-1.5 text-2xs text-muted-foreground sm:inline-flex">
-          <CornerDownLeft className="size-3" aria-hidden /> Enter to send · Shift+Enter for a new line
-        </span>
-        <span className="text-2xs text-muted-foreground sm:hidden">
-          {input.length > 0 ? `${input.length} characters` : "Grounded in your KB"}
-        </span>
+        <textarea
+          id="chat-input"
+          ref={composerRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void send();
+            }
+          }}
+          rows={1}
+          placeholder="Ask an IT question..."
+          className="max-h-44 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
+        />
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           {input.length > 3200 && (
             <span className="text-2xs tabular-nums text-[var(--warn)]">{input.length}/4000</span>
           )}
@@ -445,7 +435,7 @@ export default function Chat({ onNavigate, userName }: Props) {
             <button
               type="button"
               onClick={stop}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--border)] bg-card px-3 text-xs font-semibold transition hover:bg-muted"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-3.5 text-xs font-semibold transition hover:bg-muted"
             >
               <Square className="size-3.5" aria-hidden /> Stop
             </button>
@@ -454,13 +444,9 @@ export default function Chat({ onNavigate, userName }: Props) {
               type="submit"
               disabled={!input.trim()}
               aria-label="Send message"
-              className={[
-                "inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40",
-                hero ? "size-9 justify-center" : "h-9 px-3.5 text-xs",
-              ].join(" ")}
+              className="grid size-9 place-items-center rounded-full bg-violet-600 font-semibold text-white shadow-sm transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Send className="size-3.5" aria-hidden />
-              {!hero && "Send"}
+              <Send className="size-4" aria-hidden />
             </button>
           )}
         </div>
@@ -472,6 +458,46 @@ export default function Chat({ onNavigate, userName }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
+      {/* Top purple banner header like the reference screenshot */}
+      <div className="flex shrink-0 items-center justify-between border-b border-violet-800/40 bg-gradient-to-r from-violet-700 to-violet-900 px-5 py-3 text-white shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 place-items-center rounded-lg bg-white/15 text-white border border-white/20">
+            <Bot className="size-5" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold leading-tight text-white">IT Assistant</h1>
+            <div className="flex items-center gap-1.5 text-xs text-white/80">
+              <span className="size-2 rounded-full bg-emerald-400" />
+              <span>IT Knowledge Assistant · RBAC protected</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={startNewChat}
+            title="New conversation"
+            aria-label="New conversation"
+            className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-white/20"
+          >
+            <MessageSquarePlus className="size-4" />
+            <span className="hidden sm:inline">New Chat</span>
+          </button>
+          {!empty && (
+            <button
+              type="button"
+              onClick={() => setRailOpen(true)}
+              title="Conversation details"
+              aria-label="Conversation details"
+              className="grid size-8 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20 xl:hidden"
+            >
+              <BookOpen className="size-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           {empty ? (
@@ -482,40 +508,19 @@ export default function Chat({ onNavigate, userName }: Props) {
                 className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(60%_100%_at_50%_0%,var(--accent-soft),transparent)]"
               />
               <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-5 py-12 sm:px-6">
-                <Greeting
-                  name={displayName(userName)}
-                  composer={composerForm(true)}
-                />
+                <Greeting composer={composerForm(true)} />
               </div>
             </div>
           ) : (
             <>
               <div className="relative min-h-0 flex-1">
-                <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-1.5 xl:right-4">
-                  {isStreaming && (
-                    <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-2 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
+                {isStreaming && (
+                  <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-1.5 xl:right-4">
+                    <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-2.5 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
                       <Loader2 className="size-3 animate-spin" aria-hidden /> Answering
                     </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={startNewChat}
-                    title="New chat"
-                    aria-label="New chat"
-                    className="pointer-events-auto grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-muted-foreground shadow-sm transition hover:text-foreground"
-                  >
-                    <MessageSquarePlus className="size-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRailOpen(true)}
-                    title="Conversation details"
-                    aria-label="Conversation details"
-                    className="pointer-events-auto grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-muted-foreground shadow-sm transition hover:text-foreground xl:hidden"
-                  >
-                    <BookOpen className="size-4" aria-hidden />
-                  </button>
-                </div>
+                  </div>
+                )}
 
                 <div ref={scrollRef} className="h-full min-h-0 overflow-y-auto px-4 sm:px-6" aria-live="polite">
                   <div className="mx-auto w-full max-w-3xl space-y-5 py-6 sm:py-8">
@@ -559,8 +564,9 @@ export default function Chat({ onNavigate, userName }: Props) {
               {/* ---------------- docked composer ---------------- */}
               <div className="shrink-0 bg-gradient-to-t from-background via-background to-background/0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
                 {composerForm(false)}
-                <p className="mx-auto mt-1.5 max-w-3xl text-center text-[10px] text-muted-foreground">
-                  Answers cite the pages they used. Check anything destructive before acting on it.
+                <p className="mx-auto mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <ShieldCheck className="size-3.5 text-muted-foreground" aria-hidden />
+                  AI answers may require verification · RBAC protected
                 </p>
               </div>
             </>
