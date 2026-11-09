@@ -27,6 +27,14 @@ _require_chatbot = require_cap("chatbot")
 def login(req: LoginRequest, request: Request = None) -> dict:
     """LDAP/AD authenticate (Phase 5) → JWT access + refresh tokens (dev fallback: dev/dev)."""
     subject = authenticate(req.username, req.password)
+    if subject and subject.startswith("unknown:"):
+        who = subject.split(":", 1)[1]
+        logger.info("login refused: no account named %s", who)
+        raise HTTPException(
+            status_code=401,
+            detail=(f"No account named '{who}'. Check the spelling — an administrator "
+                    "can see the exact account name on the Users page."),
+        )
     if not subject:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     # v0.21.99 — admin-disabled accounts get a dedicated 403 (NOT the misleading

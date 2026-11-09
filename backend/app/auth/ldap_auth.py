@@ -123,7 +123,8 @@ def authenticate(username: str, password: str) -> str | None:
       "<username>"          — authenticated OK
       "disabled:<username>" — AD bind succeeded but the account is admin-disabled
       "pending:<username>"  — AD bind OK, awaiting registration approval
-      None                  — wrong credentials / user unknown / directory error
+      "unknown:<username>"  — no such account anywhere (a typo, usually)
+      None                  — wrong credentials / directory error
     """
     if not username or not password:
         return None
@@ -161,7 +162,7 @@ def authenticate(username: str, password: str) -> str | None:
 
     if not ldap_cfg().get("url"):
         logger.warning("dev auth failed for %s (ldap not configured)", username)
-        return None
+        return f"unknown:{username}"
 
     return _ldap_authenticate(username, password)
 
@@ -194,8 +195,10 @@ def _ldap_authenticate(username: str, password: str) -> str | None:
                        attributes=["sAMAccountName", "mail", "department",
                                    "userPrincipalName"])
             if not svc.entries:
+                # Tell "no such account" apart from "wrong password": a misspelt username
+                # otherwise reads as a bad password and the user retries forever.
                 logger.warning("LDAP user %s not found", username)
-                return None
+                return f"unknown:{username}"
             entry = svc.entries[0]
             user_dn = entry.entry_dn
             # canonical identity = sAMAccountName (stable for roles/audit)

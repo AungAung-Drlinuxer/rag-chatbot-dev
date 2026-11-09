@@ -75,7 +75,7 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
     configured LDAP base. Admin/agent only (v0.21.9).
 
     v0.21.51 — gate uses get_role() (which knows about dev_admin_usernames) so
-    the new admin ('ith@dmin') is recognised on first login before the users
+    the new admin ('ith@admin') is recognised on first login before the users
     table has a row for them.
     """
     from app.auth.rbac import get_role as _gr
