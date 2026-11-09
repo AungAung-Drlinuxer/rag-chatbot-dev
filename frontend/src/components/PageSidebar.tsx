@@ -170,7 +170,7 @@ export default function PageSidebar({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="hidden items-center gap-1 shrink-0 lg:flex">
             <NotificationBell
               notices={notices}
               error={noticesError}
@@ -473,7 +473,14 @@ export default function PageSidebar({
           <div className="grid size-8 place-items-center rounded-lg bg-violet-600 text-2xs font-bold text-white">iTH</div>
           <span className="text-xs font-semibold">IT Help</span>
         </div>
-        <div className="size-10" />
+        {/* Reachable without opening the drawer — it was only inside the sidebar, which on
+            a phone is off-canvas until you know to tap the menu. */}
+        <NotificationBell
+          notices={notices}
+          error={noticesError}
+          onRetry={refreshNotices}
+          onOpen={onNavigate}
+        />
       </div>
       {/* Spacer for fixed top bar on mobile */}
       <div className="h-14 lg:hidden" />

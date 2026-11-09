@@ -25,7 +25,8 @@ async function mount(notices: Notice[]) {
   root = createRoot(container);
   await act(async () => { root!.render(<NotificationBell notices={notices} />); });
   await settle();
-  return container;
+  // The panel is portaled to <body> so it can be positioned against the viewport.
+  return document.body;
 }
 
 const notice = (id: string): Notice => ({ id, kind: "approval", label: `Approve ${id}`, sub: "HITL approval" });
@@ -48,6 +49,7 @@ afterEach(async () => {
   if (root) await act(async () => { root!.unmount(); });
   container?.remove();
   root = null; container = null;
+  document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
 
@@ -107,15 +109,15 @@ describe("NotificationBell", () => {
     });
     await settle();
 
-    const bell = container.querySelector('[aria-label="Notifications"]') as HTMLButtonElement;
+    const bell = document.body.querySelector('[aria-label="Notifications"]') as HTMLButtonElement;
     await act(async () => { bell.click(); });
     await settle();
 
-    expect(container.textContent).not.toContain("You're all caught up");
-    expect(container.textContent).toContain("Couldn't load notifications");
-    expect(container.textContent).toContain("HTTP 429");
+    expect(document.body.textContent).not.toContain("You're all caught up");
+    expect(document.body.textContent).toContain("Couldn't load notifications");
+    expect(document.body.textContent).toContain("HTTP 429");
 
-    const retry = Array.from(container.querySelectorAll("button")).find((b) => /Retry/i.test(b.textContent || ""));
+    const retry = Array.from(document.body.querySelectorAll("button")).find((b) => /Retry/i.test(b.textContent || ""));
     await act(async () => { retry!.click(); });
     expect(retried).toBe(1);
   });

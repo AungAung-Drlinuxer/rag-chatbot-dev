@@ -16,6 +16,7 @@
  *     shouting about them).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Bell, Check, RefreshCw, Volume2, VolumeX } from "lucide-react";
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
 
@@ -138,6 +139,34 @@ export function useNotifications(_role: string, enabled: boolean) {
   return { notices, error, refresh };
 }
 
+
+const PANEL_MAX_W = 320;
+const PANEL_MARGIN = 8;
+
+export type PanelBox = { top: number; left: number; width: number; maxHeight: number };
+
+/** Where the panel goes: centred under the bell, then clamped into the viewport.
+ *
+ * The old CSS (`right-0` in the sidebar, `left-full` in the collapsed rail) put the panel
+ * against an edge or entirely outside the screen — on a phone it was half cut off. Pure
+ * geometry so it can be tested without a layout engine.
+ */
+export function computePanelPosition(
+  anchor: { left: number; width: number; bottom: number },
+  viewportW: number,
+  viewportH: number,
+  preferredWidth = PANEL_MAX_W,
+): PanelBox {
+  const width = Math.max(160, Math.min(preferredWidth, viewportW - PANEL_MARGIN * 2));
+  const centred = anchor.left + anchor.width / 2 - width / 2;
+  const left = Math.max(PANEL_MARGIN, Math.min(centred, viewportW - width - PANEL_MARGIN));
+  // Prefer opening below the bell, but on a short screen (or a bell near the bottom) lift
+  // the panel so its 240px body still fits — clamping the height alone pushed it off-screen.
+  const top = Math.max(PANEL_MARGIN, Math.min(anchor.bottom + 6, viewportH - 240 - PANEL_MARGIN));
+  const maxHeight = Math.max(160, viewportH - top - PANEL_MARGIN * 2);
+  return { top: Math.round(top), left: Math.round(left), width: Math.round(width), maxHeight: Math.round(maxHeight) };
+}
+
 export function NotificationBell({
   notices,
   error,
@@ -204,9 +233,56 @@ export function NotificationBell({
   }
 
   const badge = unread.length;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<PanelBox | null>(null);
+
+  // Place the panel from the bell's real rect: fixed positioning keeps it inside the
+  // viewport even when the sidebar is a narrow rail or the window is 360px wide.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setBox(computePanelPosition(
+        { left: r.left, width: r.width, bottom: r.bottom },
+        window.innerWidth,
+        window.innerHeight,
+      ));
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  // Close on outside click / Escape: the panel used to stay until the bell was hit again,
+  // which on a phone covered the conversation.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const trigger = (
     <button
+      ref={triggerRef}
       type="button"
       title={badge ? `${badge} unread notification${badge === 1 ? "" : "s"}` : "Notifications"}
       aria-label={badge ? `Notifications, ${badge} unread` : "Notifications"}
@@ -226,13 +302,12 @@ export function NotificationBell({
     </button>
   );
 
-  const panel = open && (
+  const panel = open && createPortal((
     <div
+      ref={panelRef}
       role="menu"
-      className={[
-        "z-[60] w-72 rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-xl",
-        collapsed ? "absolute left-full top-0 ml-2" : "absolute right-0 top-full mt-1",
-      ].join(" ")}
+      style={box ? { position: "fixed", top: box.top, left: box.left, width: box.width, maxHeight: box.maxHeight } : { visibility: "hidden" }}
+      className="z-[60] overflow-y-auto overscroll-contain rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-xl"
     >
       <div className="flex items-center justify-between px-2 pb-1.5">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Notifications</span>
@@ -286,7 +361,7 @@ export function NotificationBell({
         </>
       )}
     </div>
-  );
+  ), document.body);
 
   if (collapsed) {
     return (
