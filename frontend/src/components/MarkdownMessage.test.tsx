@@ -178,3 +178,78 @@ describe("MarkdownMessage — infrastructure tables", () => {
     expect(pres[0].textContent).toContain('"kind": "Node"');
   });
 });
+
+/**
+ * The answer body is where the LLM's structure has to survive: an IT answer that arrives as
+ * headings + checklists + commands + emoji must render as exactly that, not as one grey
+ * paragraph. These fixtures are the shape the new presentation prompt asks the model for.
+ */
+const RICH_ANSWER = `## ✅ Fix: node NotReady
+
+The kubelet lost its certificate. Re-join the worker.
+
+### Steps
+1. Drain the node
+2. Reset it
+3. Re-join the cluster
+
+🔧 Run on the node:
+
+\`\`\`bash
+sudo kubeadm reset -f
+sudo systemctl restart kubelet
+\`\`\`
+
+⚠️ Do not reset a control-plane node without a backup.
+
+- [x] Drain
+- [ ] Re-join
+
+> Check \`journalctl -u kubelet\` for the real cause.
+
+---
+Source: **Kubernetes Node NotReady**`;
+
+describe("MarkdownMessage — rich answers (headings, emoji, checklists)", () => {
+  it("renders markdown headings as headings, not literal ##", () => {
+    const root = render(RICH_ANSWER);
+    expect(root.querySelector("h2")!.textContent).toContain("Fix: node NotReady");
+    expect(root.querySelector("h3")!.textContent).toBe("Steps");
+    expect(root.textContent).not.toContain("## ");
+  });
+
+  it("keeps emoji from the answer intact", () => {
+    const text = render(RICH_ANSWER).textContent!;
+    for (const glyph of ["✅", "🔧", "⚠️"]) expect(text).toContain(glyph);
+    expect(render(RICH_ANSWER).querySelector("h2")!.textContent).toContain("✅");
+  });
+
+  it("renders numbered steps and task-list checkboxes", () => {
+    const root = render(RICH_ANSWER);
+    expect(root.querySelectorAll("ol li")).toHaveLength(3);
+    expect(root.querySelectorAll("input[type=checkbox]").length).toBe(2);
+  });
+
+  it("puts commands in a real code block and short values in inline code", () => {
+    const root = render(RICH_ANSWER);
+    const pre = root.querySelector("pre")!;
+    expect(pre.textContent).toContain("kubeadm reset -f");
+    expect(pre.textContent).not.toContain("```");
+    expect(root.querySelector("code:not(:has(pre))")).toBeTruthy();
+    expect(root.querySelector("blockquote")!.textContent).toContain("journalctl -u kubelet");
+  });
+
+  /* The heading rules live on the wrapper as descendant selectors (`[&_h2]:text-sm`).
+     Parsing the HTML and reading the attribute decodes `&amp;` back to `&`. */
+  const wrapperClass = (html: string) => {
+    const doc = new DOMParser().parseFromString(`<div id="r">${html}</div>`, "text/html");
+    return doc.querySelector("#r > div")?.getAttribute("class") || "";
+  };
+
+  it("gives the body a readable type scale instead of one flat size", () => {
+    const html = renderToStaticMarkup(<MarkdownMessage content={RICH_ANSWER} />);
+    // full answers are 13.5px with a 16px h1 / 14px h2 — compact widget keeps its own scale
+    expect(wrapperClass(html)).toContain("text-[13.5px]");
+    expect(wrapperClass(html)).toContain("[&_h2]:text-sm");
+  });
+});

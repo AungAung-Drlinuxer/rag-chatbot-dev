@@ -106,7 +106,10 @@ function Table({ children, ...rest }: HTMLAttributes<HTMLTableElement>) {
 
 const BASE = [
   "md min-w-0 max-w-full break-words [overflow-wrap:anywhere] leading-relaxed",
-  "[&_p]:my-2 [&_strong]:font-semibold",
+  "[&_p]:my-2 [&_strong]:font-semibold [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+  "[&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0",
+  "[&_li>p]:my-0 [&_li]:pl-0.5",
+  "[&_input[type=checkbox]]:mr-1.5 [&_input[type=checkbox]]:align-middle",
   "[&_ul]:list-disc [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:space-y-1 [&_li]:ml-4",
   "[&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400",
   "[&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 dark:[&_blockquote]:border-slate-700",
@@ -133,12 +136,15 @@ export default function MarkdownMessage({
   compact?: boolean;
   className?: string;
 }) {
+  /* Full-page answers get a real hierarchy: a 16px heading, 14px section heads and body
+     text at 14px. The old scale used `text-xs` for everything, so a long structured answer
+     read as one grey block no matter how much Markdown it carried. */
   const heading = compact
     ? "[&_h1]:mt-2.5 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:mt-2.5 [&_h2]:text-xs [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-semibold"
-    : "[&_h1]:mt-3 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:mt-3 [&_h2]:text-xs [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-semibold";
+    : "[&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:leading-snug [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mt-3 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-slate-500 dark:[&_h3]:text-slate-400";
 
   return (
-    <div className={`${BASE} ${heading} ${compact ? "text-xs" : "text-xs"} ${className}`}>
+    <div className={`${BASE} ${heading} ${compact ? "text-xs" : "text-[13.5px]"} ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
