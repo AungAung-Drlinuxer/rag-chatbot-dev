@@ -9,7 +9,6 @@ import {
   RotateCcw,
   Save,
   Settings as SettingsIcon,
-  ShieldAlert,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -22,7 +21,6 @@ import SetupChecklist from "../components/SetupChecklist";
 import { BrandingSettings } from "../components/BrandingSettings";
 import { AiServiceSettings } from "../components/AiServiceSettings";
 import { EmailServerSettings } from "../components/EmailServerSettings";
-import GuardrailsSettings from "../components/GuardrailsSettings";
 import { Image as ImageIcon } from "lucide-react";
 import {
   getMySettings, updateMySettings, getIntegrationSettings,
@@ -86,7 +84,6 @@ const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: R
     items: [
       { id: "skills", label: "AI service", icon: <BookOpen className="size-4" /> },
       { id: "notifications", label: "Email server", icon: <Bell className="size-4" /> },
-      { id: "guardrails", label: "Guardrails", icon: <ShieldAlert className="size-4" /> },
     ],
   },
 ];
@@ -560,9 +557,6 @@ export default function Settings({ role }: { role?: string }) {
 
             {/* Mail (SMTP) — admin only; the Email server tab */}
             {isAdmin && active === "notifications" && <EmailServerSettings />}
-
-            {/* ==================== GUARDRAILS ==================== */}
-            {isAdmin && active === "guardrails" && <GuardrailsSettings />}
 
 
             {/* ==================== AI ASSISTANT ==================== */}

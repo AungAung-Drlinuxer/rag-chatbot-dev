@@ -88,7 +88,7 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
         try:
             from app.security.guardrails import check_input
             verdict = check_input(req.message)
-            if verdict.action in ("blocked", "flagged", "masked"):
+            if verdict.action in ("blocked", "flagged"):
                 from app.observability.metrics import GUARDRAIL_EVENTS_TOTAL
                 GUARDRAIL_EVENTS_TOTAL.labels(type=verdict.type, action=verdict.action).inc()
                 logger.warning("GUARDRAIL %s (%s) user=%s: %s",
@@ -109,28 +109,22 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                     yield _sse("done", {"message_id": "", "latency_ms": 0,
                                         "guardrail": verdict.type})
                     return
-                if verdict.action == "masked":
-                    # Administrator chose "mask" mode: the offending word is replaced and
-                    # the question is still answered. The masked text is what we persist,
-                    # so the transcript never stores the original word either.
-                    req.message = verdict.masked or req.message
-                else:
-                    # v1.6.6 — flagged (toxic): reply immediately with a calm,
-                    # professional de-escalation. The old path burned a full LLM call
-                    # (107s on CPU fallback); this stays deterministic, instant,
-                    # zero cost — but now keeps a service-desk tone instead of a
-                    # blunt "I can't help with that."
-                    _refusal = (
-                        "I want to make sure you get the support you need, but I can't "
-                        "respond to messages with that tone. I'm here to help with "
-                        "passwords, VPN access, hardware issues, and any other IT "
-                        "requests — just let me know what you need and I'll get right on it."
-                    )
-                    yield _sse("caution", {"message": _refusal, "flagged": True, "type": verdict.type})
-                    yield _sse("token", {"token": _refusal})
-                    yield _sse("done", {"message_id": "", "latency_ms": int((time.time() - t0) * 1000),
-                                        "guardrail": verdict.type})
-                    return
+                # v1.6.6 — flagged (toxic): reply immediately with a calm,
+                # professional de-escalation. The old path burned a full LLM call
+                # (107s on CPU fallback); this stays deterministic, instant,
+                # zero cost — but now keeps a service-desk tone instead of a
+                # blunt "I can't help with that."
+                _refusal = (
+                    "I want to make sure you get the support you need, but I can't "
+                    "respond to messages with that tone. I'm here to help with "
+                    "passwords, VPN access, hardware issues, and any other IT "
+                    "requests — just let me know what you need and I'll get right on it."
+                )
+                yield _sse("caution", {"message": _refusal, "flagged": True, "type": verdict.type})
+                yield _sse("token", {"token": _refusal})
+                yield _sse("done", {"message_id": "", "latency_ms": int((time.time() - t0) * 1000),
+                                    "guardrail": verdict.type})
+                return
         except Exception as guardrail_err:
             # Never break the chat on guardrail machinery failure
             logger.warning("guardrail check failed (%s) — allowing request", guardrail_err)
@@ -461,16 +455,6 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                 span.set_attribute("rag.confidence", result.confidence)
                 span.set_attribute("rag.decision", result.decision)
                 span.set_attribute("llm.model", active_llm_model)
-                # Output moderation: the same word list that screened the question is
-                # applied to the answer, so a model that echoes the word back does not
-                # get to print it. The filter holds a short tail back so a word split
-                # across two tokens is still caught as one word.
-                out_filter = None
-                try:
-                    from app.security.guardrails import StreamFilter
-                    out_filter = StreamFilter()
-                except Exception as _of_err:
-                    logger.warning("output filter unavailable (%s) — streaming unfiltered", _of_err)
                 for tok, usage in stream_answer(req.message, context, llm_provider=req.llm_provider):
                     if usage is not None:
                         # The last (zero-length) token carries the final usage dict.
@@ -479,34 +463,13 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                     if not tok:
                         continue
                     answer_parts.append(tok)
-                    safe = out_filter.feed(tok) if out_filter is not None else tok
-                    if safe:
-                        yield _sse("token", {"token": safe})
-                if out_filter is not None:
-                    tail = out_filter.flush()
-                    if tail:
-                        yield _sse("token", {"token": tail})
-                    if out_filter.hits:
-                        try:
-                            from app.observability.metrics import GUARDRAIL_EVENTS_TOTAL
-                            GUARDRAIL_EVENTS_TOTAL.labels(type="profanity", action="masked").inc()
-                            audit("guardrail.profanity", user,
-                                  detail=f"masked {out_filter.hits} term(s) in model output")
-                        except Exception:
-                            pass
+                    yield _sse("token", {"token": tok})
                 if last_usage is not None:
                     span.set_attribute("llm.input_tokens", last_usage.get("input_tokens", 0))
                     span.set_attribute("llm.output_tokens", last_usage.get("output_tokens", 0))
                     span.set_attribute("llm.total_tokens", last_usage.get("total_tokens", 0))
 
         answer = "".join(answer_parts)
-        # Mask before persisting: a reloaded conversation must not show a word the live
-        # answer hid. Idempotent — already-masked terms no longer match the list.
-        try:
-            from app.security.guardrails import filter_output
-            answer = filter_output(answer)
-        except Exception as _fo_err:
-            logger.warning("output filter on persisted answer failed (%s)", _fo_err)
         # Stamp LLM usage + RAG tunables onto the persisted meta so they survive
         # conversation reloads (the SSE `meta` event has the live ones, but we
         # store a snapshot too so a re-opened chat can show usage under old answers).
