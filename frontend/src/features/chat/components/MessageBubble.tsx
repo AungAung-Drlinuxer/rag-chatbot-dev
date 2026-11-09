@@ -294,7 +294,13 @@ function MessageBubble({
                   return (
                     <li key={g.key}>
                       {s.url ? (
-                        <a href={s.url} target="_blank" rel="noreferrer" className="block h-full text-left">
+                        <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open “${s.title}” in a new tab`}
+                        className="block h-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40"
+                      >
                           {content}
                         </a>
                       ) : (
@@ -357,92 +363,71 @@ function MessageBubble({
         </div>
 
         {message.content && (
-          /* v1.0.1 — the reference mockup's answer footer: a "Was this helpful?" label
-             over the feedback pair, then Copy / Regenerate / Create Jira Ticket. The
-             feedback buttons used to sit unlabelled, which read as two more actions
-             rather than as a question. Copy and Regenerate are duplicated from the
-             header actions on purpose: by the time a reader reaches the end of a long
-             answer that is where the eye already is, and the header copy has scrolled
-             away. */
-          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] px-4 py-2.5">
-            <span className="mr-1 text-xs font-medium text-muted-foreground">
-              Was this helpful?
-            </span>
+          /* Icon-only action row. The "Was this helpful?" caption and the button labels
+             made the footer twice as wide as the mockup's, so each action keeps only its
+             icon — with aria-label and title carrying the meaning for hover, screen
+             readers and the tests. Copy and Share reset to their idle icon after a beat
+             (the tick is the confirmation). */
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] px-4 py-2.5">
             <button
               onClick={() => onHelpful()}
               disabled={busy}
-              title={message.serverId ? "Record feedback" : "Answer not saved yet"}
+              aria-label="Mark answer helpful"
+              aria-pressed={message.feedback === 1}
+              title={message.serverId ? "Helpful" : "Answer not saved yet"}
               className={[
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                "grid size-8 place-items-center rounded-full border transition",
                 message.feedback === 1
                   ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
               ].join(" ")}
             >
-              <CheckCircle2 className="size-3.5 text-emerald-500" />
-              Helpful
-              {message.feedback === 1 && <Check aria-hidden className="size-3" />}
+              <CheckCircle2 className="size-4" />
             </button>
             <button
               onClick={() => onNotHelpful()}
               disabled={busy}
-              title={message.serverId ? "Record feedback" : "Answer not saved yet"}
+              aria-label="Mark answer not helpful"
+              aria-pressed={message.feedback === -1}
+              title={message.serverId ? "Not helpful" : "Answer not saved yet"}
               className={[
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                "grid size-8 place-items-center rounded-full border transition",
                 message.feedback === -1
                   ? "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
               ].join(" ")}
             >
-              <AlertTriangle className="size-3.5 text-amber-500" />
-              Not helpful
-              {message.feedback === -1 && <Check aria-hidden className="size-3" />}
+              <AlertTriangle className="size-4" />
             </button>
 
-            <span aria-hidden className="mx-1 hidden h-4 w-px bg-[var(--border)] sm:block" />
+            <span aria-hidden className="mx-0.5 h-4 w-px bg-[var(--border)]" />
 
             <button
               type="button"
-              title="Copy answer"
-              aria-label="Copy answer"
+              title={copied ? "Copied" : "Copy answer"}
+              aria-label={copied ? "Copied" : "Copy answer"}
               onClick={() => copyText(message.content)}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+              className="grid size-8 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted"
             >
-              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
-              {copied ? "Copied" : "Copy answer"}
+              {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
             </button>
-            {/* Share moved here from the metadata line: the mockup's metadata row is
-                time · confidence · tokens and nothing else, and dropping the capability
-                outright would lose Web Share on the devices that have it. */}
             <button
               type="button"
-              title="Share answer"
-              aria-label="Share answer"
+              title={shared ? "Shared" : "Share answer"}
+              aria-label={shared ? "Shared" : "Share answer"}
               onClick={() => shareText(message.content)}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+              className="grid size-8 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted"
             >
-              {shared ? <Check className="size-3.5 text-emerald-500" /> : <Share2 className="size-3.5" />}
-              {shared ? "Shared" : "Share"}
+              {shared ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
             </button>
             <button
               type="button"
-              title="Regenerate — re-run this question"
-              aria-label="Regenerate answer"
-              onClick={() => onRetryQuestion?.()}
-              disabled={busy || !onRetryQuestion}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
-            >
-              <RotateCcw className="size-3.5" />
-              Regenerate
-            </button>
-            {/* The mockup pins the ticket action to the far end of the row, away from
-                the feedback pair it must not be mistaken for. */}
-            <button
+              title="Create Jira ticket"
+              aria-label="Create Jira ticket"
               onClick={onOpenTicketForm}
-              className="ml-auto flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50/80 px-3.5 py-1.5 text-xs font-medium text-orange-700 transition hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
+              className="ml-auto grid size-8 place-items-center rounded-full border border-orange-200 bg-orange-50/80 text-orange-700 transition hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
             >
-              <Ticket className="size-3.5 text-orange-600 dark:text-orange-400" />
-              Create Jira ticket
+              <Ticket className="size-4" />
             </button>
           </div>
         )}

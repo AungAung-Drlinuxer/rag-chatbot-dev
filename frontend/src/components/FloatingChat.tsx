@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
+import { toSources } from "@/features/chat/sources";
 import { uploadAttachment } from "@/features/chat/api";
 import { useUserPreferences } from "@/app/useUserPreferences";
 
@@ -186,14 +187,7 @@ export function FloatingChatPopup() {
                 ? {
                     ...m,
                     confidence: meta.confidence != null ? Math.round(meta.confidence * 100) : undefined,
-                    sources: (meta.hits ?? []).map((h: any) => ({
-                      page_id: h.page_id ?? h.chunk_id ?? String(h.title ?? ""),
-                      title: h.title ?? "Knowledge source",
-                      space: h.domain ?? h.space ?? "",
-                      excerpt: h.text ?? h.excerpt ?? "",
-                      relevance: h.score != null ? Math.round(h.score * 100) : undefined,
-                      url: h.source_url ?? null,
-                    })) as Source[],
+                      sources: toSources(meta.hits),
                   }
                 : m,
             ),

@@ -162,13 +162,26 @@ def run_rag(query: str, history: list[dict] | None = None, top_k: int | None = N
     # v0.16.7 — per-hit relevance (rerank sigmoid blended with vector distance) so the UI
     # shows real, varied percentages instead of a constant fallback.
     from app.rag.gate import gate_confidence
+
+    def _relevance(d: dict) -> float | None:
+        """None when the row carries no real score.
+
+        A keyword-only hit ships `distance=0.5` as a placeholder; reporting that as
+        "50% match" (or, once the UI scales it, "0.5% match") invents a number the
+        retriever never measured. The cross-encoder overwrites the placeholder when it
+        runs, and a vector hit always has its own distance.
+        """
+        if d.get("distance_is_placeholder") and d.get("rerank_score") is None:
+            return None
+        return gate_confidence(d)
+
     sources = [
         {
             "page_id": d.get("page_id"),
             "title": d["title"],
             "confidence": d["confidence"],
             "source_url": d["source_url"],
-            "relevance": gate_confidence(d),
+            "relevance": _relevance(d),
         }
         for d in docs
     ]

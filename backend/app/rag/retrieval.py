@@ -136,6 +136,10 @@ def _keyword_search(query: str, k: int, filter_clause: dict | None) -> list[dict
                     "source_url": meta.get("source_url"),
                     "distance": 0.5,  # placeholder; rerank re-scores
                     "confidence": 0.5,
+                    # The two values above are a stand-in, not a measurement: without the
+                    # cross-encoder there is no score for this row, and the UI must not
+                    # print "50% match" as if there were.
+                    "distance_is_placeholder": True,
                     "kw_rank": rank,
                     # v1.6.48 — same reason as _vector_search: neighbours + the
                     # per-article cap read chunk_index from here.

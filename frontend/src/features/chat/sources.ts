@@ -74,3 +74,29 @@ export function referenceLabel(n: number): string {
 export function groupedReferenceLabel(n: number): string {
   return n > 1 ? `${n} grouped references` : "1 reference";
 }
+
+/**
+ * Normalise whatever the API called a hit into the `Source` the UI renders.
+ *
+ * The backend sends `source_url` and a 0..1 `relevance`; the card wants `url` and a
+ * whole-number percentage. Leaving that translation to each caller is how the answer
+ * card ended up with no links (it looked for `url`) while the widget showed no match
+ * (it looked for `score`).
+ */
+export function toSources(raw: unknown): Source[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((h: any) => {
+    const pct =
+      h?.relevance != null ? Math.round(Number(h.relevance) * 100)
+      : h?.score != null ? Math.round(Number(h.score) * 100)
+      : null;
+    return {
+      page_id: h?.page_id ?? h?.chunk_id ?? null,
+      title: h?.title ?? "Knowledge source",
+      space: h?.space ?? h?.domain ?? "",
+      relevance: pct != null && Number.isFinite(pct) ? pct : null,
+      excerpt: h?.excerpt ?? h?.text ?? h?.content ?? "",
+      url: h?.source_url ?? h?.url ?? null,
+    } satisfies Source;
+  });
+}

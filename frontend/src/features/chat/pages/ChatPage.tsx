@@ -31,6 +31,7 @@ import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
+import { toSources } from "@/features/chat/sources";
 import {
 } from "@/components/ui/dialog";
 
@@ -155,7 +156,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         timestamp: formatMessageTime(m.timestamp ?? m.created_at),
         confidence: m.meta?.confidence != null ? Math.round(m.meta.confidence * 100) : undefined,
         decision: m.meta?.decision,
-        sources: m.meta?.hits ?? [],
+        sources: toSources(m.meta?.hits),
         usage: m.meta?.usage,
         retrieval: m.meta?.retrieval,
         toolUsed: m.meta?.tool_used,
@@ -246,7 +247,7 @@ export default function Chat({ onNavigate, userName }: Props) {
                       ...m,
                       confidence: meta.confidence != null ? Math.round(meta.confidence * 100) : undefined,
                       decision: meta.decision,
-                      sources: meta.hits ?? [],
+                      sources: toSources(meta.hits),
                       usage: meta.usage,
                       retrieval: meta.retrieval,
                       toolUsed: meta.tool_used,
