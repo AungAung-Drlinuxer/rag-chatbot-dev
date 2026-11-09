@@ -5,10 +5,13 @@ the LLM endpoint and burn provider budget. This module adds per-user / per-IP
 limits backed by Redis (shared across all backend pods, HPA-safe).
 
 Rules (default tiers):
-  chat/stream   5 / min / user      (LLM cost — the endpoint to protect)
-  escalate      3 / min / user      (ticket spam defense)
-  auth/login    5 / min / IP        (brute-force)
-  everything    60 / min / user     (read APIs, default ceiling)
+  chat/stream   10 / min / user     (LLM cost — the endpoint to protect)
+  escalate      5  / min / user     (ticket spam defense)
+  auth/login    5  / min / IP       (brute-force)
+  everything    240 / min / user    (read APIs, default ceiling)
+
+Each ceiling is overridable without a rebuild: RATE_LIMIT_CHAT_PER_MIN,
+RATE_LIMIT_ESCALATE_PER_MIN, RATE_LIMIT_LOGIN_PER_MIN, RATE_LIMIT_DEFAULT_PER_MIN.
 
 Exceeded requests get 429 + Retry-After. Fail-open: if Redis is unreachable
 the request proceeds (availability over strictness — documented trade-off).
@@ -33,12 +36,27 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("ratelimit")
 
-# (requests, window_seconds) per rule name
+# (requests, window_seconds) per rule name.
+#
+# The default tier is a ceiling, not a usage budget: one page load of this UI fires the
+# dashboard, conversations, settings, domains and ticket lookups back to back, so 60/min
+# throttled a normal session (observed: 173 requests in one minute, every one legitimate).
+# 240/min still stops a runaway loop — the LLM endpoints have their own much stricter
+# rules, which is where the real cost sits.
+def _int_env(name: str, default: int) -> int:
+    import os
+
+    try:
+        return max(1, int(os.getenv(name, "") or default))
+    except ValueError:
+        return default
+
+
 LIMITS: dict[str, tuple[int, int]] = {
-    "chat": (5, 60),
-    "escalate": (3, 60),
-    "login": (5, 60),      # keyed by client IP
-    "default": (60, 60),   # general API budget per user
+    "chat": (_int_env("RATE_LIMIT_CHAT_PER_MIN", 10), 60),
+    "escalate": (_int_env("RATE_LIMIT_ESCALATE_PER_MIN", 5), 60),
+    "login": (_int_env("RATE_LIMIT_LOGIN_PER_MIN", 5), 60),      # keyed by client IP
+    "default": (_int_env("RATE_LIMIT_DEFAULT_PER_MIN", 240), 60),  # general API budget
 }
 
 ENABLED = True
@@ -77,10 +95,15 @@ def check_limit(rule: str, key: str) -> tuple[bool, int]:
     if count > max_reqs:
         retry_after = window - int(time.time() % window) + 1
         logger.warning("RATE LIMIT %s exceeded by %s (%d/%d)", rule, key, count, max_reqs)
+        # One audit row per key per window. Logging every rejected request turned a burst
+        # into hundreds of identical "API Rate Limit" rows on the Overview page.
         try:
-            from app.observability.audit import audit
-            user_part = key.replace("user:", "") if key.startswith("user:") else key
-            audit("guardrail.rate_limit", user_part, detail=f"exceeded {max_reqs} req/{window}s threshold ({rule}), temporarily throttled")
+            first = r.set(f"rl:audit:{rule}:{key}:{bucket}", "1", ex=window, nx=True)
+            if first:
+                from app.observability.audit import audit
+                user_part = key.replace("user:", "") if key.startswith("user:") else key
+                audit("guardrail.rate_limit", user_part,
+                      detail=f"exceeded {max_reqs} req/{window}s threshold ({rule}), temporarily throttled")
         except Exception as _exc:
             logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         return False, retry_after

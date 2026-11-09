@@ -95,6 +95,31 @@ describe("NotificationBell", () => {
     expect(el.textContent).toBeDefined();
   });
 
+  it("does not claim 'caught up' when the feed failed", async () => {
+    if (root) await act(async () => { root!.unmount(); });
+    container?.remove();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let retried = 0;
+    await act(async () => {
+      root!.render(<NotificationBell notices={[]} error="HTTP 429" onRetry={() => { retried += 1; }} />);
+    });
+    await settle();
+
+    const bell = container.querySelector('[aria-label="Notifications"]') as HTMLButtonElement;
+    await act(async () => { bell.click(); });
+    await settle();
+
+    expect(container.textContent).not.toContain("You're all caught up");
+    expect(container.textContent).toContain("Couldn't load notifications");
+    expect(container.textContent).toContain("HTTP 429");
+
+    const retry = Array.from(container.querySelectorAll("button")).find((b) => /Retry/i.test(b.textContent || ""));
+    await act(async () => { retry!.click(); });
+    expect(retried).toBe(1);
+  });
+
   it("shows the caught-up state when the queue is empty", async () => {
     const el = await mount([]);
     const bell = el.querySelector('[aria-label="Notifications"]') as HTMLButtonElement;

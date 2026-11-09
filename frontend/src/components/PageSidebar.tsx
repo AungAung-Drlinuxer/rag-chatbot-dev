@@ -114,9 +114,11 @@ export default function PageSidebar({
       window.removeEventListener("ith:new-chat-started", () => setActiveSessionId(""));
     };
   }, []);
-  // B-6 — admin/agent see HITL approvals + LDAP-gated accounts as notifications
-  const canManage = role === "admin" || role === "agent";
-  const notices = useNotifications(role || "user", !!canManage);
+  /* Every role gets a feed now: the server scopes it to the caller (their own escalation
+     decisions and tickets, plus the approval/LDAP queues for admins and agents). The old
+     version turned polling off for plain users, so they never saw anything at all. */
+  const { notices, error: noticesError, refresh: refreshNotices } =
+    useNotifications(role || "user", true);
 
   // v0.21.57 — nav items are capability-aware. Locked items stay visible (so the
   // user knows the feature exists) but clicking one shows WHY access is denied.
@@ -169,9 +171,13 @@ export default function PageSidebar({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {canManage && (
-              <NotificationBell notices={notices} collapsed={collapsed} onOpen={onNavigate} />
-            )}
+            <NotificationBell
+              notices={notices}
+              error={noticesError}
+              onRetry={refreshNotices}
+              collapsed={collapsed}
+              onOpen={onNavigate}
+            />
             {onToggleCollapsed && (
               <button
                 type="button"

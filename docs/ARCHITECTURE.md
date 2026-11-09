@@ -63,6 +63,21 @@ Defaults, deliberately: priority is left empty when the conversation does not st
 `Still needed` rather than guessed. When the LLM is unavailable the draft falls back to
 quoting the user's own messages.
 
+## Notifications
+
+`GET /api/notifications` is the bell's only source. It is scoped to the caller and
+derived from rows that already exist: pending approvals and LDAP-gated accounts for
+admins/agents, decisions on the caller's own approvals, and tickets created from their
+escalations. No notification table, no fan-out writes.
+
+The UI may only say "You're all caught up" when that request succeeded — a failed poll
+(429, expired token, network) shows "Couldn't load notifications" with a retry. Polling
+pauses while the tab is hidden and backs off to 60s after a failure.
+
+Rate limits: chat 10/min, escalations 5/min, login 5/min/IP, everything else 240/min per
+user (all overridable with `RATE_LIMIT_*_PER_MIN`). The default tier is a runaway guard,
+not a usage budget — one page load legitimately fires a few dozen reads.
+
 ## Data model (32 tables)
 
 | Group | Tables | Notes |

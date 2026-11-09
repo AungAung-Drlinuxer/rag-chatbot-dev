@@ -19,6 +19,11 @@ export async function streamChat(
     signal,
   });
   if (res.status === 401) throw new Error("Session expired — please log in again");
+  if (res.status === 429) {
+    // The limiter sends Retry-After; "HTTP 429" told the user nothing they could act on.
+    const wait = Number(res.headers.get("retry-after") || 0) || 5;
+    throw new Error(`Too many requests — please wait ${wait}s and try again.`);
+  }
   if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

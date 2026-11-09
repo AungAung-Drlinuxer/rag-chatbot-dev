@@ -16,8 +16,7 @@
  *     shouting about them).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Check, Volume2, VolumeX } from "lucide-react";
-import { listApprovals } from "@/features/chat/api";
+import { AlertTriangle, Bell, Check, RefreshCw, Volume2, VolumeX } from "lucide-react";
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
 
 export type Notice = {
@@ -25,11 +24,14 @@ export type Notice = {
   kind: "approval" | "ldap" | "monitoring" | "info";
   label: string;
   sub?: string;
+  /** Where clicking it should go. Decided by the server, not guessed from `kind`. */
+  nav?: string;
 };
 
 const SEEN_KEY = "ith:notif-seen";
 const MUTED_KEY = "ith:notif-muted";
 const POLL_MS = 15_000;
+const MAX_POLL_MS = 60_000;
 
 function readSeen(): Set<string> {
   try {
@@ -73,70 +75,80 @@ export function playChime(volume = 0.06) {
   }
 }
 
-export function useNotifications(role: string, enabled: boolean) {
+export function useNotifications(_role: string, enabled: boolean) {
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
+  /* One feed, one request. The old version polled /api/approvals + /api/users from the
+     browser for admins only, and swallowed every failure — so a 429 or an expired token
+     rendered as "You're all caught up". Now a failure is a state the UI can show. */
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
+    let timer: number | undefined;
+    let delay = POLL_MS;
 
-    async function poll() {
-      const out: Notice[] = [];
-      try {
-        const d = await listApprovals();
-        const pending = (d.approvals ?? []).filter((a: { status?: string }) => a.status === "pending");
-        for (const a of pending.slice(0, 5)) {
-          out.push({
-            id: "ap-" + a.id,
-            kind: "approval",
-            label: a.question || "Ticket approval requested",
-            sub: "HITL approval",
-          });
-        }
-      } catch {
-        /* approval endpoint refused or offline — not fatal for the shell */
-      }
-      if (role === "admin" || role === "agent") {
+    const stop = () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = undefined;
+    };
+
+    async function tick() {
+      stop();
+      if (!document.hidden) {
         try {
-          const r = await apiFetch(`${BASE}/api/users`, { headers: authHeaders() });
-          if (r.ok) {
-            const d = await r.json();
-            const pending = (d.users ?? []).filter(
-              (u: { status?: string }) => (u.status || "").toLowerCase() === "pending",
-            );
-            for (const u of pending.slice(0, 5)) {
-              out.push({ id: "ldap-" + u.username, kind: "ldap", label: `${u.username} awaiting approval`, sub: "LDAP gate" });
-            }
-          }
-        } catch {
-          /* non-fatal */
+          const r = await apiFetch(`${BASE}/api/notifications`, { headers: authHeaders() });
+          if (!r.ok) throw new Error(r.status === 429 ? "Too many requests" : `HTTP ${r.status}`);
+          const d = await r.json();
+          if (!alive) return;
+          setNotices(Array.isArray(d?.notifications) ? d.notifications : []);
+          setError(null);
+          delay = POLL_MS;
+        } catch (err) {
+          if (!alive) return;
+          setError(err instanceof Error ? err.message : "Notifications unavailable");
+          // Back off: a failing endpoint must not be hammered every 15 seconds.
+          delay = Math.min(delay * 2, MAX_POLL_MS);
         }
       }
-      if (alive) setNotices(out);
+      if (alive) timer = window.setTimeout(tick, delay);
     }
 
-    void poll();
-    const iv = window.setInterval(poll, POLL_MS);
-    const onFocus = () => void poll();
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
+    const wake = () => {
+      if (document.hidden) return;
+      stop();
+      delay = POLL_MS;
+      void tick();
+    };
+
+    void tick();
+    window.addEventListener("focus", wake);
+    document.addEventListener("visibilitychange", wake);
     return () => {
       alive = false;
-      window.clearInterval(iv);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
+      stop();
+      window.removeEventListener("focus", wake);
+      document.removeEventListener("visibilitychange", wake);
     };
-  }, [enabled, role]);
+  }, [enabled, reloadKey]);
 
-  return notices;
+  const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  return { notices, error, refresh };
 }
 
 export function NotificationBell({
   notices,
+  error,
+  onRetry,
   collapsed,
   onOpen,
 }: {
   notices: Notice[];
+  /** Last poll failed. The list may be stale — never claim "all caught up" in that case. */
+  error?: string | null;
+  onRetry?: () => void;
   collapsed?: boolean;
   onOpen?: (nav: string) => void;
 }) {
@@ -236,13 +248,42 @@ export function NotificationBell({
         </button>
       </div>
 
-      {notices.length === 0 ? (
+      {notices.length === 0 && error ? (
+        /* Unknown is not the same as empty. Saying "caught up" while the feed is broken is
+           how a pending approval goes unnoticed all afternoon. */
+        <div role="alert" className="mx-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+          <div className="flex items-start gap-2">
+            <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-semibold">Couldn&apos;t load notifications</p>
+              <p className="mt-0.5 break-words text-2xs opacity-80">{error}</p>
+            </div>
+          </div>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 inline-flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-2xs font-semibold hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+            >
+              <RefreshCw aria-hidden className="size-3" /> Retry
+            </button>
+          )}
+        </div>
+      ) : notices.length === 0 ? (
         <div className="flex items-center justify-center gap-1.5 px-3 py-6 text-center text-xs text-muted-foreground">
           <Check aria-hidden className="size-3.5 text-[var(--ok)]" />
           You&apos;re all caught up
         </div>
       ) : (
-        <NoticeList notices={notices} unreadIds={new Set(unread.map((n) => n.id))} onOpen={onOpen} onClose={() => setOpen(false)} onRead={markRead} />
+        <>
+          {error && (
+            <div className="mx-2 mb-1 flex items-center gap-1.5 rounded-md bg-[var(--muted)] px-2 py-1 text-2xs text-muted-foreground">
+              <AlertTriangle aria-hidden className="size-3 text-[var(--warn)]" />
+              Couldn&apos;t refresh — showing the last known list
+            </div>
+          )}
+          <NoticeList notices={notices} unreadIds={new Set(unread.map((n) => n.id))} onOpen={onOpen} onClose={() => setOpen(false)} onRead={markRead} />
+        </>
       )}
     </div>
   );
@@ -280,7 +321,8 @@ function NoticeList({
   const go = (n: Notice) => {
     onRead([n.id]);
     onClose();
-    if (n.kind === "approval") onOpen?.("tickets");
+    if (n.nav) onOpen?.(n.nav);
+    else if (n.kind === "approval") onOpen?.("tickets");
     else if (n.kind === "ldap") onOpen?.("users");
     else if (n.kind === "monitoring") onOpen?.("dashboard");
   };
