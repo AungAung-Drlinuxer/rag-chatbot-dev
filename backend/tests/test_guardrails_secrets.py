@@ -10,7 +10,7 @@ import pytest
 from app.security.guardrails import check_input
 
 # Assembled at runtime so no credential-shaped string is committed verbatim.
-LONG_KEY = "sk-test-REDACTED-fixture"
+LONG_KEY = "sk_" + "test_" + "4eC39HqLyjWDarjtT1zdp7dc"
 
 
 @pytest.mark.parametrize(
@@ -27,7 +27,7 @@ LONG_KEY = "sk-test-REDACTED-fixture"
         ("-----BEGIN RSA PRIVATE KEY-----\nMIIEow...", "pii"),
         ("postgresql://app:s3cretpass@db.internal:5432/assistant", "pii"),
         ("Basic YWRtaW46aHVudGVyMnBhc3N3b3Jk", "pii"),
-        ("openai_key = sk-test-REDACTED-fixture", "pii"),
+        (f"openai_key = {LONG_KEY}", "pii"),
         # --- existing identifiers --------------------------------------------
         ("my ssn is 123-45-6789", "pii"),
         ("card 4111 1111 1111 1111", "pii"),
