@@ -33,7 +33,7 @@ spec:
             name: backend-config
         - secretRef:
             name: backend-secrets
-        image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.50
+        image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.51
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
@@ -60,6 +60,11 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         resources:
           limits:
             cpu: '1'
@@ -72,7 +77,11 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       terminationGracePeriodSeconds: 15
 ---
 apiVersion: v1

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import quote
 import json
 import time
 from datetime import UTC, datetime, timedelta
@@ -774,7 +775,7 @@ def ticket_attachment_download(ticket_ref: str, att_id: int,
         return Response(
             content=a.data,
             media_type=a.content_type or "application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{a.filename}"'},
+            headers={"Content-Disposition": _content_disposition(a.filename)},
         )
 
 
@@ -787,6 +788,41 @@ def ticket_attachment_download(ticket_ref: str, att_id: int,
 # chatbot-specific preferences in a `prefs` JSONB column.
 
 
+
+# --- attachment filenames -----------------------------------------------------
+# The stored name is echoed back in a Content-Disposition header. A quote closes the
+# quoted string early and CR/LF would split the response, so the name is filtered at
+# BOTH ends: what we store, and what we send.
+_UNSAFE_NAME_CHARS = set('"\\/:*?<>|;\r\n\t')
+
+
+def _safe_filename(name: str | None, fallback: str = "attachment") -> str:
+    """Keep printable characters and the original script; drop the ones that can break
+    a header or a path, then trim to something a filesystem accepts."""
+    cleaned = "".join(
+        ch for ch in (name or "") if ch.isprintable() and ch not in _UNSAFE_NAME_CHARS
+    ).strip(" .")
+    cleaned = cleaned[:120].strip()
+    return cleaned or fallback
+
+
+def _content_disposition(name: str | None, inline: bool = False) -> str:
+    """`attachment; filename="..."` that cannot be broken by the user's filename.
+
+    Two filenames are sent: a plain ASCII one for old clients and the RFC 5987
+    `filename*` form so Burmese/Chinese names survive intact.
+    """
+    safe = _safe_filename(name)
+    ascii_name = safe.encode("ascii", "ignore").decode().strip()
+    if not ascii_name or ascii_name.startswith("."):
+        # A fully non-Latin name leaves only the extension here ("...pdf"); give the
+        # old clients a readable stem. Modern ones use filename* above.
+        ascii_name = ("attachment" + ascii_name) if ascii_name else "attachment"
+    quoted = quote(safe, safe="")
+    kind = "inline" if inline else "attachment"
+    return f'{kind}; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}'
+
+
 @router.post("/attachments")
 async def upload_attachment(
     file: UploadFile = File(...),
@@ -797,16 +833,17 @@ async def upload_attachment(
     if len(data) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large (max 10 MB)")
     mime = file.content_type or "application/octet-stream"
+    filename = _safe_filename(file.filename, f"upload-{uuid4().hex[:8]}")
     att_id = uuid4().hex
     with SessionLocal() as s:
         from sqlalchemy import text as _t
         s.execute(_t(
             "INSERT INTO chat_attachments (id, session_id, username, filename, mime, size, data) "
             "VALUES (:id, :sid, :u, :fn, :mime, :sz, :data)"
-        ), {"id": att_id, "sid": session_id, "u": user, "fn": file.filename,
+        ), {"id": att_id, "sid": session_id, "u": user, "fn": filename,
             "mime": mime, "sz": len(data), "data": data})
         s.commit()
-    return {"id": att_id, "filename": file.filename, "mime": mime, "size": len(data)}
+    return {"id": att_id, "filename": filename, "mime": mime, "size": len(data)}
 
 
 @router.get("/attachments/{att_id}")
@@ -820,7 +857,7 @@ def get_attachment(att_id: str, user: str = Depends(get_current_user)):
     if not row:
         raise HTTPException(status_code=404, detail="Attachment not found")
     return Response(content=bytes(row[2]), media_type=row[1],
-                    headers={"Content-Disposition": f'inline; filename="{row[0]}"'})
+                    headers={"Content-Disposition": _content_disposition(row[0], inline=True)})
 
 
 # === v1.6.8 — Jira ticket sync (pull upstream -> local mirror) ================

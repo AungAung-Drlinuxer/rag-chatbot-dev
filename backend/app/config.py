@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     # Core
     app_env: str = "dev"
+    # /docs, /redoc and /openapi.json are a complete map of the API. Off by default;
+    # set API_DOCS_ENABLED=1 in a dev environment when you actually want them.
+    api_docs_enabled: bool = False
 
     # Data stores — use port 55433 so it does NOT collide with onprem-ai-assistant (55432)
     # No credentials in the image: the password (if the server needs one) comes from

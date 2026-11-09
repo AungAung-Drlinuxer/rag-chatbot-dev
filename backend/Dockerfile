@@ -67,5 +67,13 @@ RUN uv sync --frozen --no-dev && rm -rf /root/.cache/uv
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
+# v1.0.51 — run as an unprivileged user. Nothing in the app writes under /app at
+# runtime (uploads live in Postgres), so the tree can stay read-only to the process;
+# only $HOME is handed to it for libraries that insist on a cache dir.
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin app \
+    && chown -R app:app /app
+USER 10001
+ENV HOME=/home/app
+
 # API
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -28,6 +28,8 @@ from functools import wraps
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("ratelimit")
 
@@ -152,3 +154,45 @@ def limit(rule: str, by_ip: bool = False):
         return awrapper if is_async else swrapper
 
     return decorator
+
+
+# ============================================================
+# Global ceiling — the `default` tier, applied to every request
+# ============================================================
+# The decorator above only covers the endpoints that carry `@limit(...)`. Everything else
+# (knowledge list, users, tickets, dashboard, admin) was uncounted, so the documented
+# "60/min for the rest" existed only in this module's docstring. This middleware makes
+# that real. Routes with a stricter decorator keep it — both counters run, and the
+# stricter one is the one that will trip.
+_SKIP_PATHS = {"/health", "/metrics", "/favicon.ico", "/openapi.json", "/docs", "/redoc"}
+
+
+class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
+    """Per-user (else per-IP) ceiling on every request that isn't a probe or a static file.
+
+    Keyed by the JWT subject when a token is present, so one user cannot burn the
+    instance's budget for everyone behind the same NAT. Fails open when Redis is down,
+    like the decorator: an outage of the limiter must not become an outage of the app.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if request.method == "OPTIONS" or path in _SKIP_PATHS or path.startswith("/assets/"):
+            return await call_next(request)
+
+        key = "ip:" + _client_ip(request)
+        auth = request.headers.get("authorization", "")
+        if auth.lower().startswith("bearer "):
+            try:
+                from app.auth.jwt import decode_token
+
+                sub = decode_token(auth[7:].strip())
+                if sub:
+                    key = f"user:{sub}"
+            except Exception:  # invalid/expired token → the route will 401 anyway
+                pass
+
+        allowed, retry_after = await run_in_threadpool(check_limit, "default", key)
+        if not allowed:
+            return _too_many("default", retry_after)
+        return await call_next(request)

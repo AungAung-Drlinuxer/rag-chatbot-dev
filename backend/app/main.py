@@ -48,9 +48,38 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="IT Help Chatbot", version="0.2.0", lifespan=lifespan)
+# The interactive docs are a full map of the API (every path, schema and parameter).
+# On an internal deployment that is free reconnaissance, so they are OFF unless the
+# operator explicitly opts in with API_DOCS_ENABLED=1.
+_docs = SETTINGS.api_docs_enabled
+# One version number for the process: the installed distribution's, so `/openapi.json`
+# and an incident log agree with the image tag instead of the hardcoded "0.2.0" that
+# drifted from pyproject (0.18.4) and the image (dev-1.0.50).
+try:
+    from importlib.metadata import version as _dist_version
+
+    APP_VERSION = _dist_version("it-help-chatbot-backend")
+except Exception:  # not installed (bare checkout) — say so rather than invent a number
+    APP_VERSION = "unknown"
+
+app = FastAPI(
+    title="IT Help Chatbot",
+    version=APP_VERSION,
+    lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
+)
 
 _origins = [o.strip() for o in SETTINGS.cors_origins.split(",") if o.strip()]
+
+# Every endpoint, not just the four with a stricter @limit decorator.
+from app.security.rate_limit import GlobalRateLimitMiddleware  # noqa: E402
+
+app.add_middleware(GlobalRateLimitMiddleware)
+# Added AFTER the limiter on purpose: add_middleware puts each new layer on the outside,
+# so CORS ends up outermost and a 429 from the limiter still carries the headers the
+# browser needs to read the error instead of reporting an opaque network failure.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
