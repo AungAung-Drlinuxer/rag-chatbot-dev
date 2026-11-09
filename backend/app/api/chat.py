@@ -35,6 +35,43 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
+def _persist_guardrail_turn(session_id, user: str, question: str, answer: str,
+                            guardrail_type: str) -> str:
+    """Store the blocked exchange so history matches what the user just saw.
+
+    The old path returned before the persist block, so a guardrail refusal appeared in
+    the chat, then vanished when the conversation was reopened — and the feedback
+    buttons were dead because there was no message id. Returns the assistant message id
+    (or "" when the database is unavailable).
+    """
+    s = None
+    try:
+        from app.textutil import auto_title
+
+        s = SessionLocal()
+        sess = s.get(ChatSession, session_id)
+        if sess is None:
+            sess = ChatSession(id=session_id, username=user, title=auto_title(question))
+            s.add(sess)
+            s.flush()
+        s.add(ChatMessage(session_id=session_id, role="user", content=question))
+        msg = ChatMessage(
+            session_id=session_id, role="assistant", content=answer,
+            meta=json.dumps({"decision": "guardrail", "guardrail": guardrail_type,
+                             "domain": "policy", "hits": [], "sources": []}),
+        )
+        s.add(msg)
+        s.commit()
+        return str(msg.id)
+    except Exception as exc:  # a blocked request must never fail on bookkeeping
+        logger.warning("persist guardrail turn skipped (%s): %s", type(exc).__name__, exc)
+        return ""
+    finally:
+        if s is not None:
+            with suppress(Exception):
+                s.close()
+
+
 def _stage_emitter():
     """Yield stage SSE frames, dropping CONSECUTIVE duplicates.
 
@@ -95,33 +132,38 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                     audit("guardrail." + verdict.type, user, detail=verdict.reason[:120])
                 except Exception as _exc:
                     logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
-                if verdict.action == "blocked":
-                    yield _sse("caution", {
-                        # v1.6.6 — professional tone for blocked messages too
-                        "message": ("I couldn't process that request — it looks like it "
-                                    "contains content our security policy doesn't allow "
-                                    f"({verdict.type}). If you're trying to reach IT "
-                                    "support, please rephrase your question and I'll be "
-                                    "glad to help."),
-                        "blocked": True, "type": verdict.type})
-                    yield _sse("done", {"message_id": "", "latency_ms": 0,
-                                        "guardrail": verdict.type})
-                    return
-                # v1.6.6 — flagged (toxic): reply immediately with a calm,
-                # professional de-escalation. The old path burned a full LLM call
-                # (107s on CPU fallback); this stays deterministic, instant,
-                # zero cost — but now keeps a service-desk tone instead of a
-                # blunt "I can't help with that."
-                _refusal = (
-                    "I want to make sure you get the support you need, but I can't "
-                    "respond to messages with that tone. I'm here to help with "
-                    "passwords, VPN access, hardware issues, and any other IT "
-                    "requests — just let me know what you need and I'll get right on it."
-                )
-                yield _sse("caution", {"message": _refusal, "flagged": True, "type": verdict.type})
-                yield _sse("token", {"token": _refusal})
-                yield _sse("done", {"message_id": "", "latency_ms": int((time.time() - t0) * 1000),
-                                    "guardrail": verdict.type})
+                # v1.0.53 — one path for both actions. Blocked used to emit a caution
+                # banner and nothing else (no answer, no history, no feedback target),
+                # so the chat looked broken and the refusal disappeared on reload.
+                from app.security.refusals import refusal_for
+
+                reply = refusal_for(verdict.type)
+                _mid = _persist_guardrail_turn(session_id, user, req.message, reply, verdict.type)
+                yield _sse("meta", {
+                    "domain": "policy",
+                    "confidence": None,
+                    "decision": "guardrail",
+                    "tool_used": None,
+                    "rewritten": req.message,
+                    "hits": [],
+                    "top_k": 0,
+                    "retrieval": {"chunks": 0, "cited": 0, "top_k": 0,
+                                  "rerank_used": False, "acl_scoped": False,
+                                  "role": get_role(user)},
+                    "guardrail": {"type": verdict.type, "action": verdict.action},
+                })
+                yield _sse("caution", {
+                    "message": reply,
+                    "blocked": verdict.action == "blocked",
+                    "flagged": verdict.action == "flagged",
+                    "type": verdict.type,
+                })
+                yield _sse("token", {"token": reply})
+                yield _sse("done", {
+                    "message_id": _mid,
+                    "latency_ms": int((time.time() - t0) * 1000),
+                    "guardrail": verdict.type,
+                })
                 return
         except Exception as guardrail_err:
             # Never break the chat on guardrail machinery failure

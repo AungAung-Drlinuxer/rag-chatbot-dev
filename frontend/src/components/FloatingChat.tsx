@@ -174,7 +174,14 @@ export function FloatingChatPopup() {
         .map((m) => ({ role: m.role, content: m.content }));
 
       runChatStream(question, sessionRef, history, {
-        onMeta: () => {},
+        onMeta: (meta) =>
+          setMessages((p) =>
+            p.map((m) =>
+              m.id === botId
+                ? { ...m, guardrailType: meta.guardrail?.type, sources: toSources(meta.hits) }
+                : m,
+            ),
+          ),
         onStage: (d) => setStage(d),
         onToken: (tok) =>
           setMessages((p) => p.map((m) => (m.id === botId ? { ...m, content: m.content + tok } : m))),

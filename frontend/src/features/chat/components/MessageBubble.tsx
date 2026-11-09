@@ -14,7 +14,7 @@
  * mockup's literal hexes, so the card follows both themes. Everything the card shows
  * is a value the message already carries — no figure is invented to fill it out.
  */
-import { AlertTriangle, Bot, Check, CheckCircle2, Clock3, Copy, ExternalLink, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, Ticket, User, Zap } from "lucide-react";
+import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
 
 import AgentActivity, { stageFromText } from "@/components/AgentActivity";
 import MarkdownMessage from "@/components/MarkdownMessage";
@@ -24,6 +24,18 @@ import RagPipelineStatus from "@/features/chat/components/RagPipelineStatus";
 import { useState } from "react";
 
 import { type Message } from "@/features/chat/model";
+
+/** Human wording for a guardrail type — the type itself is an internal identifier. */
+function guardrailLabel(type: string): string {
+  const labels: Record<string, string> = {
+    injection: "prompt injection",
+    pii: "personal or secret data",
+    profanity: "abusive language",
+    toxic: "abusive tone",
+    overflow: "message too long",
+  };
+  return labels[type] ?? type;
+}
 
 function MessageBubble({
   message,
@@ -65,7 +77,11 @@ function MessageBubble({
   /* The card header's one-line provenance. It describes where the answer came from and
      never invents a domain, a score or a count — the mockup's subtitle names a support
      area, but nothing in the message payload carries one. */
-  const provenance = "Grounded in your knowledge base";
+  // A refusal has no knowledge behind it; saying "Grounded in your knowledge base" over a
+  // policy answer is the card contradicting its own body.
+  const provenance = message.guardrailType
+    ? "Policy response — no sources consulted"
+    : "Grounded in your knowledge base";
 
   /* Grouped once so the count line and the cards below are derived from the same list:
      the heading used to count raw rows ("7 references") above a list of four. */
@@ -206,6 +222,21 @@ function MessageBubble({
 
         {/* ---- body ---- */}
         <div className="px-4 py-3.5 text-[13.5px] leading-[1.7] text-foreground">
+          {message.guardrailType && (
+            /* The refusal is a normal answer; this strip explains WHY it is one. It used
+               to replace the answer entirely, which made a blocked request look like a
+               rendering bug — and said "v1.1.4", a version the user cannot act on. */
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-2.5 py-2 text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              <div className="text-2xs leading-relaxed">
+                <span className="font-semibold">Blocked by content policy</span>
+                {" · "}{guardrailLabel(message.guardrailType)}
+                <div className="opacity-80">
+                  The message was screened before any model call — nothing was sent to the AI provider.
+                </div>
+              </div>
+            </div>
+          )}
           {message.content ? (
             markdownRendering
               ? <MarkdownMessage content={message.content} />
@@ -382,7 +413,7 @@ function MessageBubble({
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
               ].join(" ")}
             >
-              <CheckCircle2 className="size-4" />
+              <ThumbsUp className="size-4" />
             </button>
             <button
               onClick={() => onNotHelpful()}
@@ -397,7 +428,7 @@ function MessageBubble({
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
               ].join(" ")}
             >
-              <AlertTriangle className="size-4" />
+              <ThumbsDown className="size-4" />
             </button>
 
             <span aria-hidden className="mx-0.5 h-4 w-px bg-[var(--border)]" />

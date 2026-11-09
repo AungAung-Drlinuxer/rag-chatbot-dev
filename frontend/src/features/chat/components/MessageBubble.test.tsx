@@ -52,3 +52,44 @@ describe("MessageBubble user preferences", () => {
     expect(html).not.toContain("20 out");
   });
 });
+
+describe("MessageBubble — guardrail refusal", () => {
+  const refusal: Message = {
+    id: "g-1",
+    role: "assistant",
+    content: "I can't accept that message because it appears to contain personal data.",
+    timestamp: "10:01 AM",
+    guardrailType: "pii",
+    decision: "guardrail",
+    sources: [],
+  };
+
+  const html = renderToStaticMarkup(
+    <MessageBubble
+      message={refusal}
+      onHelpful={() => {}}
+      onNotHelpful={() => {}}
+      onOpenTicketForm={() => {}}
+    />,
+  );
+
+  it("explains which rule fired, in words", () => {
+    expect(html).toContain("Blocked by content policy");
+    expect(html).toContain("personal or secret data");
+  });
+
+  it("keeps the refusal visible as the answer", () => {
+    expect(html).toContain("I can&#x27;t accept that message");
+  });
+
+  it("does not claim the answer is grounded in the knowledge base", () => {
+    expect(html).not.toContain("Grounded in your knowledge base");
+    expect(html).toContain("Policy response — no sources consulted");
+  });
+
+  it("offers thumbs, not a tick and a warning triangle", () => {
+    expect(html).toContain("lucide-thumbs-up");
+    expect(html).toContain("lucide-thumbs-down");
+    expect(html).not.toContain("lucide-check-circle");
+  });
+});

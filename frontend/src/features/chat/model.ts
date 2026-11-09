@@ -44,6 +44,8 @@ export type Message = {
   feedback?: 1 | -1;  // v0.21.90 — recorded rating (button state)
   ragTrace?: RagTrace;
   retrieval?: RetrievalInfo;  // S1.1 — real retrieval stats for the right panel
+  /** Set when the answer is a policy refusal: injection | pii | profanity | toxic | overflow. */
+  guardrailType?: string;
 };
 
 export type Conv = {

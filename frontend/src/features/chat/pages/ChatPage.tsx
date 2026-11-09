@@ -160,7 +160,10 @@ export default function Chat({ onNavigate, userName }: Props) {
         usage: m.meta?.usage,
         retrieval: m.meta?.retrieval,
         toolUsed: m.meta?.tool_used,
-        serverId: m.meta?.server_id,
+        // The feedback target is the top-level message_id from the API; reading only
+        // meta.server_id left every re-opened answer without a feedback target.
+        serverId: m.message_id || m.meta?.server_id,
+        guardrailType: m.meta?.guardrail,
       }));
       setMessages(loaded);
       history.current = loaded.map((m) => ({ role: m.role, content: m.content }));
@@ -251,6 +254,9 @@ export default function Chat({ onNavigate, userName }: Props) {
                       usage: meta.usage,
                       retrieval: meta.retrieval,
                       toolUsed: meta.tool_used,
+                      // The refusal is stored as a normal answer; this tells the card to
+                      // explain WHY it is one (and which rule fired).
+                      guardrailType: meta.guardrail?.type,
                     }
                   : m,
               ),
