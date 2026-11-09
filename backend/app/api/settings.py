@@ -151,6 +151,17 @@ def _load_setting(key: str, default: dict | None = None) -> dict:
                         {"k": key}).first()
     return _json_dict(row[0] if row else None, default)
 
+
+def _save_setting(key: str, value: dict) -> None:
+    """Upsert one `system_settings` row. The one write path for JSON settings."""
+    with SessionLocal() as s:
+        from sqlalchemy import text as _t
+        s.execute(_t(
+            "INSERT INTO system_settings (key, value, updated_at) VALUES (:k, :v, NOW()) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()"
+        ), {"k": key, "v": json.dumps(value)})
+        s.commit()
+
 from app.observability.audit import audit
 from app.schemas import BrandingResponse
 from fastapi import UploadFile as _UPLOAD_FILE, File as _FILE, Form as _FORM
@@ -793,6 +804,78 @@ def delete_branding_logo(user: str = Depends(get_current_user)) -> dict:
         s.commit()
     audit("branding.logo.reset", user)
     return {"ok": True}
+
+
+# === Guardrails — profanity list, mask/block mode, output filtering ==========
+# The screening itself lives in app/security/guardrails.py; this is only the
+# administrator's control surface, so a word list can be changed without a deploy.
+GUARDRAILS_KEY = "guardrails"
+
+
+class GuardrailsBody(BaseModel):
+    enabled: bool = True
+    mode: str = "mask"                 # "mask" | "block"
+    output_filter: bool = True
+    use_default_list: bool = True
+    custom_words: list[str] = []
+    mask_char: str = "*"
+
+
+@router.get("/admin/guardrails")
+def get_guardrails(user: str = Depends(get_current_user)) -> dict:
+    """ADMIN — the stored guardrail policy, plus what the running process resolved."""
+    _require_admin(user)
+    from app.security.guardrails import DEFAULT_PROFANITY, load_config
+
+    stored = _load_setting(GUARDRAILS_KEY)
+    live = load_config(force=True)
+    return {
+        "config": live,
+        "stored": bool(stored),
+        "default_list_size": len(DEFAULT_PROFANITY),
+        "effective_word_count": (
+            (len(DEFAULT_PROFANITY) if live.get("use_default_list", True) else 0)
+            + len(live.get("custom_words") or [])
+        ),
+    }
+
+
+@router.put("/admin/guardrails")
+def put_guardrails(body: GuardrailsBody, user: str = Depends(get_current_user)) -> dict:
+    """ADMIN — save the guardrail policy. Takes effect on the next message."""
+    _require_admin(user)
+    if body.mode not in ("mask", "block"):
+        raise HTTPException(status_code=400, detail="mode must be 'mask' or 'block'")
+
+    words: list[str] = []
+    for raw in body.custom_words:
+        for piece in str(raw).split(","):
+            w = piece.strip()
+            # A regex fragment would silently widen or break the whole alternation.
+            if w and w not in words:
+                words.append(w[:80])
+    if len(words) > 500:
+        raise HTTPException(status_code=400, detail="Too many words — 500 is the limit")
+
+    mask_char = (body.mask_char or "*").strip()[:1] or "*"
+
+    from app.security.guardrails import invalidate, normalise
+
+    cfg = normalise({
+        "enabled": body.enabled,
+        "mode": body.mode,
+        "output_filter": body.output_filter,
+        "use_default_list": body.use_default_list,
+        "custom_words": words,
+        "mask_char": mask_char,
+    })
+    _save_setting(GUARDRAILS_KEY, cfg)
+    invalidate()
+    audit("guardrails.update", user,
+          detail=f"mode={cfg['mode']} output_filter={cfg['output_filter']} "
+                 f"words=+{len(cfg['custom_words'])} default_list={cfg['use_default_list']}")
+    return {"ok": True, "config": cfg}
+
 @router.get("/settings/integrations/jira/service-desks")
 def jira_service_desks(user: str = Depends(require_role("admin"))) -> dict:
     """JSM service desks the configured account can see — so the ID can be copied, not guessed."""
