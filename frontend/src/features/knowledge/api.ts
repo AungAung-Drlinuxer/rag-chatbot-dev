@@ -24,9 +24,22 @@ export async function deleteArticle(page_id: string) {
   return { status: r.status, data: await r.json() };
 }
 
+export type SyncStatus = {
+  pages: number;
+  last_run: { at: string; pages: number; inserted: number; updated: number; skipped: number } | null;
+  state: "idle" | "running" | "done" | "error";
+  started_at?: number | null;
+  started_by?: string | null;
+  run_error?: string | null;
+  healthy: boolean;
+  beat_interval_minutes: number;
+};
+
 export async function triggerSync() {
   const r = await apiFetch(`${BASE}/api/articles/sync`, { method: "POST", headers: authHeaders() });
-  return { status: r.status, data: await r.json() };
+  let data: any = {};
+  try { data = await r.json(); } catch { /* non-JSON gateway page */ }
+  return { status: r.status, data };
 }
 
 export async function articleDraft(topic: string, domain: string) {

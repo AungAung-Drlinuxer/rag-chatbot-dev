@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import threading
+import time
 from datetime import UTC, datetime
 
 from sqlalchemy import text
@@ -202,8 +204,62 @@ def register_domains(domain_keys: list[str]) -> int:
     return created
 
 
+_SYNC_LOCK = threading.Lock()
+
+
+class SyncBusy(RuntimeError):
+    """A sync is already running (beat schedule or another request)."""
+
+
+def sync_state() -> dict:
+    """The live run marker: running / done / error, with when and by whom."""
+    try:
+        from app.persistence.models import RuntimeKv
+
+        with SessionLocal() as s:
+            kv = s.get(RuntimeKv, "kb_sync_run")
+            if kv and kv.value:
+                return json.loads(kv.value) if isinstance(kv.value, str) else kv.value
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("sync state unreadable: %s", exc)
+    return {"state": "idle"}
+
+
+def _write_sync_state(payload: dict) -> None:
+    try:
+        from app.persistence.models import RuntimeKv
+
+        with SessionLocal() as s:
+            kv = s.get(RuntimeKv, "kb_sync_run") or RuntimeKv(key="kb_sync_run")
+            kv.value = json.dumps(payload)
+            s.add(kv)
+            s.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("sync state write skipped (%s): %s", type(exc).__name__, exc)
+
+
 def sync_all(updated_by: str | None = None) -> dict:
-    """Sync every configured KB source. Returns counts (+ persists a health snapshot)."""
+    """Sync every configured KB source. Returns counts (+ persists a health snapshot).
+
+    One run at a time: the beat schedule fires every 30 minutes and the Knowledge page has
+    a Sync button, so without the lock a click during a scheduled run started a second,
+    concurrent ingest of the same pages.
+    """
+    if not _SYNC_LOCK.acquire(blocking=False):
+        raise SyncBusy("A knowledge-base sync is already running.")
+    started = time.time()
+    _write_sync_state({"state": "running", "started_at": started, "by": updated_by or "scheduler"})
+    try:
+        return _sync_all_locked(updated_by, started)
+    except Exception as exc:  # noqa: BLE001
+        _write_sync_state({"state": "error", "started_at": started, "by": updated_by or "scheduler",
+                           "error": str(exc)[:300], "finished_at": time.time()})
+        raise
+    finally:
+        _SYNC_LOCK.release()
+
+
+def _sync_all_locked(updated_by: str | None, started: float) -> dict:
     articles = load_all()
     stats = {"pages": len(articles), "inserted": 0, "updated": 0, "skipped": 0}
     try:
@@ -226,6 +282,8 @@ def sync_all(updated_by: str | None = None) -> dict:
         logger.warning("domain registration skipped (%s): %s", type(exc).__name__, exc)
 
     logger.info("sync done %s", stats)
+    _write_sync_state({"state": "done", "started_at": started, "by": updated_by or "scheduler",
+                       "finished_at": time.time(), **stats})
 
     # Sync-health snapshot for the Knowledge tab strip (best-effort).
     try:

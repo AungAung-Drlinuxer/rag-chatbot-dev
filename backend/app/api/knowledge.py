@@ -34,29 +34,46 @@ def articles_search(req: ArticleSearchRequest, user: str = Depends(get_current_u
 @router.post("/api/articles/sync")
 def articles_sync(user: str = Depends(get_current_user),
                   role: str = Depends(require_role("admin", "agent"))) -> dict:
-    """Trigger a KB sync (Phase 7 — from all configured sources)."""
-    import httpx
+    """Queue a KB sync and return immediately.
 
-    from app.knowledge.ingest import sync_all
+    This used to run the whole sync inside the request. A real sync takes ~90s (the
+    scheduled one measured 88s), which is longer than the proxy in front of the app waits,
+    so the browser got a 504 and the Knowledge page reported "Sync failed" while the sync
+    was in fact still running — and each retry started another concurrent one. The caller
+    now watches `/api/sync-status` (`state`, `started_at`) instead of holding a connection.
+    """
+    import logging
+    import threading
+
+    from app.knowledge.ingest import SyncBusy, sync_all, sync_state
+
+    if sync_state().get("state") == "running":
+        raise HTTPException(
+            status_code=409,
+            detail="A knowledge-base sync is already running. Watch the status line.",
+        )
 
     audit("sync", user, detail="kb_sync")
     try:
-        return sync_all(updated_by=user)
-    except ValueError as exc:  # integration not configured (missing url/email/token)
-        raise HTTPException(status_code=409, detail=str(exc)) from None
-    except httpx.HTTPStatusError as exc:
-        # A provider rejection is an operator problem to fix, not a server bug — say which
-        # credential is wrong instead of letting the ASGI traceback surface as a 500.
-        code = exc.response.status_code
-        if code in (401, 403):
-            detail = ("Atlassian rejected the credentials. The email must be the account that "
-                      "created the API token, and the token needs Confluence/Jira scopes.")
-        else:
-            detail = f"Knowledge source returned HTTP {code}: {exc.response.text[:200]}"
-        raise HTTPException(status_code=502, detail=detail) from None
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502,
-                            detail=f"Could not reach the knowledge source: {type(exc).__name__}") from None
+        from workers.sync_tasks import sync_kb
+
+        task = sync_kb.delay(user)
+        return {"queued": True, "task_id": task.id, "runner": "celery"}
+    except Exception as exc:  # noqa: BLE001 — broker down: still never block for 90s
+        logging.getLogger("knowledge.sync").warning(
+            "celery enqueue failed (%s); running the sync in a thread", exc
+        )
+
+        def _run() -> None:
+            try:
+                sync_all(updated_by=user)
+            except SyncBusy:
+                pass
+            except Exception:  # noqa: BLE001 — the run-state row records the failure
+                logging.getLogger("knowledge.sync").exception("background sync failed")
+
+        threading.Thread(target=_run, name="kb-sync", daemon=True).start()
+        return {"queued": True, "runner": "thread"}
 
 
 @router.post("/api/articles/draft")
@@ -338,9 +355,16 @@ def sync_status(user: str = Depends(get_current_user)) -> dict:
         kv = s.get(RuntimeKv, "kb_last_sync")
         pages = s.execute(_text("SELECT count(*) FROM kb_meta")).scalar() or 0
     snap = _json.loads(kv.value) if kv and kv.value else None
+    from app.knowledge.ingest import sync_state
+
+    run = sync_state()
     return {
         "pages": pages,
         "last_run": snap,
+        "state": run.get("state", "idle"),
+        "started_at": run.get("started_at"),
+        "started_by": run.get("by"),
+        "run_error": run.get("error"),
         "healthy": bool(snap),
         "beat_interval_minutes": 30,  # workers/celery_app.py beat schedule
     }

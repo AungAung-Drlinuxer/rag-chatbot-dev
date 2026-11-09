@@ -109,10 +109,15 @@ type SyncStatus = {
   pages: number;
   last_run: {
     at: string;
-    duration_ms: number;
-    pages_created: number;
-    pages_updated: number;
+    pages?: number;
+    inserted?: number;
+    updated?: number;
+    skipped?: number;
   } | null;
+  state?: "idle" | "queued" | "running" | "done" | "error";
+  started_at?: number | null;
+  started_by?: string | null;
+  run_error?: string | null;
   healthy: boolean;
   beat_interval_minutes: number;
 };
@@ -546,16 +551,38 @@ export default function Knowledge({ role, onToast }: Props) {
     }
   }
 
+  /* The sync is queued server-side and takes ~90s; the request returns immediately. The
+     old code awaited the whole run, so the proxy timed out first and the page said
+     "Sync failed" while the sync was still going. Watch the run state instead. */
   async function handleSync() {
     setBusy(true);
     try {
-      await triggerSync();
-      onToast("Knowledge base synced");
-      await loadBrowse();
-      setSearchMode(false);
-      await fetchList(0);
-    } catch {
-      onToast("Sync failed", "err");
+      const res = await triggerSync();
+      if (res.status === 409) {
+        onToast(res.data?.detail ?? "A sync is already running");
+      } else if (res.status >= 400) {
+        throw new Error(res.data?.detail ?? `Sync could not start (HTTP ${res.status})`);
+      } else {
+        onToast("Sync started — this usually takes about a minute");
+      }
+
+      for (let i = 0; i < 60; i += 1) {
+        const st = await getSyncStatus().catch(() => null);
+        if (st) {
+          if (st.state === "error") throw new Error(st.run_error || "Sync failed");
+          if (st.state === "done") {
+            onToast(`Knowledge base synced · ${st.last_run?.pages ?? st.pages} page(s)`);
+            await loadBrowse();
+            setSearchMode(false);
+            await fetchList(0);
+            return;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+      onToast("Sync is still running — the status strip will update when it finishes");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Sync failed", "err");
     } finally {
       setBusy(false);
     }
@@ -681,9 +708,15 @@ export default function Knowledge({ role, onToast }: Props) {
           <StatCard
             icon={<Clock3 className="size-4" />}
             label="Last sync"
-            value={lastSync.value}
-            suffix={lastSync.suffix}
-            caption={`Runs every ${status?.beat_interval_minutes ?? 30} min`}
+            value={status?.state === "running" ? "Syncing" : lastSync.value}
+            suffix={status?.state === "running" ? "…" : lastSync.suffix}
+            caption={
+              status?.state === "running"
+                ? `Started by ${status.started_by ?? "scheduler"}`
+                : status?.state === "error"
+                  ? "Last run failed — see the Sync button"
+                  : `Runs every ${status?.beat_interval_minutes ?? 30} min`
+            }
           />
         </section>
 

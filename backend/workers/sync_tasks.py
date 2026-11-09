@@ -6,8 +6,9 @@ from workers.celery_app import celery_app
 
 
 @celery_app.task(name="workers.sync_tasks.sync_kb")
-def sync_kb() -> dict:
-    return sync_all()
+def sync_kb(updated_by: str | None = None) -> dict:
+    """`updated_by` is the admin who asked for a manual run; the beat passes nothing."""
+    return sync_all(updated_by=updated_by)
 
 
 @celery_app.task(name="workers.sync_tasks.reconcile_jira")

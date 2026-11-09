@@ -74,13 +74,13 @@ function happyPath() {
   m.listArticleDomains.mockResolvedValue({
     domains: [{ domain: "database", display_name: "Database", pages: 12, last_synced: iso(), description: "PostgreSQL, Oracle, SQL, deadlocks, performance" }],
   });
-  m.getSyncStatus.mockResolvedValue({ pages: 12, last_run: { at: iso(), duration_ms: 400, pages_created: 1, pages_updated: 2 }, healthy: true, beat_interval_minutes: 30 });
+  m.getSyncStatus.mockResolvedValue({ pages: 12, state: "done", last_run: { at: iso(), pages: 12, inserted: 1, updated: 2, skipped: 9 }, healthy: true, beat_interval_minutes: 30 });
   m.listArticles.mockResolvedValue({ articles: [article()], total: 3 });
   // One provider genuinely contributed rows. The old figure was the length of a hardcoded
   // array, which reported "2 sources" on an install where only Confluence was configured.
   m.listArticleSources.mockResolvedValue({ sources: [{ key: "confluence", label: "Confluence", count: 12 }] });
   m.searchArticles.mockResolvedValue({ data: { articles: [{ title: "VPN fix", domain: "database", source_url: "" }] } });
-  m.triggerSync.mockResolvedValue({ status: 200, data: {} });
+  m.triggerSync.mockResolvedValue({ status: 200, data: { queued: true } });
   m.bulkMoveArticles.mockResolvedValue({ status: 200, data: { moved: 1 } });
 }
 
@@ -165,7 +165,7 @@ describe("KnowledgePage — header, results and rows", () => {
     const healthy = await mount("admin");
     expect(healthy.textContent).toContain("KB Synced");
 
-    m.getSyncStatus.mockResolvedValue({ pages: 12, last_run: null, healthy: false, beat_interval_minutes: 30 });
+    m.getSyncStatus.mockResolvedValue({ pages: 12, state: "idle", last_run: null, healthy: false, beat_interval_minutes: 30 });
     const stale = await mount("admin");
     expect(stale.textContent).toContain("Sync Pending");
   });
@@ -237,7 +237,7 @@ describe("KnowledgePage — filters, search and sync", () => {
     const el = await mount("admin");
     await click(button(el, "Sync now"));
     expect(m.triggerSync).toHaveBeenCalled();
-    expect(onToast).toHaveBeenCalledWith("Knowledge base synced");
+    expect(onToast).toHaveBeenCalledWith(expect.stringContaining("Knowledge base synced"));
   });
 
   it("flags General-IT stragglers and description-less domains for review", async () => {
