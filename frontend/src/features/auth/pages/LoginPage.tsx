@@ -170,13 +170,15 @@ export default function Login({
                 {/* The asset is 1280x508 (2.52:1). Any other ratio + object-cover crops the
                     drawing — the artwork stopped short at both edges. The frame now takes
                     the image's own ratio, so it always shows in full and never stretches. */}
+                {/* Fixed, viewport-aware height + object-cover: the artwork bleeds to all
+                    four edges of the frame instead of sitting in a white letterbox. The
+                    crop only trims the illustration's own white margin. */}
                 <img
                   src="/login-illustration.jpg"
                   width={1280}
                   height={508}
                   alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                  className="pointer-events-none block h-auto w-full select-none"
-                  style={{ aspectRatio: "1280 / 508" }}
+                  className="pointer-events-none block h-[clamp(190px,27vh,330px)] w-full select-none object-cover object-center"
                   fetchPriority="high"
                   decoding="async"
                   draggable={false}
