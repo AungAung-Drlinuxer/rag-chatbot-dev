@@ -155,6 +155,11 @@ export default function App() {
     setLoginPass("");
     setLoginErr("");
     setAuthed(false);
+    /* Leaving `#/settings` (or any other page) in the address bar meant the sign-in screen
+       lived at /#/settings — reloading it, or sending that link to a colleague, landed on
+       a protected page. Logging out returns to the app root. */
+    setNav("chat");
+    window.history.replaceState(null, "", "/");
     // Note: Do NOT reset data-theme to light on logout so the user's preferred theme persists seamlessly
   }
 
@@ -167,6 +172,9 @@ export default function App() {
     };
     window.addEventListener("ith:session-expired", onExpired);
     return () => window.removeEventListener("ith:session-expired", onExpired);
+    // onLogout is stable in behaviour (clears tokens + state); re-binding on each render
+    // would drop an expiry event that arrives during the swap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shell = (active: string, children: React.ReactNode) => (

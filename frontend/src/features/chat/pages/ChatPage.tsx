@@ -16,7 +16,6 @@ import {
   BookOpen,
   CornerDownLeft,
   Loader2,
-  MessageSquarePlus,
   Send,
   ShieldCheck,
   Sparkles,
@@ -531,20 +530,11 @@ export default function Chat({ onNavigate, userName }: Props) {
                   <button
                     type="button"
                     onClick={() => setEscalateOpen(true)}
-                    title="Escalate to IT Support — draft a ticket from this conversation"
-                    aria-label="Escalate to IT Support"
-                    className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-2.5 text-2xs font-semibold text-muted-foreground shadow-sm transition hover:text-foreground"
+                    title="Escalate to IT — draft a ticket from this conversation"
+                    aria-label="Escalate to IT"
+                    className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 active:scale-[0.98]"
                   >
-                    <Ticket className="size-3.5" aria-hidden /> Escalate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startNewChat}
-                    title="New chat"
-                    aria-label="New chat"
-                    className="pointer-events-auto grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-muted-foreground shadow-sm transition hover:text-foreground"
-                  >
-                    <MessageSquarePlus className="size-4" aria-hidden />
+                    <Ticket className="size-3.5" aria-hidden /> Escalate to IT
                   </button>
                   <button
                     type="button"

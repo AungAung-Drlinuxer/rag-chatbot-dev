@@ -17,11 +17,17 @@ export function applyStoredTheme(): void {
 export function applyUserPrefs(s: any): void {
   const root = document.documentElement;
   let theme: string;
-  // If theme is explicit ("dark" | "light"), trust theme over legacy darkMode
+  // If theme is explicit ("dark" | "light"), trust theme over legacy darkMode.
+  // "system" follows the OS — it used to fall through to the light default, which is why a
+  // user on a dark desktop got a light app after signing in.
   if (s?.theme === "dark") {
     theme = "dark";
   } else if (s?.theme === "light") {
     theme = "light";
+  } else if (s?.theme === "system") {
+    theme = typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   } else if (typeof s?.darkMode === "boolean") {
     theme = s.darkMode ? "dark" : "light";
   } else {

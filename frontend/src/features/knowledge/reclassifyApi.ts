@@ -16,12 +16,17 @@ export type ReclassifyChange = {
 };
 
 export type ReclassifyStatus = {
-  state: "idle" | "running" | "done" | "error";
+  /* `queued`  — accepted by the worker, not started yet
+     `running` — heartbeating
+     `interrupted` — the backend died mid-run (the server reports this; it is not an error
+                     the admin caused, and re-running is safe) */
+  state: "idle" | "queued" | "running" | "interrupted" | "done" | "error";
   total: number;
   done: number;
   changed: number;
   started_at: number | null;
   finished_at: number | null;
+  heartbeat_at?: number | null;
   applied: boolean;
   applied_count?: number;
   error: string | null;

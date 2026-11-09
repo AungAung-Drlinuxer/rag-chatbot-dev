@@ -10,7 +10,7 @@ celery_app = Celery(
     "it_help_chatbot",
     broker=broker_url(),
     backend=result_backend_url(),  # DB 1 for results, DB 0 for broker (standalone keeps split)
-    include=["workers.sync_tasks"],
+    include=["workers.sync_tasks", "workers.reclassify_task"],
 )
 
 # Sentinel HA (Phase 10): kombu needs the master_name transport option.

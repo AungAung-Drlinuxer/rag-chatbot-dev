@@ -216,6 +216,24 @@ export default function Settings({ role }: { role?: string }) {
     } finally { setSaving(false); }
   }
 
+  /* Theme is an appearance choice, not a form field. It used to live only in React state
+     until "Save changes" was pressed, so picking Dark and leaving the page — or signing out
+     and back in — came back light. Save it the moment it is picked. */
+  async function chooseTheme(dark: boolean) {
+    setDarkMode(dark);
+    applyThemeNow(dark, compact, animations, chatFontSize);
+    const theme = dark ? "dark" : "light";
+    try {
+      await updateMySettings({ theme });
+      setBaseline((b) => (b ? { ...b, theme } : b));
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2000);
+      window.dispatchEvent(new CustomEvent("ith:theme-changed", { detail: { theme } }));
+    } catch (err: any) {
+      setSaveError(err?.message || "Could not save the theme");
+    }
+  }
+
   /** Restore the form to the last stored values and re-apply the theme. */
   function discardChanges() {
     if (!baseline) return;
@@ -350,10 +368,7 @@ export default function Settings({ role }: { role?: string }) {
                           <button
                             key={option}
                             type="button"
-                            onClick={() => {
-                              setDarkMode(option === "dark");
-                              applyThemeNow(option === "dark", compact, animations, chatFontSize);
-                            }}
+                            onClick={() => void chooseTheme(option === "dark")}
                             aria-pressed={on}
                             className={[
                               "w-[104px] rounded-xl border p-1.5 text-left transition",

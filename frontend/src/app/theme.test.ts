@@ -34,4 +34,18 @@ describe("theme engine", () => {
     expect(val).not.toBe("undefined");
     expect(["light", "dark"]).toContain(val);
   });
+
+  it("resolves theme:'system' against the OS preference", () => {
+    const original = window.matchMedia;
+    // @ts-expect-error test stub
+    window.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} });
+    applyUserPrefs({ theme: "system" });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    window.matchMedia = original;
+  });
+
+  it("explicit theme wins over a stale darkMode flag", () => {
+    applyUserPrefs({ theme: "light", darkMode: true });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
 });

@@ -67,6 +67,16 @@ export default function Login({
 
   const appName = branding.appName || "IT Help Chatbot";
 
+  /* The sign-in screen owns the root URL. Arriving at a deep link such as `/#/settings`
+     while signed out used to leave that path in the address bar — reloading it looked like
+     a broken protected page. Clean it as soon as this screen is what renders. `#/sso` is
+     left alone: the callback still needs to read its code. */
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash || hash === "#/" || hash.startsWith("#/sso")) return;
+    window.history.replaceState(null, "", "/");
+  }, []);
+
   // v1.5.1 — client-side validation before hitting the server
   function handleLocalSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -157,13 +167,16 @@ export default function Login({
                     {appName} · assistant workspace
                   </span>
                 </div>
+                {/* The asset is 1280x508 (2.52:1). Any other ratio + object-cover crops the
+                    drawing — the artwork stopped short at both edges. The frame now takes
+                    the image's own ratio, so it always shows in full and never stretches. */}
                 <img
                   src="/login-illustration.jpg"
                   width={1280}
-                  height={512}
+                  height={508}
                   alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                  className="pointer-events-none h-auto max-h-[min(34vh,340px)] w-full select-none object-cover"
-                  style={{ aspectRatio: "2.5 / 1" }}
+                  className="pointer-events-none block h-auto w-full select-none"
+                  style={{ aspectRatio: "1280 / 508" }}
                   fetchPriority="high"
                   decoding="async"
                   draggable={false}
@@ -211,7 +224,8 @@ export default function Login({
                 src="/login-illustration.jpg"
                 alt=""
                 aria-hidden
-                className="relative mt-3 h-20 w-full rounded-xl object-cover shadow-sm ring-1 ring-white/15 sm:h-24"
+                className="relative mt-3 block h-auto w-full rounded-xl object-cover shadow-sm ring-1 ring-white/15"
+                style={{ aspectRatio: "1280 / 508" }}
                 decoding="async"
                 draggable={false}
               />

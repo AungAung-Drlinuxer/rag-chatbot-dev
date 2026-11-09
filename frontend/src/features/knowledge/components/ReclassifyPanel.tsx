@@ -24,7 +24,7 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
     try {
       const s = await getReclassifyStatus();
       setSt(s);
-      if (s.state === "running") {
+      if (s.state === "running" || s.state === "queued") {
         timer.current = setTimeout(poll, 2500);
       }
     } catch {
@@ -65,7 +65,8 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
     }
   }
 
-  const running = st?.state === "running";
+  const running = st?.state === "running" || st?.state === "queued";
+  const interrupted = st?.state === "interrupted";
   const lowCount = (st?.changes ?? []).filter((c) => c.confidence < 0.75).length;
   const pct = st && st.total > 0 ? Math.round((st.done / st.total) * 100) : 0;
 
@@ -128,9 +129,13 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
         </Button>
         {st && st.state !== "idle" && (
           <span className="text-xs text-muted-foreground">
-            {st.state === "running"
+            {st.state === "queued"
+              ? "Queued — waiting for a worker…"
+              : st.state === "running"
               ? `Classifying ${st.done}/${st.total} (${pct}%)…`
-              : st.state === "error"
+              : st.state === "interrupted"
+                ? st.error
+                : st.state === "error"
                 ? `Failed: ${st.error}`
                 : st.applied
                   ? `Applied ${st.applied_count ?? st.changed} change(s) across ${st.total} article(s).`
@@ -212,6 +217,16 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
               Refresh now
             </button>
           )}
+        </div>
+      )}
+
+      {interrupted && (
+        <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="size-3" />
+          The previous run was interrupted and nothing was applied.
+          <button className="underline" onClick={() => run(false)} disabled={busy}>
+            Start again
+          </button>
         </div>
       )}
 
