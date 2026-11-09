@@ -60,7 +60,7 @@ def _knowledge(s) -> dict:
         import json as _json
         try:
             last = _json.loads(last)
-        except Exception:  # noqa: BLE001
+        except Exception:
             last = None
     # Field names come from the panels in Settings → Integrations (`api_token`, not `token`);
     # a readiness check that reads the wrong key reports "not connected" on a working install.
@@ -86,7 +86,7 @@ def _integrations(s) -> dict:
         from app.auth.sso import sso_enabled as _sso_enabled
 
         sso_ready = bool(_sso_enabled())
-    except Exception:  # noqa: BLE001
+    except Exception:
         sso_ready = _has(sso, "issuer", "realm", "client_id", "redirect_uri")
     return {
         "jira": {"configured": _has(jira, "base_url", "api_token", "email"),

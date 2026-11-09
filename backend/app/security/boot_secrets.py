@@ -43,7 +43,7 @@ def _as_dict(value: object) -> dict:
         try:
             parsed = json.loads(value)
             return parsed if isinstance(parsed, dict) else {}
-        except Exception:  # noqa: BLE001
+        except Exception:
             return {}
     return {}
 

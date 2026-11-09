@@ -1,6 +1,6 @@
 """Phase 10 — LLM provider selection (anthropic | openai) tests (no network)."""
-from app.llm import client as llm_mod
 from app.config import SETTINGS
+from app.llm import client as llm_mod
 
 
 def test_make_chain_none_without_key(monkeypatch):

@@ -22,8 +22,9 @@ _ALERT_KEYS = ("approval_request", "ticket_created", "ticket_status_change")
 
 
 def smtp_config() -> dict:
-    from app.persistence.database import SessionLocal
     from sqlalchemy import text as _t
+
+    from app.persistence.database import SessionLocal
     try:
         with SessionLocal() as s:
             row = s.execute(_t("SELECT value FROM system_settings WHERE key = 'smtp'")).first()
@@ -31,7 +32,7 @@ def smtp_config() -> dict:
         if isinstance(cfg, str):
             cfg = json.loads(cfg)
         return cfg or {}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.warning("smtp config load failed: %s", exc)
         return {}
 
@@ -42,15 +43,16 @@ def _admin_usernames() -> list[str]:
     No fallback recipient: inventing one would mail an unrelated person (or a person who
     does not exist on a fresh install) whenever the user table is empty or unreadable.
     """
-    from app.persistence.database import SessionLocal
     from sqlalchemy import text as _t
+
+    from app.persistence.database import SessionLocal
     try:
         with SessionLocal() as s:
             rows = s.execute(_t(
                 "SELECT username, email FROM users WHERE role_override = 'admin'"
             )).all()
         return [r[1] or r[0] for r in rows if (r[1] or r[0])]
-    except Exception:  # noqa: BLE001
+    except Exception:
         return []
 
 
@@ -84,7 +86,7 @@ def _send(cfg: dict, to_addr: str, subject: str, body: str) -> bool:
                 srv.sendmail(from_addr, [to_addr], msg.as_string())
         log.info("alert mail sent: %s -> %s", subject, to_addr)
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.warning("alert mail failed (%s -> %s): %s", subject, to_addr, exc)
         return False
 
@@ -122,8 +124,9 @@ def user_email(username: str | None) -> str | None:
     """
     if not username:
         return None
-    from app.persistence.database import SessionLocal
     from sqlalchemy import text as _t
+
+    from app.persistence.database import SessionLocal
     try:
         with SessionLocal() as s:
             row = s.execute(
@@ -131,7 +134,7 @@ def user_email(username: str | None) -> str | None:
                 {"u": username},
             ).first()
         return row[0] if row and row[0] else None
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 

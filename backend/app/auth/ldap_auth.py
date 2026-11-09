@@ -222,7 +222,6 @@ def _ldap_authenticate(username: str, password: str) -> str | None:
             try:
                 from sqlalchemy import text as _t
 
-                from app.auth.rbac import get_role
                 from app.persistence.database import SessionLocal
                 with SessionLocal() as s:
                     row = s.execute(_t(
@@ -278,6 +277,7 @@ def _ldap_authenticate(username: str, password: str) -> str | None:
                 # v0.21.96 — registration gate mirrors the search path
                 try:
                     from sqlalchemy import text as _t
+
                     from app.persistence.database import SessionLocal
                     base = username.split("@")[0]
                     with SessionLocal() as s:

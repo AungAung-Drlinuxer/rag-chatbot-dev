@@ -125,7 +125,7 @@ def _profanity_hit(message: str) -> str | None:
     return None
 
 
-def check_input(message: str) -> "GuardrailResult":
+def check_input(message: str) -> GuardrailResult:
     """Screen a user chat message. Returns a GuardrailResult verdict.
 
     Order matters: overflow (cheap) → injection (blocked) → pii (blocked) →

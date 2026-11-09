@@ -9,7 +9,6 @@ from __future__ import annotations
 from app.integrations.jira_reconcile import decide
 from app.integrations.ticket_status import canonical_from_jira_status as canon
 
-
 ROWS = [
     {"id": 1, "jira_key": "ITHD-1", "status": "open"},
     {"id": 2, "jira_key": "ITHD-2", "status": "open"},

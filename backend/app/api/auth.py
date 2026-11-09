@@ -2,21 +2,19 @@ from __future__ import annotations
 
 import logging
 
-from app.schemas import LoginRequest, RefreshRequest
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from app.security.rate_limit import limit
 from pydantic import BaseModel
 
+from app.auth import sso
 from app.auth.deps import get_current_user
 from app.auth.jwt import create_access_token, create_refresh_token
-from app.auth import sso
 from app.auth.ldap_auth import authenticate
-from app.auth.rbac import allowed_domains, get_role, require_cap
-from app.config import SETTINGS
+from app.auth.rbac import require_cap
 from app.observability.audit import audit
 from app.persistence.models import UserSettings
+from app.schemas import LoginRequest, RefreshRequest
+from app.security.rate_limit import limit
 
 logger = logging.getLogger("auth")
 
@@ -95,6 +93,7 @@ def refresh_token(req: RefreshRequest) -> dict:
     # v0.21.50 — also block refresh for disabled users
     try:
         from sqlalchemy import text as _t
+
         from app.persistence.database import SessionLocal
         with SessionLocal() as s:
             row = s.execute(_t("SELECT status FROM users WHERE username = :u"), {"u": subject}).first()
@@ -105,8 +104,8 @@ def refresh_token(req: RefreshRequest) -> dict:
             )
     except HTTPException:
         raise
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"access_token": create_access_token(subject), "username": subject}
 
 
@@ -119,8 +118,8 @@ def me(user: str = Depends(get_current_user)) -> dict:
     explain *why* something is blocked ("Your role (User) cannot create tickets").
     """
     from app.auth.rbac import (
-        CAPABILITIES,
         _MATRIX_ROLE_FOR,
+        CAPABILITIES,
         effective_role,
         permissions_for,
     )
@@ -181,7 +180,9 @@ def get_my_settings(user: str = Depends(get_current_user)) -> dict:
     to light on every relogin.
     """
     import json as _json
+
     from sqlalchemy import text as _t
+
     from app.persistence.database import SessionLocal
 
     s = SessionLocal()
@@ -224,7 +225,9 @@ def update_my_settings(payload: dict, user: str = Depends(get_current_user)) -> 
     so a saved "light" theme never stuck and login kept the stale dark theme.
     """
     import json as _json
+
     from sqlalchemy import text as _t
+
     from app.persistence.database import SessionLocal
 
     if not isinstance(payload, dict):
@@ -293,7 +296,7 @@ def sso_login() -> RedirectResponse:
     origin = sso.frontend_origin()
     try:
         return RedirectResponse(sso.start_login(), status_code=302)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("sso start failed: %s", exc)
         return RedirectResponse(f"{origin}/#/login?sso_error=unavailable", status_code=302)
 
@@ -323,7 +326,7 @@ def sso_callback(
         username = sso.username_from(claims)
         role = sso.role_from_claims(claims)
         status = sso.provision(username, role)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Never leak the reason to the browser: it can contain token-endpoint output.
         logger.warning("sso callback failed: %s", exc)
         return bounce("failed")

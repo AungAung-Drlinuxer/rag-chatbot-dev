@@ -78,8 +78,10 @@ def _llm_db_cfg() -> dict:
         return _LLM_CFG_CACHE
     try:
         import json as _json
-        from app.persistence.database import SessionLocal
+
         from sqlalchemy import text as _t2
+
+        from app.persistence.database import SessionLocal
         with SessionLocal() as s:
             row = s.execute(_t2("SELECT value FROM system_settings WHERE key = 'llm'")).first()
         val = row[0] if row else {}

@@ -8,24 +8,23 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
-    Integer,
-    Boolean,
-    Text,
     JSON,
     BigInteger,
+    Boolean,
     DateTime,
     Float,
-    Numeric,
     ForeignKey,
+    Integer,
+    Numeric,
     SmallInteger,
     String,
     Text,
-    Uuid,
     UniqueConstraint,
+    Uuid,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

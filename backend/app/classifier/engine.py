@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any
 
 logger = logging.getLogger("classifier")
 
@@ -64,6 +63,7 @@ def get_active_keyword_rules(force_reload: bool = False) -> dict[str, list[str]]
             return _cached_rules
         try:
             from sqlalchemy import text
+
             from app.persistence.database import SessionLocal
             with SessionLocal() as s:
                 rows = s.execute(text(

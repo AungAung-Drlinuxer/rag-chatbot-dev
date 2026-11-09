@@ -12,8 +12,8 @@ import logging
 import threading
 import time
 
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
 logger = logging.getLogger("metrics")
 
@@ -173,6 +173,6 @@ def metrics_endpoint() -> Response:
     # v1.1.6 — refresh DB-backed security gauges before serving (rate-limited 30s)
     try:
         refresh_security_gauges()
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

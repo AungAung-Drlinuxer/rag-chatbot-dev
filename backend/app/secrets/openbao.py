@@ -40,7 +40,7 @@ def _read_sa_token() -> str | None:
                 return f.read().strip()
         except FileNotFoundError:
             continue
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("openbao: cannot read SA token at %s: %s", path, exc)
     return None
 
@@ -54,7 +54,7 @@ def _login(url: str, role: str, sa_token: str) -> str | None:
             json={"jwt": sa_token, "role": role},
             timeout=HTTP_TIMEOUT_S,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("openbao: k8s auth login failed: %s", exc)
         return None
 
@@ -68,7 +68,7 @@ def _login(url: str, role: str, sa_token: str) -> str | None:
 
     try:
         return resp.json()["auth"]["client_token"]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("openbao: cannot parse login response: %s", exc)
         return None
 
@@ -82,7 +82,7 @@ def _read_kv(url: str, openbao_token: str, path: str) -> dict[str, Any] | None:
             headers={"X-Vault-Token": openbao_token},
             timeout=HTTP_TIMEOUT_S,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("openbao: KV read failed: %s", exc)
         return None
 
@@ -96,7 +96,7 @@ def _read_kv(url: str, openbao_token: str, path: str) -> dict[str, Any] | None:
 
     try:
         return resp.json()["data"]["data"]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("openbao: cannot parse KV response: %s", exc)
         return None
 

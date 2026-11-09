@@ -12,16 +12,13 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-
-from app.auth.deps import get_current_user
-from app.auth.rbac import require_cap
-from app.observability.audit import audit
-
 from sqlalchemy import text as _sqltext
 
+from app.auth.rbac import require_cap
+from app.classifier.engine import reload_rules_cache
+from app.observability.audit import audit
 from app.persistence.database import SessionLocal
 from app.persistence.models import ClassifierDomain
-from app.classifier.engine import reload_rules_cache
 
 router = APIRouter()
 

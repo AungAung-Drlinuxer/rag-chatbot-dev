@@ -23,8 +23,18 @@ def test_jwt_roundtrip():
 
 
 def test_jwt_refresh_token():
+    # v0.18.1 — the `type` claim is enforced, so a refresh token must be decoded AS a
+    # refresh token. Decoding it as an access token is exactly the replay this blocks.
     token = create_refresh_token("jsmith")
-    assert decode_token(token) == "jsmith"
+    assert decode_token(token, expected_type="refresh") == "jsmith"
+
+
+def test_a_refresh_token_is_not_accepted_as_an_access_token():
+    import pytest as _pytest
+
+    token = create_refresh_token("jsmith")
+    with _pytest.raises(ValueError):
+        decode_token(token)
 
 
 def test_jwt_rejects_garbage():

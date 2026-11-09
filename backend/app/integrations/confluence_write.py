@@ -13,8 +13,6 @@ import base64
 
 import httpx
 
-from app.config import SETTINGS
-
 # domain (classifier vocabulary) → Confluence parent page title in IHKB.
 # Titles must match the real page names in the space tree.
 DOMAIN_PARENT: dict[str, str] = {

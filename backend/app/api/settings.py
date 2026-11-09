@@ -3,19 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
-from uuid import uuid4
 
-
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi import status as http_status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_role, require_cap
-from app.config import SETTINGS
+from app.auth.rbac import get_role, require_role
 from app.persistence.database import SessionLocal, engine
 
 logger = logging.getLogger("dashboard")
@@ -151,9 +146,12 @@ def _load_setting(key: str, default: dict | None = None) -> dict:
                         {"k": key}).first()
     return _json_dict(row[0] if row else None, default)
 
+from fastapi import File as _FILE
+from fastapi import Form as _FORM
+from fastapi import UploadFile as _UPLOAD_FILE
+
 from app.observability.audit import audit
 from app.schemas import BrandingResponse
-from fastapi import UploadFile as _UPLOAD_FILE, File as _FILE, Form as _FORM
 
 router = APIRouter(prefix="/api")
 
@@ -170,7 +168,6 @@ def _rows(sql: str, params: dict | None = None) -> list[dict]:
 SMTP_KEYS = {"host", "port", "username", "password", "from_address", "use_tls", "enabled", "alerts"}
 
 def _require_admin(user: str) -> None:
-    from app.auth.rbac import get_role
     if get_role(user) != "admin":
         raise HTTPException(status_code=403, detail="Forbidden: admin only")
 
@@ -221,9 +218,10 @@ def put_smtp_settings(payload: dict, user: str = Depends(get_current_user)) -> d
 @router.post("/settings/smtp/test")
 def send_test_email(payload: dict, user: str = Depends(get_current_user)) -> dict:
     _require_admin(user)
-    import smtplib, ssl as _ssl
-    from email.mime.text import MIMEText
+    import smtplib
+    import ssl as _ssl
     from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
     with SessionLocal() as s:
         from sqlalchemy import text as _t
         row = s.execute(_t("SELECT value FROM system_settings WHERE key = 'smtp'")).first()
@@ -468,14 +466,13 @@ def _kickoff_kb_sync() -> str:
     operator just made.
     """
     import logging
-    from datetime import UTC, datetime
 
     from app.integrations.confluence import confluence_cfg
 
     log = logging.getLogger("it-help-chatbot")
     try:
         cfg = confluence_cfg()
-    except Exception as exc:  # noqa: BLE001 — half-configured is a normal state here
+    except Exception as exc:
         log.info("kb sync not queued: %s", exc)
         return "not-configured"
     if not (cfg.get("base_url") and (cfg.get("api_token") or cfg.get("token"))):
@@ -493,8 +490,8 @@ def _kickoff_kb_sync() -> str:
                 at = datetime.fromisoformat(str(prev.get("at")))
                 if (now - at).total_seconds() < 120:
                     return "already-pending"
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as _exc:
+                logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         s.execute(_t(
             "INSERT INTO runtime_kv (key, value) VALUES ('kb_sync_kick', :v) "
             "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
@@ -507,7 +504,7 @@ def _kickoff_kb_sync() -> str:
         sync_kb.delay()
         log.info("kb sync queued after a credential change")
         return "queued"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.warning("kb sync not queued (%s): %s", type(exc).__name__, exc)
         return "unavailable"
 
@@ -516,7 +513,6 @@ def _kickoff_kb_sync() -> str:
 def test_integration(key: str, user: str = Depends(get_current_user)) -> dict:
     """Connectivity test for Confluence / Jira."""
     import httpx
-    from app.config import SETTINGS
     with SessionLocal() as s:
         from sqlalchemy import text as _t
         row = s.execute(_t("SELECT value FROM system_settings WHERE key = :k"), {"k": key}).first()
@@ -586,12 +582,11 @@ def test_integration(key: str, user: str = Depends(get_current_user)) -> dict:
             status, detail = 200, ""
         elif key == "ldap":
             # LDAP bind check via ldap3 using saved config (falls back to env config)
-            from app.config import SETTINGS as _S
             host = cfg.get("host") or ""
             if not host:
                 raise ValueError("host not set")
             port = int(cfg.get("port") or 389)
-            from ldap3 import Server, Connection
+            from ldap3 import Connection, Server
             srv = Server(host, port=port, get_info=None, connect_timeout=5)
             conn = Connection(srv, user=cfg.get("bind_dn") or None,
                               password=cfg.get("bind_password") or None, auto_bind=False)
@@ -800,7 +795,7 @@ def jira_service_desks(user: str = Depends(require_role("admin"))) -> dict:
 
     try:
         return {"desks": service_desks()}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"{type(exc).__name__}: {exc}") from exc
 
 
@@ -813,5 +808,5 @@ def jira_request_types(desk_id: str, user: str = Depends(require_role("admin")))
         raise HTTPException(status_code=400, detail="desk_id must be numeric")
     try:
         return {"request_types": request_types(desk_id)}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"{type(exc).__name__}: {exc}") from exc

@@ -222,7 +222,7 @@ createRoot(document.getElementById("root")!).render(
     role="admin"
     userName="aung.lae"
     perms={{ manage_domains: true, manage_knowledge: true }}
-    onToast={(msg) => console.log("[toast]", msg)}
+    onToast={(msg) => { void msg; }}  // harness: no console output in a shipped bundle
   />,
 );
 

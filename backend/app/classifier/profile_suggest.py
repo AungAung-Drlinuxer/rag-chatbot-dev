@@ -37,7 +37,7 @@ Rules:
 
 
 def _extract_json(raw: str) -> dict | None:
-    m = re.search(r"\{.*\}", raw or "", re.S)
+    m = re.search(r"\{.*\}", raw or "", re.DOTALL)
     if not m:
         return None
     try:
@@ -85,6 +85,6 @@ def suggest_profile(*, key: str, name: str, description: str = "",
         if not desc and not cleaned:
             return None
         return {"description": desc[:280], "keywords": cleaned[:40]}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.info("profile suggestion failed: %s", exc)
         return None

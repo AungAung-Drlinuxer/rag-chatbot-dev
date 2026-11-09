@@ -7,7 +7,10 @@ Also asserts the two claims the evidence card will make separately:
   meta.servers_scope  = what the turn was ALLOWED to use
   evidence.servers    = what it ACTUALLY used
 """
-import json, time, urllib.request
+import json
+import time
+import urllib.request
+
 from app.auth.jwt import create_access_token
 
 BASE = "http://localhost:8000"

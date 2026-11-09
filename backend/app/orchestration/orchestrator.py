@@ -13,10 +13,10 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger("orchestration")
 
-from app.classifier.engine import LOCKDOWN, STAGE1_CONFIDENCE, classify_domain
+from app.classifier.engine import LOCKDOWN, STAGE1_CONFIDENCE
 from app.config import SETTINGS
-from app.rag.gate import DECISION_ANSWER, decide, gate_confidence
 from app.llm.client import make_chain, stream_answer
+from app.rag.gate import DECISION_ANSWER, decide, gate_confidence
 from app.rag.retrieval import build_context, retrieve
 from app.rag.rewriter import rewrite_query
 from app.tools.ticket_tool import detect_ticket_intent, fetch_ticket_context
@@ -74,13 +74,13 @@ def _retrieve(rewritten: str, domain: str, k: int | None = None) -> list[dict]:
 
     try:
         from app.rag.retrieval import _is_stronger, _is_weak
-    except Exception:  # noqa: BLE001
+    except Exception:
         return docs
 
     if _is_weak(docs):
         try:
             wider = retrieve(rewritten, domain=None, k=k)
-        except Exception:  # noqa: BLE001
+        except Exception:
             wider = []
         if wider and _is_stronger(wider, docs):
             logger.info(
@@ -122,10 +122,9 @@ def run_rag(query: str, history: list[dict] | None = None, top_k: int | None = N
     `top_k` (per-call) overrides any runtime override; runtime override overrides
     the env default. Lookup order: per-call arg → runtime_kv → SETTINGS.
     """
-    from app.runtime import get as runtime_get
-
     # P3 — LLM classifier first; keyword classifier as the guaranteed fallback.
     from app.classifier.llm_classifier import classify_domain_smart
+    from app.runtime import get as runtime_get
 
     domain, domain_conf, _reason = classify_domain_smart(query)  # (classifier, outside diagram block)
     rewritten = _query_rewrite(query, history)         # 1. Query Rewrite

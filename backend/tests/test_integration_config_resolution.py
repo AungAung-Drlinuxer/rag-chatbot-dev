@@ -34,7 +34,7 @@ def test_saved_row_is_authoritative_and_does_not_borrow_the_env_email(monkeypatc
 
 
 def test_env_is_used_only_when_nothing_is_saved(monkeypatch):
-    monkeypatch.setattr(conf, "_db_cfg", lambda: {})
+    monkeypatch.setattr(conf, "_db_cfg", dict)
     monkeypatch.setattr(conf.SETTINGS, "confluence_base_url", "https://env.example/wiki", raising=False)
     monkeypatch.setattr(conf.SETTINGS, "confluence_email", "env@corp.example", raising=False)
     monkeypatch.setattr(conf.SETTINGS, "confluence_token", "env-token", raising=False)

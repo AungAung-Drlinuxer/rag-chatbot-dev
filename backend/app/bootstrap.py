@@ -99,7 +99,7 @@ def _install_extension_as_superuser() -> bool:
         with engine.begin() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise SystemExit(f"could not install pgvector with BOOTSTRAP_SUPERUSER_URL: {exc}") from exc
     finally:
         engine.dispose()
@@ -188,7 +188,7 @@ def provision_role_and_database() -> dict:
     try:
         with app_engine.connect() as conn:
             conn.execute(text(f'GRANT ALL ON SCHEMA public TO "{role}"'))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"note: could not grant schema rights ({type(exc).__name__}): {exc}", file=sys.stderr)
     finally:
         app_engine.dispose()
@@ -225,7 +225,7 @@ def drop_obsolete_objects() -> dict:
                 s.execute(text(statement))
                 s.commit()
                 dropped.append(label)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 s.rollback()
                 failed[label] = f"{type(exc).__name__}: {exc}"
     return {"dropped": dropped, "failed": failed, "still_present": _obsolete_present()}
@@ -256,7 +256,7 @@ def ensure_checkpoint_tables() -> bool:
     try:
         import psycopg
         from langgraph.checkpoint.postgres import PostgresSaver
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
     from app.config import SETTINGS
 
@@ -267,7 +267,7 @@ def ensure_checkpoint_tables() -> bool:
         with psycopg.connect(url, autocommit=True, connect_timeout=10) as conn:
             PostgresSaver(conn).setup()  # type: ignore[arg-type]
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"note: checkpoint tables not created ({type(exc).__name__}: {exc})", file=sys.stderr)
         return False
 

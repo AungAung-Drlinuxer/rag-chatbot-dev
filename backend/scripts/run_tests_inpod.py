@@ -20,7 +20,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-import pytest_shim  # noqa: E402  (must be importable AS `pytest` below)
+import pytest_shim
+
 sys.modules.setdefault("pytest", pytest_shim)
 
 sys.path.insert(0, "/app")

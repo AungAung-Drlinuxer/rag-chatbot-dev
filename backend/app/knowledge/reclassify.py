@@ -44,8 +44,8 @@ EMPTY_STATUS = {
 
 
 def _write_status(payload: dict) -> None:
-    from app.persistence.models import RuntimeKv
     from app.persistence.database import SessionLocal
+    from app.persistence.models import RuntimeKv
 
     with SessionLocal() as s:
         row = s.get(RuntimeKv, _STATUS_KEY)
@@ -57,8 +57,8 @@ def _write_status(payload: dict) -> None:
 
 
 def reclassify_status() -> dict:
-    from app.persistence.models import RuntimeKv
     from app.persistence.database import SessionLocal
+    from app.persistence.models import RuntimeKv
 
     try:
         with SessionLocal() as s:
@@ -66,7 +66,7 @@ def reclassify_status() -> dict:
             if row and row.value:
                 data = json.loads(row.value) if isinstance(row.value, str) else row.value
                 return {**EMPTY_STATUS, **data}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("reclassify status unreadable: %s", exc)
     return dict(EMPTY_STATUS)
 
@@ -140,7 +140,7 @@ def _run(limit: int, apply: bool) -> None:
 
         status.update({"state": "done", "finished_at": time.time()})
         _write_status(status)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("reclassify failed")
         status.update({"state": "error", "error": str(exc)[:300], "finished_at": time.time()})
         _write_status(status)

@@ -157,8 +157,8 @@ def jira_route(domain: str | None) -> dict:
         try:
             for row in _domain_routing_map().get(d, []):
                 return {"project": row[0], "assignee": row[1]}
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"project": None, "assignee": None}
 
 
@@ -258,8 +258,8 @@ def _stored_matrix() -> dict:
             perms = r["permissions"] or {}
             if r["role"] in matrix:
                 matrix[r["role"]] = {**matrix[r["role"]], **perms}
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return matrix
 
 
@@ -322,8 +322,8 @@ def permissions_for(username: str) -> dict:
         if row and row.permissions:
             for k, v in row.permissions.items():
                 perms[k] = bool(v)
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
 
     # v1.3.6 — merged capability: "Manage routing domains" follows "Manage knowledge"
     # (both live on the Knowledge page). manage_domains stays defined for backend

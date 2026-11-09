@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from app.config import SETTINGS
 
@@ -89,12 +89,11 @@ class RAGState(TypedDict):
 
 
 def _node_classify(state: RAGState) -> dict:
-    from app.observability.telemetry import start_span
-
     # P3 — LLM classification first (accurate, handles Burmese and generic
     # questions); the keyword classifier remains the fallback so an LLM outage or
     # an air-gapped deployment degrades instead of failing.
     from app.classifier.llm_classifier import classify_domain_smart
+    from app.observability.telemetry import start_span
 
     with start_span("graph.classify_domain", {"question": state["question"][:60]}):
         domain, _conf, reason = classify_domain_smart(state["question"])
@@ -213,7 +212,7 @@ def _auto_escalate(username: str | None) -> bool:
     try:
         row = s.get(UserSettings, username)
         return bool(row.auto_escalate_on_caution) if row else False
-    except Exception as exc:  # noqa: BLE001 — a preference lookup must not break the turn
+    except Exception as exc:
         logger.warning("auto_escalate_on_caution lookup failed for %r: %s", username, exc)
         return False
     finally:
@@ -282,8 +281,8 @@ def _node_create_ticket(state: RAGState) -> dict:
     try:
         from app.notifier import notify_ticket_created
         notify_ticket_created(state.get("user"), ticket_id, summary)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
 
     link = jr.get("link") or ""
     msg = (f"✅ Ticket ({ticket_id or 'created'}) opened successfully. "
@@ -328,8 +327,6 @@ def _checkpointer():
     Postgres saver stores checkpoints in the assistant DB so any replica can resume.
     """
     import os
-
-    from langgraph.checkpoint.postgres import PostgresSaver
 
     import psycopg
     from langgraph.checkpoint.postgres import PostgresSaver

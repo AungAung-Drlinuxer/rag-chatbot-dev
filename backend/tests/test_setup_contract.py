@@ -55,7 +55,7 @@ def test_integration_readiness_reads_the_field_names_the_panels_write(monkeypatc
     # The panels store `api_token` and LDAP's `host`; a check that looks for `token`/`server`
     # says "not connected" on a working install, and the admin sees a green test connection
     # next to a red checklist. Pin the names.
-    import app.api.setup as setup
+    from app.api import setup
 
     rows = {
         "confluence": {"base_url": "https://x.atlassian.net/wiki", "api_token": "t", "email": "e@x"},

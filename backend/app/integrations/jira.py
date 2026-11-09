@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 from urllib.parse import quote
 
 from app.config import SETTINGS
@@ -23,6 +24,8 @@ _CREATE_PATH = "/secure/CreateIssueDetails!init.jspa"
 # shows "configured" while escalate() still saw empty env vars and silently
 # skipped Jira (tickets saved local-only with jira_key=NULL).
 import time as _time
+
+logger = logging.getLogger(__name__)
 
 _JIRA_CFG_CACHE: dict | None = None
 _JIRA_CFG_AT: float = 0.0
@@ -49,6 +52,7 @@ def _jira_cfg() -> dict:
     }
     try:
         from sqlalchemy import text as _t
+
         from app.persistence.database import SessionLocal
         with SessionLocal() as s:
             row = s.execute(_t(
@@ -73,8 +77,8 @@ def _jira_cfg() -> dict:
                     else _json.dumps(val.get("request_types") or "")
                 ) if val.get("request_types") else "",
             }
-    except Exception:  # DB not ready — env fallback keeps dev working
-        pass
+    except Exception as exc:
+        logger.debug("%s suppressed: %s", type(exc).__name__, exc)
     _JIRA_CFG_CACHE, _JIRA_CFG_AT = out, now
     return out
 
@@ -116,7 +120,7 @@ def domain_project(domain: str | None) -> str:
             return (s.execute(text(
                 "SELECT jira_project FROM classifier_domains "
                 "WHERE lower(domain_key) = :k AND is_active = true"), {"k": key}).scalar() or "")
-    except Exception:  # noqa: BLE001 - a DB hiccup must not stop a ticket
+    except Exception:
         return ""
 
 
@@ -155,11 +159,6 @@ def escalate(summary: str, description: str, reporter=None,
         return {"link": build_create_link(summary, description), "mode": "link",
                 "jira_key": None, "reporter": reporter,
                 "error": f"{type(exc).__name__}: {exc}"}
-
-
-def _mock_key():
-    import random
-    return f"ESC-{random.randint(1000, 9999)}"
 
 
 def _auth_header():
@@ -235,9 +234,13 @@ def _create_via_issue_rest(summary, description, reporter, project, assignee):
 
 # chatbot status word -> acceptable Jira transition names (first match wins)
 # v1.6.9 — canonical status model shared with OpenProject (ticket_status.py)
-from app.integrations.ticket_status import (  # noqa: E402
+from app.integrations.ticket_status import (
     JIRA_TRANSITIONS_BY_CANONICAL as STATUS_TRANSITIONS,
+)
+from app.integrations.ticket_status import (
     canonical_from_jira_status as _canonical_from_jira_status,
+)
+from app.integrations.ticket_status import (
     is_terminal,
 )
 
@@ -497,7 +500,7 @@ def assign_issue(issue_key: str, identifier: str) -> dict:
                 return {"ok": True, "account_id": match["accountId"],
                         "display_name": match.get("displayName")}
             return {"ok": False, "detail": f"HTTP {put.status_code}: {put.text[:200]}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 
@@ -538,7 +541,7 @@ def add_comment(issue_key: str, body: str) -> dict:
             if r.status_code in (200, 201):
                 return {"ok": True, "id": (r.json() or {}).get("id")}
             return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 
@@ -570,7 +573,7 @@ def upload_attachment(issue_key: str, filename: str, content: bytes, mime: str) 
                 return {"ok": True, "id": (data[0] or {}).get("id") if data else None,
                         "filename": (data[0] or {}).get("filename") if data else filename}
             return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 def _adf(text: str) -> dict:
@@ -625,10 +628,10 @@ def update_issue_fields(issue_key: str, *, summary: str | None = None,
                 errs = r.json().get("errors") or {}
                 if errs:
                     detail = (detail + " " + "; ".join(f"{k}: {v}" for k, v in errs.items())).strip()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 detail = (r.text or "")[:200]
             return {"ok": False, "detail": detail or f"HTTP {r.status_code}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "detail": str(exc)}
     return {"ok": True}
 
@@ -647,7 +650,7 @@ def delete_attachment(attachment_id: str) -> dict:
         if r.status_code in (200, 204, 404):
             return {"ok": True, "already_gone": r.status_code == 404}
         return {"ok": False, "detail": (r.text or "")[:200] or f"HTTP {r.status_code}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "detail": str(exc)}
 
 
@@ -676,5 +679,5 @@ def list_attachment_ids(issue_key: str, filename: str | None = None) -> dict:
             if delete_attachment(str(item.get("id"))).get("ok"):
                 deleted += 1
         return {"ok": True, "ids": [i.get("id") for i in matches], "deleted": deleted}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "ids": [], "deleted": 0, "detail": str(exc)}

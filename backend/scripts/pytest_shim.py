@@ -38,7 +38,7 @@ def raises(expected, match=None):
             if not re.search(match, str(e)):
                 raise AssertionError(f"{e!r} does not match {match!r}")
         return
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise AssertionError(f"expected {expected.__name__}, got {type(e).__name__}: {e}")
     raise AssertionError(f"expected {expected.__name__} to be raised")
 

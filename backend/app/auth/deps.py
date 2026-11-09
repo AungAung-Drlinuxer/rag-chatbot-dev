@@ -1,10 +1,14 @@
 """FastAPI dependency — requires a valid JWT Bearer token (Phase 5 auth)."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.jwt import decode_token
+
+logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -12,7 +16,7 @@ UN_AUTHORIZED = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),  # noqa: B008 (FastAPI idiom)
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> str:
     """Return the authenticated username from the `Authorization: Bearer *** header.
 
@@ -39,6 +43,7 @@ def get_current_user(
     # v0.21.50 — revoke session immediately if admin disabled the user
     try:
         from sqlalchemy import text as _t
+
         from app.persistence.database import SessionLocal
         with SessionLocal() as s:
             row = s.execute(_t(
@@ -51,7 +56,7 @@ def get_current_user(
             )
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         # DB hiccup = fail-open so a transient outage doesn't lock everyone out
-        pass
+        logger.debug("%s suppressed: %s", type(exc).__name__, exc)
     return username

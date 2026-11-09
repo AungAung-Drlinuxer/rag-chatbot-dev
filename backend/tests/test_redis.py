@@ -1,6 +1,6 @@
 """Phase 10 — Redis standalone/Sentinel switch tests (lazy, no network)."""
-from app.persistence import redis as rd
 from app.config import SETTINGS
+from app.persistence import redis as rd
 
 
 def test_broker_url_standalone(monkeypatch):

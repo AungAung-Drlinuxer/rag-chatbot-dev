@@ -19,9 +19,9 @@ The `decide()` step is pure so the rules can be tested without a database or a l
 """
 from __future__ import annotations
 
-from app.integrations.ticket_status import normalise_status as normalise
-
 from sqlalchemy import text
+
+from app.integrations.ticket_status import normalise_status as normalise
 
 DELETED_STATUS = "deleted"
 

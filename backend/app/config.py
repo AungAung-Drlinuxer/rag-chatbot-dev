@@ -19,7 +19,7 @@ def _resolve_openbao_overrides() -> dict[str, str]:
     try:
         from app.secrets import openbao as _openbao
         data = _openbao.load()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _log.info("openbao resolver unavailable: %s", exc)
         return {}
     return data or {}

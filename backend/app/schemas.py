@@ -63,8 +63,8 @@ class ArticleRequest(StrictModel):
 
 
 # --- Domain Management Schemas ---
-from typing import Any
 from pydantic import BaseModel, Field
+
 
 class DomainCreateRequest(BaseModel):
     domain_key: str = Field(..., min_length=2, max_length=64, description="Unique domain key e.g. 'hr'")

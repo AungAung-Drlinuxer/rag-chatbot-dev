@@ -72,7 +72,7 @@ def record_usage(
                 },
             )
             s.commit()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # A failed usage row must not surface to the user, but it must be visible to an
         # operator: without it the observability page silently under-reports spend.
         logger.warning("usage row skipped (%s): %s", type(exc).__name__, exc)

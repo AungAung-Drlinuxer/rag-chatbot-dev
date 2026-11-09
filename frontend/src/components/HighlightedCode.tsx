@@ -37,8 +37,23 @@ export const HighlightedCode = memo(function HighlightedCode({ code, lang }: { c
   }, [code, resolved]);
 
   if (html === null) return <pre><code>{code}</code></pre>;
-  return <div className="shiki-block" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="shiki-block" dangerouslySetInnerHTML={{ __html: sanitizeShikiHtml(html) }} />;
 });
+
+/**
+ * Shiki escapes the code it tokenises, but the string still goes through
+ * `dangerouslySetInnerHTML` — one unescaped path and model output becomes markup. Keep
+ * the markup shiki actually emits (`<pre>`, `<code>`, `<span style>`, `<br>`, `<div>`)
+ * and drop anything that can execute.
+ */
+export function sanitizeShikiHtml(html: string): string {
+  return html
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, "")
+    // Event handlers and javascript: URLs.
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\s(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, "");
+}
 
 /** react-markdown `components.pre` override that unwraps the child <code> element. */
 export function MarkdownPre({ children }: { children?: ReactNode }) {

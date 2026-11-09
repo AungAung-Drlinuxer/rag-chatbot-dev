@@ -53,8 +53,10 @@ def test_admin_settings_list_requires_admin_role():
 
 def test_admin_settings_put_persists_runtime_override(monkeypatch):
     """Admin saves a top_k override; the next GET reflects it on the same request."""
-    # Force a known dev-admin identity
+    # Force a known dev-admin identity. The default is empty on purpose (no implicit
+    # admin on a fresh install), so the test supplies one instead of asserting a default.
     from app.config import SETTINGS as S
+    monkeypatch.setattr(S, "dev_admin_usernames", "dev")
     assert "dev" in S.dev_admin_usernames
     client = _client()
     headers = {"Authorization": f"Bearer {_token('dev')}"}

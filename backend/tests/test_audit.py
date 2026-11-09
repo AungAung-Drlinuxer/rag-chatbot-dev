@@ -1,7 +1,7 @@
 """Phase 8 — audit best-effort test (never raises, even if DB down)."""
 import app.observability.audit as audit_mod
-from app.observability.audit import audit
 from app.config import SETTINGS
+from app.observability.audit import audit
 
 
 def test_audit_never_raises(monkeypatch):

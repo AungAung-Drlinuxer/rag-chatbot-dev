@@ -2,19 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
-import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi import status as http_status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_role, require_cap
-from app.config import SETTINGS
+from app.auth.rbac import get_role
 from app.observability.audit import audit
 from app.persistence.database import SessionLocal, engine
 
@@ -113,18 +108,13 @@ def put_rbac_matrix(payload: dict, user: str = Depends(get_current_user)) -> dic
     try:
         from app.observability.audit import audit
         audit("rbac.matrix.update", user, detail="roles=" + ",".join(r["role"] for r in matrix))
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "count": len(matrix)}
 
 
 # --- v0.21.58 — per-user permission overrides + groups ------------------------
 
-from app.persistence.models import (
-    AppGroup,
-    GroupMember,
-    UserPermissionOverride,
-)
 
 
 @router.get("/users/{username}/permissions")
@@ -163,8 +153,8 @@ def put_user_permissions(username: str, payload: dict, user: str = Depends(get_c
         s.commit()
     try:
         audit("user.permissions.update", user, detail=f"target={username} perms={perms}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     from app.auth.rbac import permissions_for
 
     return {"ok": True, "username": username, "effective": permissions_for(username)}
@@ -193,8 +183,8 @@ def put_runtime_settings(payload: dict, user: str = Depends(get_current_user)) -
         try:
             runtime_set(k, v)
             applied[k] = v
-        except KeyError:
-            pass
+        except KeyError as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "applied": applied}
 
 
@@ -308,8 +298,8 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
                 try:
                     from app.notifier import notify_ticket_created
                     notify_ticket_created(res["username"], jr.get("jira_key"), summary)
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as _exc:
+                    logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
                 graph_state.update(
                     ticket_id=jr.get("jira_key"),
                     escalation_messages=[f"✅ Ticket ({jr.get('jira_key')}) opened successfully."])
@@ -328,6 +318,7 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
     try:
         if requester and thread_id_raw:
             import uuid as _uuid
+
             from sqlalchemy import text as _t2
             if decision == "approved" and ticket_id:
                 reply = (f"✅ **Your escalation was approved.**\n\n"
@@ -379,8 +370,8 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
         audit("approval.decision", user, detail=f"id={approval_id} decision={decision} ticket={ticket_id}")
         from app.observability.metrics import ESCALATION_TICKETS_TOTAL
         ESCALATION_TICKETS_TOTAL.labels(status=decision).inc()
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {
         "ok": True,
         "decision": decision,
@@ -453,7 +444,8 @@ def admin_export_audits(
             "SELECT created_at, action, username, domain, decision, confidence, detail "
             "FROM audit_log " + where + " ORDER BY created_at DESC LIMIT 10000"
         ), params).mappings().all()
-    import csv as _csv, io as _io
+    import csv as _csv
+    import io as _io
 
     buf = _io.StringIO()
     w = _csv.writer(buf)
@@ -465,7 +457,7 @@ def admin_export_audits(
                     (r["detail"] or "").replace("\r", " ").replace("\n", " ")])
     return _Resp(
         content=buf.getvalue(), media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="audit-log.csv"'},
+        headers={"Content-Disposition": 'attachment; filename="audit-log.csv"'},
     )
 
 
@@ -557,7 +549,7 @@ def admin_conversation_export(session_id: str, format: str = "txt",
                         media_type="application/json",
                         headers={"Content-Disposition": f'attachment; filename="{fname}.json"'})
     lines = [
-        f"Conversation export — IT Help Chatbot",
+        "Conversation export — IT Help Chatbot",
         f"User: {d['username']}   Session: {session_id}",
         f"Started: {d['started_at']}   Title: {d['title'] or '(untitled)'}",
         f"Exported: {datetime.now(UTC).isoformat()} by {user}",

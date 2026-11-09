@@ -96,7 +96,7 @@ def _cache_put(key: str, value) -> None:
 
 
 def _extract_json(raw: str) -> dict | None:
-    m = re.search(r"\{.*\}", raw or "", re.S)
+    m = re.search(r"\{.*\}", raw or "", re.DOTALL)
     if not m:
         return None
     try:
@@ -156,7 +156,7 @@ def classify_domain_llm(question: str):
         _cache_put(cache_key, out)
         logger.info("llm classifier: %r -> %s (%.2f) %s", q[:50], domain, conf, reason)
         return out
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("llm classifier unavailable (%s: %s) — keyword fallback",
                        type(exc).__name__, exc)
         return None

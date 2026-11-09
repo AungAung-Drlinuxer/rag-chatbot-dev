@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import json
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text as sqltext
 
 from app.auth.deps import get_current_user
-from app.config import SETTINGS
-from app.observability.audit import audit
 from app.persistence.database import SessionLocal
+from app.persistence.models import ChatMessage, ChatSession
 from app.rag.gate import DECISION_CAUTION, caution_message
-from app.persistence.models import ChatSession, ChatMessage
 
 router = APIRouter()
 
@@ -20,7 +16,6 @@ def list_conversations(user: str = Depends(get_current_user), limit: int = 20) -
     """Recent conversations for the current user (RECENT CONVERSATIONS sidebar)."""
     from sqlalchemy import func
 
-    from app.persistence.database import SessionLocal
 
     s = SessionLocal()
     try:
@@ -82,9 +77,9 @@ def list_conversations(user: str = Depends(get_current_user), limit: int = 20) -
 @router.patch("/api/conversations/{session_id}")
 def update_conversation(session_id: str, payload: dict, user: str = Depends(get_current_user)) -> dict:
     """v0.21.38 — rename / pin a conversation (owner only)."""
-    from app.persistence.database import SessionLocal
-    from app.persistence.models import ChatSession
     from uuid import UUID as _UUID
+
+    from app.persistence.models import ChatSession
     try:
         sid = _UUID(session_id)
     except Exception:
@@ -107,7 +102,6 @@ def conversation_messages(session_id: str, user: str = Depends(get_current_user)
     """Load a conversation's full message history (sidebar click → reload chat)."""
     import uuid as _uuid
 
-    from app.persistence.database import SessionLocal
 
     try:
         sid = _uuid.UUID(session_id)
@@ -154,7 +148,6 @@ def conversation_messages(session_id: str, user: str = Depends(get_current_user)
 @router.delete("/api/conversations")
 def clear_conversations(user: str = Depends(get_current_user)) -> dict:
     """Clear the current user's conversations (cascade their messages)."""
-    from app.persistence.database import SessionLocal
 
     s = SessionLocal()
     try:
@@ -173,7 +166,6 @@ def delete_conversation(session_id: str, user: str = Depends(get_current_user)) 
     """Delete ONE conversation owned by the current user (cascades messages)."""
     from uuid import UUID as UUIDType
 
-    from app.persistence.database import SessionLocal
 
     try:
         sid = UUIDType(session_id)

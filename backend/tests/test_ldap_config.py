@@ -10,7 +10,6 @@ These tests pin the URL normaliser, which is where the two-field UI meets ldap3.
 from __future__ import annotations
 
 import pytest
-
 from fastapi import HTTPException
 
 from app.api.settings import validate_ldap_payload

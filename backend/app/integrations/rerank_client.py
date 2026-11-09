@@ -81,7 +81,7 @@ def score(query: str, docs: list[dict]) -> list[float]:
                     scores[idx] = float(hit.get("relevance_score", 0.0))
             logger.debug("remote rerank: %d docs in %sms", len(docs), body.get("took_ms"))
             return scores
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
             if attempt < attempts - 1:
                 # 0.4s, then 1.0s — long enough for a warming pod to answer.

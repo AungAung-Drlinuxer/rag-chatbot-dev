@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-from app.schemas import ArticleDraftRequest, ArticleRequest, ArticleSearchRequest
-
-import json
 import logging
-import os
-import re
-import time
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from app.auth.deps import get_current_user
 from app.auth.rbac import require_role
-from app.config import SETTINGS
 from app.observability.audit import audit
-from app.persistence.database import SessionLocal, engine
+from app.persistence.database import SessionLocal
+from app.schemas import ArticleDraftRequest, ArticleRequest, ArticleSearchRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -92,8 +87,8 @@ def article_create(req: ArticleRequest, user: str = Depends(get_current_user),
     """Add a KB article — v0.19.0: writes to Confluence (domain section) when
     the space is configured, then ingests locally. Falls back to local-only
     (page_id kept) if the Confluence write fails."""
-    from app.knowledge.ingest import ingest_article
     from app.integrations.confluence_write import create_kb_page
+    from app.knowledge.ingest import ingest_article
 
     confluence = create_kb_page(req.title, req.body, req.domain)
 
@@ -129,7 +124,6 @@ def article_domains(user: str = Depends(get_current_user)) -> dict:
     from sqlalchemy import text as _text
 
     from app.auth.rbac import allowed_domains, get_role
-    from app.persistence.database import SessionLocal
     from app.persistence.models import ClassifierDomain
 
     with SessionLocal() as s:
@@ -162,7 +156,7 @@ def article_domains(user: str = Depends(get_current_user)) -> dict:
 
     allowed = allowed_domains(get_role(user))
     all_keys = list(meta_dict.keys())
-    for k in counts.keys():
+    for k in counts:
         if k not in all_keys:
             all_keys.append(k)
 
@@ -209,7 +203,6 @@ def article_sources(user: str = Depends(get_current_user)) -> dict:
     """
     from sqlalchemy import text
 
-    from app.persistence.database import SessionLocal
 
     labels = {"confluence": "Confluence", "manual": "Manual", "unknown": "Internal"}
     with SessionLocal() as s:
@@ -232,7 +225,6 @@ def articles_recent(limit: int = 8, user: str = Depends(get_current_user)) -> di
     from sqlalchemy import text as _text
 
     from app.auth.rbac import allowed_domains, get_role
-    from app.persistence.database import SessionLocal
 
     limit = max(1, min(limit, 25))
     with SessionLocal() as s:
@@ -267,7 +259,6 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
     from sqlalchemy import text as _text
 
     from app.auth.rbac import allowed_domains, get_role
-    from app.persistence.database import SessionLocal
 
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
@@ -341,7 +332,6 @@ def sync_status(user: str = Depends(get_current_user)) -> dict:
 
     from sqlalchemy import text as _text
 
-    from app.persistence.database import SessionLocal
     from app.persistence.models import RuntimeKv
 
     with SessionLocal() as s:
@@ -360,7 +350,6 @@ def sync_status(user: str = Depends(get_current_user)) -> dict:
 def article_delete(page_id: str, user: str = Depends(get_current_user),
                    role: str = Depends(require_role("admin", "agent"))) -> dict:
     """Remove a KB article (vectors + sync meta)."""
-    from app.persistence.database import SessionLocal
     from app.knowledge.ingest import _delete_vectors
     from app.persistence.models import KbMeta
 
@@ -405,15 +394,15 @@ def articles_bulk_move(req: dict,
         try:
             chunks += _apply_change(pid, domain)
             moved += 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failed.append({"page_id": pid, "error": str(exc)[:120]})
 
     try:
         from app.rag.bm25_index import BM25IndexManager
 
         BM25IndexManager.get_instance().invalidate()
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"moved": moved, "domain": domain, "chunks_touched": chunks,
             "failed": failed}
 
@@ -424,7 +413,6 @@ def articles_bulk_delete(req: dict,
                          role: str = Depends(require_role("admin", "agent"))) -> dict:
     """Remove many KB articles (vectors + sync meta)."""
     from app.knowledge.ingest import _delete_vectors
-    from app.persistence.database import SessionLocal
     from app.persistence.models import KbMeta
 
     page_ids = [str(p) for p in (req.get("page_ids") or []) if p][:500]
@@ -441,15 +429,15 @@ def articles_bulk_delete(req: dict,
                     s.delete(row)
                     s.commit()
             deleted += 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failed.append({"page_id": pid, "error": str(exc)[:120]})
 
     try:
         from app.rag.bm25_index import BM25IndexManager
 
         BM25IndexManager.get_instance().invalidate()
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"deleted": deleted, "failed": failed}
 
 

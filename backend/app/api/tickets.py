@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import logging
-from urllib.parse import quote
-import json
 import time
-from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -14,8 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_role, require_cap
-from app.config import SETTINGS
+from app.auth.rbac import get_role, require_cap, require_role
 from app.persistence.database import SessionLocal, engine
 
 logger = logging.getLogger("dashboard")
@@ -42,14 +39,6 @@ class TicketCreate(BaseModel):
 
     def effective_subject(self) -> str:
         return (self.subject or self.summary or "").strip()
-
-class CommentRequest(BaseModel):
-    body: str
-
-class TicketUpdateRequest(BaseModel):
-    status: str | None = None
-    assignee: str | None = None
-    priority: str | None = None
 
 class AttachmentRequest(BaseModel):
     filename: str
@@ -209,7 +198,6 @@ def _bulk_upstream_status_refresh(rows: list[dict]) -> None:
     """
     from app.integrations.ticket_status import canonical_from_jira_status
 
-    now = time.time()
     jira_keys: list[str] = []
     for r in rows:
         jk = r.get("jira_key")
@@ -376,8 +364,8 @@ def create_ticket(
         try:
             from app.notifier import notify_ticket_created
             notify_ticket_created(user, ext_key, subj[:120])
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         # v1.6.8 — drop the creation notice into the user's chat history so the
         # chatbox shows it after reload too (chat dialog only; best-effort).
         if req.session_id:
@@ -392,8 +380,8 @@ def create_ticket(
                 s.add(ChatMessage(session_id=req.session_id, role="assistant",
                                   content=notice))
                 s.commit()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as _exc:
+                logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         return {
             "id": ext_key,
             "destination": destination,
@@ -470,8 +458,8 @@ def _sync_jira_status(row):
         try:
             from app.notifier import notify_ticket_status
             notify_ticket_status(row.created_by, row.jira_key, old, local)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         return local
     return None
 
@@ -576,8 +564,8 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             live = fetch_issue_status(row.jira_key)
             if live.get("ok") and live.get("status"):
                 req.status = canonical_from_jira_status(live["status"])
-        except Exception:  # noqa: BLE001 - the transition itself succeeded
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         sync_notes.append("synced to Jira")
 
     # A status change and its explanation belong together: the operator writes one note, Jira
@@ -935,6 +923,6 @@ def reconcile_tickets(
     result = reconcile_jira(limit=limit)
     try:
         audit("tickets.reconcile", user, detail=f" checked={result['checked']} missing={result['missing']}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, **result}

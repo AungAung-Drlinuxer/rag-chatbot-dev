@@ -103,6 +103,15 @@ kind: Ingress
 metadata:
   name: frontend
   namespace: rag-chatbot-dev
+  annotations:
+    # Ingress-nginx buffers a proxied response by default and only flushes when the
+    # upstream finishes. Chat is SSE: the answer arrived at the browser as one lump after
+    # ~60s, with the pipeline tracker frozen the whole time — measured first-byte 63.6s
+    # through the host vs 0.19s against the Service. The backend and the frontend's own
+    # nginx already stream correctly; this is the layer that was holding it back.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
 spec:
   ingressClassName: nginx
   rules:

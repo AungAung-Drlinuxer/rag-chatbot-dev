@@ -1,34 +1,32 @@
 from __future__ import annotations
 
-from app.schemas import ChatRequest, EscalateRequest, FeedbackRequest
-
 import json
+import logging
 import os
 import time
 import uuid
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from app.auth.deps import get_current_user
 from app.api.auth import _require_chatbot
-from app.auth.rbac import get_role, require_role, allowed_domains
+from app.auth.deps import get_current_user
+from app.auth.rbac import allowed_domains, get_role, jira_route
 from app.config import SETTINGS
-from app.observability.audit import audit
-from app.observability.telemetry import start_span
-from app.security.rate_limit import limit
-from app.persistence.models import ChatMessage, ChatSession, Feedback
-from app.persistence.database import SessionLocal
-from app.orchestration.orchestrator import run_rag
-from app.auth.rbac import jira_route
-from app.rag.gate import DECISION_CAUTION, caution_message
-from app.rag.retrieval import build_context
 from app.integrations.contacts import get_contact
 from app.integrations.jira import escalate as jira_escalate
 from app.llm.client import stream_answer
-from app.schemas import EscalationsResponse, FeedbackResponse
-import logging
+from app.observability.audit import audit
+from app.observability.telemetry import start_span
+from app.orchestration.orchestrator import run_rag
+from app.persistence.database import SessionLocal
+from app.persistence.models import ChatMessage, ChatSession, Feedback
+from app.rag.gate import DECISION_CAUTION, caution_message
+from app.rag.retrieval import build_context
+from app.schemas import ChatRequest, EscalateRequest, EscalationsResponse, FeedbackRequest, FeedbackResponse
+from app.security.rate_limit import limit
+
 logger = logging.getLogger("chat")
 
 router = APIRouter()
@@ -95,8 +93,8 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                                verdict.action, verdict.type, user, verdict.reason)
                 try:
                     audit("guardrail." + verdict.type, user, detail=verdict.reason[:120])
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
                 if verdict.action == "blocked":
                     yield _sse("caution", {
                         # v1.6.6 — professional tone for blocked messages too
@@ -227,8 +225,8 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
 
             try:
                 audit("chat", user, "general", 1.0, "small_talk")
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
             yield _sse("done", {
                 "message_id": _st_msg_id or str(uuid.uuid4()),
                 "latency_ms": int((time.time() - t0) * 1000),
@@ -245,7 +243,6 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
         # v1.1.9 — MONITORING NL QUERY TOOL: Zabbix devices/servers + K8s/LGTM app status.
         # Deterministic intent match; answers real-time data without touching the KB/LLM path
         # (fast, accurate, rate-limit friendly).
-        import re as _re
         _msg_l = req.message.lower()
 
 
@@ -294,7 +291,6 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                         # progress detail. Keep it on the server log instead.
                         logger.debug("graph event: %r", ev)
                 graph_pending = bool(g.get("pending_approval"))
-                graph_thread = req.session_id
                 result = RAGOrchestrationResult(
                     domain=g["domain"], rewritten=g["rewritten"], docs=g["docs"],
                     confidence=g["confidence"], decision=g["decision"],
@@ -339,6 +335,7 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                 import uuid as _uuid
                 approval_id = str(_uuid.uuid4())
                 from sqlalchemy import text as _txt
+
                 from app.persistence.database import SessionLocal as _SL
                 with _SL() as _s:
                     _s.execute(_txt(
@@ -356,8 +353,8 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                         f"Approve/reject in Chat → approval queue.\n",
                         to_admins=True,
                     )
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as _exc:
+                    logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
                 yield _sse("approval_request", {
                     "approval_id": approval_id,
                     "thread_id": req.session_id,
@@ -492,7 +489,7 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                     s.close()
 
         message_id = db_msg_id or str(uuid.uuid4())
-        from app.observability.metrics import CHAT_REQUESTS_TOTAL, CHAT_LATENCY_SECONDS
+        from app.observability.metrics import CHAT_LATENCY_SECONDS, CHAT_REQUESTS_TOTAL
         CHAT_REQUESTS_TOTAL.labels(domain=result.domain or "general", decision=result.decision).inc()
         CHAT_LATENCY_SECONDS.labels(domain=result.domain or "general", decision=result.decision).observe(time.time() - t0)
         audit("chat", user, result.domain, result.confidence, result.decision)
@@ -529,7 +526,7 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                 session_id=session_id,
                 username=user,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("usage row skipped: %s", exc)
 
         # Echo LLM usage + RAG tunables on the terminal event so the frontend can
@@ -602,7 +599,6 @@ def escalate(req: EscalateRequest, user: str = Depends(get_current_user)) -> dic
 @router.post("/api/feedback", response_model=FeedbackResponse)
 def feedback(req: FeedbackRequest, user: str = Depends(get_current_user)) -> dict:
     """Record Helpful / Not Helpful (design doc §7)."""
-    from app.persistence.database import SessionLocal
 
     s = SessionLocal()
     try:

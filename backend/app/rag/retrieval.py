@@ -233,7 +233,7 @@ def _expand_neighbours(docs: list[dict], radius: int = 1,
                 "WHERE cmetadata->>'page_id' = ANY(:pids) "
                 "ORDER BY cmetadata->>'page_id', (cmetadata->>'chunk_index')::int"
             ), {"pids": page_ids}).fetchall()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return docs  # expansion is an enhancement, never a failure path
 
     by_article: dict[str, list] = {}
@@ -401,7 +401,7 @@ def _is_weak(docs: list[dict]) -> bool:
         return False
     try:
         return similarity_to_confidence(float(best)) < _WEAK_CONFIDENCE
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -444,7 +444,7 @@ def run_pipeline(query: str, history: list[dict] | None = None) -> PipelineResul
     if _is_weak(docs):
         try:
             wider = retrieve(rewritten, domain=None)
-        except Exception:  # noqa: BLE001
+        except Exception:
             wider = []
         if wider and _is_stronger(wider, docs):
             logger.info(

@@ -1,21 +1,17 @@
 from __future__ import annotations
 
 import logging
-import time
-from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_role, require_cap
+from app.auth.rbac import get_role
 from app.config import SETTINGS
-from app.persistence.database import SessionLocal, engine
 from app.observability.audit import audit
+from app.persistence.database import SessionLocal, engine
 
 logger = logging.getLogger("dashboard")
 
@@ -99,8 +95,8 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
         with _SL() as s:
             for m in s.execute(_t("SELECT group_name, username FROM app_group_members")).mappings():
                 app_group_map.setdefault(m["username"], []).append(m["group_name"])
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
 
     # 1) local users (DB) — first so the canonical id field is "local:<username>"
     with SessionLocal() as s:
@@ -129,8 +125,8 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                     "joined": "—",
                     "source": "local",
                 }
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     # 2) AD users via LDAP
     if SETTINGS.ldap_url:
         try:
@@ -183,8 +179,8 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                                 last_login = "—"
                             else:
                                 last_login = _dt.fromtimestamp(ts, tz=_dt.timezone.utc).isoformat()
-                    except Exception:
-                        pass
+                    except Exception as _exc:
+                        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
                 # local record lookup (before first use — v0.21.74 bugfix)
                 local = out.get(u, {})
                 # local last_login (real chatbot logins) wins when newer
@@ -244,8 +240,8 @@ def update_user_role(username: str, payload: dict, user: str = Depends(get_curre
     try:
         from app.observability.audit import audit
         audit("user.role.update", user, detail=f"target={username} role={role}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "username": username, "role_override": role}
 
 
@@ -280,8 +276,8 @@ def update_user_status(username: str, payload: dict, user: str = Depends(get_cur
     try:
         from app.observability.audit import audit
         audit("user.status.update", user, detail=f"target={username} enabled={enabled}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "username": username, "status": new_status}
 
 
@@ -303,8 +299,8 @@ def reset_user_access(username: str, user: str = Depends(get_current_user)) -> d
     try:
         from app.observability.audit import audit
         audit("user.reset_access", user, detail=f"target={username}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "username": username, "status": "Active"}
 
 
@@ -319,7 +315,6 @@ def set_local_password(username: str, payload: dict, user: str = Depends(get_cur
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     # refuse for LDAP-sourced users (they authenticate against AD)
     with SessionLocal() as s:
-        from sqlalchemy import text as _t
 
         from app.persistence.models import LocalUserCredential
 
@@ -344,8 +339,8 @@ def set_local_password(username: str, payload: dict, user: str = Depends(get_cur
         s.commit()
     try:
         audit("user.password.set", user, detail=f"target={username}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True}
 
 

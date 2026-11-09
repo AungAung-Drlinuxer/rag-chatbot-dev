@@ -81,8 +81,8 @@ def check_limit(rule: str, key: str) -> tuple[bool, int]:
             from app.observability.audit import audit
             user_part = key.replace("user:", "") if key.startswith("user:") else key
             audit("guardrail.rate_limit", user_part, detail=f"exceeded {max_reqs} req/{window}s threshold ({rule}), temporarily throttled")
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         return False, retry_after
     return True, 0
 
@@ -189,8 +189,8 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
                 sub = decode_token(auth[7:].strip())
                 if sub:
                     key = f"user:{sub}"
-            except Exception:  # invalid/expired token → the route will 401 anyway
-                pass
+            except Exception as exc:  # invalid/expired token → the route will 401 anyway
+                logger.debug("anonymous rate-limit key (%s): %s", type(exc).__name__, exc)
 
         allowed, retry_after = await run_in_threadpool(check_limit, "default", key)
         if not allowed:

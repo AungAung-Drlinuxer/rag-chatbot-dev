@@ -14,8 +14,10 @@ import json
 import sys
 
 sys.path.insert(0, "/app")
-from app.mcp.infra_agent import (  # noqa: E402
-    answer_infra, build_tools, detect_infra_intent,
+from app.mcp.infra_agent import (
+    answer_infra,
+    build_tools,
+    detect_infra_intent,
 )
 
 # (question, expectation-note)
@@ -117,7 +119,7 @@ def main() -> None:
         }
         (passes if ok else fails).append(rec)
         flag = "PASS" if ok else "FAIL"
-        print(f"{flag}  [{sh:8}] i={str(intent):5} {note:28} :: {q}")
+        print(f"{flag}  [{sh:8}] i={intent!s:5} {note:28} :: {q}")
         if not ok:
             print(f"        -> route={kind} chars={len(text)} head={rec['head']!r}")
 

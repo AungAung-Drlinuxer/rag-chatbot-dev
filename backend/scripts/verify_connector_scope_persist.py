@@ -5,7 +5,11 @@ The unit tests cover validate_scope / _decode_scope. This covers the wiring: req
 session row -> list endpoint -> messages endpoint, which is where a column that is added but
 never written (or written but never selected) still passes every unit test.
 """
-import json, urllib.request, urllib.error, uuid
+import json
+import urllib.error
+import urllib.request
+import uuid
+
 from app.auth.jwt import create_access_token
 
 tok = create_access_token("AungAung")

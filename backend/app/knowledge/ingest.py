@@ -12,10 +12,10 @@ from datetime import UTC, datetime
 
 from sqlalchemy import text
 
-from app.knowledge.chunker import chunk_text
 from app.config import SETTINGS
-from app.persistence.database import SessionLocal, engine
+from app.knowledge.chunker import chunk_text
 from app.knowledge.loaders import load_all
+from app.persistence.database import SessionLocal, engine
 from app.persistence.models import KbMeta
 from app.rag.retrieval import add_texts
 
@@ -95,7 +95,7 @@ def _effective_domain(art: dict) -> str:
             if conf >= 0.6:
                 logger.info("ingest classify: %r -> %s (%.2f, %s)", title[:50], d, conf, reason)
                 return d
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("ingest LLM classify unavailable (%s) — keyword path", exc)
 
     d, conf = classify_domain(title)

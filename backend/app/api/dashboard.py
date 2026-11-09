@@ -5,15 +5,12 @@ import logging
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_role, require_cap
 from app.config import SETTINGS
 from app.persistence.database import SessionLocal, engine
 
@@ -63,8 +60,7 @@ def _window(days: int, start: str | None, end: str | None) -> tuple[str, str, in
     if first and last:
         if first > last:
             first, last = last, first
-        if last > today:
-            last = today
+        last = min(last, today)
         if (last - first).days + 1 > MAX_WINDOW_DAYS:
             first = last - timedelta(days=MAX_WINDOW_DAYS - 1)
     else:
@@ -450,8 +446,8 @@ def _integration_cfg(key: str) -> dict:
                 val = {}
         if isinstance(val, dict):
             merged.update(val)
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return merged
 
 

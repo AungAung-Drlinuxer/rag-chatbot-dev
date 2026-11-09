@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import logging
 
-from app.knowledge.chunker import chunk_text
 from app.config import SETTINGS
 from app.integrations.confluence import fetch_space
+from app.knowledge.chunker import chunk_text
 from app.rag.retrieval import add_texts
 
 logging.basicConfig(level=logging.INFO)

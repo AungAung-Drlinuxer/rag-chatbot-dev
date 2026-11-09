@@ -13,20 +13,15 @@ Redis limiter used for users.
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import secrets
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import require_cap
 from app.persistence.database import SessionLocal
 from app.persistence.models import ApiKey
-from app.security.rate_limit import check_limit, _too_many
 
 logger = logging.getLogger("apikeys")
 router = APIRouter(prefix="/api/apikeys")
@@ -123,8 +118,8 @@ def create_key(body: dict, user: str = Depends(get_current_user)) -> dict:
     try:
         from app.observability.audit import audit
         audit("apikey.create", user, detail=f"{name} scope={scope} owner={owner}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {
         "name": name, "scope": scope, "key_prefix": prefix, "owner": owner,
         "key": raw,  # shown ONCE

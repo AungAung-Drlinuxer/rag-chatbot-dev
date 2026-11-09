@@ -1,6 +1,6 @@
 """Tests for the top_k override in RAGOrchestrationResult (Phase 10.1)."""
-from app.orchestration import orchestrator as orchestration
 from app.config import SETTINGS
+from app.orchestration import orchestrator as orchestration
 
 
 def test_run_rag_uses_default_top_k(monkeypatch):

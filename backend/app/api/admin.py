@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import json
 import os
-import re
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi import status as http_status
 from pydantic import BaseModel
-from sqlalchemy import text as sqltext
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import require_role, require_cap
-from app.config import SETTINGS
+from app.auth.rbac import require_cap, require_role
 from app.observability.audit import audit
 from app.persistence.database import SessionLocal
 from app.schemas import (
@@ -144,6 +139,7 @@ def integrations_status(user: str = Depends(get_current_user)) -> dict:
 # --------------------------------------------------------------------------
 from app.eval import run_eval as _run_eval
 
+
 @router.post("/api/eval/run")
 async def eval_run_endpoint(user: str = Depends(get_current_user),
                               role: str = Depends(require_role("admin"))) -> dict:
@@ -168,8 +164,8 @@ def eval_cases_endpoint(user: str = Depends(get_current_user)) -> dict:
 #   /api/admin/domains         GET, POST
 #   /api/admin/domains/{id}    PUT, DELETE
 # --------------------------------------------------------------------------
-from app.persistence.models import ClassifierDomain
 from app.classifier.engine import reload_rules_cache
+from app.persistence.models import ClassifierDomain
 
 
 @router.get("/api/admin/domains")

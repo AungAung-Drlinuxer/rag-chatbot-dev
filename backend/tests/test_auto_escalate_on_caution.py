@@ -15,9 +15,9 @@ this behaviour depends on.
 from typing import cast
 
 from app.graph_rag import RAGState, _auto_escalate, _node_tools
-from app.rag.gate import DECISION_CAUTION
 from app.persistence.database import SessionLocal
 from app.persistence.models import UserSettings
+from app.rag.gate import DECISION_CAUTION
 
 USER = "__test_auto_escalate__"
 

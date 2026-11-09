@@ -1,9 +1,9 @@
 """Tests for Knowledge-tab endpoints (v0.4.0): domains/recent/list/sync-status."""
 from sqlalchemy import text
 
-from app.persistence.database import engine, init_db
 from app.knowledge.ingest import ingest_article
 from app.main import app
+from app.persistence.database import engine, init_db
 
 
 def _client():

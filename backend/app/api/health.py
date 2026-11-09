@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+
 from app.config import SETTINGS
 from app.schemas import HealthResponse
 

@@ -26,7 +26,7 @@ def init_db() -> None:
         with engine.connect() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.commit()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         if "permission denied" in str(exc).lower() or "must be superuser" in str(exc).lower():
             raise RuntimeError(
                 "the pgvector extension is not installed in this database, and the "
@@ -190,7 +190,7 @@ def init_db() -> None:
                 with conn.begin_nested():
                     conn.execute(text(statement))
                 conn.commit()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 conn.rollback()
                 logger.warning("could not create %s: %s", name, exc)
 
@@ -199,7 +199,7 @@ def init_db() -> None:
                 with conn.begin_nested():
                     conn.execute(text(statement))
                 conn.commit()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 conn.rollback()
                 # A missing vector-store table is expected before the first ingest; anything
                 # else is worth a warning rather than a failed boot.
