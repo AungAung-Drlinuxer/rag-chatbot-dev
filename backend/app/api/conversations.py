@@ -142,6 +142,9 @@ def conversation_messages(session_id: str, user: str = Depends(get_current_user)
                 "meta": meta,
                 "caution": caution,
                 "message_id": str(m.id),  # v0.21.90 — real row id so feedback survives reload
+                # The DB row's own clock. Without this the UI had nothing to render and
+                # stamped every re-opened message with the current time.
+                "timestamp": m.created_at.isoformat() if m.created_at else None,
             })
         return {"session_id": session_id, "messages": messages}
     finally:

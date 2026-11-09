@@ -58,6 +58,25 @@ export function currentTime() {
   return new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+/** Absolute send time for a bubble — the clock for today's messages, the date as well
+ *  for anything older, so a re-opened conversation shows when it was actually said
+ *  instead of the moment you looked at it. */
+export function formatMessageTime(iso?: string | null): string {
+  if (!iso) return currentTime();
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return currentTime();
+  const now = new Date();
+  const clock = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (d.toDateString() === now.toDateString()) return clock;
+  const sameYear = d.getFullYear() === now.getFullYear();
+  const day = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+  return `${day}, ${clock}`;
+}
+
 export function latestSources(messages: Message[]): Source[] {
   const assistantMessages = messages.filter((m) => m.role === "assistant");
   const latest = assistantMessages[assistantMessages.length - 1];

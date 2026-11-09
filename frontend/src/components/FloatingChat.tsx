@@ -35,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
-import { currentTime, type Message, type Source } from "@/features/chat/model";
+import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
 import { uploadAttachment } from "@/features/chat/api";
 import { useUserPreferences } from "@/app/useUserPreferences";
 
@@ -156,8 +156,8 @@ export function FloatingChatPopup() {
       if (!opts?.replaceBotId) {
         setMessages((p) => [
           ...p,
-          { id: `u-${Date.now()}`, role: "user", content: question, timestamp: currentTime() },
-          { id: botId, role: "assistant", content: "", timestamp: currentTime() },
+          { id: `u-${Date.now()}`, role: "user", content: question, timestamp: formatMessageTime(new Date().toISOString()) },
+          { id: botId, role: "assistant", content: "", timestamp: formatMessageTime(new Date().toISOString()) },
         ]);
       } else {
         // reset the failed bubble for retry

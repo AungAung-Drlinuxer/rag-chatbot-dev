@@ -30,7 +30,7 @@ import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
-import { currentTime, latestSources, type Message, type Source } from "@/features/chat/model";
+import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import {
 } from "@/components/ui/dialog";
 
@@ -152,9 +152,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         id: m.message_id || `m-${i}`,
         role: m.role,
         content: m.content ?? "",
-        timestamp: m.timestamp
-          ? new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : currentTime(),
+        timestamp: formatMessageTime(m.timestamp ?? m.created_at),
         confidence: m.meta?.confidence != null ? Math.round(m.meta.confidence * 100) : undefined,
         decision: m.meta?.decision,
         sources: m.meta?.hits ?? [],
@@ -213,14 +211,14 @@ export default function Chat({ onNavigate, userName }: Props) {
       id: crypto.randomUUID(),
       role: "user",
       content: question,
-      timestamp: currentTime(),
+      timestamp: formatMessageTime(new Date().toISOString()),
     };
     const assistantId = crypto.randomUUID();
     const assistantMsg: Message = {
       id: assistantId,
       role: "assistant",
       content: "",
-      timestamp: currentTime(),
+      timestamp: formatMessageTime(new Date().toISOString()),
     };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
