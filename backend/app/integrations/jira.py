@@ -205,6 +205,80 @@ def _create_via_jsm(service_desk_id, request_type_id, summary, description,
     return issue_key, link
 
 
+def _adf_paragraphs(text: str) -> dict:
+    """Plain text -> Atlassian Document Format. One paragraph per blank-line block, with
+    hard breaks inside a block, so a markdown-ish draft keeps its shape in Jira."""
+    blocks = [b.strip() for b in (text or "").split("\n\n") if b.strip()]
+    content = []
+    for block in blocks:
+        nodes = []
+        for i, line in enumerate(block.split("\n")):
+            if i:
+                nodes.append({"type": "hardBreak"})
+            nodes.append({"type": "text", "text": line})
+        content.append({"type": "paragraph", "content": nodes})
+    return {"type": "doc", "version": 1,
+            "content": content or [{"type": "paragraph", "content": []}]}
+
+
+def create_issue(*, summary: str, description: str, project: str | None = None,
+                 issue_type: str = "Task", priority: str | None = None,
+                 custom_fields: dict | None = None, labels: list[str] | None = None,
+                 reporter: str | None = None) -> dict:
+    """Create with an explicit issue type, priority and custom fields.
+
+    `escalate()` predates the reviewed-draft flow and always posts a "Task" with no
+    priority; this is the path that honours what the user approved in the form.
+    Returns {"jira_key", "link", "mode": "rest"} or {"jira_key": None, "error": ...}.
+    """
+    import httpx
+    cfg = _jira_cfg()
+    if not (cfg["base_url"] and cfg["email"] and cfg["api_token"]):
+        return {"jira_key": None, "link": build_create_link(summary, description),
+                "mode": "link",
+                "error": "Jira credentials missing (email + API token) in Settings → Integrations"}
+
+    fields: dict = {
+        "project": {"key": project or cfg["project"]},
+        "summary": summary,
+        "description": _adf_paragraphs(description),
+        "issuetype": {"name": issue_type or "Task"},
+    }
+    if priority:
+        fields["priority"] = {"name": priority}
+    if labels:
+        fields["labels"] = labels
+    for key, value in (custom_fields or {}).items():
+        if value in (None, "", [], {}):
+            continue
+        fields[key] = value
+
+    headers = {"Authorization": _auth_header(), "Accept": "application/json",
+               "Content-Type": "application/json"}
+    try:
+        with httpx.Client(timeout=30) as client:
+            r = client.post(f"{cfg['base_url'].rstrip('/')}/rest/api/3/issue",
+                            json={"fields": fields}, headers=headers)
+            if r.status_code >= 400:
+                detail = ""
+                try:
+                    errs = (r.json() or {}).get("errors") or {}
+                    detail = "; ".join(f"{k}: {v}" for k, v in errs.items()) or r.text[:300]
+                except Exception:  # noqa: BLE001
+                    detail = r.text[:300]
+                return {"jira_key": None, "link": "", "mode": "rest",
+                        "error": f"Jira rejected the ticket ({r.status_code}): {detail}"}
+            body = r.json()
+    except Exception as exc:  # noqa: BLE001
+        return {"jira_key": None, "link": "", "mode": "rest",
+                "error": f"{type(exc).__name__}: {exc}"}
+
+    key = body.get("key", "")
+    return {"jira_key": key or None,
+            "link": f"{cfg['base_url'].rstrip('/')}/browse/{key}" if key else "",
+            "mode": "rest", "reporter": reporter}
+
+
 def _create_via_issue_rest(summary, description, reporter, project, assignee):
     """Standard POST /rest/api/3/issue fallback (no JSM service-desk)."""
     import httpx

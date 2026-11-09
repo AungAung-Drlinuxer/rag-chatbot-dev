@@ -40,7 +40,30 @@ Every step is prepared to fail *downwards*: a dead reranker returns vector order
 provider returns an error the UI can show. A broken dependency never produces a fabricated
 answer.
 
-## Data model (31 tables)
+## Escalation (conversation → reviewed draft → Jira)
+
+`POST /api/escalations/draft` reads the conversation, keeps the turns that belong to the
+issue (`select_relevant`), redacts secrets and personal data with the same patterns the
+chat guardrail uses, and asks the model for a structured draft. It never calls Jira.
+
+`POST /api/escalations/submit` posts exactly the fields that arrive — the server does not
+regenerate the text between review and submit — and:
+
+- validates project, issue type, priority and required custom fields against Jira
+  `createmeta` (cached 60s) before calling it;
+- refuses a draft whose `content_hash` no longer matches the one the form was opened with
+  (another tab regenerated it);
+- is idempotent per `idempotency_key`, so a double click or a retry returns the existing
+  ticket instead of opening a second one;
+- writes `audit_log.action = escalate.submitted` with draft id, conversation id, approved
+  content hash and the resulting key, then appends the key and link to the transcript.
+
+Defaults, deliberately: priority is left empty when the conversation does not state one,
+`business_impact` stays empty unless the user said it, and unknowns are listed in
+`Still needed` rather than guessed. When the LLM is unavailable the draft falls back to
+quoting the user's own messages.
+
+## Data model (32 tables)
 
 | Group | Tables | Notes |
 | --- | --- | --- |

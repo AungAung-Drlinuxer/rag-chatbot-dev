@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Sparkles,
   Square,
+  Ticket,
   X,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
+import { EscalateDialog } from "@/features/escalation/EscalateDialog";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
@@ -101,6 +103,7 @@ export default function Chat({ onNavigate, userName }: Props) {
   const [railOpen, setRailOpen] = useState(false);
   // The chat does not own a ticket form: it opens the same dialog the Tickets page uses,
   // with the question and the answer as its starting text.
+  const [escalateOpen, setEscalateOpen] = useState(false);
   const [ticketFor, setTicketFor] = useState<Message | null>(null);
   const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string }>({ subject: "", description: "" });
 
@@ -527,6 +530,15 @@ export default function Chat({ onNavigate, userName }: Props) {
                   )}
                   <button
                     type="button"
+                    onClick={() => setEscalateOpen(true)}
+                    title="Escalate to IT Support — draft a ticket from this conversation"
+                    aria-label="Escalate to IT Support"
+                    className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-2.5 text-2xs font-semibold text-muted-foreground shadow-sm transition hover:text-foreground"
+                  >
+                    <Ticket className="size-3.5" aria-hidden /> Escalate
+                  </button>
+                  <button
+                    type="button"
                     onClick={startNewChat}
                     title="New chat"
                     aria-label="New chat"
@@ -627,6 +639,13 @@ export default function Chat({ onNavigate, userName }: Props) {
 
       {/* ---------------- escalate ---------------- */}
       {/* Same form as Tickets → Create ticket: one dialog, one set of fields. */}
+      <EscalateDialog
+        open={escalateOpen}
+        onOpenChange={setEscalateOpen}
+        sessionId={sessionId}
+        onToast={notify}
+      />
+
       <CreateTicketDialog
         open={!!ticketFor}
         onOpenChange={(o) => { if (!o) setTicketFor(null); }}
