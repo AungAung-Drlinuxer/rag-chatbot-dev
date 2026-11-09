@@ -247,14 +247,14 @@ function TokenBreakdown({ title }: PanelBodyProps) {
 
   const rows = (usage.by_model ?? []).slice(0, 6);
   const t = usage.totals;
-  const perAnswer = t.requests > 0 ? Math.round((t.tokens_in + t.tokens_out) / t.requests) : 4095;
+  const perAnswer = t.requests > 0 ? Math.round((t.tokens_in + t.tokens_out) / t.requests) : null;
 
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
         <span className="text-xs font-medium text-muted-foreground">
-          {fmtInt(perAnswer)} tok/ans
+          {perAnswer === null ? "—" : `${fmtInt(perAnswer)} tok/ans`}
         </span>
       </div>
 
@@ -297,7 +297,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
         <span className="truncate">
-          Default LLM: {rows[0]?.model || "Nemotron-3.5"}
+          {rows[0] ? `Default LLM: ${rows[0].model}` : "No model traffic in this window"}
         </span>
         <a href="#/settings" className="shrink-0 font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
           Configure models
@@ -310,13 +310,13 @@ function TokenBreakdown({ title }: PanelBodyProps) {
 function Domains({ title }: PanelBodyProps) {
   const { domains, stats } = useDashboardData();
   const s = stats as any;
-  const totalArticles = s?.kb_pages ?? 94;
+  const totalArticles = s?.kb_pages ?? null;
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
         <span className="rounded-full border border-slate-700/60 bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
-          {totalArticles} articles
+          {totalArticles === null ? "— articles" : `${totalArticles} articles`}
         </span>
       </div>
       <div className="mt-3 space-y-2.5 flex-1 min-h-0 overflow-y-auto">
@@ -334,8 +334,8 @@ function Domains({ title }: PanelBodyProps) {
 
 function Workspace({ title }: PanelBodyProps) {
   const { stats, role } = useDashboardData();
-  const kb = stats ? String((stats as any).kb_pages ?? 94) : "94";
-  const blocked = stats ? String((stats as any).attacks_blocked_7d ?? 1) : "1";
+  const kb = stats && (stats as any).kb_pages != null ? String((stats as any).kb_pages) : "—";
+  const blocked = stats && (stats as any).attacks_blocked_7d != null ? String((stats as any).attacks_blocked_7d) : "—";
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
@@ -383,7 +383,7 @@ function Workspace({ title }: PanelBodyProps) {
 
 function Health({ title }: PanelBodyProps) {
   const { health, healthSummary, healthDown } = useDashboardData();
-  const count = (health ?? []).length || 7;
+  const count = (health ?? []).length;
   return (
     <section aria-label="System health" className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
@@ -394,7 +394,7 @@ function Health({ title }: PanelBodyProps) {
           )}
         </div>
         <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-medium text-emerald-300">
-          {healthSummary.overall || "Healthy"}
+          {healthSummary.overall || "Unknown"}
         </span>
       </div>
 
@@ -409,7 +409,7 @@ function Health({ title }: PanelBodyProps) {
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
-        <span>{count} dependencies reporting</span>
+        <span>{count === 0 ? "No dependencies reporting" : `${count} dependencies reporting`}</span>
         <a
           href="http://10.10.10.18:3000/d/rag-platform-health"
           target="_blank"
@@ -718,7 +718,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
             {rows.map((e, i) => {
               const evType = getGuardrailType(e);
               const evRisk = getGuardrailRisk(evType, e.risk);
-              const evId = e.id ? `evt-${e.id}` : `evt-${101 + i}`;
+              const evId = e.id ? `evt-${e.id}` : null;
               return (
                 <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
                   <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
@@ -737,7 +737,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button
                       type="button"
-                      onClick={() => setOpen({ ...e, type: evType, risk: evRisk, id: evId })}
+                      onClick={() => setOpen({ ...e, type: evType, risk: evRisk, id: evId ?? undefined })}
                       className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors ml-auto"
                       aria-label={`View detail for the ${evType} event`}
                     >
@@ -789,7 +789,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 </span>
                 <div>
                   <h3 className="text-base font-bold text-foreground">Guardrail Trigger Details</h3>
-                  <p className="text-xs text-muted-foreground">ID: {open.id ? `${open.id}` : "evt-101"}</p>
+                  <p className="text-xs text-muted-foreground">ID: {open.id ? `${open.id}` : "—"}</p>
                 </div>
               </div>
               <button
