@@ -259,6 +259,7 @@ export function FloatingChatPopup() {
     if (nav.share) {
       try {
         await nav.share({ title: "IT Knowledge Assistant", text });
+        flashNotice("Shared");
         return;
       } catch {
         /* user cancelled — fall through to copy */

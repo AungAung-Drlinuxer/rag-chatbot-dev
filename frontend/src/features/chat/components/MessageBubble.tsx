@@ -102,10 +102,23 @@ function MessageBubble({
 
   async function shareText(text: string) {
     const nav = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> };
-    if (nav.share) {
-      try { await nav.share({ title: "IT Help Chatbot", text }); return; } catch { /* cancelled */ }
+    if (typeof nav.share === "function") {
+      try {
+        await nav.share({ title: "IT Help Chatbot", text });
+        flashShared();
+        return;
+      } catch {
+        /* dismissed or blocked — fall through to the clipboard */
+      }
     }
-    await copyText(text); // share unsupported -> copy as fallback
+    // No Web Share API (most desktops) or the sheet failed: copy, and say so with the
+    // tick. Previously the success path returned before setShared(), so the button on a
+    // browser with share support gave no confirmation at all.
+    await copyText(text);
+    flashShared();
+  }
+
+  function flashShared() {
     setShared(true);
     window.setTimeout(() => setShared(false), 1600);
   }

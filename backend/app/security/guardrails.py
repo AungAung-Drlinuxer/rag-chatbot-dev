@@ -51,11 +51,47 @@ _INJECTION_PATTERNS: list[tuple[str, str]] = [
     (r"from\s+now\s+on\s+(you\s+will|you\s+are)", "instruction_override"),
 ]
 
-# --- PII heuristics (SSN, credit card, API keys) -----------------------------
+# --- PII / secret heuristics --------------------------------------------------
+# Ordered most-specific first: the audit reason quotes the first match, so a real
+# OpenAI key is reported as such instead of as "a long token".
+#
+# The prefix list matters more than the entropy heuristic. A mis-detection is a blocked
+# message with an explanation; a miss is a live credential in the chat transcript, the
+# audit log and the database backup. Every pattern here is anchored so it does not fire
+# inside a URL or a file name unless that really is where the secret is.
 _PII_PATTERNS: list[tuple[str, str]] = [
+    # Government / payment identifiers
     (r"\b\d{3}-\d{2}-\d{4}\b", "SSN pattern (###-##-####)"),
-    (r"\b(?:\d{4}[-\s]?){3}\d{4}\b", "credit-card pattern (####-####-####-####)"),
-    (r"\b(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,})\b", "API-key pattern (sk-/ghp_)"),
+    (r"\b(?:\d{4}[-\s]){3}\d{4}\b", "credit-card pattern (####-####-####-####)"),
+    (r"\b(?:\d{4}[-\s]){2}\d{4}[-\s]\d{4}\b", "credit-card pattern (groups of four)"),
+
+    # Vendor API keys. `sk_` is included because keys are pasted from configs that use
+    # underscores as often as hyphens — the miss that prompted this list was `sk_…`.
+    (r"\b(?:sk|pk|rk)[-_][A-Za-z0-9][A-Za-z0-9_-]{15,}", "API key (sk-/pk-/rk-)"),
+    (r"\b(?:ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{20,}", "GitHub token"),
+    (r"\bxox[abposr]-[A-Za-z0-9-]{10,}", "Slack token"),
+    (r"\bAKIA[0-9A-Z]{16}\b", "AWS access key id"),
+    (r"\bASIA[0-9A-Z]{16}\b", "AWS temporary access key id"),
+    (r"\bAIza[0-9A-Za-z_-]{35}\b", "Google API key"),
+    (r"\b(?:azure|aws|gcp|openai|anthropic|huggingface)[_-]?[A-Za-z0-9_-]{0,10}?"
+     r"(?:key|token|secret)\b\s*[:=]\s*\S{8,}", "named credential assignment"),
+
+    # Bearer-style secrets that identify themselves
+    (r"\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}", "JWT"),
+    (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key block"),
+    (r"\bBasic\s+[A-Za-z0-9+/]{16,}={0,2}", "HTTP Basic credentials"),
+
+    # Credentials embedded in a connection string: scheme://user:password@host
+    (r"\b[a-z][a-z0-9+.\-]*://[^\s:/@]{1,64}:[^\s@/]{6,}@", "password in a connection string"),
+
+    # Last resort: a long token with mixed case and digits. A lowercase hex digest
+    # (git SHA, sha256) and a UUID are explicitly NOT secrets, so they must not match:
+    # both are all-lowercase, and the look-ahead below requires an uppercase letter.
+    # `(?-i:…)` is load-bearing: these patterns compile with re.IGNORECASE, under which
+    # `[A-Z]` also matches lowercase — every lowercase hex digest would be "mixed case".
+    (r"\b(?=[A-Za-z0-9_-]{40,}\b)(?=(?-i:[A-Za-z0-9_-]*[A-Z]))"
+     r"(?=(?-i:[A-Za-z0-9_-]*[a-z]))(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{40,}\b",
+     "high-entropy token"),
 ]
 
 # --- Toxicity / abuse heuristics (conservative — refuse + offer help) --------

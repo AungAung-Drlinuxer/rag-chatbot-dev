@@ -207,7 +207,7 @@ export default function Chat({ onNavigate, userName }: Props) {
 
   /* ---------------- send / stream ---------------- */
 
-  const send = useCallback(async (direct?: string) => {
+  const send = useCallback(async (direct?: string, opts?: { replaceId?: string }) => {
     const question = (direct ?? input).trim();
     if (!question || streamingId) return;
 
@@ -225,8 +225,31 @@ export default function Chat({ onNavigate, userName }: Props) {
       timestamp: formatMessageTime(new Date().toISOString()),
     };
 
-    setMessages((prev) => [...prev, userMsg, assistantMsg]);
-    history.current = [...history.current, { role: "user", content: question }];
+    /* `replaceId` is the edit / retry path: the original question stays where it is
+       (same bubble, new text) and everything after it is dropped, because those answers
+       answered a question the user has just replaced. Appending instead left the old
+       answer sitting above the new one — two contradictory replies to "the same" turn. */
+    setMessages((prev) => {
+      if (opts?.replaceId) {
+        const i = prev.findIndex((m) => m.id === opts.replaceId);
+        if (i >= 0) {
+          return [
+            ...prev.slice(0, i),
+            { ...prev[i], content: question, timestamp: formatMessageTime(new Date().toISOString()), feedback: undefined },
+            assistantMsg,
+          ];
+        }
+      }
+      return [...prev, userMsg, assistantMsg];
+    });
+    if (opts?.replaceId) {
+      const i = messages.findIndex((m) => m.id === opts.replaceId);
+      const head = i >= 0 ? messages.slice(0, i) : [];
+      history.current = [...head.map((m) => ({ role: m.role, content: m.content })),
+                        { role: "user", content: question }];
+    } else {
+      history.current = [...history.current, { role: "user", content: question }];
+    }
     setInput("");
     setStage("Understanding the question");
     setElapsed(0);
@@ -315,7 +338,7 @@ export default function Chat({ onNavigate, userName }: Props) {
       setStage("");
       abortRef.current = null;
     }
-  }, [input, notify, sessionId, streamingId]);
+  }, [input, messages, notify, sessionId, streamingId]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -542,10 +565,14 @@ export default function Chat({ onNavigate, userName }: Props) {
                               onHelpful={() => void rate(m, 1)}
                               onNotHelpful={() => void rate(m, -1)}
                               onOpenTicketForm={() => openTicket(m)}
-                              onRetryQuestion={() => {
-                                const q = [...messages].slice(0, messages.indexOf(m)).reverse().find((x) => x.role === "user");
-                                if (q) void send(q.content);
-                              }}
+                              /* Edit: resend the edited text in place of the original turn.
+                                 This prop was never passed before, so "Save & resend"
+                                 closed the editor and did nothing. */
+                              onSubmitEdit={(id, text) => void send(text, { replaceId: id })}
+                              /* Retry: re-run THIS question. It used to search backwards
+                                 for the previous user turn, so it re-asked the message
+                                 before the one you clicked. */
+                              onRetryQuestion={() => void send(m.content, { replaceId: m.id })}
                               busy={busy}
                               liveStageText={busy ? stage : undefined}
                               liveElapsedMs={busy ? elapsed : undefined}

@@ -24,6 +24,7 @@ Browser ──▶ frontend (nginx, SPA) ──▶ backend (FastAPI)
 | understand how it works | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | keep it alive (backup, upgrade, rollback, logs) | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
 | know what every directory is for | [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) |
+| test or change the safety filters | [docs/GUARDRAILS.md](docs/GUARDRAILS.md) |
 | learn the stack module by module | [docs/course/](docs/course/) |
 
 ## Repository layout
