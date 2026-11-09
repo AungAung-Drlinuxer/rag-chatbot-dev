@@ -103,18 +103,22 @@ through `assignable/search` and the issue is assigned after creation.
 
 ## Editing a ticket
 
-**Edit** in the detail pane opens one sheet covering everything that can change:
+The detail pane is **read-only until Edit**. One Edit button, at the top of the pane: the
+footer used to carry a second one and the header carried a "Details" button that opened a
+sheet, so unlocking a ticket took two clicks and showed two controls that both said Edit.
+
+After Edit, everything is edited where it is read:
 
 | Section | Fields | Destination |
 |---|---|---|
-| Details | subject, description, priority, assignee, due date | `PUT /api/tickets/{ref}` → `PUT /rest/api/3/issue/{key}` |
-| Attachments | add files, delete existing (staged) | upload: `POST …/attachments`; delete: `DELETE …/attachments/{id}` → `DELETE /rest/api/3/attachment/{id}` |
-| Workflow | target step + note | transition and comment, same save as the details |
+| Header / body | subject, description, priority, assignee, due date | `PUT /api/tickets/{ref}` → `PUT /rest/api/3/issue/{key}`, sent by **Save** |
+| Attachments | add a file, delete an existing one | upload: `POST …/attachments`; delete: `DELETE …/attachments/{id}` → `DELETE /rest/api/3/attachment/{id}` |
+| Workflow | pick a step, write the note | **Update in Jira** — transition and comment in one call |
 
-Nothing is written until **Save ticket**. The order is fixed: details and workflow first (the
-only call Jira can refuse with a `409`), then attachment removals, then uploads. A partial
-failure is reported per item ("photo.png did not upload…"), never as one opaque error, and the
-sheet stays open so nothing typed is lost.
+**Save** stays disabled until a field actually differs from the ticket on screen, so it cannot
+fire an empty PUT. Status and attachments are separate actions because they are separate Jira
+endpoints; a field PUT that Jira answers with a caveat reports it by name ("Jira kept its own
+copy of the details"), never as one opaque error.
 
 Delete goes to Jira **before** the local row: an attachment removed only here is still visible
 on the issue and out of the agent's reach. If Jira refuses, the row stays and the toast says so.

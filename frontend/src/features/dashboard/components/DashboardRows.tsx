@@ -155,10 +155,17 @@ export function EscalationRow({
    DOMAIN ROW
 ============================================================ */
 
+/** The reference board colours one bar per domain so a list of six is readable at a glance.
+    The colours are the chart tokens (--chart-1..6), not palette classes, so both themes get a
+    legible variant; index 0 is the largest domain. */
+const CHART_VAR = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
+
 export function DomainRow({
   domain,
+  index = 0,
 }: {
   domain: Domain;
+  index?: number;
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -192,9 +199,10 @@ export function DomainRow({
         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
 
           <div
-            className="h-full rounded-full bg-[var(--primary)]"
+            className="h-full rounded-full transition-all duration-500"
             style={{
-              width: `${domain.percentage * 4}%`,
+              background: CHART_VAR[index % CHART_VAR.length],
+              width: `${Math.min(100, domain.percentage * 4)}%`,
             }}
           />
 

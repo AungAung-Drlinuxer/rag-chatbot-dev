@@ -35,18 +35,36 @@ export function MiniSparkline() {
 export function Legend({
   label,
   className,
+  active = true,
+  onClick,
 }: {
   label: string;
   className: string;
+  /** a legend entry is also the series filter: inactive series dim rather than vanish */
+  active?: boolean;
+  onClick?: () => void;
 }) {
+  const dot = <span className={`size-2.5 shrink-0 rounded-full ${className}`} aria-hidden />;
+  if (!onClick) {
+    return (
+      <span className={`flex items-center gap-1.5 ${active ? "" : "opacity-50"}`}>
+        {dot}
+        {label}
+      </span>
+    );
+  }
   return (
-    <span className="flex items-center gap-1.5">
-      <span
-        className={`h-0.5 w-3.5 rounded-full ${className}`}
-      />
-
-      {label}
-    </span>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-all hover:bg-[var(--muted)]/60 ${
+        active ? "opacity-100" : "opacity-50"
+      }`}
+    >
+      {dot}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -80,10 +98,13 @@ export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
 
 export function ConversationChart({
   data, width: boxWidth, height: boxHeight,
+  visible = { total: true, resolved: true, escalated: true },
 }: {
   data: { day: string; total: number; resolved: number; escalated: number }[];
   width?: number;
   height?: number;
+  /** which series the legend left on; hidden lines do not draw, the axis still fits the data */
+  visible?: { total: boolean; resolved: boolean; escalated: boolean };
 }) {
   // v0.21.84 — dynamic Y scale (was hardcoded 400): nearest "nice" ceiling
   // v1.5.3 — headroom reduced to 10% and "nice" step aligned to data magnitude
@@ -109,36 +130,29 @@ export function ConversationChart({
   const chartHeight =
     height - top - bottom;
 
+  const xAt = (index: number) =>
+    left + (data.length > 1 ? (index / (data.length - 1)) * chartWidth : chartWidth / 2);
+
+  const yAt = (value: number) => top + chartHeight - (value / max) * chartHeight;
+
   function points(key: "total" | "resolved" | "escalated") {
-    return data
-      .map((item, index) => {
-        const x =
-          left +
-          (index /
-            (data.length - 1)) *
-            chartWidth;
-
-        const y =
-          top +
-          chartHeight -
-          (item[key] / max) * chartHeight;
-
-        return `${x},${y}`;
-      })
-      .join(" ");
+    return data.map((item, index) => `${xAt(index)},${yAt(item[key])}`).join(" ");
   }
 
+  // The reference board reads one day at a time; hovering a day column shows its three
+  // numbers instead of making the reader compare a line against the axis by eye.
+  const [hover, setHover] = useState<number | null>(null);
+
   return (
-    /* The card owns the height now (the dashboard's chart row is a fixed 230px), so the
-       chart fills whatever is left. `meet` scales it UNIFORMLY — the 620×240 proportions
-       are kept and any leftover space is letterboxed, rather than `none` stretching the
-       axis labels out of shape when the box gets shorter. */
-    <div className="mt-2 min-h-0 w-full flex-1 overflow-hidden">
+    /* The card owns the height now, so the chart fills whatever is left. `meet` scales it
+       UNIFORMLY rather than stretching the axis labels out of shape. */
+    <div className="relative mt-2 min-h-0 w-full flex-1 overflow-hidden">
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="h-full w-full"
         preserveAspectRatio="xMidYMid meet"
+        onMouseLeave={() => setHover(null)}
       >
 
         {/* Grid */}
@@ -146,11 +160,7 @@ export function ConversationChart({
         {[0, 0.25, 0.5, 0.75, 1].map(
           (frac) => {
             const value = Math.round(max * frac);
-            const y =
-              top +
-              chartHeight -
-              (value / max) *
-                chartHeight;
+            const y = yAt(value);
 
             return (
               <g key={value}>
@@ -160,7 +170,10 @@ export function ConversationChart({
                   y1={y}
                   y2={y}
                   stroke="currentColor"
-                  className="text-slate-100 dark:text-slate-800"
+                  strokeDasharray="3 3"
+                  strokeWidth="0.8"
+                  opacity="0.55"
+                  className="text-slate-200 dark:text-slate-700"
                 />
 
                 <text
@@ -176,96 +189,137 @@ export function ConversationChart({
           }
         )}
 
+        {/* Hover guide */}
+        {hover !== null && (
+          <line
+            x1={xAt(hover)}
+            x2={xAt(hover)}
+            y1={top}
+            y2={top + chartHeight}
+            stroke="currentColor"
+            strokeWidth="1"
+            opacity="0.35"
+            className="text-[var(--primary)]"
+          />
+        )}
+
         {/* Total */}
 
-        <polyline
-          points={points("total")}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-blue-500"
-        />
+        {visible.total && (
+          <polyline
+            points={points("total")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[var(--primary)]"
+          />
+        )}
 
         {/* Resolved */}
 
-        <polyline
-          points={points("resolved")}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-[var(--ok)]"
-        />
+        {visible.resolved && (
+          <polyline
+            points={points("resolved")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[var(--ok)]"
+          />
+        )}
 
         {/* Escalated */}
 
-        <polyline
-          points={points("escalated")}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-[var(--warn)]"
-        />
+        {visible.escalated && (
+          <polyline
+            points={points("escalated")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[var(--warn)]"
+          />
+        )}
 
         {/* Points */}
 
-        {data.map(
-          (item, index) => {
-            const x =
-              left +
-              (index /
-                (data.length - 1)) *
-                chartWidth;
-
-            const y =
-              top +
-              chartHeight -
-              (item.total / max) *
-                chartHeight;
-
-            return (
-              <circle
-                key={item.day}
-                cx={x}
-                cy={y}
-                r="3"
-                className="fill-blue-500"
-              />
-            );
-          }
-        )}
+        {data.map((item, index) => (
+          <g key={item.day}>
+            {visible.total && (
+              <circle cx={xAt(index)} cy={yAt(item.total)} r={hover === index ? 5 : 3} className="fill-[var(--primary)] transition-all" />
+            )}
+            {visible.resolved && item.resolved > 0 && (
+              <circle cx={xAt(index)} cy={yAt(item.resolved)} r={hover === index ? 4 : 2.5} className="fill-[var(--ok)] transition-all" />
+            )}
+            {visible.escalated && item.escalated > 0 && (
+              <circle cx={xAt(index)} cy={yAt(item.escalated)} r={hover === index ? 4 : 2.5} className="fill-[var(--warn)] transition-all" />
+            )}
+          </g>
+        ))}
 
         {/* X labels */}
 
         {data.map(
-          (item, index) => {
-            const x =
-              left +
-              (index /
-                (data.length - 1)) *
-                chartWidth;
-
-            return (
+          (item, index) => (
               <text
                 key={item.day}
-                x={x}
+                x={xAt(index)}
                 y={height - 10}
                 textAnchor="middle"
                 fontSize="10"
-                className="fill-slate-400"
+                className={hover === index ? "fill-[var(--foreground)] font-semibold" : "fill-slate-400"}
               >
                 {item.day}
               </text>
-            );
-          }
+          )
         )}
 
+        {/* Hover columns: one transparent band per day, so the tooltip works anywhere on
+            the column and not only on a 3px dot. */}
+        {data.map((item, index) => {
+          const band = chartWidth / Math.max(1, data.length - 1);
+          return (
+            <rect
+              key={`hit-${item.day}`}
+              x={xAt(index) - band / 2}
+              y={top}
+              width={band}
+              height={chartHeight}
+              fill="transparent"
+              onMouseEnter={() => setHover(index)}
+            />
+          );
+        })}
+
       </svg>
+
+      {hover !== null && data[hover] && (
+        <div
+          className="pointer-events-none absolute top-2 z-10 w-36 rounded-lg border border-[var(--border)] bg-[var(--popover)] p-2 text-2xs shadow-lg"
+          style={{
+            left: `${Math.min(78, Math.max(4, ((xAt(hover) / width) * 100) - 9))}%`,
+          }}
+          role="status"
+        >
+          <p className="border-b border-[var(--border)] pb-1 font-semibold">{data[hover].day}</p>
+          <p className="mt-1 flex justify-between gap-2 text-[var(--primary)]">
+            <span>Total</span>
+            <span className="font-semibold tabular-nums">{data[hover].total}</span>
+          </p>
+          <p className="flex justify-between gap-2 text-[var(--ok)]">
+            <span>Resolved</span>
+            <span className="font-semibold tabular-nums">{data[hover].resolved}</span>
+          </p>
+          <p className="flex justify-between gap-2 text-[var(--warn)]">
+            <span>Escalated</span>
+            <span className="font-semibold tabular-nums">{data[hover].escalated}</span>
+          </p>
+        </div>
+      )}
 
     </div>
   );

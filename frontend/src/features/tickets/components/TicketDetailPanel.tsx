@@ -9,7 +9,7 @@
  * The panel is presentational + local form state only: status transitions, comments and
  * attachments are callbacks so the page keeps one owner for network + optimistic updates.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -32,6 +32,8 @@ import { Button } from "@/components/ui/button";
 import { MetaRow, PriorityBadge, StatusBadge } from "@/features/tickets/components/presentational";
 import { attachmentUrl } from "@/features/tickets/api";
 import {
+  PRIORITY_META,
+  type Assignable,
   type Attachment,
   type Comment,
   type Ticket,
@@ -39,6 +41,15 @@ import {
   relTime,
   statusMeta,
 } from "@/features/tickets/model";
+
+/** The fields half of a ticket, as one PUT. Status/comment/attachments are separate actions. */
+export type TicketEditPayload = {
+  subject: string;
+  description: string;
+  priority: string;
+  assignee: string;
+  due_date: string;
+};
 
 // The rail is Jira's happy path. `reopened` is a loop back to the start, not a fifth dot:
 // it is shown on the badge and fills the rail at step one.
@@ -53,7 +64,9 @@ export function TicketDetailPanel({
   jiraReady,
   onClose,
   onStatus,
-  onEdit,
+  onSave,
+  saveBusy,
+  assignable,
   onDeleteAttachment,
   onAddComment,
   onAddAttachment,
@@ -66,8 +79,10 @@ export function TicketDetailPanel({
   jiraReady: boolean;
   onClose: () => void;
   onStatus: (status: Ticket["status"], comment: string) => Promise<boolean>;
-  /** Opens the edit sheet — every editable field, attachments and the workflow live there. */
-  onEdit: () => void;
+  /** One save for the fields — the same call the old Details sheet made, now without the sheet. */
+  onSave: (payload: TicketEditPayload) => Promise<boolean>;
+  saveBusy: boolean;
+  assignable: Assignable[];
   onDeleteAttachment: (id: number) => void;
   onAddComment: (body: string) => void;
   onAddAttachment: (file: File) => void;
@@ -85,12 +100,41 @@ export function TicketDetailPanel({
    * write to Jira. Now the panel is a document; Edit unlocks the controls, Done locks them.
    */
   const [editing, setEditing] = useState(false);
+  /**
+   * The editable half of the ticket, held here rather than behind a second "Details" sheet.
+   * The complaint this answers: pressing Edit and then having to press Details to change the
+   * subject or the assignee is two clicks for one job, and two buttons that both said Edit.
+   */
+  const [form, setForm] = useState({ subject: "", description: "", priority: "medium", assignee: "", due_date: "" });
+  const syncForm = useCallback(
+    () =>
+      setForm({
+        subject: ticket?.subject ?? "",
+        description: ticket?.description ?? "",
+        priority: ticket?.priority ?? "medium",
+        assignee: ticket?.assignee ?? "",
+        due_date: ticket?.due_date ? ticket.due_date.slice(0, 10) : "",
+      }),
+    [ticket],
+  );
   useEffect(() => {
     setEditing(false);
     setTarget(null);
     setNote("");
     setComment("");
   }, [ticket?.id]);
+  useEffect(() => {
+    if (editing) syncForm();
+  }, [editing, syncForm]);
+
+  const fieldsDirty =
+    editing &&
+    ticket != null &&
+    (form.subject !== (ticket.subject ?? "") ||
+      form.description !== (ticket.description ?? "") ||
+      form.priority !== (ticket.priority ?? "medium") ||
+      form.assignee !== (ticket.assignee ?? "") ||
+      form.due_date !== (ticket.due_date ? ticket.due_date.slice(0, 10) : ""));
 
   const shell =
     "flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card";
@@ -140,31 +184,54 @@ export function TicketDetailPanel({
                 Jira
               </span>
             </div>
-            <h2 className="mt-1.5 text-[15px] font-semibold leading-6 text-foreground">
-              {ticket.subject}
-            </h2>
+            {editing ? (
+              <input
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                aria-label="Subject"
+                className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-background px-2.5 py-1 text-[14px] font-semibold leading-6 outline-none focus:border-[var(--primary)]"
+              />
+            ) : (
+              <h2 className="mt-1.5 text-[15px] font-semibold leading-6 text-foreground">
+                {ticket.subject}
+              </h2>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {editing && (
+              <Button
+                size="sm"
+                className="h-7 rounded-lg px-2 text-[11px]"
+                disabled={!fieldsDirty || saveBusy}
+                onClick={() =>
+                  void onSave({
+                    subject: form.subject.trim(),
+                    description: form.description,
+                    priority: form.priority,
+                    assignee: form.assignee,
+                    due_date: form.due_date,
+                  }).then((ok) => {
+                    if (ok) syncForm();
+                  })
+                }
+                title={fieldsDirty ? "Write the details to Jira" : "Nothing changed yet"}
+              >
+                <CheckCircle2 className="mr-1 size-3" /> {saveBusy ? "Saving…" : "Save"}
+              </Button>
+            )}
             {editing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 rounded-lg px-2 text-[11px]"
-                  onClick={onEdit}
-                  title="Subject, description, priority, due date and assignee"
-                >
-                  <Pencil className="mr-1 size-3" /> Details
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-7 rounded-lg px-2 text-[11px]"
-                  onClick={() => setEditing(false)}
-                >
-                  Done
-                </Button>
-              </>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 rounded-lg px-2 text-[11px]"
+                onClick={() => {
+                  setEditing(false);
+                  syncForm();
+                }}
+              >
+                Done
+              </Button>
             ) : (
               <Button
                 size="sm"
@@ -173,7 +240,7 @@ export function TicketDetailPanel({
                 onClick={() => setEditing(true)}
                 disabled={!canManage}
                 aria-label="Edit ticket"
-                title={canManage ? "Unlock comments, workflow and attachments" : "Your role cannot change tickets"}
+                title={canManage ? "Unlock the fields, workflow, comments and attachments" : "Your role cannot change tickets"}
               >
                 <Pencil className="mr-1 size-3" /> Edit
               </Button>
@@ -376,21 +443,89 @@ export function TicketDetailPanel({
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Description
         </p>
-        <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[13px] leading-6 text-foreground">
-          {ticket.description?.trim() || "No description provided."}
-        </div>
+        {editing ? (
+          <textarea
+            rows={4}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            aria-label="Description"
+            className="mb-5 w-full resize-y rounded-xl border border-[var(--border)] bg-background px-3.5 py-3 text-[13px] leading-6 outline-none focus:border-[var(--primary)]"
+          />
+        ) : (
+          <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[13px] leading-6 text-foreground">
+            {ticket.description?.trim() || "No description provided."}
+          </div>
+        )}
 
         <div className="mb-5 grid grid-cols-2 gap-x-4 gap-y-3.5">
           <MetaRow icon={<UserRound className="size-3" />} label="Requester" value={ticket.requester} />
-          <MetaRow icon={<Users className="size-3" />} label="Assignee" value={ticket.assignee ?? "Unassigned"} />
           <MetaRow icon={<Tag className="size-3" />} label="Category" value={ticket.category} />
-          <MetaRow icon={<CheckCircle2 className="size-3" />} label="Priority" value={priority.label} />
           <MetaRow icon={<CalendarClock className="size-3" />} label="Created" value={new Date(ticket.created_at).toLocaleString()} />
-          <MetaRow
-            icon={<CalendarClock className="size-3" />}
-            label="Due"
-            value={ticket.due_date ? new Date(ticket.due_date).toLocaleDateString() : "—"}
-          />
+
+          {editing ? (
+            <>
+              <label className="block">
+                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <Users className="size-3" /> Assignee
+                </span>
+                <select
+                  value={form.assignee}
+                  onChange={(e) => setForm({ ...form, assignee: e.target.value })}
+                  aria-label="Assignee"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value="">Unassigned</option>
+                  {assignable.map((u) => (
+                    <option key={u.username} value={u.username}>
+                      {u.username}
+                      {u.group ? ` · ${u.group}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <CheckCircle2 className="size-3" /> Priority
+                </span>
+                <select
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                  aria-label="Priority"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                >
+                  {Object.entries(PRIORITY_META).map(([value, m]) => (
+                    <option key={value} value={value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <CalendarClock className="size-3" /> Due date
+                </span>
+                <input
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  aria-label="Due date"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <MetaRow icon={<Users className="size-3" />} label="Assignee" value={ticket.assignee ?? "Unassigned"} />
+              <MetaRow icon={<CheckCircle2 className="size-3" />} label="Priority" value={priority.label} />
+              <MetaRow
+                icon={<CalendarClock className="size-3" />}
+                label="Due"
+                value={ticket.due_date ? new Date(ticket.due_date).toLocaleDateString() : "—"}
+              />
+            </>
+          )}
         </div>
 
         {/* activity */}
@@ -519,23 +654,13 @@ export function TicketDetailPanel({
             </p>
           </>
         ) : (
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-1.5 text-[10.5px] leading-4 text-muted-foreground">
-              <Lock className="size-3 shrink-0" />
-              Read-only. Edit to comment, move the workflow or attach a file.
-            </p>
-            {canManage && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0 rounded-lg text-[11px]"
-                onClick={() => setEditing(true)}
-                aria-label="Edit ticket"
-              >
-                <Pencil className="mr-1 size-3" /> Edit
-              </Button>
-            )}
-          </div>
+          // One Edit button on this panel, at the top. Two of them — one per end of the same
+          // card — read like two different actions.
+          <p className="flex items-center gap-1.5 text-[10.5px] leading-4 text-muted-foreground">
+            <Lock className="size-3 shrink-0" />
+            Read-only. Press Edit at the top of this panel to change the details, move the
+            workflow, comment or attach a file.
+          </p>
         )}
       </footer>
     </aside>

@@ -226,6 +226,30 @@
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+
+/* ============================================================================
+   Chart palette — the categorical colours the Overview uses to tell domains,
+   series and models apart. Named tokens (never raw Tailwind palette classes) so
+   both themes get a legible variant; the order is the only thing that matters.
+   ========================================================================== */
+:root {
+  --chart-1: #4f46e5;  /* indigo  — volume     */
+  --chart-2: #7c3aed;  /* violet  — our accent */
+  --chart-3: #0891b2;  /* cyan    — tokens     */
+  --chart-4: #059669;  /* emerald — resolved   */
+  --chart-5: #d97706;  /* amber   — pending    */
+  --chart-6: #e11d48;  /* rose    — escalated  */
+}
+
+[data-theme="dark"] {
+  --chart-1: #818cf8;
+  --chart-2: #a78bfa;
+  --chart-3: #22d3ee;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --chart-6: #fb7185;
+}
+
 body {
   font-family: var(--font); background: var(--background); color: var(--foreground);
   -webkit-font-smoothing: antialiased; line-height: 1.6;

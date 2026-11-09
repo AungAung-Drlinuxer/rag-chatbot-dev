@@ -146,6 +146,14 @@ function Trend({ title }: PanelBodyProps) {
     }),
     { total: 0, resolved: 0, escalated: 0 },
   );
+  const [visible, setVisible] = useState({ total: true, resolved: true, escalated: true });
+  const toggle = (key: keyof typeof visible) =>
+    setVisible((v) => {
+      const next = { ...v, [key]: !v[key] };
+      // clicking a lone series back on when everything is off, and clicking the only
+      // visible one off, would leave an empty chart — both reset to "all" instead.
+      return Object.values(next).some(Boolean) ? next : v;
+    });
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
       <div className="flex flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
@@ -155,16 +163,17 @@ function Trend({ title }: PanelBodyProps) {
             {win.kind === "custom" ? rangeLabel : `last ${win.days} days`} · split by what the assistant did with each conversation
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-2xs text-muted-foreground">
-          <Legend label={`Total (${fmtInt(totals.total)})`} className="bg-[var(--primary)]" />
-          <Legend label={`Resolved (${fmtInt(totals.resolved)})`} className="bg-[var(--ok)]" />
-          <Legend label={`Escalated (${fmtInt(totals.escalated)})`} className="bg-[var(--warn)]" />
+        {/* The legend doubles as the series filter, like the reference board. */}
+        <div className="flex flex-wrap items-center gap-1 text-2xs text-muted-foreground">
+          <Legend label={`Total (${fmtInt(totals.total)})`} className="bg-[var(--primary)]" active={visible.total} onClick={() => toggle("total")} />
+          <Legend label={`Resolved (${fmtInt(totals.resolved)})`} className="bg-[var(--ok)]" active={visible.resolved} onClick={() => toggle("resolved")} />
+          <Legend label={`Escalated (${fmtInt(totals.escalated)})`} className="bg-[var(--warn)]" active={visible.escalated} onClick={() => toggle("escalated")} />
         </div>
       </div>
       {/* The chart measures its own box, so dragging the panel taller redraws a taller plot
           instead of scaling a 620×240 picture up and letterboxing it. */}
       <div ref={chartRef} className="flex min-h-[140px] flex-1 flex-col px-5 pb-4">
-        <ConversationChart data={series} width={chartSize.w} height={chartSize.h} />
+        <ConversationChart data={series} width={chartSize.w} height={chartSize.h} visible={visible} />
       </div>
     </section>
   );
@@ -252,7 +261,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
         {fmtInt(t.tokens_in)} in · {fmtInt(t.tokens_out)} out · {fmtInt(t.requests)} answers
       </p>
 
-      <div data-list-scroll className="mt-2 min-h-0 overflow-auto">
+      <div data-list-scroll className="mt-2 min-h-0 flex-1 overflow-auto">
         {rows.length === 0 ? (
           <p className="py-4 text-2xs text-muted-foreground">No usage recorded in this window.</p>
         ) : (
@@ -280,6 +289,15 @@ function TokenBreakdown({ title }: PanelBodyProps) {
           </table>
         )}
       </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
+        <span className="truncate" title={rows[0]?.model}>
+          {rows[0] ? `Busiest: ${rows[0].model}` : "No model traffic"}
+        </span>
+        <a href="#/settings" className="shrink-0 font-medium text-[var(--accent-foreground)] hover:underline">
+          Configure models
+        </a>
+      </div>
     </section>
   );
 }
@@ -299,8 +317,8 @@ function Domains({ title }: PanelBodyProps) {
         {(domains ?? []).length === 0 && (
           <div className="py-4 text-center text-2xs text-muted-foreground">No domain data yet.</div>
         )}
-        {(domains ?? []).slice(0, 6).map((domain) => (
-          <DomainRow key={domain.name} domain={domain} />
+        {(domains ?? []).slice(0, 6).map((domain, i) => (
+          <DomainRow key={domain.name} domain={domain} index={i} />
         ))}
         {(domains ?? []).length > 6 && (
           <p className="text-2xs text-muted-foreground">+{(domains ?? []).length - 6} more domains</p>
@@ -332,7 +350,7 @@ function Workspace({ title }: PanelBodyProps) {
               <div className="truncate text-[10px] text-muted-foreground">indexed &amp; searchable</div>
             </div>
           </div>
-          <span className="text-xl font-bold tabular-nums">{kb}</span>
+          <span className="text-2xl font-bold tabular-nums">{kb}</span>
         </div>
 
         {role === "admin" && (
@@ -346,7 +364,7 @@ function Workspace({ title }: PanelBodyProps) {
                 <div className="truncate text-[10px] text-muted-foreground">prompt injections</div>
               </div>
             </div>
-            <span className="text-xl font-bold tabular-nums text-[var(--ok)]">{blocked}</span>
+            <span className="text-2xl font-bold tabular-nums text-[var(--ok)]">{blocked}</span>
           </div>
         )}
       </div>
@@ -453,16 +471,18 @@ function LockedUsage({ title, reason }: { title: string; reason: string }) {
 }
 
 function UsageKpis({ title }: PanelBodyProps) {
-  const { usage, usageError, usageDenied } = useDashboardData();
+  const { usage, usageError, usageDenied, role, totals } = useDashboardData();
   if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token and cost data." />;
   const t = usage?.totals;
   const perAnswer = t && t.requests > 0 ? t.cost_usd / t.requests : 0;
+  // Each tile keeps the reference's colour-coded role: violet for volume, sky for the raw
+  // token count, emerald for money, amber for time. Semantic tokens only.
   const tiles = [
-    { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "queries resolved", icon: <MessageSquare className="size-3.5" />, hint: undefined },
-    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, hint: undefined,
-      stack: t ? [`In ${fmtInt(t.tokens_in)}`, `Out ${fmtInt(t.tokens_out)}`] : undefined },
-    { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", caption: t ? `avg ${fmtCost(perAnswer)} / answer` : "no usage in this window", icon: <Gauge className="size-3.5" />, hint: undefined },
-    { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", caption: "LLM generation", icon: <Activity className="size-3.5" />, hint: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : undefined },
+    { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "queries resolved", icon: <MessageSquare className="size-3.5" />, tone: "text-[var(--primary)]", stack: undefined as string[] | undefined, hint: undefined as string | undefined },
+    { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, tone: "text-[var(--accent-foreground)]",
+      stack: t ? [`In ${fmtInt(t.tokens_in)}`, `Out ${fmtInt(t.tokens_out)}`] : undefined, hint: undefined },
+    { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", caption: t ? `avg ${fmtCost(perAnswer)} / answer` : "no usage in this window", icon: <Gauge className="size-3.5" />, tone: "text-[var(--ok)]", stack: undefined, hint: undefined },
+    { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", caption: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : "LLM generation", icon: <Activity className="size-3.5" />, tone: "text-[var(--warn)]", stack: undefined, hint: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : undefined },
   ];
   return (
     <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
@@ -477,34 +497,47 @@ function UsageKpis({ title }: PanelBodyProps) {
       )}
       {/* Four tiles, each with its own icon and caption: the number is the headline, the
           caption says what it counts, and the icons keep a glance cheap. */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 px-3 py-2.5 transition-colors hover:border-[var(--primary)]/30"
+            className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2.5 py-1.5 transition-colors hover:border-[var(--primary)]/30"
             title={tile.hint}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-              <span className="text-[var(--accent-foreground)]">{tile.icon}</span>
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+              <span className={tile.tone}>{tile.icon}</span>
               <span className="truncate">{tile.label}</span>
             </div>
             {/* In/out is two numbers; one line of a narrow tile clipped the second one.
                 Stacking them keeps both readable without shrinking the other tiles. */}
             {tile.stack ? (
-              <div className="mt-1.5 space-y-0.5" title={tile.value}>
+              <div className="mt-1 space-y-0.5" title={tile.value}>
                 {tile.stack.map((line) => (
-                  <p key={line} className="truncate text-[15px] font-bold leading-tight tabular-nums">
+                  <p key={line} className={`truncate text-[13px] font-bold leading-tight tabular-nums ${tile.tone}`}>
                     {line}
                   </p>
                 ))}
               </div>
             ) : (
-              <p className="mt-1.5 truncate text-2xl font-bold tabular-nums leading-none">{tile.value}</p>
+              <p className={`mt-1 truncate text-lg font-bold tabular-nums leading-none ${tile.tone}`}>{tile.value}</p>
             )}
-            <p className="mt-1 truncate text-[10px] text-muted-foreground">{tile.caption}</p>
+            <p className="truncate text-[10px] text-muted-foreground">{tile.caption}</p>
           </div>
         ))}
       </div>
+
+      {/* The reference board closed this card with a "model efficiency score". There is no
+          such measurement in the data, so the footer reports the number that is real: how
+          many conversations the bot closed without a human.
+
+          flex:none because the board's fill rule stretches the LAST child of every panel to
+          absorb leftover height — a footer is content, not a scroll area. */}
+      {role === "admin" && (
+        <div style={{ flex: "0 0 auto" }} className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[11px]">
+          <span className="text-muted-foreground">Self-service rate</span>
+          <span className="font-semibold tabular-nums text-[var(--ok)]">{totals.resolvedPct}% resolved</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -642,6 +675,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
             <tr>
               <th className="px-4 py-1.5 font-medium">When</th>
               <th className="px-4 py-1.5 font-medium">Type</th>
+              <th className="px-4 py-1.5 font-medium">Domain</th>
               <th className="px-4 py-1.5 font-medium">User</th>
               <th className="px-4 py-1.5 font-medium">Detail</th>
               <th className="px-4 py-1.5 text-right font-medium">Action</th>
@@ -656,6 +690,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                     {e.action.replace("guardrail.", "")}
                   </span>
                 </td>
+                <td className="px-4 py-1.5">{e.domain || "—"}</td>
                 <td className="px-4 py-1.5">{e.username || "—"}</td>
                 <td className="max-w-[36ch] truncate px-4 py-1.5 text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
                 <td className="px-4 py-1.5 text-right">
@@ -672,7 +707,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
                   {guardrailDenied ? "Ask an administrator for access." : "No guardrail events recorded."}
                 </td>
               </tr>
@@ -727,8 +762,8 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 <dd className="mt-0.5 font-medium">{open.domain || "—"}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Decision</dt>
-                <dd className="mt-0.5 font-medium">{open.decision || "blocked"}</dd>
+                <dt className="text-muted-foreground">Stage</dt>
+                <dd className="mt-0.5 font-medium">input screening</dd>
               </div>
             </dl>
 
@@ -738,8 +773,9 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
             </pre>
 
             <p className="mt-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] p-3 text-[11px] leading-relaxed text-[var(--accent-foreground)]">
-              The request was stopped before it reached the model. A standard refusal was returned
-              to the user and the event was written to the audit trail.
+              Screened before any LLM call, by the input guardrails. The refusal reason above is
+              the matched rule, truncated to 120 characters when it was written to the audit trail;
+              the event itself is the audit record.
             </p>
           </div>
         </div>

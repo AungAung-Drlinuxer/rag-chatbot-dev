@@ -122,6 +122,15 @@ async function typeInto(el: HTMLInputElement | HTMLTextAreaElement, value: strin
   await settle();
 }
 
+async function selectOption(el: HTMLSelectElement, value: string) {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!;
+    setter.call(el, value);
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await settle();
+}
+
 const rowCount = (el: ParentNode) => el.querySelectorAll("tbody tr").length;
 
 beforeEach(() => {
@@ -267,7 +276,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(text).toContain("Cannot reach the VPN gateway.");
     // Read-only until Edit: the rail is visible, but the step picker and the note box are not.
     expect(text).toContain("Jira workflow");
-    expect(text).toContain("Read-only. Edit to comment, move the workflow or attach a file.");
+    expect(text).toContain("Read-only. Press Edit at the top of this panel");
     expect(text).not.toContain("Pick a step above to move the ticket");
 
     const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
@@ -291,7 +300,11 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeNull();
     expect(pane.querySelector('textarea[aria-label="Comment to post with the status change"]')).toBeNull();
     expect(pane.querySelector('input[type="file"]')).toBeNull();
-    expect(pane.textContent).toContain("Read-only. Edit to comment, move the workflow or attach a file.");
+    expect(pane.textContent).toContain("Read-only. Press Edit at the top of this panel");
+    // One Edit control, not one per end of the card, and the fields are still text.
+    expect(pane.querySelectorAll('button[aria-label="Edit ticket"]').length).toBe(1);
+    expect(pane.querySelector('input[aria-label="Subject"]')).toBeNull();
+    expect(pane.querySelector('select[aria-label="Priority"]')).toBeNull();
 
     const steps = [...pane.querySelectorAll("button[data-step]")] as HTMLButtonElement[];
     expect(steps.length).toBe(4);
@@ -303,6 +316,38 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeTruthy();
     expect(pane.querySelector('input[type="file"]')).toBeTruthy();
     expect(pane.textContent).toContain("Pick a step above to move the ticket");
+    // Edit must be enough on its own: the fields open with it, no second sheet to reach for.
+    expect((pane.querySelector('input[aria-label="Subject"]') as HTMLInputElement).value).toBe("VPN down");
+    expect(pane.querySelector('textarea[aria-label="Description"]')).toBeTruthy();
+    expect(pane.querySelector('select[aria-label="Priority"]')).toBeTruthy();
+    expect(pane.querySelector('select[aria-label="Assignee"]')).toBeTruthy();
+    expect(pane.querySelector('input[aria-label="Due date"]')).toBeTruthy();
+    expect(pane.querySelector('button[title="Nothing changed yet"]')).toBeTruthy();
+  });
+
+  it("writes the fields to Jira from the panel, with no Details step in between", async () => {
+    m.ticketUpdate.mockResolvedValue({ ok: true, fields_synced: true });
+    const el = await mount("admin");
+    await click(button(el, "IT-1"));
+    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
+    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
+    await Promise.resolve();
+
+    const subject = pane.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
+    await typeInto(subject, "VPN down — floor 3");
+    const priority = pane.querySelector('select[aria-label="Priority"]') as HTMLSelectElement;
+    await selectOption(priority, "high");
+    await Promise.resolve();
+
+    const save = [...pane.querySelectorAll("button")].find((b) => b.textContent?.includes("Save")) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+    await click(save);
+    await Promise.resolve();
+
+    expect(m.ticketUpdate).toHaveBeenCalledWith("IT-1", expect.objectContaining({
+      subject: "VPN down — floor 3",
+      priority: "high",
+    }));
   });
 
   it("opens the create dialog and refuses to create a ticket with no subject", async () => {
