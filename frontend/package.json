@@ -1,6 +1,6 @@
 {
   "name": "it-help-chatbot-frontend",
-  "version": "dev-1.0.57",
+  "version": "dev-1.0.58",
   "private": true,
   "type": "module",
   "scripts": {
@@ -34,8 +34,8 @@
     "@types/node": "^26.3.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
@@ -43,8 +43,8 @@
     "puppeteer-core": "^25.9.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.69.0",
-    "vite": "^5.4.11",
-    "vitest": "^4.1.11"
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
   },
   "allowScripts": {
     "esbuild@0.21.5": true

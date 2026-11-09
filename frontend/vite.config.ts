@@ -24,10 +24,14 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
-        // split the heavy vendors out of the app entry chunk
-        manualChunks: {
-          react: ["react", "react-dom"],
-          markdown: ["react-markdown", "remark-gfm"],
+        // Split the heavy vendors out of the app entry chunk. Function form (not the
+        // `{ name: [...] }` map) because Vite 8's Rolldown output types only accept it.
+        manualChunks(id: string) {
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "react";
+          if (/node_modules\/(react-markdown|remark-gfm|remark-|micromark|mdast|hast|unist)/.test(id)) {
+            return "markdown";
+          }
+          return undefined;
         },
       },
     },
