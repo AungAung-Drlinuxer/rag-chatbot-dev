@@ -35,12 +35,15 @@ export type ObservabilityOverview = {
 };
 
 export type GuardrailEvent = {
+  id?: string | number;
   action: string;
   username: string | null;
   domain: string | null;
   decision: string | null;
   detail: string | null;
   created_at: string | null;
+  type?: string;
+  risk?: string;
 };
 
 export type UsageRange = number | { days?: number; start?: string; end?: string };

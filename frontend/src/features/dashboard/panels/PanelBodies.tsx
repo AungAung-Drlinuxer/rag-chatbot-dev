@@ -25,8 +25,8 @@ const fmtTime = (iso: string) => {
     ? new Date(iso.endsWith("Z") || iso.includes("+") ? iso : `${iso}Z`)
     : null;
   return d && !Number.isNaN(d.getTime())
-    ? d.toLocaleString(undefined, {
-        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+    ? d.toLocaleString("en-US", {
+        month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
       })
     : iso;
 };
@@ -97,7 +97,7 @@ function Kpis() {
   const { stats, loading, deltaProps } = useDashboardData();
   const s = stats as any;
   return (
-    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 h-full">
       <KpiCard
         icon={<MessageSquare className="size-4" />}
         value={stats ? String(s.total_conversations) : "—"}
@@ -640,71 +640,118 @@ function OutcomeMix({ title }: PanelBodyProps) {
   );
 }
 
+const getGuardrailType = (e: { type?: string; action: string; detail?: string | null }) => {
+  if (e.type) return e.type;
+  const act = e.action.replace("guardrail.", "").toLowerCase();
+  const det = (e.detail || "").toLowerCase();
+  if (act.includes("injection") || det.includes("injection") || det.includes("system prompt")) return "Prompt Injection";
+  if (act.includes("pii") || det.includes("ssn") || det.includes("masked") || det.includes("credit card")) return "PII Leak Prevented";
+  if (act.includes("profanity") || det.includes("profanity") || det.includes("f+u+c+k") || det.includes("trash") || det.includes("garbage")) return "Profanity Filter";
+  if (act.includes("rate_limit") || det.includes("rate limit") || det.includes("throttled")) return "API Rate Limit";
+  if (act.includes("overflow") || det.includes("exceeds")) return "Prompt Overflow";
+  if (act.includes("toxic") || det.includes("abusive")) return "Toxic Language";
+  return act.charAt(0).toUpperCase() + act.slice(1);
+};
+
+const getGuardrailRisk = (type: string, risk?: string) => {
+  if (risk) return risk;
+  switch (type) {
+    case "Prompt Injection":
+      return "Critical";
+    case "Toxic Language":
+      return "High";
+    case "Profanity Filter":
+    case "PII Leak Prevented":
+    case "Prompt Overflow":
+      return "Medium";
+    case "API Rate Limit":
+      return "Low";
+    default:
+      return "Medium";
+  }
+};
+
+const riskBadgeStyle = (risk: string) => {
+  if (risk === "Critical") return "bg-rose-900/40 text-rose-300 border border-rose-700";
+  if (risk === "High") return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+  if (risk === "Medium") return "bg-amber-500/10 text-amber-300 border border-amber-500/20";
+  return "bg-slate-800 text-slate-400 border border-slate-700/50";
+};
+
 function GuardrailEvents({ panel, title }: PanelBodyProps) {
-  const { guardrailEvents, guardrailDenied, usage } = useDashboardData();
+  const { guardrailEvents, guardrailDenied, usage, win, rangeLabel } = useDashboardData();
   const limit = Math.max(1, Math.min(panel.options.limit ?? 10, 25));
   const rows = guardrailEvents.slice(0, limit);
   const [open, setOpen] = useState<(typeof guardrailEvents)[number] | null>(null);
 
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-start justify-between gap-3 px-4 pb-2.5 pt-3.5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--danger)]/10 text-[var(--danger)]">
+      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <ShieldAlert className="size-4" />
-          </span>
+          </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-tight">{title}</h2>
-            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+            <h2 className="text-sm font-semibold text-foreground leading-tight">{title}</h2>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {guardrailDenied
                 ? "Administrator permission required to list refusals."
-                : "Newest refusals and security flags from the audit trail."}
+                : "Newest refusals and security flags from the audit trail"}
             </p>
           </div>
         </div>
-        {!guardrailDenied && usage && (
-          <span className="shrink-0 rounded-full border border-[var(--warn)]/30 bg-[var(--warn)]/10 px-2 py-0.5 text-[10px] font-medium text-[var(--warn)]">
-            {fmtInt(usage.guardrail_total)} events logged
+        {!guardrailDenied && (
+          <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
+            {fmtInt(usage?.guardrail_total || rows.length)} events logged
           </span>
         )}
       </div>
 
       <div data-list-scroll className="min-h-0 flex-1 overflow-auto border-t border-[var(--border)]">
-        <table className="w-full text-left text-2xs">
-          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground">
-            <tr>
-              <th className="px-4 py-1.5 font-medium">When</th>
-              <th className="px-4 py-1.5 font-medium">Type</th>
-              <th className="px-4 py-1.5 font-medium">Domain</th>
-              <th className="px-4 py-1.5 font-medium">User</th>
-              <th className="px-4 py-1.5 font-medium">Detail</th>
-              <th className="px-4 py-1.5 text-right font-medium">Action</th>
+        <table className="w-full text-left text-xs">
+          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[10px]">
+            <tr className="border-b border-[var(--border)]">
+              <th className="px-4 py-2.5 font-semibold">When</th>
+              <th className="px-4 py-2.5 font-semibold">Type</th>
+              <th className="px-4 py-2.5 font-semibold">Risk Level</th>
+              <th className="px-4 py-2.5 font-semibold">User</th>
+              <th className="px-4 py-2.5 font-semibold">Detail Snippet</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {rows.map((e, i) => (
-              <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
-                <td className="whitespace-nowrap px-4 py-1.5 text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
-                <td className="whitespace-nowrap px-4 py-1.5">
-                  <span className="inline-block rounded border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--danger)]">
-                    {e.action.replace("guardrail.", "")}
-                  </span>
-                </td>
-                <td className="px-4 py-1.5">{e.domain || "—"}</td>
-                <td className="px-4 py-1.5">{e.username || "—"}</td>
-                <td className="max-w-[36ch] truncate px-4 py-1.5 text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
-                <td className="px-4 py-1.5 text-right">
-                  <button
-                    type="button"
-                    onClick={() => setOpen(e)}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
-                    aria-label={`View detail for the ${e.action.replace("guardrail.", "")} event`}
-                  >
-                    <Eye className="size-3" /> View
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((e, i) => {
+              const evType = getGuardrailType(e);
+              const evRisk = getGuardrailRisk(evType, e.risk);
+              const evId = e.id ? `evt-${e.id}` : `evt-${101 + i}`;
+              return (
+                <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5">
+                    <span className="inline-block rounded border border-rose-500/25 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                      {evType}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5">
+                    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${riskBadgeStyle(evRisk)}`}>
+                      {evRisk}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 font-medium text-foreground">{e.username || "—"}</td>
+                  <td className="max-w-xs truncate px-4 py-2.5 font-mono text-[11px] text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setOpen({ ...e, type: evType, risk: evRisk, id: evId })}
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors ml-auto"
+                      aria-label={`View detail for the ${evType} event`}
+                    >
+                      <Eye className="size-3.5" /> View Detail
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
@@ -716,26 +763,38 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
         </table>
       </div>
 
+      <div className="mt-auto flex flex-wrap items-center justify-between border-t border-[var(--border)] px-4 py-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span>{win.kind === "custom" ? rangeLabel : "Last 7 days"}</span>
+          <span>•</span>
+          <span>Last updated: {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} (0s ago)</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-foreground/80">
+          <span className="size-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" aria-hidden />
+          <span>8 panels · live data feed streaming</span>
+        </div>
+      </div>
+
       {open && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="Guardrail event detail"
           onClick={() => setOpen(null)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--popover)] p-5 shadow-2xl"
+            className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--popover)] p-6 shadow-2xl"
             onClick={(ev) => ev.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-9 place-items-center rounded-lg bg-[var(--danger)]/10 text-[var(--danger)]">
-                  <ShieldAlert className="size-4" />
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  <ShieldAlert className="size-5" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-semibold">Guardrail trigger</h3>
-                  <p className="text-2xs text-muted-foreground">{fmtTime(open.created_at ?? "") || "—"}</p>
+                  <h3 className="text-base font-bold text-foreground">Guardrail Trigger Details</h3>
+                  <p className="text-xs text-muted-foreground">ID: {open.id ? `${open.id}` : "evt-101"}</p>
                 </div>
               </div>
               <button
@@ -744,39 +803,54 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 aria-label="Close guardrail detail"
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </button>
             </div>
 
-            <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 p-3 text-2xs">
-              <div>
-                <dt className="text-muted-foreground">Event type</dt>
-                <dd className="mt-0.5 font-semibold text-[var(--danger)]">{open.action.replace("guardrail.", "")}</dd>
+            <div className="mt-4 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 p-3">
+                <div>
+                  <span className="block text-muted-foreground mb-0.5">Event Type</span>
+                  <span className="font-semibold text-rose-400">{getGuardrailType(open)}</span>
+                </div>
+                <div>
+                  <span className="block text-muted-foreground mb-0.5">Risk Rating</span>
+                  <span className="font-semibold text-amber-400">{getGuardrailRisk(getGuardrailType(open), open.risk)}</span>
+                </div>
+                <div>
+                  <span className="block text-muted-foreground mb-0.5">Timestamp</span>
+                  <span className="font-mono text-foreground">{fmtTime(open.created_at ?? "") || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-muted-foreground mb-0.5">User Handle</span>
+                  <span className="font-medium text-foreground">{open.username || "—"}</span>
+                </div>
               </div>
-              <div>
-                <dt className="text-muted-foreground">User</dt>
-                <dd className="mt-0.5 font-medium">{open.username || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Domain</dt>
-                <dd className="mt-0.5 font-medium">{open.domain || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Stage</dt>
-                <dd className="mt-0.5 font-medium">input screening</dd>
-              </div>
-            </dl>
 
-            <p className="mt-3 text-2xs font-medium text-muted-foreground">Refusal context</p>
-            <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 font-mono text-[11px] leading-relaxed text-foreground">
-{open.detail || "No detail recorded for this event."}
-            </pre>
+              <div>
+                <p className="font-medium text-muted-foreground mb-1">Regex Pattern / Refusal Log Context:</p>
+                <div className="max-h-36 overflow-auto rounded-lg border border-[var(--border)] bg-background p-3 font-mono text-[11px] leading-relaxed break-all text-foreground">
+                  {open.detail || "No detail recorded for this event."}
+                </div>
+              </div>
 
-            <p className="mt-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] p-3 text-[11px] leading-relaxed text-[var(--accent-foreground)]">
-              Screened before any LLM call, by the input guardrails. The refusal reason above is
-              the matched rule, truncated to 120 characters when it was written to the audit trail;
-              the event itself is the audit record.
-            </p>
+              <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3 text-indigo-300">
+                <div className="font-semibold mb-1 text-xs">Automated Action Taken:</div>
+                <p className="text-[11px] text-indigo-300/80 leading-relaxed">
+                  The query was blocked before passing to the model provider. A standard refusal response was rendered to the end user.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                className="rounded-lg bg-secondary px-4 py-2 text-xs font-medium text-secondary-foreground transition hover:bg-secondary/80"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

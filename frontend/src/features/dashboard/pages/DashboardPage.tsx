@@ -509,7 +509,7 @@ export default function Dashboard({ role, perms }: Props) {
                   >
                     <div
                       data-panel-body
-                      className="panel-surface h-full min-h-0 overflow-hidden rounded-2xl"
+                      className={panel.type === "kpis" ? "h-full min-h-0 w-full" : "panel-surface h-full min-h-0 overflow-hidden rounded-2xl"}
                     >
                       {renderPanelBody(panel, panelTitle(panel))}
                     </div>

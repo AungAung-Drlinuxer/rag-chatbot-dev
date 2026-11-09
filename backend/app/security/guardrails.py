@@ -42,9 +42,20 @@ _INJECTION_PATTERNS: list[tuple[str, str]] = [
     (r"from\s+now\s+on\s+(you\s+will|you\s+are)", "instruction_override"),
 ]
 
+# --- PII heuristics (SSN, credit card, API keys) -----------------------------
+_PII_PATTERNS: list[tuple[str, str]] = [
+    (r"\b\d{3}-\d{2}-\d{4}\b", "masked SSN pattern: XXX-XX-****"),
+    (r"\b(?:\d{4}[-\s]?){3}\d{4}\b", "masked Credit Card pattern: ****-****-****-****"),
+    (r"\b(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,})\b", "masked API Key pattern: sk-****"),
+]
+
+# --- Profanity heuristics ----------------------------------------------------
+_PROFANITY_PATTERNS: list[str] = [
+    r"\b(f+u+c+k+|sh+i+t+|b+i+t+c+h+|a+s+s+h+o+l+e+|d+a+m+n+|b+a+s+t+a+r+d+)\b",
+]
+
 # --- Toxicity / abuse heuristics (conservative list — refuse + offer help) ----
 _TOXIC_PATTERNS: list[str] = [
-    r"\b(f+u+c+k+|sh+i+t+|b+i+t+c+h+|a+s+s+h+o+l+e+)\b",
     r"\b(you\s+(are|re)\s+(a\s+)?(useless|stupid|idiot|trash|garbage))",
     # v1.6.6 — "useless/garbage/trash" directed AT the chatbot itself
     r"\b(useless|garbage|trash)\s+(chatbot|bot|assistant|service|system)",
@@ -53,19 +64,20 @@ _TOXIC_PATTERNS: list[str] = [
 ]
 
 _INJECTION_RE = [(re.compile(pat, re.IGNORECASE), label) for pat, label in _INJECTION_PATTERNS]
+_PII_RE = [(re.compile(pat, re.IGNORECASE), label) for pat, label in _PII_PATTERNS]
 
 
 @dataclass
 class GuardrailResult:
     action: str        # "pass" | "blocked" | "flagged"
-    type: str          # "injection" | "overflow" | "toxic" | "none"
+    type: str          # "injection" | "overflow" | "pii" | "profanity" | "toxic" | "none"
     reason: str
 
 
 def check_input(message: str) -> "GuardrailResult":
     """Screen a user chat message. Returns a GuardrailResult verdict.
 
-    Order matters: overflow (cheap) → injection (blocked) → toxicity (flagged).
+    Order matters: overflow (cheap) → injection (blocked) → pii (blocked) → profanity (flagged) → toxicity (flagged).
     Detections are logged at WARNING and counted by the caller.
     """
     if not message:
@@ -86,7 +98,19 @@ def check_input(message: str) -> "GuardrailResult":
             return GuardrailResult("blocked", "injection",
                                    f"{label}: matched '{m.group(0)[:60]}'")
 
-    # 3) Toxicity / abuse — flag (refuse at LLM via system prompt; record event)
+    # 3) PII leak prevention — block outright
+    for regex, label in _PII_RE:
+        m = regex.search(message)
+        if m:
+            return GuardrailResult("blocked", "pii",
+                                   f"{label} in user request stream")
+
+    # 4) Profanity filter — flag
+    for pat in _PROFANITY_PATTERNS:
+        if re.search(pat, message, re.IGNORECASE):
+            return GuardrailResult("flagged", "profanity", f"abusive language: '{pat[:30]}…'")
+
+    # 5) Toxicity / abuse — flag (refuse at LLM via system prompt; record event)
     for pat in _TOXIC_PATTERNS:
         if re.search(pat, message, re.IGNORECASE):
             return GuardrailResult("flagged", "toxic", f"abusive language: '{pat[:30]}…'")

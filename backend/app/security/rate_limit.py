@@ -75,6 +75,12 @@ def check_limit(rule: str, key: str) -> tuple[bool, int]:
     if count > max_reqs:
         retry_after = window - int(time.time() % window) + 1
         logger.warning("RATE LIMIT %s exceeded by %s (%d/%d)", rule, key, count, max_reqs)
+        try:
+            from app.observability.audit import audit
+            user_part = key.replace("user:", "") if key.startswith("user:") else key
+            audit("guardrail.rate_limit", user_part, detail=f"exceeded {max_reqs} req/{window}s threshold ({rule}), temporarily throttled")
+        except Exception:
+            pass
         return False, retry_after
     return True, 0
 

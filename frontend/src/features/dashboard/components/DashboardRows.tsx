@@ -168,48 +168,30 @@ export function DomainRow({
   index?: number;
 }) {
   return (
-    <div className="flex items-center gap-3">
-
-      <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-        {domain.icon}
-      </div>
-
-      <div className="min-w-0 flex-1">
-
-        <div className="mb-1.5 flex items-center justify-between">
-
-          <span className="text-2xs font-medium">
-            {domain.name}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-2xs font-medium text-foreground">
+          {domain.name}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-2xs font-medium text-foreground">
+            {domain.count}
           </span>
-
-          <div className="flex items-center gap-2">
-
-            <span className="text-2xs font-medium">
-              {domain.count}
-            </span>
-
-            <span className="w-10 text-right text-2xs text-muted-foreground">
-              {domain.percentage}%
-            </span>
-
-          </div>
-
+          <span className="w-10 text-right text-2xs text-muted-foreground">
+            {domain.percentage}%
+          </span>
         </div>
-
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              background: CHART_VAR[index % CHART_VAR.length],
-              width: `${Math.min(100, domain.percentage * 4)}%`,
-            }}
-          />
-
-        </div>
-
       </div>
 
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            background: CHART_VAR[index % CHART_VAR.length],
+            width: `${Math.min(100, Math.max(0, domain.percentage * 3.6))}%`,
+          }}
+        />
+      </div>
     </div>
   );
 }

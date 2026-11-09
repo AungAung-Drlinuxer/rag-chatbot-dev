@@ -120,8 +120,8 @@ export const DEFAULT_LAYOUT: PanelSpec[] = [
 
 export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
   p("kpis", "kpis", 12, 1),
-  p("usage", "usage-kpis", 4, 2),
-  p("trend", "trend", 8, 2),
+  p("usage", "usage-kpis", 6, 2),
+  p("trend", "trend", 6, 2),
   p("domains", "domains", 3, 3),
   p("tokens", "token-breakdown", 3, 3),
   p("health", "health", 3, 3),

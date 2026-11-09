@@ -175,10 +175,34 @@ def observability_events(
     limit = max(1, min(limit, 200))
     with SessionLocal() as s:
         rows = [dict(r) for r in s.execute(text(
-            "SELECT action, username, domain, decision, detail, created_at "
+            "SELECT id, action, username, domain, decision, detail, created_at "
             "FROM audit_log WHERE action LIKE 'guardrail.%' "
             "ORDER BY created_at DESC LIMIT :n"
         ), {"n": limit}).mappings()]
     for r in rows:
         r["created_at"] = r["created_at"].isoformat() if r.get("created_at") else None
+        act = r.get("action") or ""
+        subtype = act.replace("guardrail.", "")
+        detail_lower = (r.get("detail") or "").lower()
+        if subtype == "injection" or "injection" in detail_lower or "prompt" in detail_lower:
+            r["type"] = "Prompt Injection"
+            r["risk"] = "Critical"
+        elif subtype == "pii" or "pii" in detail_lower or "ssn" in detail_lower:
+            r["type"] = "PII Leak Prevented"
+            r["risk"] = "Medium"
+        elif subtype == "profanity" or "profanity" in detail_lower or "f+u+c+k" in detail_lower or "trash" in detail_lower or "garbage" in detail_lower:
+            r["type"] = "Profanity Filter"
+            r["risk"] = "Medium"
+        elif subtype == "rate_limit" or "rate limit" in detail_lower or "throttled" in detail_lower:
+            r["type"] = "API Rate Limit"
+            r["risk"] = "Low"
+        elif subtype == "overflow":
+            r["type"] = "Prompt Overflow"
+            r["risk"] = "Medium"
+        elif subtype == "toxic":
+            r["type"] = "Toxic Language"
+            r["risk"] = "High"
+        else:
+            r["type"] = subtype.title()
+            r["risk"] = "Low"
     return {"events": rows}
