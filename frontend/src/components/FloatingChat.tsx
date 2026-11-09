@@ -327,29 +327,29 @@ export function FloatingChatPopup() {
       className="fixed bottom-5 right-5 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
     >
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--primary)] px-4 py-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/15">
+      <div className="flex shrink-0 items-center gap-3 border-b border-violet-800/40 bg-gradient-to-r from-violet-700 to-violet-800 px-4 py-3 text-white">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 border border-white/25">
           <Bot className="size-5 text-white" strokeWidth={1.8} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-white">IT Assistant</div>
+          <div className="text-sm font-bold text-white leading-tight">IT Assistant</div>
           <div className="mt-0.5 flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-emerald-300" />
-            <span className="text-2xs text-white/70">IT Knowledge Assistant · RBAC protected</span>
+            <span className="size-2 rounded-full bg-emerald-400" />
+            <span className="text-xs text-white/80">IT Knowledge Assistant - RBAC protected</span>
           </div>
         </div>
         <button
           aria-label="Minimize chat"
           title="Minimize"
           onClick={() => setMinimized(true)}
-          className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/15 hover:text-white"
+          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
         >
           <Minus className="size-4" />
         </button>
         <button
           aria-label="Close chat"
           onClick={() => setOpen(false)}
-          className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/15 hover:text-white"
+          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
         >
           <X className="size-4" />
         </button>
@@ -358,12 +358,12 @@ export function FloatingChatPopup() {
       {/* Body */}
       <div ref={bodyRef} className="flex-1 space-y-4 overflow-y-auto bg-background p-4">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="grid size-14 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--primary)]">
-              <Sparkles className="size-6" />
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="grid size-14 place-items-center rounded-2xl bg-violet-600/20 text-violet-400 border border-violet-500/30 shadow-sm">
+              <Sparkles className="size-6 text-violet-400" />
             </div>
-            <h3 className="mt-3 text-sm font-bold text-foreground">Ask an IT question</h3>
-            <p className="mt-1 max-w-[250px] text-xs leading-5 text-muted-foreground">
+            <h3 className="mt-3.5 text-base font-bold text-foreground">Ask an IT question</h3>
+            <p className="mt-1.5 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
               I answer from your organization&apos;s knowledge base and cite the pages I used.
             </p>
           </div>
@@ -538,7 +538,7 @@ export function FloatingChatPopup() {
       )}
 
       {/* Composer — the same component the chat page uses, so the two cannot drift. */}
-      <div className="shrink-0 border-t border-[var(--border)] bg-white p-2.5 dark:bg-[#111827]">
+      <div className="shrink-0 border-t border-[var(--border)] bg-card p-2.5">
         <form onSubmit={(e) => { e.preventDefault(); send(); }}>
           <Composer
             value={input}
@@ -549,14 +549,15 @@ export function FloatingChatPopup() {
             multiline={false}
             placeholder="Ask an IT question..."
             aria-label="Ask a question"
+            className="border-[var(--border)] bg-muted/40 focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/10"
             onAttach={async (f: File) => {
               try { await uploadAttachment(f, sessionRef); } catch { /* non-blocking */ }
             }}
           />
         </form>
-        <div className="mt-1.5 flex items-center justify-center gap-1 text-2xs text-muted-foreground">
-          <Shield className="size-3" />
-          AI answers may require verification · RBAC protected
+        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+          <Shield className="size-3 text-muted-foreground" />
+          AI answers may require verification - RBAC protected
         </div>
       </div>
     </div>

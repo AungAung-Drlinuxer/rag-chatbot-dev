@@ -39,9 +39,9 @@ export function NeedHelpCard() {
         setOpen(true);
       }}
       className={[
-        "group fixed bottom-5 right-5 z-40 grid size-10 place-items-center rounded-full",
-        "bg-blue-600 text-white shadow-md shadow-blue-600/30",
-        "transition-all duration-300 hover:scale-110 hover:bg-blue-700",
+        "group fixed bottom-5 right-5 z-40 grid size-12 place-items-center rounded-full",
+        "bg-violet-600 text-white shadow-lg shadow-violet-600/30",
+        "transition-all duration-300 hover:scale-110 hover:bg-violet-700",
         visible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
       ].join(" ")}
     >
