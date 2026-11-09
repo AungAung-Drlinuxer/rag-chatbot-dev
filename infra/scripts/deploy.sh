@@ -43,7 +43,7 @@ say "config + database"
 kubectl apply -f "$OUT/00-namespace.yaml" -f "$OUT/05-config.yaml"
 kubectl apply -f "$OUT/20-database.yaml"
 kubectl -n "$NAMESPACE" wait --for=condition=Ready --timeout=600s \
-  cluster/postgres-dev || { echo "postgres cluster did not become ready"; exit 1; }
+  clusters.postgresql.cnpg.io/postgres-dev || { echo "postgres cluster did not become ready"; exit 1; }
 
 say "schema (db-init Job)"
 kubectl -n "$NAMESPACE" delete job db-init --ignore-not-found

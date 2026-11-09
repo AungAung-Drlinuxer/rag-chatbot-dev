@@ -33,6 +33,7 @@ rand_pw() { openssl rand -hex 24; }
 rand_key() { openssl rand -hex 32; }
 
 echo "namespace: $NAMESPACE"
+kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create ns "$NAMESPACE"
 
 if exists backend-secrets && [[ $FORCE -eq 0 ]]; then
   say "backend-secrets exists — skipping (use --force to rotate)"

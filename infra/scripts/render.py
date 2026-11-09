@@ -38,6 +38,8 @@ DEFAULTS = {
     "S3_ENDPOINT": "https://s3.drlinuxer.com",
     "S3_BUCKET": "rag-chatbot-dev-postgres",
     "MONITORING_ENABLED": "1",
+    # 0 serves plain HTTP (a cluster with no cert-manager / no TLS secret yet).
+    "TLS_ENABLED": "1",
     "PROM_REMOTE_WRITE": "http://10.10.10.18:9090/api/v1/write",
 }
 
@@ -92,6 +94,12 @@ def render(text: str, env: dict[str, str]) -> str:
     text = text.replace("RAGCHAT_NAMESPACE: rag-chatbot-dev", f"RAGCHAT_NAMESPACE: {env['NAMESPACE']}")
     text = text.replace("dev-chat.drlinuxer.com", env["DOMAIN"])
     text = text.replace("drlinuxer-tls", env["TLS_SECRET"])
+
+    # A fresh cluster usually has no certificate yet. Dropping the whole `tls:` block is
+    # better than pointing at a secret that does not exist: the Ingress then answers on
+    # http:// and the install can be verified before DNS/TLS is wired up.
+    if env.get("TLS_ENABLED", "1") == "0":
+        text = re.sub(r"(?m)^  tls:\n(?:  - [^\n]*\n|[ \t]{4,}[^\n]*\n)+", "", text)
     text = text.replace("ingressClassName: nginx", f"ingressClassName: {env['INGRESS_CLASS']}")
 
     if env["STORAGE_CLASS"]:
@@ -99,6 +107,20 @@ def render(text: str, env: dict[str, str]) -> str:
                             f"storageClassName: {env['STORAGE_CLASS']}")
     else:
         text = re.sub(r"\n\s*storageClassName: truenas-iscsi", "", text)
+
+    # Backups off means the ObjectStore CR is not applied. The Cluster must not reference
+    # the barman plugin in that case: its pre-reconcile hook blocks the whole reconciliation
+    # loop until the ObjectStore exists, so Postgres never starts and the install hangs.
+    if str(env.get("BACKUP_ENABLED", "1")) == "0":
+        text = re.sub(r"(?m)^[ \t]*plugins:\n(?:[ \t]{4,}[^\n]*\n)+", "", text)
+        text = re.sub(r"(?m)^[ \t]*archive_mode: \"on\"\n", "", text)
+        text = re.sub(r"(?m)^[ \t]*archive_timeout: [^\n]*\n", "", text)
+
+    # Pinned ClusterIPs are cluster-specific: a fresh cluster would reject them (that
+    # address may belong to another service) and `apply` fails. Headless services
+    # (`clusterIP: None`) are kept — that value means "no address", not an address.
+    text = re.sub(r"(?m)^[ \t]*clusterIP: (?!None)[^\n]*\n", "", text)
+    text = re.sub(r"(?m)^[ \t]*clusterIPs:\n(?:[ \t]+-[^\n]*\n)+", "", text)
 
     text = text.replace("size: 5Gi", f"size: {env['POSTGRES_SIZE']}")
     text = text.replace("endpointURL: https://s3.drlinuxer.com", f"endpointURL: {env['S3_ENDPOINT']}")

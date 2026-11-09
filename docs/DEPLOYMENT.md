@@ -5,6 +5,43 @@ No state lives outside the namespace, so a new cluster is a clean install, not a
 
 ---
 
+## 0. Bare cluster → working install (one command)
+
+```bash
+cp infra/env.example infra/env     # set DOMAIN, NAMESPACE, REGISTRY (or pass them as env vars)
+infra/scripts/install.sh
+```
+
+`install.sh` is the whole path, and it is idempotent:
+
+1. reads `infra/env`, then applies anything you exported as an override
+   (`NAMESPACE=… DOMAIN=… TLS_ENABLED=0 infra/scripts/install.sh`);
+2. fills in what only the cluster knows — the default `StorageClass` and the first
+   `IngressClass` — so a fresh cluster needs no editing beyond the domain;
+3. installs **CloudNativePG** and **ingress-nginx** with Helm when they are missing
+   (`--skip-prereqs` refuses instead of installing);
+4. creates the namespace and every Secret with generated values (`create-secrets.sh`),
+   plus a `harbor-pull` docker-registry secret when `HARBOR_USER`/`HARBOR_PASSWORD` are set;
+5. renders and applies the manifests, waits for Postgres and `db-init`, then for
+   backend/frontend, and refuses to apply if the rendered namespace differs from `NAMESPACE`;
+6. creates the **first administrator** and prints its generated password **once**;
+7. verifies over HTTP — `/health` must be 200 and a real `POST /api/auth/login` must
+   return 200 — instead of trusting `kubectl get pods`.
+
+Useful flags: `--yes` (no prompt), `--skip-prereqs`, `--no-smoke`, `--admin <name>`.
+
+Still manual after the script, because they are site-specific:
+
+- **DNS** — point `DOMAIN` at the ingress address it prints.
+- **TLS** — create `TLS_SECRET` (cert-manager or by hand), or run with `TLS_ENABLED=0`.
+- **LLM key** — Settings → Integrations (or use the on-prem Ollama engine).
+- **Knowledge** — the KB starts empty; an empty KB makes the assistant refuse every
+  question. Sync it before showing the app to users.
+
+Everything below is the same install done by hand, one step at a time.
+
+---
+
 ## 1. What gets created
 
 | Component | Image | Purpose | Needs |
@@ -23,6 +60,9 @@ Suggested floor: **4 vCPU / 12Gi** for the namespace. Everything except Ollama a
 reranker is small; those two hold models in memory.
 
 ## 2. Prerequisites
+
+`install.sh` installs CloudNativePG and ingress-nginx for you when they are missing. The
+checks below are what it runs; do them by hand only if you deploy without the script.
 
 ```bash
 kubectl version                     # 1.27+
