@@ -67,15 +67,6 @@ export default function Login({
 
   const appName = branding.appName || "IT Help Chatbot";
 
-  /* The sign-in screen owns the root URL. Arriving at a deep link such as `/#/settings`
-     while signed out used to leave that path in the address bar — reloading it looked like
-     a broken protected page. Clean it as soon as this screen is what renders. `#/sso` is
-     left alone: the callback still needs to read its code. */
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash || hash === "#/" || hash.startsWith("#/sso")) return;
-    window.history.replaceState(null, "", "/");
-  }, []);
 
   // v1.5.1 — client-side validation before hitting the server
   function handleLocalSubmit(e: React.FormEvent) {

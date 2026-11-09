@@ -17,6 +17,7 @@ import { applyStoredTheme, applyUserPrefs } from "@/app/theme";
 import { usernameFromToken } from "@/app/session";
 import {
   setAuthToken, setRefreshToken, loadTokens, saveTokens, clearTokens, BASE,
+  loadTokensSync,
 } from "@/shared/api/client";
 import { login, getMe, exchangeSsoCode, getSsoEnabled } from "@/features/auth/api";
 import { getMySettings } from "@/features/settings/api";
@@ -64,11 +65,28 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const [authed, setAuthed] = useState(false);
+  /* Restore the in-memory token and the signed-in state from the tab's cached session
+     during the first render, so a refresh paints the page the user was on — not the login
+     screen for a frame, which then raced the restore and sent them to chat. */
+  const initialSession = useState(() => {
+    const cached = loadTokensSync();
+    if (cached?.access) {
+      setAuthToken(cached.access);
+      setRefreshToken(cached.refresh ?? null);
+    }
+    return cached;
+  })[0];
+  const [authed, setAuthed] = useState(Boolean(initialSession?.access));
+  /* False until the stored session has been read. Rendering the login screen before that
+     point (and letting it rewrite the URL) is what bounced a refresh on `#/articles` to the
+     chat page: for a few hundred milliseconds the app believed nobody was signed in. */
+  const [booted, setBooted] = useState(false);
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginErr, setLoginErr] = useState("");
-  const [userName, setUserName] = useState("");
+  const [userName, setUserName] = useState(
+    initialSession?.access ? usernameFromToken(initialSession.access) : "",
+  );
   const [role, setRole] = useState("");
   const [perms, setPerms] = useState<Record<string, boolean>>({});
   const [meDisplay, setMeDisplay] = useState("");
@@ -119,7 +137,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Restore session from OS keyring on mount (Phase 5).
+  // Restore session on mount. The browser copy is read synchronously first, so an
+  // already signed-in tab never paints the login screen (or rewrites the URL) on refresh.
   useEffect(() => {
     loadTokens().then((t) => {
       if (t?.access) {
@@ -130,8 +149,17 @@ export default function App() {
         getMe().then((m) => { setRole(m.role); setPerms(m.permissions ?? {}); setMeDisplay(m.displayRole ?? ""); }).catch(() => {});
         getMySettings().then(applyUserPrefs).catch(() => {}); // theme engine on restore
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setBooted(true));
   }, []);
+
+  /* A genuinely signed-out visitor on a deep link is moved to the root once — but only
+     after the session restore has finished, and never for the SSO callback. */
+  useEffect(() => {
+    if (!booted || authed) return;
+    const hash = window.location.hash;
+    if (hash.startsWith("#/sso")) return;
+    if (hash && hash !== "#/") window.history.replaceState(null, "", "/");
+  }, [booted, authed]);
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();

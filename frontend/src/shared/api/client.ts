@@ -55,14 +55,25 @@ async function tryRefresh(): Promise<boolean> {
 
 /** fetch that auto-refreshes once on 401 then retries the original request. */
 export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  /* Whether this tab was signed in when the request went out. A 401 on a request that
+     never carried a token (fired while the session was still being restored) must not log
+     the user out — that race is why a refresh sometimes ended on the login screen. */
+  const hadSession = Boolean(authToken);
   let res = await fetch(url, init);
   if (res.status === 401) {
     if (refreshToken && (await tryRefresh())) {
       const headers = new Headers(init.headers || {});
       if (authToken) headers.set("Authorization", `Bearer ${authToken}`);
       res = await fetch(url, { ...init, headers });
+      if (res.ok && authToken) {
+        // Keep the stored copy current so a reload does not fall back to an expired one.
+        try {
+          const stored = loadTokensSync();
+          if (stored) void saveTokens(authToken, stored.refresh ?? "");
+        } catch { /* storage unavailable — the in-memory token still works */ }
+      }
     }
-    if (res.status === 401 && !url.includes("/api/auth/login")) {
+    if (res.status === 401 && hadSession && !url.includes("/api/auth/login")) {
       window.dispatchEvent(new CustomEvent("ith:session-expired"));
     }
   }
@@ -76,6 +87,19 @@ export async function saveTokens(access: string, refresh: string) {
   if (inTauri()) return invoke("save_tokens", { access, refresh });
   sessionStorage.setItem("tokens", JSON.stringify({ access, refresh }));
 }
+/** Synchronous read of the browser session (no keyring). Used to restore the session
+ *  before the first paint in a tab, so the login screen never renders for an already
+ *  signed-in user. Returns null in the desktop build, where the keyring is async. */
+export function loadTokensSync(): { access: string; refresh: string } | null {
+  if (inTauri()) return null;
+  try {
+    const v = sessionStorage.getItem("tokens");
+    return v ? JSON.parse(v) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadTokens(): Promise<{ access: string; refresh: string } | null> {
   if (inTauri()) return invoke("load_tokens");
   const v = sessionStorage.getItem("tokens");
