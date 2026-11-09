@@ -1,37 +1,64 @@
-# rag-chatbot-dev — cluster layout
+# Kubernetes manifests
 
-Everything the dev workspace needs, and nothing else. Apply in filename order:
+Twelve files, one namespace, no external state. The numbers are the apply order.
+
+| File | Creates | Notes |
+| --- | --- | --- |
+| `00-namespace.yaml` | `Namespace` | label `app.kubernetes.io/part-of` |
+| `05-config.yaml` | `ConfigMap backend-config` | every URL, model name and pipeline knob |
+| `10-preview.yaml` | frontend Deployment + Service + Ingress | nginx on :8080 behind Service :80; SSE-safe annotations |
+| `15-db-init.yaml` | Job `db-init` | `python -m app.bootstrap --init`, idempotent |
+| `20-database.yaml` | CNPG `Cluster postgres-dev` | pgvector via `postInitApplicationSQL`; 5Gi |
+| `21-backup.yaml` | `ObjectStore` + nightly `ScheduledBackup` | needs the barman-cloud plugin + S3 secret |
+| `30-backend.yaml` | backend Deployment + Service | uid 10001, non-root, read-only root filesystem |
+| `40-redis.yaml` | Redis master + Sentinel StatefulSets | master PVC on `STORAGE_CLASS` |
+| `41-ollama.yaml` | Ollama Deployment + Service | image has `nomic-embed-text` baked in |
+| `42-rerank.yaml` | rerank-svc Deployment + Service | CPU cross-encoder, model baked in |
+| `43-celery.yaml` | celery-worker + celery-beat | same image as backend |
+| `45-monitoring.yaml` | Alloy ServiceAccount/Role/ConfigMap/Deployment | remote-write to Prometheus |
+
+## Do not apply these by hand on a new cluster
+
+They carry *this* cluster's names: `harbor.drlinuxer.com/rag-chatbot-dev`,
+`dev-chat.drlinuxer.com`, `truenas-iscsi`. Use the scripts:
 
 ```bash
-kubectl apply -f 05-config.yaml -f 20-database.yaml -f 21-backup.yaml
-# wait for the cluster, then create every table/extension (idempotent Job)
-kubectl apply -f 15-db-init.yaml
-kubectl apply -f 40-redis.yaml -f 41-ollama.yaml -f 42-rerank.yaml \
-  -f 43-celery.yaml -f 30-backend.yaml -f 10-preview.yaml -f 45-monitoring.yaml
+cp infra/env.example infra/env && $EDITOR infra/env   # namespace, registry, domain, tags
+infra/scripts/create-secrets.sh                       # secrets (never committed)
+infra/scripts/build-images.sh                         # images
+infra/scripts/deploy.sh                               # render + apply + verify
 ```
 
-| File | What it creates | Notes |
+`infra/scripts/render.py` writes `infra/.rendered/` with your values substituted; that is
+what `deploy.sh` applies. Applying `infra/k8s-dev/` directly is still valid — it is what this
+repo's own dev cluster runs.
+
+## Secrets
+
+| Secret | Keys | Created by |
 | --- | --- | --- |
-| `05-config.yaml` | `backend-config` ConfigMap | the complete runtime config; all URLs point inside this namespace |
-| `20-database.yaml` | CloudNativePG cluster `postgres-dev` | see `docs/database-setup.md` for the first-admin step |
-| `21-backup.yaml` | `ObjectStore` + nightly `ScheduledBackup` | S3 `…/rag-chatbot-dev-postgres`, 7d retention, WAL archiving — see `docs/postgres-backup-restore.md` |
-| `15-db-init.yaml` | Job `db-init` | runs `python -m app.bootstrap --init`: role, database, pgvector, every table, checkpoint tables, ownership, verification. Idempotent |
-| `40-redis.yaml` | Redis master + Sentinel + 3 Services | password from `backend-secrets`; Sentinel config templated at boot |
-| `41-ollama.yaml` | Ollama (embedding runtime) | image ships `nomic-embed-text`; no PVC (a mount would hide the bundled models) |
-| `42-rerank.yaml` | `rerank-svc` | CPU cross-encoder, `bge-reranker-base` |
-| `43-celery.yaml` | `celery-worker`, `celery-beat` | same image as the backend; beat writes its schedule to `/tmp` |
-| `30-backend.yaml` | FastAPI backend + Service | env from `backend-config` + `backend-secrets` |
-| `10-preview.yaml` | frontend + Ingress | host `dev-chat.drlinuxer.com` only |
-| `45-monitoring.yaml` | Alloy collector (SA/Role/CM/Deployment) | scrapes this namespace's backend to the shared Prometheus with `environment="dev"`; dashboard in `infra/monitoring/` — see `docs/monitoring.md` |
+| `backend-secrets` | `DATABASE_URL`, `REDIS_URL`, `REDIS_PASSWORD`, `JWT_SECRET`, `LDAP_BIND_PASSWORD`, `rerank-api-key` | `create-secrets.sh` |
+| `postgres-dev-app` | `username`, `password` | `create-secrets.sh` (CNPG bootstrap) |
+| `db-init-superuser` | `url` | optional, external Postgres only |
+| `<TLS_SECRET>` | `tls.crt`, `tls.key` | cert-manager or `kubectl create secret tls` |
+| `cnpg-backup-s3` | `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION` | you, if backups are enabled |
 
-Deliberately absent (prod has them, dev does not need them): pgAdmin, RedisInsight, the 3-data +
-3-sentinel topology, and the embedding-model PVC. Scaling Redis to prod's shape is a `replicas:`
-change on the two StatefulSets plus `REDIS_SENTINELS` listing every sentinel.
+Provider keys, Confluence/Jira tokens and SMTP credentials are **not** here: they live in the
+database, written through Settings → Integrations, and are never returned by the API.
 
-## Where the secrets live
+## What is deliberately absent
 
-`backend-secrets` holds `DATABASE_URL`, `REDIS_PASSWORD`, `REDIS_URL`, `LDAP_BIND_PASSWORD`.
-`cnpg-backup-s3` (`ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`) is what the backup plugin reads;
-both are created out-of-band, never committed.
-Provider keys, Confluence/Jira tokens and SMTP credentials are **not** in the cluster config —
-they are stored in the database through Settings → Integrations and never returned by the API.
+Prod-only pieces that a dev or small install does not need: pgAdmin, RedisInsight, the
+3-data + 3-sentinel Redis topology, and the embedding-model PVC. Scaling Redis to that shape
+is a `replicas:` change plus a `REDIS_SENTINELS` list.
+
+## Dependency order
+
+```
+namespace → config → postgres (wait Ready) → db-init (wait Complete)
+        → redis / ollama / rerank / celery → backend → frontend
+        → backup, monitoring
+```
+
+`deploy.sh` enforces exactly this and refuses to start when a secret, the CNPG CRD, the
+StorageClass or the IngressClass is missing.

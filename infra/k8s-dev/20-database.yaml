@@ -38,12 +38,20 @@ spec:
       archive_timeout: 5min
   storage:
     size: 5Gi
+  # The application role is deliberately not a superuser, so `CREATE EXTENSION vector`
+  # cannot be run by it. postInitApplicationSQL runs once as the CNPG superuser inside the
+  # freshly created database — this is what makes a from-scratch install unattended. It
+  # used to be a manual `kubectl exec … psql -c "CREATE EXTENSION …"` step, which every
+  # new cluster forgot.
   bootstrap:
     initdb:
       database: assistant
       owner: app
       secret:
         name: postgres-dev-app
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector;
+        - GRANT USAGE ON SCHEMA public TO app;
   resources:
     requests: { cpu: 100m, memory: 256Mi }
     limits:   { cpu: "1", memory: 1Gi }

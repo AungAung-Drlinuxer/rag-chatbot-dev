@@ -46,3 +46,7 @@ docs/qa/
 # tool caches
 .ruff_cache/
 .backend-venv/
+
+# Rendered manifests + per-cluster deploy values (never commit a credential-bearing env)
+infra/.rendered/
+infra/env

@@ -16,8 +16,13 @@ dev/prod database ရဲ့ schema (PostgreSQL 16 + pgvector 0.8.0, tables ၃�
 | Database | အသစ်၊ အလွတ် | `--init` က `CREATE DATABASE assistant OWNER app` ကို အလိုအလျောက် လုပ်တယ် |
 | App credentials | non-superuser role | extension တစ်ခုတည်းကို superuser နဲ့ လုပ်မယ် |
 
-Application role ကို **superuser မပေးပါနဲ့**။ `CREATE EXTENSION vector` တစ်ကြိမ်တည်း
-superuser လိုတာကို `BOOTSTRAP_SUPERUSER_URL` နဲ့ ဖြေရှင်းထားပါတယ်။
+Application role ကို **superuser မပေးပါနဲ့**။
+
+> အစကတည်းက တစ်ခါတည်း အလုပ်ဖြစ်ရအောင် — bundled CloudNativePG cluster က
+> `postInitApplicationSQL` နဲ့ `CREATE EXTENSION vector` ကို superuser အနေနဲ့ အလိုအလျောက်
+> လုပ်ပေးတယ် (`infra/k8s-dev/20-database.yaml`)။ အောက်မှာ ဖော်ပြထားတဲ့ manual step က
+> **ပြင်ပ PostgreSQL** ကို သုံးတဲ့အခါပဲ လိုတယ်။ အဲဒီအခါ `CREATE EXTENSION vector`
+> တစ်ကြိမ်တည်း superuser လိုတာကို `BOOTSTRAP_SUPERUSER_URL` နဲ့ ဖြေရှင်းထားပါတယ်။
 
 ---
 

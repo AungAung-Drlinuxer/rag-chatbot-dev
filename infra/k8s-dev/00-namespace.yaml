@@ -1,0 +1,7 @@
+# The whole stack lives in one namespace. Rendered from infra/env (NAMESPACE).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rag-chatbot-dev
+  labels:
+    app.kubernetes.io/part-of: rag-chatbot

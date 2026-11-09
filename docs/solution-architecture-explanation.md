@@ -25,7 +25,7 @@ deployed on Kubernetes with PostgreSQL + pgvector, Redis Sentinel HA, and an LGM
 | Knowledge scattered across Confluence, wikis, ticketing systems, file shares | Unified **Knowledge Hub** — automated sync from Confluence, XWiki, OpenProject into a single searchable vector + keyword index |
 | Employees wait for IT staff to answer repeat questions | Instant self-service answers 24/7 with **source citations** — staff only handle genuinely new issues |
 | Generic chatbots hallucinate (confidently wrong answers) | **Confidence Gate** — every answer is scored against retrieved evidence; below threshold the bot says "I'm not certain" and escalates to a human instead of guessing |
-| Cloud AI = data leaves the company | **Fully air-gapped on-prem** — LLM fallback runs locally via Ollama (`llama3.2:1b`), embeddings via `nomic-embed-text`; external LLM APIs are optional, never required |
+| Cloud AI = data leaves the company | **Fully air-gapped on-prem** — LLM fallback runs locally via Ollama (`llama3.2:3b`), embeddings via `nomic-embed-text`; external LLM APIs are optional, never required |
 | No visibility into what the AI is doing | Full **LGMT observability** — every request is traced (Tempo), logged (Loki), measured (Prometheus), and cost-tracked per model |
 
 ---
@@ -189,7 +189,7 @@ substrate that future tool protocols and agents can call into — nothing gets t
 - **Air-gapped deployment**: all components run on-prem (RKE2 K8s, Harbor registry,
   local Ollama models). No traffic leaves the network.
 - External LLM APIs (OpenRouter) are *optional* — when unavailable or undesirable,
-  the system automatically falls back to local `llama3.2:1b` with zero data egress.
+  the system automatically falls back to local `llama3.2:3b` with zero data egress.
 
 ### 6.2 Identity & access
 - **LDAP/AD authentication** — corporate directory is the source of truth
