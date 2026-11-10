@@ -6,6 +6,7 @@ import {
   Copy,
   Download,
   ListFilter,
+  Printer,
   RefreshCw,
   ScrollText,
   Search,
@@ -13,6 +14,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { listAudits } from "@/features/audits/api";
+import { downloadCsv, printReport } from "@/shared/report";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 
 /**
@@ -249,17 +251,54 @@ export default function AuditsPage() {
     setPage(1);
   }
 
+  /* The report is the *filtered* set, labelled like the table — a CSV of raw column names
+     ("decision", "confidence") is unreadable in Excel and in a printed pack. */
+  const reportColumns = [
+    { key: "time", label: "Time", width: "14%" },
+    { key: "action", label: "Action", width: "18%" },
+    { key: "user", label: "User", width: "14%" },
+    { key: "domain", label: "Domain", width: "12%" },
+    { key: "decision", label: "Decision", width: "10%" },
+    { key: "confidence", label: "Confidence", width: "9%" },
+    { key: "detail", label: "Detail", width: "23%" },
+  ];
+
+  const reportRows = useMemo(
+    () => filtered.map((r) => ({
+      time: r.created_at ? r.created_at.replace("T", " ").slice(0, 19) : "",
+      action: r.action,
+      user: r.username,
+      domain: r.domain,
+      decision: r.decision,
+      confidence: r.confidence,
+      detail: r.detail ?? "",
+    })),
+    [filtered],
+  );
+
+  const rangeLabel = fromDate || toDate
+    ? `${fromDate || "start"} → ${toDate || "today"}`
+    : "All loaded events";
+
   function exportCsv() {
-    const header = "created_at,action,username,domain,decision,confidence,detail";
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = filtered.map((r) =>
-      [r.created_at, r.action, r.username, r.domain, r.decision, r.confidence,
-       (r.detail ?? "").replace(/\r?\n/g, " ")].map(esc).join(","));
-    const csv = "\ufeff" + [header, ...lines].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    downloadCsv(`audit-log-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, reportRows);
+  }
+
+  function printReportSheet() {
+    const ok = printReport({
+      title: "Audit log",
+      subtitle: `Administration · ${rangeLabel}`,
+      columns: reportColumns,
+      rows: reportRows,
+      meta: [
+        `Events: ${reportRows.length}`,
+        `Users: ${users}`,
+        q ? `Search: "${q}"` : "",
+        filterAction ? `Action: ${filterAction}` : "",
+        filterResult ? `Decision: ${filterResult}` : "",
+      ].filter(Boolean),
+    });
+    if (!ok) window.alert("Your browser blocked the print window. Allow pop-ups for this site and try again.");
   }
 
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
@@ -293,6 +332,14 @@ export default function AuditsPage() {
               </button>
               {/* Primary: exporting is the page's one "do something" action, so it gets
                   the brand fill that the secondary Refresh deliberately does not. */}
+              <button
+                onClick={printReportSheet}
+                disabled={filtered.length === 0}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50"
+              >
+                <Printer className="size-3.5" />
+                Print
+              </button>
               <button
                 onClick={exportCsv}
                 disabled={filtered.length === 0}

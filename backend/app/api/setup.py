@@ -26,7 +26,7 @@ router = APIRouter()
 # Tables the application cannot run without (ORM models + hand-written core tables). The
 # full install also creates LangGraph's checkpoint tables and, on first ingest, the vector
 # store — those are reported separately because they are created lazily.
-REQUIRED_TABLES = 27
+REQUIRED_TABLES = 28  # + notification_dismissals (per-user cleared feed)
 
 
 def _settings(s, key: str) -> dict:

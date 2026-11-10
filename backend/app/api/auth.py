@@ -171,7 +171,11 @@ def _serialize_user_settings(s: UserSettings) -> dict:
 # column of their own. Anything else sent to PUT /api/settings is ignored — the endpoint
 # used to persist whatever key it was handed, which made it an unbounded write into the
 # user's own row.
-_PREFS_FIELDS = {"darkMode", "compact", "animations", "appName", "appShort", "cliHintSeen"}
+_PREFS_FIELDS = {
+    "darkMode", "compact", "animations", "appName", "appShort", "cliHintSeen",
+    # Notifications (read by api/notifications.py to filter the derived feed)
+    "notifyApprovals", "notifyTickets", "notifyAccounts", "notifySound",
+}
 
 _USER_SETTABLE_FIELDS = {
     "theme", "density", "chat_font_size", "code_font",

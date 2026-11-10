@@ -120,7 +120,7 @@ export default function PageSidebar({
   /* Every role gets a feed now: the server scopes it to the caller (their own escalation
      decisions and tickets, plus the approval/LDAP queues for admins and agents). The old
      version turned polling off for plain users, so they never saw anything at all. */
-  const { notices, error: noticesError, refresh: refreshNotices } =
+  const { notices, error: noticesError, refresh: refreshNotices, clear: clearNotices } =
     useNotifications(role || "user", true);
 
   // Nav items are capability-aware and the menu is filtered, not greyed out: an entry
@@ -202,6 +202,7 @@ export default function PageSidebar({
               notices={notices}
               error={noticesError}
               onRetry={refreshNotices}
+              onClear={clearNotices}
               collapsed={collapsed}
               onOpen={onNavigate}
             />
@@ -495,6 +496,7 @@ export default function PageSidebar({
           notices={notices}
           error={noticesError}
           onRetry={refreshNotices}
+          onClear={clearNotices}
           onOpen={onNavigate}
         />
       </div>

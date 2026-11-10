@@ -195,7 +195,9 @@ export default function Users() {
 
   /* v0.21.80 — responsive pagination (real, not decorative) */
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  /* Ten per page, fixed: the same unit as Conversations and the Audit log. A page-size
+     selector made three lists that could not be compared page for page. */
+  const perPage = 10;
 
   async function loadUsers(showRefresh = false) {
     if (showRefresh) setRefreshing(true);
@@ -326,7 +328,7 @@ export default function Users() {
     () => filteredUsers.slice((page - 1) * perPage, page * perPage),
     [filteredUsers, page, perPage]
   );
-  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, departmentFilter, perPage]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, departmentFilter]);
 
   const hasFilters = Boolean(search || statusFilter !== "All" || roleFilter !== "All" || departmentFilter !== "All");
   const rangeStart = filteredUsers.length === 0 ? 0 : (page - 1) * perPage + 1;
@@ -523,12 +525,7 @@ export default function Users() {
                 ))}
                 {totalPages > 5 && <span className="px-1 text-xs text-muted-foreground">… {totalPages}</span>}
                 <PaginationButton label="›" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} />
-                <select className="ml-2 h-8 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-2xs"
-                  value={perPage} onChange={(e) => setPerPage(Number(e.target.value))} aria-label="Users per page">
-                  <option value="10">10 / page</option>
-                  <option value="25">25 / page</option>
-                  <option value="50">50 / page</option>
-                </select>
+                <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
               </div>
             </div>
           )}

@@ -126,17 +126,39 @@ export function useNotifications(_role: string, enabled: boolean) {
     void tick();
     window.addEventListener("focus", wake);
     document.addEventListener("visibilitychange", wake);
+    // Clearing from Settings must empty this bell too, without waiting for the next poll.
+    window.addEventListener("ith:notifications-cleared", wake as EventListener);
     return () => {
       alive = false;
       stop();
       window.removeEventListener("focus", wake);
       document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("ith:notifications-cleared", wake as EventListener);
     };
   }, [enabled, reloadKey]);
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 
-  return { notices, error, refresh };
+  /* Clearing is recorded server-side (POST /api/notifications/clear), not just hidden in
+     this tab: the feed is derived from approvals/tickets, so a local-only hide would come
+     straight back on the next poll or on another device. The list empties immediately and
+     the next poll confirms it. */
+  const clear = useCallback(async () => {
+    const ids = notices.map((n) => n.id);
+    setNotices([]);
+    try {
+      await apiFetch(`${BASE}/api/notifications/clear`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+    } catch {
+      /* the poll below re-reads the truth — a failed clear simply brings the list back */
+    }
+    setReloadKey((k) => k + 1);
+  }, [notices]);
+
+  return { notices, error, refresh, clear };
 }
 
 
@@ -171,6 +193,7 @@ export function NotificationBell({
   notices,
   error,
   onRetry,
+  onClear,
   collapsed,
   onOpen,
 }: {
@@ -178,6 +201,8 @@ export function NotificationBell({
   /** Last poll failed. The list may be stale — never claim "all caught up" in that case. */
   error?: string | null;
   onRetry?: () => void;
+  /** Dismiss everything currently shown, persistently, for this user. */
+  onClear?: () => void | Promise<void>;
   collapsed?: boolean;
   onOpen?: (nav: string) => void;
 }) {
@@ -311,6 +336,17 @@ export function NotificationBell({
     >
       <div className="flex items-center justify-between px-2 pb-1.5">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Notifications</span>
+        <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => void onClear?.()}
+          disabled={notices.length === 0}
+          aria-label="Clear notifications"
+          title="Clear notifications"
+          className="rounded px-1.5 py-1 text-2xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+        >
+          Clear
+        </button>
         <button
           type="button"
           onClick={toggleMute}
@@ -321,6 +357,7 @@ export function NotificationBell({
         >
           {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
         </button>
+        </div>
       </div>
 
       {notices.length === 0 && error ? (

@@ -76,3 +76,48 @@ def test_pending_approvals_are_visible_when_the_role_manages_them(seeded, monkey
     user_items = client.get("/api/notifications", headers=_auth("dev")).json()["notifications"]
     assert f"ap-{seeded['pending']}" not in [i["id"] for i in user_items], (
         "a plain user has no approval queue to work")
+
+
+def test_clear_dismisses_items_for_that_user_only(seeded):
+    """Clear records the ids server-side; the same rows must not reappear on the next poll."""
+    who = "dev"
+    before = client.get("/api/notifications", headers=_auth(who)).json()["notifications"]
+    assert before, "fixture should give the caller at least one notice"
+
+    r = client.post("/api/notifications/clear", json={"ids": [i["id"] for i in before]}, headers=_auth(who))
+    assert r.status_code == 200
+    assert r.json()["cleared"] == len(before)
+
+    after = client.get("/api/notifications", headers=_auth(who)).json()["notifications"]
+    assert {i["id"] for i in after}.isdisjoint({i["id"] for i in before})
+
+    # A different account still sees its own notice — dismissals are per user.
+    other = client.get("/api/notifications", headers=_auth("someone-else")).json()["notifications"]
+    assert other, "another user's feed must not be affected"
+
+    with SessionLocal() as s:
+        s.execute(text("DELETE FROM notification_dismissals WHERE username = :u"), {"u": who})
+        s.commit()
+
+
+def test_clear_all_without_ids_dismisses_the_visible_feed(seeded):
+    who = "dev"
+    r = client.post("/api/notifications/clear", json={}, headers=_auth(who))
+    assert r.status_code == 200 and r.json()["cleared"] >= 0
+    assert client.get("/api/notifications", headers=_auth(who)).json()["notifications"] == []
+    with SessionLocal() as s:
+        s.execute(text("DELETE FROM notification_dismissals WHERE username = :u"), {"u": who})
+        s.commit()
+
+
+def test_pref_turns_a_category_off(seeded):
+    """notifyTickets=false hides the "your escalation was decided" notices, not everything."""
+    who = "dev"
+    assert client.get("/api/notifications", headers=_auth(who)).json()["prefs"]["notifyTickets"] is True
+    client.put("/api/settings", json={"notifyTickets": False}, headers=_auth(who))
+    try:
+        feed = client.get("/api/notifications", headers=_auth(who)).json()
+        assert feed["prefs"]["notifyTickets"] is False
+        assert all(i["kind"] != "info" for i in feed["notifications"])
+    finally:
+        client.put("/api/settings", json={"notifyTickets": True}, headers=_auth(who))

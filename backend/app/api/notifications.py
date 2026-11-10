@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
@@ -30,6 +30,68 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 MAX_ITEMS = 20
 DECIDED_WINDOW_DAYS = 14
 
+# What the user may switch off in Settings → Notifications. Absent means "on": a missing
+# pref must never silently hide a pending approval.
+PREF_DEFAULTS = {
+    "notifyApprovals": True,   # work waiting on an admin/agent decision
+    "notifyTickets": True,     # my escalations decided, my tickets created
+    "notifyAccounts": True,    # accounts awaiting approval (admins)
+}
+
+
+def _prefs(user: str) -> dict:
+    """The three notification switches, read from user_settings.prefs (JSONB)."""
+    try:
+        with SessionLocal() as s:
+            row = s.execute(
+                text("SELECT prefs FROM user_settings WHERE username = :u"), {"u": user}
+            ).scalar()
+    except Exception:  # noqa: BLE001 - a missing row is the normal first-visit case
+        row = None
+    if isinstance(row, str):
+        try:
+            import json
+            row = json.loads(row)
+        except Exception:  # noqa: BLE001
+            row = None
+    out = dict(PREF_DEFAULTS)
+    if isinstance(row, dict):
+        for k in PREF_DEFAULTS:
+            v = row.get(k)
+            if isinstance(v, bool):
+                out[k] = v
+    return out
+
+
+_DDL = """
+CREATE TABLE IF NOT EXISTS notification_dismissals (
+    username     VARCHAR(64) NOT NULL,
+    item_id      VARCHAR(64) NOT NULL,
+    dismissed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (username, item_id)
+)
+"""
+
+
+def _ensure_table(s) -> None:
+    """create_all covers a fresh install; this covers a cluster that predates the table."""
+    s.execute(text(_DDL))
+
+
+def _dismissed(user: str) -> set[str]:
+    try:
+        with SessionLocal() as s:
+            _ensure_table(s)
+            s.commit()
+            rows = s.execute(
+                text("SELECT item_id FROM notification_dismissals WHERE username = :u"),
+                {"u": user},
+            ).scalars().all()
+    except Exception as exc:  # noqa: BLE001 - table may not exist on a very old schema
+        logger.warning("notification_dismissals unavailable: %s", exc)
+        return set()
+    return set(rows)
+
 
 def _iso(value) -> str:
     return value.isoformat() if value else ""
@@ -39,6 +101,8 @@ def _iso(value) -> str:
 def notifications(user: str = Depends(get_current_user)) -> dict:
     """Newest-first feed for the caller. Empty list means "nothing concerns you" — the UI
     may only say "all caught up" when this call actually succeeded."""
+    prefs = _prefs(user)
+    dismissed = _dismissed(user)
     role = (get_role(user) or "user").lower()
     is_admin = role == "admin"
     is_agent = role in ("admin", "agent")
@@ -111,9 +175,49 @@ def notifications(user: str = Depends(get_current_user)) -> dict:
                     "created_at": "",
                 })
 
+    if not prefs["notifyApprovals"]:
+        items = [i for i in items if i["kind"] != "approval"]
+    if not prefs["notifyAccounts"]:
+        items = [i for i in items if i["kind"] != "ldap"]
+    if not prefs["notifyTickets"]:
+        items = [i for i in items if i["kind"] not in ("info",)]
+    items = [i for i in items if i["id"] not in dismissed]
+
     items.sort(key=lambda i: i["created_at"] or "", reverse=True)
     return {
         "notifications": items[:MAX_ITEMS],
         "generated_at": datetime.now(UTC).isoformat(),
         "role": role,
+        "prefs": prefs,
     }
+
+
+@router.post("/clear")
+def clear_notifications(
+    payload: dict | None = Body(default=None),
+    user: str = Depends(get_current_user),
+) -> dict:
+    """Clear the feed the user is looking at.
+
+    The feed is derived, so there is nothing to delete — the ids it is showing are recorded as
+    dismissed for this user and filtered out of every later response. With no `ids`, everything
+    currently in the caller's feed is dismissed (the "Clear all" button); passing ids lets the
+    UI clear a subset without racing a poll that arrived in between.
+    """
+    ids = (payload or {}).get("ids")
+    if ids is None:
+        ids = [i["id"] for i in notifications(user=user)["notifications"]]
+    ids = [str(i)[:64] for i in (ids or []) if str(i).strip()]
+    if not ids:
+        return {"cleared": 0}
+
+    with SessionLocal() as s:
+        _ensure_table(s)
+        for item_id in ids:
+            s.execute(text(
+                "INSERT INTO notification_dismissals (username, item_id) VALUES (:u, :i) "
+                "ON CONFLICT (username, item_id) DO NOTHING"
+            ), {"u": user, "i": item_id})
+        s.commit()
+    logger.info("cleared %d notification(s) for %s", len(ids), user)
+    return {"cleared": len(ids)}

@@ -358,3 +358,17 @@ class EscalationDraft(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+
+
+class NotificationDismissal(Base):
+    """Per-user "cleared" marks for the derived notification feed.
+
+    The feed is computed from approvals/escalations/accounts, so it has no row of its own to
+    delete. Clearing therefore records the item id the user dismissed; the feed skips ids
+    that appear here for that user. Keys are the feed's stable ids ("ap-12", "esc-7", …), not
+    row numbers, so a dismissed item cannot hide a different one that reuses its id later.
+    """
+    __tablename__ = "notification_dismissals"
+    username: Mapped[str] = mapped_column(String(64), primary_key=True)
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    dismissed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

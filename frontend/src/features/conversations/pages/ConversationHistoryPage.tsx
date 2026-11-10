@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   Bot,
+  Download,
   FileJson,
   FileText,
   LayoutGrid,
   List,
   MessageSquare,
   MessagesSquare,
+  Printer,
   RefreshCw,
   Search,
   SearchX,
@@ -15,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { adminListConversations, adminConversationMessages, adminDownloadConversation } from "@/features/conversations/admin-api";
+import { downloadCsv, printReport } from "@/shared/report";
 import { listUsers } from "@/features/users/api";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 
@@ -263,6 +266,51 @@ export default function ConversationHistoryPage() {
   // Narrowing a filter must not leave the reader on a page that no longer exists.
   useEffect(() => { setPage(1); }, [q, fromDate, toDate, filterUser]);
 
+  /* Reports print/export the *filtered* list, not the ten rows on screen. */
+  const reportColumns = [
+    { key: "user", label: "User", width: "16%" },
+    { key: "title", label: "Conversation", width: "40%" },
+    { key: "messages", label: "Msgs", width: "8%" },
+    { key: "started", label: "Started", width: "18%" },
+    { key: "last", label: "Last activity", width: "18%" },
+  ];
+
+  const reportRows = useMemo(
+    () => shown.map((c) => ({
+      user: c.username,
+      title: maskProfanity(c.title) || "(untitled conversation)",
+      messages: c.messages,
+      started: fmt(c.started_at),
+      last: fmt(c.last_at),
+      session: c.session_id,
+    })),
+    [shown],
+  );
+
+  const rangeLabel = fromDate || toDate
+    ? `${fromDate || "start"} → ${toDate || "today"}`
+    : "All conversations";
+  const filterSummary = [
+    q ? `Search: "${q}"` : "",
+    filterUser ? `User: ${filterUser}` : "",
+    fromDate || toDate ? `Range: ${rangeLabel}` : "",
+  ].filter(Boolean);
+
+  function exportCsv() {
+    downloadCsv(`conversations-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, reportRows);
+  }
+
+  function printReportSheet() {
+    const ok = printReport({
+      title: "Conversation history",
+      subtitle: `Workspace · ${rangeLabel}`,
+      columns: reportColumns,
+      rows: reportRows,
+      meta: [`Conversations: ${shown.length}`, ...filterSummary],
+    });
+    if (!ok) window.alert("Your browser blocked the print window. Allow pop-ups for this site and try again.");
+  }
+
   // Group the transcript by day so the panel can show the mockup's day dividers.
   const grouped = useMemo(() => {
     const out: { day: string; items: Msg[] }[] = [];
@@ -285,14 +333,32 @@ export default function ConversationHistoryPage() {
         title="Conversation history"
         description="Review conversations, explore transcripts, and keep context in one place."
         actions={
-          <button
-            onClick={load}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw className={["size-3.5", loading ? "animate-spin" : ""].join(" ")} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={load}
+              disabled={loading}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50"
+            >
+              <RefreshCw className={["size-3.5", loading ? "animate-spin" : ""].join(" ")} />
+              Refresh
+            </button>
+            <button
+              onClick={printReportSheet}
+              disabled={shown.length === 0}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50"
+            >
+              <Printer className="size-3.5" />
+              Print
+            </button>
+            <button
+              onClick={exportCsv}
+              disabled={shown.length === 0}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:opacity-50"
+            >
+              <Download className="size-3.5" />
+              Export CSV
+            </button>
+          </div>
         }
       />
 

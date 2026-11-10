@@ -134,18 +134,30 @@ describe("SettingsPage — role gating and the grouped nav", () => {
   it("shows an admin all five nav entries and the Administrator badge", async () => {
     const el = await mount("admin");
     const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
-    expect(nav.querySelectorAll("button")).toHaveLength(4);
+    expect(nav.querySelectorAll("button")).toHaveLength(5);
     expect(nav.textContent).toContain("Preferences");
     expect(nav.textContent).toContain("Integrations");
     expect(nav.textContent).toContain("AI service");
+    // The bell's own preferences — personal, so every role gets them.
+    expect(nav.textContent).toContain("Notifications");
     expect(nav.textContent).toContain("Email server");
     expect(el.textContent).toContain("Administrator");
+  });
+
+  it("gives a plain user Preferences and their notification preferences only", async () => {
+    const el = await mount("user");
+    const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
+    expect(nav.querySelectorAll("button")).toHaveLength(2);
+    expect(nav.textContent).toContain("Preferences");
+    expect(nav.textContent).toContain("Notifications");
+    // The mail server and the integrations catalogue stay administrator-only.
+    expect(nav.textContent).not.toContain("Email server");
   });
 
   it("shows a non-admin ONLY Preferences, and hides the admin-only panels", async () => {
     const el = await mount("user");
     const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
-    expect(nav.querySelectorAll("button")).toHaveLength(1);
+    expect(nav.querySelectorAll("button")).toHaveLength(2);
     expect(nav.textContent).toContain("Preferences");
     expect(nav.textContent).not.toContain("Integrations");
     // Branding lives inside the general panel but is admin-gated.

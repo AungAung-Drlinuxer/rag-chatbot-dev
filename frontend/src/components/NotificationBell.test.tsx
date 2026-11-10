@@ -11,19 +11,20 @@ import { createRoot, type Root } from "react-dom/client";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
+import type { ComponentProps } from "react";
 import { NotificationBell, type Notice } from "@/components/NotificationBell";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-async function mount(notices: Notice[]) {
+async function mount(notices: Notice[], props: Partial<ComponentProps<typeof NotificationBell>> = {}) {
   if (root) await act(async () => { root!.unmount(); });
   container?.remove();
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => { root!.render(<NotificationBell notices={notices} />); });
+  await act(async () => { root!.render(<NotificationBell notices={notices} {...props} />); });
   await settle();
   // The panel is portaled to <body> so it can be positioned against the viewport.
   return document.body;
@@ -128,5 +129,24 @@ describe("NotificationBell", () => {
     await act(async () => { bell.click(); });
     await settle();
     expect(el.textContent).toContain("You're all caught up");
+  });
+
+  it("offers Clear only when there is something to clear, and calls the server-backed handler", async () => {
+    let cleared = 0;
+    const el = await mount([notice("ap-1")], { onClear: () => { cleared += 1; } });
+    const trigger = el.querySelector('[aria-label^="Notifications"]') as HTMLElement;
+    await act(async () => { trigger.click(); });
+    const clear = document.querySelector('[aria-label="Clear notifications"]') as HTMLButtonElement;
+    expect(clear).toBeTruthy();
+    await act(async () => { clear.click(); });
+    expect(cleared).toBe(1);
+
+    // Nothing in the feed → nothing to clear.
+    await mount([], { onClear: () => { cleared += 1; } });
+    await act(async () => {
+      (document.querySelector('[aria-label^="Notifications"]') as HTMLElement).click();
+    });
+    const empty = document.querySelector('[aria-label="Clear notifications"]') as HTMLButtonElement;
+    expect(empty.disabled).toBe(true);
   });
 });
