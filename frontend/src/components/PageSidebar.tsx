@@ -1,5 +1,9 @@
 /** Shared nav sidebar for non-chat pages (extracted verbatim from App.tsx).
- * Capability-aware nav (v0.21.57): locked items stay visible; clicking shows WHY. */
+ * Capability-aware nav: a menu entry the role cannot use is NOT rendered at all.
+ * (It used to stay visible as a locked row that explained the denial on click — an
+ * administrator's menu is what people expect to see, and a rail full of padlocks reads
+ * as a broken app rather than a permission model.) The page-level guard in App.tsx
+ * still answers a deep link or a bookmarked URL with the reason. */
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
 import { useBranding } from "@/app/useBranding";
@@ -77,7 +81,6 @@ export default function PageSidebar({
 }) {
   const branding = useBranding();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [denied, setDenied] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [conversations, setConversations] = useState<any[]>([]);
 
@@ -120,8 +123,10 @@ export default function PageSidebar({
   const { notices, error: noticesError, refresh: refreshNotices } =
     useNotifications(role || "user", true);
 
-  // v0.21.57 — nav items are capability-aware. Locked items stay visible (so the
-  // user knows the feature exists) but clicking one shows WHY access is denied.
+  // Nav items are capability-aware and the menu is filtered, not greyed out: an entry
+  // with a capability the caller lacks never reaches the DOM. While permissions are
+  // still loading we show only the always-available entries, so nobody sees a menu item
+  // appear and then vanish.
   const items: Array<{ id: string; label: string; icon: React.ReactNode; cap?: string; capLabel?: string }> = [
     { id: "chat", label: "Chat", icon: <MessageSquare className="size-4" />, cap: "chatbot", capLabel: "Ask the AI assistant" },
     { id: "dashboard", label: "Overview", icon: <Home className="size-4" /> },
@@ -133,6 +138,12 @@ export default function PageSidebar({
     { id: "audits", label: "Audit Log", icon: <ScrollText className="size-4" />, cap: "manage_users", capLabel: "View platform audit trail" },
     { id: "settings", label: "Settings", icon: <SettingsIcon className="size-4" /> },
   ];
+  const visible = items.filter((item) => {
+    if (!item.cap) return true;
+    if (perms) return perms[item.cap] !== false;
+    return item.cap === "chatbot"; // boot: only the one capability every role has
+  });
+
   const pretty = displayRole || ({ admin: "Administrator", knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"] || "User";
 
   const navBody = (
@@ -221,52 +232,33 @@ export default function PageSidebar({
             Workspace
           </p>
         )}
-        {items.map((item) => {
-          const locked = item.cap ? perms && perms[item.cap] === false : false;
+        {visible.map((item) => {
           return (
             <div key={item.id}>
               <button
                 onClick={() => {
-                  if (locked) {
-                    setDenied(denied === item.id ? null : item.id);
-                    return;
-                  }
-                  setDenied(null);
                   onNavigate(item.id);
                   if (item.id === "chat") {
                     window.dispatchEvent(new CustomEvent("ith:new-chat"));
                   }
                   setMobileOpen(false);
                 }}
-                title={locked ? `No permission: ${item.capLabel}` : collapsed ? item.label : undefined}
+                title={collapsed ? item.label : undefined}
                 aria-label={collapsed ? item.label : undefined}
                 className={[
                   "mb-1 flex w-full items-center rounded-lg text-left text-xs font-medium transition",
                   collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
-                  active === item.id && !locked
+                  active === item.id
                     ? "bg-white text-violet-700 font-semibold shadow-sm dark:bg-[var(--sidebar-active-bg)] dark:text-white"
                     : "text-white/80 hover:bg-white/10 hover:text-white",
-                  locked ? "opacity-60" : "",
                 ].join(" ")}
               >
                 {item.icon}
                 {!collapsed && <span className="flex-1">{item.label}</span>}
-                {active === item.id && !locked && (
+                {active === item.id && (
                   <span className="ml-auto size-1.5 shrink-0 rounded-full bg-violet-500" aria-hidden="true" />
                 )}
-                {locked && (
-                  <svg viewBox="0 0 24 24" className="size-3.5 text-amber-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                )}
               </button>
-              {locked && denied === item.id && (
-                <div className="mb-2 mx-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-2xs leading-4 text-amber-200">
-                  Access restricted — your role ({pretty}) does not have permission:
-                  {" "}<b>{item.capLabel}</b>. Contact your administrator.
-                </div>
-              )}
             </div>
           );
         })}
