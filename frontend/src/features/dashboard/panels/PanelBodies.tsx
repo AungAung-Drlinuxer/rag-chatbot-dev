@@ -336,46 +336,44 @@ function Workspace({ title }: PanelBodyProps) {
   const { stats, role } = useDashboardData();
   const kb = stats && (stats as any).kb_pages != null ? String((stats as any).kb_pages) : "—";
   const blocked = stats && (stats as any).attacks_blocked_7d != null ? String((stats as any).attacks_blocked_7d) : "—";
+  /* Narrow card, two facts: one line each. The captions live in the title attribute —
+     stacked two-line rows are what pushed the footer onto "Attacks Blocked". */
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide">{title || "Workspace Stats"}</h2>
-        <span className="text-xs text-muted-foreground">Live feed</span>
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <h2 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide">{title || "Workspace Stats"}</h2>
+        <span className="shrink-0 whitespace-nowrap text-3xs text-muted-foreground">Live</span>
       </div>
 
-      <div className="mt-3 space-y-2.5 flex-1">
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 p-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
-              <BookOpen className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-foreground">KB Articles</div>
-              <div className="text-[10px] text-muted-foreground">Indexed &amp; Searchable</div>
-            </div>
-          </div>
-          <span className="text-2xl font-bold tabular-nums text-foreground">{kb}</span>
+      <div className="mt-2 flex min-h-0 flex-1 flex-col justify-evenly gap-1.5">
+        <div
+          className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
+          title="Knowledge-base articles that are indexed and searchable"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+            <BookOpen className="size-3.5" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">KB Articles</span>
+          <span className="shrink-0 text-lg font-bold tabular-nums text-foreground">{kb}</span>
         </div>
 
         {role === "admin" && (
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 p-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                <ShieldAlert className="size-4" />
-              </span>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-foreground">Attacks Blocked (7d)</div>
-                <div className="text-[10px] text-muted-foreground">Prompt Injections</div>
-              </div>
-            </div>
-            <span className="text-2xl font-bold tabular-nums text-emerald-400">{blocked}</span>
+          <div
+            className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
+            title="Prompt-injection attempts refused by the guardrails in the last 7 days"
+          >
+            <span className="grid size-7 shrink-0 place-items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+              <ShieldAlert className="size-3.5" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">Attacks Blocked (7d)</span>
+            <span className="shrink-0 text-lg font-bold tabular-nums text-emerald-400">{blocked}</span>
           </div>
         )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] pt-2 text-[10px]">
-        <span className="text-muted-foreground">Guardrail Status: Active</span>
-        <span className="font-semibold text-emerald-400">100% Protection</span>
+      <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-[var(--border)] pt-1.5 text-3xs">
+        <span className="truncate text-muted-foreground">Guardrails: active</span>
+        <span className="shrink-0 font-semibold text-emerald-400">100%</span>
       </div>
     </section>
   );

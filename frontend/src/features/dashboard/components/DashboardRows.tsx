@@ -4,6 +4,7 @@
  * The KPI tiles and the list rows.
  */
 
+import { healthGlyph } from "@/shared/healthGlyph";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -204,18 +205,19 @@ export function DomainRow({
 
 export function HealthRow({ item }: { item: HealthItem }) {
   const healthy = item.status === "Healthy";
+  // Same glyph/colour table as the chat rail, so PostgreSQL is emerald on both pages.
+  const glyph = healthGlyph(item.key, item.name);
+  const Glyph = glyph.Icon;
 
   return (
     <div className="flex items-center gap-2.5 px-3.5 py-1.5 transition-colors hover:bg-muted/40">
       <div
         className={[
           "grid size-6 shrink-0 place-items-center rounded-md",
-          healthy
-            ? "bg-muted/80 text-muted-foreground"
-            : "bg-[var(--danger)]/12 text-[var(--danger)]",
+          healthy ? glyph.tint : "bg-[var(--danger)]/12 text-[var(--danger)]",
         ].join(" ")}
       >
-        {item.icon}
+        {healthy ? <Glyph className="size-3.5" aria-hidden /> : item.icon}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -233,10 +235,7 @@ export function HealthRow({ item }: { item: HealthItem }) {
         </span>
         <span
           aria-hidden
-          className={[
-            "size-2 rounded-full",
-            healthy ? "bg-emerald-400" : "bg-rose-500",
-          ].join(" ")}
+          className={["size-2 rounded-full", healthy ? glyph.dot : "bg-rose-500"].join(" ")}
         />
         <span className="sr-only">{item.status}</span>
       </div>

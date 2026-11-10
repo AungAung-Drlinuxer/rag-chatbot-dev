@@ -15,10 +15,8 @@
  * different task from asking a question.
  */
 import { useEffect, useState } from "react";
-import {
-  Activity, Cpu, Database, FileText, KeyRound, Plus, Server, ShieldCheck,
-  SquareKanban, Ticket, Users, Wifi, Zap,
-} from "lucide-react";
+import { Activity, KeyRound, Plus, ShieldCheck, Ticket, Wifi } from "lucide-react";
+import { healthGlyph } from "@/shared/healthGlyph";
 
 import { dashHealth } from "@/features/dashboard/api";
 
@@ -33,22 +31,6 @@ const TONE: Record<string, string> = {
 function toneOf(s: Service | undefined): keyof typeof TONE {
   if (!s) return "unknown";
   return s.status === "Healthy" ? "ok" : "bad";
-}
-
-/** One glyph per dependency, matched on the key/name the health probe returns. */
-const GLYPH: { match: RegExp; icon: typeof Database; tint: string }[] = [
-  { match: /postgres|database|db$|sql/i, icon: Database, tint: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400" },
-  { match: /redis|cache|broker/i, icon: Zap, tint: "text-amber-600 bg-amber-500/10 dark:text-amber-400" },
-  { match: /jira/i, icon: SquareKanban, tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400" },
-  { match: /confluence|docs?/i, icon: FileText, tint: "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400" },
-  { match: /ldap|active directory|ad\b/i, icon: Users, tint: "text-violet-600 bg-violet-500/10 dark:text-violet-400" },
-  { match: /keycloak|sso|auth/i, icon: ShieldCheck, tint: "text-rose-600 bg-rose-500/10 dark:text-rose-400" },
-  { match: /ollama|llm|embed|model/i, icon: Cpu, tint: "text-fuchsia-600 bg-fuchsia-500/10 dark:text-fuchsia-400" },
-  { match: /.*/, icon: Server, tint: "text-slate-600 bg-slate-500/10 dark:text-slate-300" },
-];
-
-function glyphFor(s: Service) {
-  return GLYPH.find((g) => g.match.test(s.key) || g.match.test(s.name)) ?? GLYPH[GLYPH.length - 1];
 }
 
 /** The actions a person actually needs from a support assistant, in that order. */
@@ -123,11 +105,11 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
           <ul className="space-y-1">
             {rows.map((s) => {
               const tone = toneOf(s);
-              const g = glyphFor(s);
+              const g = healthGlyph(s.key, s.name);
               return (
                 <li key={s.key} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-2xs">
                   <span className={`grid size-5 shrink-0 place-items-center rounded-md ${g.tint}`}>
-                    <g.icon className="size-3" aria-hidden />
+                    <g.Icon className="size-3" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-muted-foreground" title={s.name}>{s.name}</span>
                   <span className="flex shrink-0 items-center gap-1 font-medium text-foreground">

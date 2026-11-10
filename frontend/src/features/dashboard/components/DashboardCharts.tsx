@@ -142,16 +142,33 @@ export function ConversationChart({
   // The reference board reads one day at a time; hovering a day column shows its three
   // numbers instead of making the reader compare a line against the axis by eye.
   const [hover, setHover] = useState<number | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  /** Nearest day under the pointer. The SVG is uniformly scaled inside its box, so the
+   *  cursor has to be mapped through the same scale (and the letterbox offset) — this is
+   *  why hovering used to feel like it only worked exactly on the dots. */
+  function hoverFromEvent(e: React.MouseEvent<SVGSVGElement>) {
+    const box = boxRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const k = Math.min(box.width / width, box.height / height);
+    const drawnW = width * k;
+    const offsetX = box.left + (box.width - drawnW) / 2;
+    const viewX = (e.clientX - offsetX) / k;
+    const t = (viewX - left) / Math.max(1, chartWidth);
+    const idx = Math.round(t * Math.max(1, data.length - 1));
+    setHover(Math.max(0, Math.min(data.length - 1, idx)));
+  }
 
   return (
     /* The card owns the height now, so the chart fills whatever is left. `meet` scales it
        UNIFORMLY rather than stretching the axis labels out of shape. */
-    <div className="relative mt-2 min-h-0 w-full flex-1 overflow-hidden">
+    <div ref={boxRef} className="relative mt-2 min-h-0 w-full flex-1">
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="h-full w-full"
         preserveAspectRatio="xMidYMid meet"
+        onMouseMove={hoverFromEvent}
         onMouseLeave={() => setHover(null)}
       >
 
@@ -278,31 +295,21 @@ export function ConversationChart({
           )
         )}
 
-        {/* Hover columns: one transparent band per day, so the tooltip works anywhere on
-            the column and not only on a 3px dot. */}
-        {data.map((item, index) => {
-          const band = chartWidth / Math.max(1, data.length - 1);
-          return (
-            <rect
-              key={`hit-${item.day}`}
-              x={xAt(index) - band / 2}
-              y={top}
-              width={band}
-              height={chartHeight}
-              fill="transparent"
-              onMouseEnter={() => setHover(index)}
-            />
-          );
-        })}
-
       </svg>
 
-      {hover !== null && data[hover] && (
+      {hover !== null && data[hover] && (() => {
+        const box = boxRef.current?.getBoundingClientRect();
+        const boxW = box?.width ?? 320;
+        const TIP = 176;                       // the card's own width
+        const k = Math.min(boxW / width, (box?.height ?? height) / height);
+        const offsetX = (boxW - width * k) / 2;
+        const px = offsetX + xAt(hover) * k;
+        // keep the whole card inside the chart at both ends, instead of pinning it to 78%
+        const left = Math.max(6, Math.min(boxW - TIP - 6, px - TIP / 2));
+        return (
         <div
-          className="pointer-events-none absolute top-2 z-10 w-36 rounded-lg border border-[var(--border)] bg-[var(--popover)] p-2 text-2xs shadow-lg"
-          style={{
-            left: `${Math.min(78, Math.max(4, ((xAt(hover) / width) * 100) - 9))}%`,
-          }}
+          className="pointer-events-none absolute top-2 z-10 rounded-lg border border-[var(--border)] bg-[var(--popover)] p-2 text-2xs shadow-lg"
+          style={{ left, width: TIP }}
           role="status"
         >
           <p className="border-b border-[var(--border)] pb-1 font-semibold">{data[hover].day}</p>
@@ -319,7 +326,8 @@ export function ConversationChart({
             <span className="font-semibold tabular-nums">{data[hover].escalated}</span>
           </p>
         </div>
-      )}
+        );
+      })()}
 
     </div>
   );
