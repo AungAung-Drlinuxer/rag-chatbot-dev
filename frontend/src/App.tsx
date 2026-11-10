@@ -30,6 +30,7 @@ import LoginPage from "@/features/auth/pages/LoginPage";
 import ChatPage from "@/features/chat/pages/ChatPage";
 import { Suspense, lazy } from "react";
 import { PageFallback } from "@/components/PageFallback";
+import { displayAppName, useBranding } from "@/app/useBranding";
 
 /**
  * Route-level code splitting.
@@ -52,6 +53,12 @@ export default function App() {
   // v0.21.44 — apply persisted theme on every page load (previously only Settings
   // did, so refreshing on other pages reset the theme).
   useEffect(() => { applyStoredTheme(); }, []);
+  /* The tab title is branding, not a constant: an administrator who names the workspace
+     should see that name in the tab and in anything the app shares. */
+  const brand = useBranding();
+  useEffect(() => {
+    document.title = displayAppName(brand.appName);
+  }, [brand.appName]);
   const [nav, setNav] = useHashNav();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [paletteOpen, setPaletteOpen] = useState(false);

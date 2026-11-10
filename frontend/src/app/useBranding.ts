@@ -3,6 +3,24 @@ import { apiFetch, BASE } from "@/shared/api/client";
 
 export type Branding = { logo: string | null; appName: string | null };
 
+/* No product name is baked into the UI. Until an administrator names the workspace, the
+   app calls itself something plain and the mark is the initials of that name — never a
+   hard-coded "iTH". */
+export const DEFAULT_APP_NAME = "IT Help";
+
+/** Two initials from the brand name: "IT Help Chatbot" → "IH", "Zenith" → "ZE". */
+export function brandInitials(appName?: string | null): string {
+  const name = (appName || "").trim() || DEFAULT_APP_NAME;
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+/** The name to print: the administrator's, or the neutral default. */
+export function displayAppName(appName?: string | null): string {
+  return (appName || "").trim() || DEFAULT_APP_NAME;
+}
+
 let cache: Branding | null = null;
 const listeners = new Set<(b: Branding) => void>();
 

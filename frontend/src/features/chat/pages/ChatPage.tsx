@@ -12,24 +12,13 @@
  * with the evidence rail only from `xl`, because on a phone the transcript is the product.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  BookOpen,
-  CornerDownLeft,
-  Loader2,
-  Send,
-  ShieldCheck,
-  Sparkles,
-  Square,
-  Ticket,
-  X,
-} from "lucide-react";
+import { BookOpen, CornerDownLeft, Loader2, Send, ShieldCheck, Sparkles, Square, Ticket, X, ArrowDown } from "lucide-react";
 
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
-import { EscalateDialog } from "@/features/escalation/EscalateDialog";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
@@ -102,13 +91,23 @@ export default function Chat({ onNavigate, userName }: Props) {
   const [railOpen, setRailOpen] = useState(false);
   // The chat does not own a ticket form: it opens the same dialog the Tickets page uses,
   // with the question and the answer as its starting text.
-  const [escalateOpen, setEscalateOpen] = useState(false);
+  /* "Escalate to IT" and a message's "Create Jira ticket" used to open two different forms —
+     a thin draft/submit escalation, and the real Jira Service Management form with a
+     category, an assignee pool and a request type. One conversation, one form: both entry
+     points now open the same dialog, and the escalating one arrives pre-filled with the
+     conversation it came from. */
+  const [escalatePreset, setEscalatePreset] = useState<{ subject: string; description: string; domain?: string } | null>(null);
   const [ticketFor, setTicketFor] = useState<Message | null>(null);
-  const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string }>({ subject: "", description: "" });
+  const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string; domain?: string }>({ subject: "", description: "" });
 
   const history = useRef<{ role: string; content: string }[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  /* Whether the newest answer is out of view. The conversation is long by nature, and
+     scrolling up to re-read an old answer used to leave no way back except dragging the
+     scrollbar — so the page offers one: "Scroll to end". */
+  const [atBottom, setAtBottom] = useState(true);
+  const atBottomRef = useRef(true);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const startedAt = useRef(0);
 
@@ -123,6 +122,16 @@ export default function Chat({ onNavigate, userName }: Props) {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+    atBottomRef.current = true;
+    setAtBottom(true);
+  }, []);
+
+  /** Distance from the bottom, so the jump button appears only when it is useful. */
+  const onConversationScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+    atBottomRef.current = gap < 96;
+    setAtBottom(gap < 96);
   }, []);
 
   // Auto-grow the composer up to 8 lines, then it scrolls.
@@ -140,7 +149,7 @@ export default function Chat({ onNavigate, userName }: Props) {
   }, [isStreaming]);
 
   useEffect(() => {
-    scrollToEnd(false);
+    if (atBottomRef.current) scrollToEnd(false);
   }, [messages.length, scrollToEnd]);
 
   /* ---------------- conversations ---------------- */
@@ -158,6 +167,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         timestamp: formatMessageTime(m.timestamp ?? m.created_at),
         confidence: m.meta?.confidence != null ? Math.round(m.meta.confidence * 100) : undefined,
         decision: m.meta?.decision,
+        domain: m.meta?.domain,
         sources: toSources(m.meta?.hits),
         usage: m.meta?.usage,
         retrieval: m.meta?.retrieval,
@@ -275,6 +285,7 @@ export default function Chat({ onNavigate, userName }: Props) {
                       ...m,
                       confidence: meta.confidence != null ? Math.round(meta.confidence * 100) : undefined,
                       decision: meta.decision,
+                      domain: meta.domain,
                       sources: toSources(meta.hits),
                       usage: meta.usage,
                       retrieval: meta.retrieval,
@@ -367,6 +378,8 @@ export default function Chat({ onNavigate, userName }: Props) {
     setTicketPreset({
       subject: question?.content.slice(0, 90) || "Incident from the IT assistant",
       description: m.content,
+      // The answer knows which domain it was routed to; the ticket starts there.
+      domain: m.domain,
     });
     setTicketFor(m);
   }
@@ -529,7 +542,15 @@ export default function Chat({ onNavigate, userName }: Props) {
                   )}
                   <button
                     type="button"
-                    onClick={() => setEscalateOpen(true)}
+                    onClick={() => {
+                      const firstUser = messages.find((m) => m.role === "user")?.content ?? "";
+                      const lastAnswer = [...messages].reverse().find((m) => m.role === "assistant");
+                      setEscalatePreset({
+                        subject: (firstUser || lastAnswer?.content || "Support request").slice(0, 160),
+                        description: lastAnswer?.content ?? firstUser,
+                        domain: lastAnswer?.domain,
+                      });
+                    }}
                     title="Escalate to IT — draft a ticket from this conversation"
                     aria-label="Escalate to IT"
                     className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 active:scale-[0.98]"
@@ -547,7 +568,23 @@ export default function Chat({ onNavigate, userName }: Props) {
                   </button>
                 </div>
 
-                <div ref={scrollRef} className="h-full min-h-0 overflow-y-auto px-4 sm:px-6" aria-live="polite">
+                {!atBottom && (
+                  <button
+                    type="button"
+                    onClick={() => scrollToEnd(true)}
+                    aria-label="Scroll to end"
+                    title="Jump to the newest message"
+                    className="absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-2xs font-semibold text-foreground shadow-lg transition hover:bg-[var(--accent-soft)] active:scale-[0.98]"
+                  >
+                    <ArrowDown className="size-3.5" aria-hidden /> Scroll to end
+                  </button>
+                )}
+                <div
+                  ref={scrollRef}
+                  onScroll={onConversationScroll}
+                  className="h-full min-h-0 overflow-y-auto px-4 sm:px-6"
+                  aria-live="polite"
+                >
                   <div className="mx-auto w-full max-w-3xl space-y-5 py-6 sm:py-8">
                     {loadingConversation && (
                       <div className="space-y-3">
@@ -627,23 +664,13 @@ export default function Chat({ onNavigate, userName }: Props) {
         </div>
       )}
 
-      {/* ---------------- escalate ---------------- */}
-      {/* Same form as Tickets → Create ticket: one dialog, one set of fields. */}
-      <EscalateDialog
-        open={escalateOpen}
-        onOpenChange={setEscalateOpen}
-        sessionId={sessionId}
-        onToast={notify}
-      />
-
+      {/* ---------------- one ticket form, two doors ---------------- */}
       <CreateTicketDialog
-        open={!!ticketFor}
-        onOpenChange={(o) => { if (!o) setTicketFor(null); }}
-        preset={{
-          subject: ticketPreset.subject,
-          description: ticketPreset.description,
-          sessionId,
-        }}
+        open={!!ticketFor || !!escalatePreset}
+        onOpenChange={(o) => { if (!o) { setTicketFor(null); setEscalatePreset(null); } }}
+        preset={escalatePreset
+          ? { ...escalatePreset, sessionId }
+          : { subject: ticketPreset.subject, description: ticketPreset.description, domain: ticketPreset.domain, sessionId }}
         onToast={notify}
       />
 

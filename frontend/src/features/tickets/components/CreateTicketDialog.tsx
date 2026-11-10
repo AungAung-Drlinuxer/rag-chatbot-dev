@@ -36,6 +36,10 @@ export type CreateTicketPreset = {
   subject?: string;
   description?: string;
   sessionId?: string | null;
+  /** The routing domain the assistant filed the answer under. Seeds the category, which in
+   *  turn seeds the request type, the project and the assignee pool — Jira Service Management
+   *  routes by request type, so a ticket with no category is a ticket nobody owns. */
+  domain?: string;
 };
 
 type Props = {
@@ -68,6 +72,10 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   const [jiraReady, setJiraReady] = useState<boolean | null>(null);
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  /* A domain key from the chat ("network") has to become the dropdown's label ("Network"),
+     and the dropdown only exists once the domain list has loaded — so remember the request
+     and apply it when the options arrive. */
+  const [pendingDomain, setPendingDomain] = useState<string | null>(null);
 
   // Reference data is loaded once per mount; the dialog is mounted with the page.
   useEffect(() => {
@@ -78,10 +86,8 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
       .then((ds) => {
         if (!ds.length) return;
         const hasGeneral = ds.some((x) => x.key === "general");
-        setCategories([
-          ...(hasGeneral ? [{ key: "general", label: "General" }] : []),
-          ...ds.map((x) => ({ key: x.key, label: x.label })),
-        ]);
+        const list = ds.map((x) => ({ key: x.key, label: x.label }));
+        setCategories(hasGeneral ? list : [{ key: "general", label: "General" }, ...list]);
       })
       .catch(() => {});
   }, []);
@@ -105,10 +111,30 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   // Each opening starts from the preset, not from the previous attempt's leftovers.
   useEffect(() => {
     if (!open) return;
-    setDraft({ ...EMPTY, ...(preset?.subject ? { subject: preset.subject.slice(0, 200) } : {}), ...(preset?.description ? { description: preset.description } : {}) });
+    setDraft({
+      ...EMPTY,
+      ...(preset?.subject ? { subject: preset.subject.slice(0, 200) } : {}),
+      ...(preset?.description ? { description: preset.description } : {}),
+    });
+    setPendingDomain(preset?.domain ? preset.domain.toLowerCase() : null);
     setPendingFiles([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // The answer's routing domain picks the category as soon as the options are known.
+  useEffect(() => {
+    if (!open || !pendingDomain) return;
+    const match = categories.find(
+      (c) => c.key.toLowerCase() === pendingDomain || c.label.toLowerCase() === pendingDomain,
+    );
+    if (!match) return;
+    setDraft((d) =>
+      d.category === EMPTY.category || d.category.toLowerCase() === pendingDomain
+        ? { ...d, category: match.label }
+        : d,
+    );
+    setPendingDomain(null);
+  }, [open, pendingDomain, categories]);
 
   async function submit() {
     if (!draft.subject.trim()) {

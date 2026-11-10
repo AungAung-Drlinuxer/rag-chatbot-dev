@@ -14,9 +14,10 @@ import { createRoot, type Root } from "react-dom/client";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-vi.mock("@/app/useBranding", () => ({
-  useBranding: () => ({ appName: "IT Help Chatbot", short: "iTH" }),
-}));
+vi.mock("@/app/useBranding", async (orig) => {
+  const real = await orig<typeof import("@/app/useBranding")>();
+  return { ...real, useBranding: () => ({ logo: null, appName: "IT Help Chatbot" }) };
+});
 
 // The page probes /health on mount; that is not what this suite is about.
 vi.mock("@/shared/api/client", async (orig) => {

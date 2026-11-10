@@ -18,7 +18,9 @@ import { Panel, Row, Segmented } from "../components/SettingsKit";
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
 import SetupChecklist from "../components/SetupChecklist";
-import { BrandingSettings } from "../components/BrandingSettings";
+import { BrandingSettings, fetchBranding } from "../components/BrandingSettings";
+import { refreshBrandingCache } from "@/app/useBranding";
+import { apiFetch, authHeaders, BASE } from "@/shared/api/client";
 import { AiServiceSettings } from "../components/AiServiceSettings";
 import { EmailServerSettings } from "../components/EmailServerSettings";
 import { Image as ImageIcon } from "lucide-react";
@@ -142,6 +144,12 @@ export default function Settings({ role }: { role?: string }) {
   const [showTokenUsage, setShowTokenUsage] = useState(true);
   const [markdownRendering, setMarkdownRendering] = useState(true);
 
+  /* Branding is an administrator's preference too, so it rides in this form: the name is
+     staged here and written by the SAME Save button as everything else (it used to have a
+     "Save name" button of its own, which made the page have two ideas of "saved"). */
+  const [brandName, setBrandName] = useState<string | null>(null);
+  const [brandBaseline, setBrandBaseline] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -160,7 +168,10 @@ export default function Settings({ role }: { role?: string }) {
     show_token_usage: showTokenUsage,
     markdown_rendering: markdownRendering,
   };
-  const dirty = baseline !== null && JSON.stringify(currentValues) !== JSON.stringify(baseline);
+  const dirty = baseline !== null && (
+    JSON.stringify(currentValues) !== JSON.stringify(baseline)
+    || (isAdmin && brandName !== brandBaseline)
+  );
 
   // The API returns a flat preference object (older servers may wrap it).
   useEffect(() => {
@@ -197,6 +208,13 @@ export default function Settings({ role }: { role?: string }) {
         applyThemeNow(dark, dense, anim, fontSize);
       })
       .catch((e) => { if (mounted) setSaveError(e?.message || "Could not load saved settings"); });
+
+    // The brand name is part of this form for an administrator, so it loads with it.
+    if (isAdmin) {
+      fetchBranding()
+        .then((b) => { if (!mounted) return; setBrandName(b.appName ?? ""); setBrandBaseline(b.appName ?? ""); })
+        .catch(() => {});
+    }
     return () => { mounted = false; };
   }, []);
 
@@ -205,6 +223,23 @@ export default function Settings({ role }: { role?: string }) {
     const payload = currentValues;
     try {
       await updateMySettings(payload);
+      // One Save: the brand name rides with the preferences (admin only, and only when it
+      // actually changed — the endpoint is administrator-gated).
+      if (isAdmin && brandName !== brandBaseline) {
+        const r = await apiFetch(`${BASE}/api/admin/branding/app-name`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ appName: brandName ?? "" }),
+        });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          throw new Error(j?.detail || `Brand name was not saved (HTTP ${r.status})`);
+        }
+        const b = await fetchBranding();
+        refreshBrandingCache(b);
+        setBrandName(b.appName ?? "");
+        setBrandBaseline(b.appName ?? "");
+      }
       applyThemeNow(darkMode, compact, animations, chatFontSize);
       window.dispatchEvent(new CustomEvent("ith:settings-saved", { detail: payload }));
       setBaseline(currentValues);
@@ -244,6 +279,7 @@ export default function Settings({ role }: { role?: string }) {
     setSourceCitations(baseline.show_rag_sources);
     setShowTokenUsage(baseline.show_token_usage);
     setMarkdownRendering(baseline.markdown_rendering);
+    if (isAdmin && brandBaseline !== null) setBrandName(brandBaseline);
     applyThemeNow(dark, baseline.compact, baseline.animations, baseline.chat_font_size);
     setSaveError(null);
   }
@@ -430,7 +466,10 @@ export default function Settings({ role }: { role?: string }) {
               description="Custom logo and brand name shown on the login page and sidebar."
             >
               <div className="p-5">
-                <BrandingSettings />
+                <BrandingSettings
+                  appName={brandName}
+                  onAppNameChange={setBrandName}
+                />
               </div>
             </SectionCard>
             )}

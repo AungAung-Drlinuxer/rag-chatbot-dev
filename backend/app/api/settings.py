@@ -748,7 +748,8 @@ def put_branding_app_name(
     """ADMIN — set the brand name (optional) shown beside the logo.
 
     Body: {"appName": "My IT Help" | null}
-    Empty string clears the override (falls back to "IT Help Chatbot").
+    Empty string clears the override, and the installation falls back to its neutral
+    built-in name — no product name is baked into the UI.
     """
     _require_admin(user)
     name = body.get("appName")
@@ -759,7 +760,7 @@ def put_branding_app_name(
                         {"k": BRANDING_KEY}).first()
         cur = _json_dict(row[0] if row else None)
         if name:
-            cur["appName"] = name[:60]  # cap length
+            cur["appName"] = name[:48]  # cap length (the field caps at 48 too)
         else:
             cur.pop("appName", None)
         s.execute(_t(

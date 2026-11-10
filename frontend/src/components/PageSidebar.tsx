@@ -6,7 +6,7 @@
  * still answers a deep link or a bookmarked URL with the reason. */
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
-import { useBranding } from "@/app/useBranding";
+import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
 import { BookOpen, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { useNotifications, NotificationBell } from "@/components/NotificationBell";
 import {
@@ -158,7 +158,13 @@ export default function PageSidebar({
           {branding.logo ? (
             <img src={branding.logo} alt="Logo" className="size-8 rounded-xl object-contain" />
           ) : (
-            <div className="grid size-8 place-items-center rounded-xl bg-white text-xs font-extrabold text-violet-700 shadow-sm dark:bg-[var(--primary)] dark:text-white">iTH</div>
+            <div className="grid size-8 place-items-center overflow-hidden rounded-xl bg-white text-xs font-extrabold text-violet-700 shadow-sm dark:bg-[var(--primary)] dark:text-white">
+              {branding.logo ? (
+                <img src={branding.logo} alt="" className="size-full object-contain p-1" />
+              ) : (
+                brandInitials(branding.appName)
+              )}
+            </div>
           )}
           {onToggleCollapsed && (
             <button
@@ -178,10 +184,16 @@ export default function PageSidebar({
             {branding.logo ? (
               <img src={branding.logo} alt="Company logo" className="size-8 shrink-0 rounded-xl object-contain" />
             ) : (
-              <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-white text-xs font-extrabold text-violet-700 shadow-sm dark:bg-[var(--primary)] dark:text-white">iTH</div>
+              <div className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl bg-white text-xs font-extrabold text-violet-700 shadow-sm dark:bg-[var(--primary)] dark:text-white">
+                {branding.logo ? (
+                  <img src={branding.logo} alt="" className="size-full object-contain p-1" />
+                ) : (
+                  brandInitials(branding.appName)
+                )}
+              </div>
             )}
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-white truncate">{branding.appName || "IT Help Chatbot"}</div>
+              <div className="text-xs font-semibold text-white truncate">{displayAppName(branding.appName)}</div>
             </div>
           </div>
 
@@ -466,7 +478,13 @@ export default function PageSidebar({
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <div className="grid size-8 place-items-center rounded-lg bg-violet-600 text-2xs font-bold text-white">iTH</div>
+          <div className="grid size-8 place-items-center overflow-hidden rounded-lg bg-violet-600 text-2xs font-bold text-white">
+            {branding.logo ? (
+              <img src={branding.logo} alt="" className="size-full object-contain p-1" />
+            ) : (
+              brandInitials(branding.appName)
+            )}
+          </div>
           <span className="text-xs font-semibold">IT Help</span>
         </div>
         {/* Reachable without opening the drawer — it was only inside the sidebar, which on

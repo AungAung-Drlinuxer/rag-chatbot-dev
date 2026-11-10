@@ -33,6 +33,9 @@ export type Message = {
   timestamp: string;
   confidence?: number;
   decision?: string;
+  /** The routing domain the assistant filed this answer under ("network", "policy", …).
+   *  A ticket raised from the answer starts in that category instead of "General". */
+  domain?: string;
   topK?: number;
   sources?: Source[];
   usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };

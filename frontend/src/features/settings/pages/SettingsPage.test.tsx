@@ -53,6 +53,8 @@ vi.mock("../components/IntegrationsConfig", () => ({
 }));
 vi.mock("../components/BrandingSettings", () => ({
   BrandingSettings: () => <div data-stub="branding">BrandingSettings panel</div>,
+  // the page now loads the brand name itself, so it needs this too
+  fetchBranding: () => Promise.resolve({ logo: null, appName: null }),
 }));
 vi.mock("../components/AiServiceSettings", () => ({
   AiServiceSettings: () => <div data-stub="ai">AiServiceSettings panel</div>,

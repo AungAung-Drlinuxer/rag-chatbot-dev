@@ -13,7 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { useBranding } from "@/app/useBranding";
+import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
 import { healthPing } from "@/features/auth/api";
 
 /**
@@ -81,7 +81,7 @@ export default function Login({
   const branding = useBranding();
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
 
-  const appName = branding.appName || "IT Help Chatbot";
+  const appName = displayAppName(branding.appName);
 
   /* Single sign-on is offered under its real name. "SSO" told the user nothing about
      where they were being sent; Keycloak is what the realm actually is, and the realm
@@ -421,7 +421,7 @@ function Logo({ branding, size, onDark = false }: {
     <div
       className={`${box} grid shrink-0 place-items-center bg-[var(--primary)] font-extrabold tracking-tight text-white shadow-sm ${onDark ? "ring-1 ring-white/30" : ""}`}
     >
-      iTH
+      {brandInitials(branding.appName)}
     </div>
   );
 }
