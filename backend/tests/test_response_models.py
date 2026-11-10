@@ -44,7 +44,15 @@ def _h(username: str = "dev") -> dict:
 
 
 def _schema(client, path: str, method: str = "get") -> dict:
-    spec = client.get("/openapi.json").json()
+    """Read the schema from the app object, not from GET /openapi.json.
+
+    The HTTP endpoint only exists when docs are enabled for that deployment, so the test
+    used to fail on `spec["paths"]` for a reason that had nothing to do with response
+    models. `app.openapi()` is always available and is the same document.
+    """
+    from app.main import app
+
+    spec = app.openapi()
     return spec["paths"][path][method]["responses"]["200"]["content"]["application/json"]["schema"]
 
 

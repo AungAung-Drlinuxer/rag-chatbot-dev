@@ -737,14 +737,23 @@ export default function Knowledge({ role, onToast }: Props) {
                 <div className="text-2xs font-semibold uppercase tracking-wide text-[var(--warn)]">
                   Needs review
                 </div>
-                <p className="mt-0.5 font-semibold">A little organization goes a long way</p>
+                <p className="mt-0.5 font-semibold">
+                  {gen > 0
+                    ? `${gen} article${gen === 1 ? "" : "s"} sit in General IT`
+                    : "Some domains are not usable by the classifier"}
+                </p>
                 <p className="mt-0.5 leading-relaxed">
                   {gen > 0 && (
-                    <>{gen} article{gen === 1 ? "" : "s"} still in General IT.</>
+                    <>
+                      General IT is the fallback bucket: the classifier cannot route these
+                      by domain, so they are matched by keyword only and can surface for the
+                      wrong question. Articles that genuinely belong there (contacts,
+                      escalation guides, “Start Here”) can stay.
+                    </>
                   )}
                   {gen > 0 && noDesc.length > 0 && " "}
                   {noDesc.length > 0 && (
-                    <>{noDesc.length} domain{noDesc.length === 1 ? "" : "s"} have no description and cannot be used by the classifier.</>
+                    <>{noDesc.length} domain{noDesc.length === 1 ? "" : "s"} have no description — the classifier cannot choose them at all.</>
                   )}
                 </p>
               </div>

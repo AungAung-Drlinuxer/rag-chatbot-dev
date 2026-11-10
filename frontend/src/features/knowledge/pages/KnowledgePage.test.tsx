@@ -249,7 +249,8 @@ describe("KnowledgePage — filters, search and sync", () => {
     });
     const text = (await mount("admin")).textContent!;
     expect(text).toContain("Needs review");
-    expect(text).toContain("5 articles still in General IT");
+    expect(text).toContain("5 articles sit in General IT");
+    expect(text).toContain("fallback bucket");
     expect(text).toContain("1 domain have no description");
   });
 });

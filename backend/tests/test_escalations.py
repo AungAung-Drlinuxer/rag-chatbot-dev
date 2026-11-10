@@ -1,15 +1,15 @@
 """Phase 6 — list escalations endpoint (GET /api/escalations)."""
 from fastapi.testclient import TestClient
 
+from app.auth.jwt import create_access_token
 from app.main import app
 
 client = TestClient(app)
 
 
 def _token() -> str:
-    r = client.post("/api/auth/login", json={"username": "dev", "password": "dev"})
-    assert r.status_code == 200
-    return r.json()["access_token"]
+    """A signed token — the dev password bypass no longer exists (see test_auth.py)."""
+    return create_access_token("dev")
 
 
 def test_list_escalations_shape():

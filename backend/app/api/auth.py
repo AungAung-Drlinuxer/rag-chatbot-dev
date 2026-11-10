@@ -167,6 +167,12 @@ def _serialize_user_settings(s: UserSettings) -> dict:
     }
 
 
+# Free-form UI preferences that legitimately live in the `prefs` JSONB blob rather than a
+# column of their own. Anything else sent to PUT /api/settings is ignored — the endpoint
+# used to persist whatever key it was handed, which made it an unbounded write into the
+# user's own row.
+_PREFS_FIELDS = {"darkMode", "compact", "animations", "appName", "appShort", "cliHintSeen"}
+
 _USER_SETTABLE_FIELDS = {
     "theme", "density", "chat_font_size", "code_font",
     "show_token_usage", "show_rag_sources", "stream_responses",
@@ -254,29 +260,23 @@ def update_my_settings(payload: dict, user: str = Depends(get_current_user)) -> 
         for k, v in payload.items():
             if k in _USER_SETTABLE_FIELDS and v is not None:
                 setattr(row, k, v)
-            elif v is not None:
+            elif k in _PREFS_FIELDS and v is not None:
                 extras[k] = v
         if extras:
-            existing = s.execute(
-                _t("SELECT prefs FROM user_settings WHERE username = :u"), {"u": user}
-            ).first()
-            prefs = existing[0] if existing else {}
-            if isinstance(prefs, str):
+            # Merge the unknown keys into the JSONB blob on the ORM row. A hand-written
+            # `INSERT (username, theme, density, prefs)` left every other NOT NULL column
+            # (chat_font_size, show_token_usage, …) to the database, which has none — so the
+            # first save of a brand-new user died on a NotNullViolation. The ORM fills the
+            # Python-side defaults, which is what those columns actually rely on.
+            prefs = row.prefs or {}
+            if isinstance(prefs, str):  # legacy rows held JSON text
                 try:
                     prefs = _json.loads(prefs)
                 except Exception:
                     prefs = {}
-            prefs = prefs or {}
+            prefs = dict(prefs)
             prefs.update(extras)
-            s.execute(
-                _t(
-                    "INSERT INTO user_settings (username, theme, density, prefs) "
-                    "VALUES (:u, :t, :d, :p) "
-                    "ON CONFLICT (username) DO UPDATE SET theme = :t, density = :d, prefs = :p, updated_at = NOW()"
-                    ),
-                    {"u": user, "t": row.theme or "light", "d": row.density or "comfortable",
-                 "p": _json.dumps(prefs)},
-            )
+            row.prefs = prefs
         s.commit()
         s.refresh(row)
         out = _serialize_user_settings(row)

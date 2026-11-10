@@ -282,4 +282,16 @@ describe("DashboardPage — empty and error states", () => {
     // The KPI row still renders, but with an em dash rather than an invented 0.
     expect(el.textContent).toContain("—");
   });
+
+  it("describes the board in the caller's own terms", async () => {
+    // An organization view and a personal view are not the same page; the copy must not
+    // tell a plain user they are looking at "who it helped".
+    await mount("admin");
+    expect(document.body.textContent).toContain("who it helped");
+    expect(document.body.textContent).not.toContain("Your conversations");
+
+    await mount("user"); // mount() unmounts the previous tree itself
+    expect(document.body.textContent).toContain("Your conversations");
+    expect(document.body.textContent).not.toContain("who it helped");
+  });
 });

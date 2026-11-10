@@ -10,6 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
+    text,
     BigInteger,
     Boolean,
     DateTime,
@@ -231,6 +232,9 @@ class UserSettings(Base):
     escalate_open_new_tab: Mapped[bool] = mapped_column(default=True)
     # Code style
     code_font: Mapped[str] = mapped_column(String(32), default="JetBrains Mono")
+    # Free-form UI prefs saved by SettingsPage (darkMode, appName, …). The API reads this
+    # column with raw SQL; it must exist in the model too, or create_all never makes it.
+    prefs: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

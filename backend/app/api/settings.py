@@ -622,9 +622,9 @@ def list_llm_models(user: str = Depends(require_role("admin"))) -> dict:
     Returns [{id, name}] sorted by id. Used by the Settings -> Integrations ->
     Models Provider model selector so admins pick from the provider's real list.
     """
-    from app.auth.rbac import get_role as _get_role
-    if _get_role(user) != "admin":
-        raise HTTPException(status_code=403, detail="Administrator permission required.")
+    # The route dependency is already require_role("admin"); the extra in-body check
+    # re-tested a value that is not the username and locked an administrator out of the
+    # model catalogue. One guard, in one place.
     import httpx
     with SessionLocal() as s:
         from sqlalchemy import text as _t

@@ -32,11 +32,28 @@ def client():
 
 @pytest.fixture(scope="module")
 def admin():
-    from app.config import SETTINGS
+    """A real administrator identity.
 
-    names = [u.strip() for u in (SETTINGS.dev_admin_usernames or "").split(",") if u.strip()]
-    assert names, "dev_admin_usernames is empty — no admin identity available in tests"
-    return {"Authorization": f"Bearer {create_access_token(names[0])}"}
+    A token alone is not enough any more: `require_role("admin")` reads the caller's role
+    from the users table, so the fixture has to create that row. Minting a token for
+    whatever username happened to be in DEV_ADMIN_USERNAMES answered 403 as soon as RBAC
+    was on.
+    """
+    from sqlalchemy import text as _sql
+
+    from app.persistence.database import SessionLocal
+
+    username = "settings.admin"
+    with SessionLocal() as s:
+        s.execute(
+            _sql(
+                "INSERT INTO users (username, status, role_override) VALUES (:u, 'Active', 'admin') "
+                "ON CONFLICT (username) DO UPDATE SET status = 'Active', role_override = 'admin'"
+            ),
+            {"u": username},
+        )
+        s.commit()
+    return {"Authorization": f"Bearer {create_access_token(username)}"}
 
 
 # --------------------------------------------------------------------------- #

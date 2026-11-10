@@ -1,11 +1,17 @@
-"""Tests for the top_k override in RAGOrchestrationResult (Phase 10.1)."""
-from app.config import SETTINGS
+"""top_k: the per-call override, and the admin-tunable default.
+
+The default is no longer read from SETTINGS — the runtime registry (system_settings,
+editable from the admin RAG panel) is the source of truth, so a test that monkeypatched
+SETTINGS was asserting against a value the orchestrator had stopped consulting.
+"""
+import app.runtime as runtime
+
 from app.orchestration import orchestrator as orchestration
 
 
-def test_run_rag_uses_default_top_k(monkeypatch):
-    """If top_k is None, fall back to SETTINGS.retrieval_top_k and echo it on the result."""
-    monkeypatch.setattr(SETTINGS, "retrieval_top_k", 7)
+def test_run_rag_uses_the_runtime_default_top_k(monkeypatch):
+    """If top_k is None, fall back to the runtime knob and echo it on the result."""
+    monkeypatch.setattr(runtime, "get", lambda key, *a: 7 if key == "retrieval_top_k" else 0)
     # Force the retriever to return [] (no real DB needed) and to NOT raise.
     monkeypatch.setattr(orchestration, "_retrieve", lambda q, d, k=None: [])
     res = orchestration.run_rag("hello")
@@ -15,7 +21,7 @@ def test_run_rag_uses_default_top_k(monkeypatch):
 
 def test_run_rag_respects_top_k_override(monkeypatch):
     """Per-call top_k should override the global default."""
-    monkeypatch.setattr(SETTINGS, "retrieval_top_k", 3)
+    monkeypatch.setattr(runtime, "get", lambda key, *a: 3 if key == "retrieval_top_k" else 0)
     seen_k = {}
 
     def fake_retrieve(rewritten, domain, k=None):

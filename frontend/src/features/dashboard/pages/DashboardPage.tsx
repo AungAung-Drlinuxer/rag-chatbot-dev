@@ -69,6 +69,13 @@ type Props = {
 
 export default function Dashboard({ role, perms }: Props) {
   const canSeeUsage = role === "admin" || !!(perms && perms.manage_users);
+  // The board means two different things depending on the caller: an administrator or a
+  // Knowledge Manager reads the whole organization, everyone else reads their own trail.
+  // The copy has to say which, or a plain user is told they are looking at "who it helped".
+  const orgWide = canSeeUsage || role === "knowledge" || role === "domain_manager";
+  const roleBadge = role === "admin" ? "Administrator"
+    : role === "knowledge" || role === "domain_manager" ? "Knowledge Manager"
+    : "User";
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   // The COMMITTED reporting window is the state. The picker's controls are only ways to
@@ -356,9 +363,11 @@ export default function Dashboard({ role, perms }: Props) {
         breadcrumbs={["Workspace", "Overview"]}
         eyebrow="Workspace"
         icon={<Home className="size-5" />}
-        badge={role === "admin" ? "Administrator" : "User"}
+        badge={roleBadge}
         title="Overview"
-        description="What the assistant did, who it helped, and what still needs a human."
+        description={orgWide
+          ? "What the assistant did, who it helped, and what still needs a human."
+          : "Your conversations, the tickets you raised, and how the assistant answered you."}
         dense
         actions={<>
           <div className="relative hidden sm:block">

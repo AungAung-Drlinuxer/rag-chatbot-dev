@@ -1,9 +1,39 @@
-"""Tests for Knowledge-tab endpoints (v0.4.0): domains/recent/list/sync-status."""
+"""Tests for Knowledge-tab endpoints (v0.4.0): domains/recent/list/sync-status.
+
+These ingest two articles, which means real embeddings and a real vector store — the
+suite is skipped when the local embedding model is not answering, instead of failing with
+a ConnectionError that says nothing about the endpoint under test.
+"""
+import httpx
+import pytest
 from sqlalchemy import text
 
+from app.auth.jwt import create_access_token
+from app.config import SETTINGS
 from app.knowledge.ingest import ingest_article
 from app.main import app
 from app.persistence.database import engine, init_db
+
+
+def _embeddings_reachable() -> bool:
+    base = (getattr(SETTINGS, "ollama_base_url", "") or "").rstrip("/")
+    if not base:
+        return False
+    try:
+        return httpx.get(f"{base}/api/tags", timeout=2.0).status_code == 200
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _embeddings_reachable(),
+    reason="needs the local embedding model (Ollama) to ingest the fixtures",
+)
+
+
+def _auth() -> dict:
+    """A signed token — the dev password bypass no longer exists."""
+    return {"Authorization": f"Bearer {create_access_token('dev')}"}
 
 
 def _client():
@@ -26,8 +56,7 @@ def _seed():
 def test_domains_and_recent():
     _seed()
     c = _client()
-    tok = c.post("/api/auth/login", json={"username": "dev", "password": "dev"}).json()["access_token"]
-    H = {"Authorization": f"Bearer {tok}"}
+    H = _auth()
 
     r = c.get("/api/articles-domains", headers=H)
     assert r.status_code == 200
@@ -43,8 +72,7 @@ def test_domains_and_recent():
 def test_list_filters_by_domain():
     _seed()
     c = _client()
-    tok = c.post("/api/auth/login", json={"username": "dev", "password": "dev"}).json()["access_token"]
-    r = c.get("/api/articles-list", params={"domain": "database"}, headers={"Authorization": f"Bearer {tok}"})
+    r = c.get("/api/articles-list", params={"domain": "database"}, headers=_auth())
     arts = r.json()["articles"]
     assert arts and all(a["domain"] == "database" for a in arts)
     assert any(a["title"] == "DB Timeout" for a in arts)
@@ -55,8 +83,7 @@ def test_sync_status():
     from app.knowledge.ingest import sync_all
     sync_all(updated_by="tester")
     c = _client()
-    tok = c.post("/api/auth/login", json={"username": "dev", "password": "dev"}).json()["access_token"]
-    r = c.get("/api/sync-status", headers={"Authorization": f"Bearer {tok}"})
+    r = c.get("/api/sync-status", headers=_auth())
     body = r.json()
     assert body["pages"] >= 2
     assert body["healthy"] and "inserted" in body["last_run"]

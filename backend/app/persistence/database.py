@@ -175,6 +175,15 @@ def init_db() -> None:
             "UPDATE langchain_pg_embedding SET tsv = to_tsvector('english', document) "
             "WHERE tsv IS NULL",
         ),
+        # The settings API stores free-form UI preferences (darkMode, appName, …) as one
+        # JSONB blob. The column was added to the queries but never to the model, so a
+        # database created before it — and every fresh install, because create_all only
+        # creates tables, never columns — answered "column prefs does not exist" with a 500
+        # on /api/auth/me and /api/settings. Additive and idempotent.
+        (
+            "user_settings.prefs",
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS prefs JSONB NOT NULL DEFAULT '{}'::jsonb",
+        ),
         # HNSW index for fast cosine search (needs pgvector >= 0.5).
         (
             "langchain_pg_embedding HNSW index",

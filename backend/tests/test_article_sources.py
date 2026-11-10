@@ -28,7 +28,7 @@ def test_classify_source(url, page_id, expected):
 
 def test_article_sources_counts_each_provider(monkeypatch):
     """The endpoint itself must work — the page calls it on every load."""
-    import app.persistence.database as db
+    import app.api.knowledge as knowledge_api
 
     class _Res:
         def __init__(self, rows): self._rows = rows
@@ -43,7 +43,10 @@ def test_article_sources_counts_each_provider(monkeypatch):
             ("", "manual-7"),
         ])
 
-    monkeypatch.setattr(db, "SessionLocal", lambda: _S())
+    # Patch the name the endpoint actually calls: knowledge.py imported SessionLocal into
+    # its own namespace, so patching app.persistence.database had no effect and the test
+    # silently read the real (empty) table.
+    monkeypatch.setattr(knowledge_api, "SessionLocal", lambda: _S())
 
     from app.api.knowledge import article_sources
 

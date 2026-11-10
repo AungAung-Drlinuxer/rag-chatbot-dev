@@ -1,15 +1,20 @@
 """Phase 10 — RECENT CONVERSATIONS: list / load / clear (GET/DELETE /api/conversations)."""
 from fastapi.testclient import TestClient
 
+from app.auth.jwt import create_access_token
 from app.main import app
 
 client = TestClient(app)
 
 
 def _token() -> str:
-    r = client.post("/api/auth/login", json={"username": "dev", "password": "dev"})
-    assert r.status_code == 200, r.text
-    return r.json()["access_token"]
+    """A signed token, not a login round trip.
+
+    These suites used to POST /api/auth/login with dev/dev, which only worked while the
+    dev password bypass existed. The bypass is gone — a credential row is required — and
+    these endpoints only need an authenticated principal, so mint one directly.
+    """
+    return create_access_token("dev")
 
 
 def _auth() -> dict:
