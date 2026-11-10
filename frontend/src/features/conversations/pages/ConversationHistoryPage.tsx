@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutGrid,
   List,
+  MessageSquare,
   MessagesSquare,
   RefreshCw,
   Search,
@@ -104,6 +105,29 @@ function maskProfanity(text: string): string {
 }
 
 /** One figure per card, counted from the loaded list. */
+/** The pager control Users uses: same size, same active fill. */
+function PagerButton({ label, active, disabled, onClick }: {
+  label: string; active?: boolean; disabled?: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-current={active ? "page" : undefined}
+      className={[
+        "grid h-8 min-w-8 place-items-center rounded-lg border px-2 text-xs font-medium transition",
+        active
+          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
+          : "border-[var(--border)] bg-card text-foreground hover:bg-[var(--muted)]",
+        disabled ? "cursor-not-allowed opacity-40" : "",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+}
+
 function StatCard({
   icon,
   value,
@@ -146,6 +170,9 @@ export default function ConversationHistoryPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
   // v0.21.83 — audit date range + export actions moved into the detail panel
   const [fromDate, setFromDate] = useState("");
+  /* Ten per page, the same rhythm as Users — a conversation list is read page by page,
+     not scrolled as one endless strip. */
+  const [page, setPage] = useState(1);
   const [toDate, setToDate] = useState("");
 
   async function load() {
@@ -226,6 +253,16 @@ export default function ConversationHistoryPage() {
   const activeUsers = new Set(convs.map((c) => c.username)).size;
   const filtered = q.trim() !== "" || fromDate !== "" || toDate !== "" || filterUser !== "";
 
+  const PER_PAGE = 10;
+  const pageCount = Math.max(1, Math.ceil(shown.length / PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const pageRows = shown.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+  const rangeStart = shown.length === 0 ? 0 : (safePage - 1) * PER_PAGE + 1;
+  const rangeEnd = Math.min(safePage * PER_PAGE, shown.length);
+
+  // Narrowing a filter must not leave the reader on a page that no longer exists.
+  useEffect(() => { setPage(1); }, [q, fromDate, toDate, filterUser]);
+
   // Group the transcript by day so the panel can show the mockup's day dividers.
   const grouped = useMemo(() => {
     const out: { day: string; items: Msg[] }[] = [];
@@ -260,7 +297,7 @@ export default function ConversationHistoryPage() {
       />
 
       <main className="space-y-4">
-        <section className="grid auto-rows-fr gap-3 sm:gap-4 md:grid-cols-3">
+        <section className="grid auto-rows-fr gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<LayoutGrid className="size-4" />}
             value={String(convs.length)}
@@ -282,14 +319,34 @@ export default function ConversationHistoryPage() {
             caption="Distinct users in this result"
             loading={loading}
           />
+          <StatCard
+            icon={<MessageSquare className="size-4" />}
+            value={convs.length ? (totalMsgs / convs.length).toFixed(1) : "0"}
+            title="Avg messages"
+            caption="Per conversation in this result"
+            loading={loading}
+          />
         </section>
 
-        {/* Toolbar — drives the list and the transcript panel together. */}
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border)] bg-card px-4 py-3">
-          {/* Same search control as Tickets, Knowledge, Domains and Users: icon inside the
-              field, focus ring on the input itself. It used to be a hand-rolled wrapper with
-              the border on the div, which is why this page's box looked different. */}
-          <div className="relative min-w-[220px] flex-1">
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+          {/* List table — USER · CONVERSATION · MSGS · LAST ACTIVITY, as in the mockup. */}
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+            <div className="flex items-center justify-between gap-3 px-5 py-4">
+              <h2 className="text-sm font-semibold">
+                Conversations
+                <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-2xs font-normal text-muted-foreground">
+                  {shown.length}
+                </span>
+              </h2>
+              <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
+                Latest activity
+                <ArrowDown className="size-3" />
+              </span>
+            </div>
+
+            {/* toolbar — same position and controls as Users: search, filters, range */}
+            <div className="flex flex-wrap items-center gap-2 px-5 pb-4">
+<div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <input
               value={q}
@@ -340,25 +397,9 @@ export default function ConversationHistoryPage() {
           >
             Reset
           </button>
-        </section>
-
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-          {/* List table — USER · CONVERSATION · MSGS · LAST ACTIVITY, as in the mockup. */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
-            <div className="flex items-center justify-between gap-3 px-5 py-4">
-              <h2 className="text-sm font-semibold">
-                Conversations
-                <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-2xs font-normal text-muted-foreground">
-                  {shown.length}
-                </span>
-              </h2>
-              <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
-                Latest activity
-                <ArrowDown className="size-3" />
-              </span>
             </div>
 
-            <div className="max-h-[560px] overflow-auto">
+            <div className="overflow-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">
@@ -378,7 +419,7 @@ export default function ConversationHistoryPage() {
                       </tr>
                     ))
                   )}
-                  {!loading && shown.map((c) => (
+                  {!loading && pageRows.map((c) => (
                     <tr
                       key={c.session_id}
                       onClick={() => view(c)}
@@ -440,6 +481,24 @@ export default function ConversationHistoryPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* range + pager footer — the same footer as Users */}
+            {!loading && shown.length > 0 && (
+              <div className="flex flex-col gap-3 border-t border-[var(--border)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-xs text-muted-foreground">
+                  Showing {rangeStart} to {rangeEnd} of {shown.length} conversations
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))} />
+                  {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
+                    <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
+                  ))}
+                  {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
+                  <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((n) => Math.min(pageCount, n + 1))} />
+                  <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
+                </div>
+              </div>
+            )}
 
             <div className="border-t border-[var(--border)] px-5 py-3 text-2xs text-muted-foreground">
               Showing {shown.length} of {convs.length} conversation{convs.length === 1 ? "" : "s"}

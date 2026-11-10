@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   ArrowDown,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Copy,
   Download,
+  ListFilter,
   RefreshCw,
   ScrollText,
   Search,
@@ -147,6 +146,28 @@ const AUDIT_FETCH_LIMIT = 500;
  */
 const PAGE_SIZE = 10;
 
+function PagerButton({ label, active, disabled, onClick }: {
+  label: string; active?: boolean; disabled?: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-current={active ? "page" : undefined}
+      className={[
+        "grid h-8 min-w-8 place-items-center rounded-lg border px-2 text-xs font-medium transition",
+        active
+          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
+          : "border-[var(--border)] bg-card text-foreground hover:bg-[var(--muted)]",
+        disabled ? "cursor-not-allowed opacity-40" : "",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function AuditsPage() {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -157,6 +178,10 @@ export default function AuditsPage() {
   const [filterAction, setFilterAction] = useState("");
   const [filterResult, setFilterResult] = useState("");
   const [page, setPage] = useState(1);
+  /* Time range, same control pair as Conversations: an audit question is almost always
+     "what happened between X and Y", and the log can be far too long to scan. */
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   async function load() {
     setLoading(true);
@@ -185,6 +210,9 @@ export default function AuditsPage() {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
       if (filterResult && resultOf(r) !== filterResult) return false;
+      const day = (r.created_at ?? "").slice(0, 10);
+      if (fromDate && day < fromDate) return false;
+      if (toDate && day > toDate) return false;
       if (!needle) return true;
       return (
         (r.username ?? "").toLowerCase().includes(needle) ||
@@ -193,7 +221,7 @@ export default function AuditsPage() {
         (r.detail ?? "").toLowerCase().includes(needle)
       );
     });
-  }, [rows, q, filterResult]);
+  }, [rows, q, filterResult, fromDate, toDate]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // Clamp rather than reset: narrowing a filter must never leave the view past the
@@ -211,11 +239,13 @@ export default function AuditsPage() {
   }, [rows]);
   const users = useMemo(() => new Set(rows.map((r) => r.username).filter(Boolean)).size, [rows]);
 
-  const hasFilters = Boolean(q || filterAction || filterResult);
+  const hasFilters = Boolean(q || filterAction || filterResult || fromDate || toDate);
   function resetFilters() {
     setQ("");
     setFilterAction("");
     setFilterResult("");
+    setFromDate("");
+    setToDate("");
     setPage(1);
   }
 
@@ -276,7 +306,7 @@ export default function AuditsPage() {
         />
 
         {/* summary cards — label left, icon right, big number, muted caption */}
-        <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             icon={<Copy className="size-4" />}
             label="Total events in log"
@@ -294,6 +324,12 @@ export default function AuditsPage() {
             label="Distinct users"
             value={users.toLocaleString()}
             caption="In loaded events"
+          />
+          <SummaryCard
+            icon={<ListFilter className="size-4" />}
+            label="In this range"
+            value={filtered.length.toLocaleString()}
+            caption={fromDate || toDate ? `${fromDate || "…"} → ${toDate || "…"}` : "No date limit applied"}
           />
         </div>
 
@@ -344,10 +380,29 @@ export default function AuditsPage() {
               <option value="answer">Answer</option>
               <option value="none">No result</option>
             </select>
+            <div className="flex items-center gap-1.5" role="group" aria-label="Date range">
+              <input
+                type="date"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                aria-label="From date"
+                className="h-9 w-[140px] rounded-lg border border-[var(--border)] bg-background px-2.5 text-xs outline-none focus:border-[var(--primary)] dark:[color-scheme:dark]"
+              />
+              <span aria-hidden className="text-xs text-muted-foreground">—</span>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                aria-label="To date"
+                className="h-9 w-[140px] rounded-lg border border-[var(--border)] bg-background px-2.5 text-xs outline-none focus:border-[var(--primary)] dark:[color-scheme:dark]"
+              />
+            </div>
             <button
               onClick={resetFilters}
               disabled={!hasFilters}
-              className="h-10 rounded-lg border border-[var(--border)] bg-card px-3.5 text-xs font-semibold transition hover:bg-[var(--muted)] disabled:opacity-40"
+              className="h-9 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium transition hover:bg-[var(--muted)] disabled:opacity-40"
             >
               Reset
             </button>
@@ -475,7 +530,7 @@ export default function AuditsPage() {
             <span className="text-xs text-muted-foreground">
               {filtered.length === 0
                 ? "0 events"
-                : `Showing ${rangeStart}–${rangeEnd} of ${filtered.length} events`}
+                : `Showing ${rangeStart} to ${rangeEnd} of ${filtered.length} events`}{" "}
               {/* Say so when the log is bigger than one fetch: "no match" must never be
                   read as "this event does not exist". */}
               {total > rows.length && (
@@ -485,23 +540,13 @@ export default function AuditsPage() {
               )}
             </span>
             <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                aria-label="Previous page"
-                className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-[var(--muted)] disabled:opacity-40"
-              >
-                <ChevronLeft className="size-3.5" />
-              </button>
-              <span className="px-1 text-xs text-muted-foreground">{safePage} / {pageCount}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                disabled={safePage >= pageCount}
-                aria-label="Next page"
-                className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-[var(--muted)] disabled:opacity-40"
-              >
-                <ChevronRight className="size-3.5" />
-              </button>
+              <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} />
+              {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
+                <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
+              ))}
+              {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
+              <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))} />
+              <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
             </div>
           </div>
         </section>
