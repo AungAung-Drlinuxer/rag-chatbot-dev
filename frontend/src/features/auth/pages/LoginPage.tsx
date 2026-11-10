@@ -158,18 +158,21 @@ export default function Login({
                     {appName} · assistant workspace
                   </span>
                 </div>
-                {/* The asset is 1280x508 (2.52:1). Any other ratio + object-cover crops the
-                    drawing — the artwork stopped short at both edges. The frame now takes
-                    the image's own ratio, so it always shows in full and never stretches. */}
-                {/* Fixed, viewport-aware height + object-cover: the artwork bleeds to all
-                    four edges of the frame instead of sitting in a white letterbox. The
-                    crop only trims the illustration's own white margin. */}
+                {/* The asset is 1230x457 (2.69:1) with its own white margin already
+                    trimmed off, so it can fill the frame edge to edge.
+
+                    The rule: the image keeps ITS ratio at every width and every zoom
+                    level — `w-full h-auto` plus the intrinsic ratio. No `object-cover`
+                    and no viewport-height (`vh`) height: those were what cropped the
+                    drawing at some widths ("ဟိုမရောက် ဒီမရောက်") and made it change size
+                    when the browser zoom moved. Nothing is cut, nothing stretches. */}
                 <img
                   src="/login-illustration.jpg"
-                  width={1280}
-                  height={508}
+                  width={1230}
+                  height={457}
                   alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                  className="pointer-events-none block h-[clamp(190px,27vh,330px)] w-full select-none object-cover object-center"
+                  className="pointer-events-none block h-auto w-full max-w-full select-none"
+                  style={{ aspectRatio: "1230 / 457" }}
                   fetchPriority="high"
                   decoding="async"
                   draggable={false}
@@ -217,8 +220,8 @@ export default function Login({
                 src="/login-illustration.jpg"
                 alt=""
                 aria-hidden
-                className="relative mt-3 block h-auto w-full rounded-xl object-cover shadow-sm ring-1 ring-white/15"
-                style={{ aspectRatio: "1280 / 508" }}
+                className="relative mt-3 block h-auto w-full max-w-full rounded-xl shadow-sm ring-1 ring-white/15"
+                style={{ aspectRatio: "1230 / 457" }}
                 decoding="async"
                 draggable={false}
               />
