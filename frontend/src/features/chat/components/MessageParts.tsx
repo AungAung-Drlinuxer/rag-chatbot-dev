@@ -3,7 +3,7 @@
  * ChatPage.tsx (v1.6.68) so the page file stops carrying them.
  */
 import { useState } from "react";
-import { Check, Copy, ExternalLink, Sparkles } from "lucide-react";
+import { Check, Copy, ExternalLink, FileText, Sparkles, Ticket } from "lucide-react";
 
 import { type Source } from "@/features/chat/model";
 import { groupedReferenceLabel } from "@/features/chat/sources";
@@ -138,11 +138,16 @@ export function SourceCard({
             has not been dropped: it is the chip's tooltip. */}
         <span
           className={[
-            "shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
-            top ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+            "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
+            top
+              ? (source.page_id
+                  ? "bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-xs"
+                  : "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-xs")
+              : "bg-muted text-muted-foreground",
           ].join(" ")}
           title={source.space ? `${collection} - ${index} · ${source.space}` : `${collection} - ${index}`}
         >
+          {source.page_id ? <FileText className="size-2.5" aria-hidden /> : <Ticket className="size-2.5" aria-hidden />}
           {collection} - {index}
         </span>
         <span

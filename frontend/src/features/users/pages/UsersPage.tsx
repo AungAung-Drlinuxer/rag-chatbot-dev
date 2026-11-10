@@ -433,15 +433,26 @@ export default function Users() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            {/* Fixed layout: the table obeys the panel instead of the panel obeying the
+                longest email it happens to hold (that is what forced a sideways scroll). */}
+            <table className="w-full table-fixed text-xs">
+              <colgroup>
+                <col className="w-[32%]" />
+                <col className="hidden w-[14%] lg:table-column" />
+                <col className="w-[15%]" />
+                <col className="w-[12%]" />
+                <col className="hidden w-[13%] 2xl:table-column" />
+                <col className="hidden w-[12%] min-[1800px]:table-column" />
+                <col className="w-[17%]" />
+              </colgroup>
               <thead className="bg-[var(--muted)]/40">
                 <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
                   <Th>User</Th>
-                  <Th>Department</Th>
+                  <Th className="hidden lg:table-cell">Department</Th>
                   <Th>Role</Th>
                   <Th>Status</Th>
-                  <Th>Last login</Th>
-                  <Th>Joined</Th>
+                  <Th className="hidden 2xl:table-cell">Last login</Th>
+                  <Th className="hidden min-[1800px]:table-cell">Joined</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
@@ -682,10 +693,10 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
 
   return (
     <tr className="border-b border-[var(--border)] transition hover:bg-[var(--muted)]/40">
-      <td className="px-5 py-3.5">
+      <td className="px-4 py-3.5">
         <button type="button" onClick={onSelect} className="flex min-w-0 items-center gap-3 text-left">
           <Avatar name={user.name} />
-          <span className="min-w-0">
+          <span className="min-w-0 max-w-[26ch]">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-xs font-semibold" title={user.name}>{user.name}</span>
               {user.username.endsWith("-svc") && (
@@ -703,23 +714,23 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
           </span>
         </button>
       </td>
-      <td className="px-5 py-3.5">
+      <td className="hidden px-4 py-3.5 lg:table-cell">
         {hasDepartment ? (
-          <span className="text-2xs" title={user.department}>{user.department}</span>
+          <span className="block max-w-[14ch] truncate text-2xs" title={user.department}>{user.department}</span>
         ) : (
           <span className="text-2xs text-muted-foreground" title="No department assigned">—</span>
         )}
       </td>
-      <td className="px-5 py-3.5"><RoleBadge role={user.role} /></td>
-      <td className="px-5 py-3.5"><StatusBadge status={user.status} /></td>
-      <td className="px-5 py-3.5">
+      <td className="px-4 py-3.5"><RoleBadge role={user.role} /></td>
+      <td className="px-4 py-3.5"><StatusBadge status={user.status} /></td>
+      <td className="hidden px-4 py-3.5 2xl:table-cell">
         {hasLogin ? (
           <span className="text-2xs text-muted-foreground" title={user.lastLogin}>{formatDateTime(user.lastLogin)}</span>
         ) : (
           <span className="text-2xs text-muted-foreground" title="This account has never signed in">Never logged in</span>
         )}
       </td>
-      <td className="px-5 py-3.5">
+      <td className="hidden px-4 py-3.5 min-[1800px]:table-cell">
         {/* Local accounts carry no join date at all (the endpoint returns "—"),
             so the column says so rather than guessing at a sync source. */}
         {hasJoined ? (
@@ -728,7 +739,7 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
           <span className="text-2xs text-muted-foreground" title="No join date recorded by the directory">—</span>
         )}
       </td>
-      <td className="px-5 py-3.5">
+      <td className="px-4 py-3.5">
         <div className="flex items-center justify-end gap-1">
           <button type="button" onClick={onSelect}
             className="rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5 text-2xs font-semibold transition hover:bg-[var(--muted)]">

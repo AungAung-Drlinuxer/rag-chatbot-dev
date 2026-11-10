@@ -430,22 +430,24 @@ export default function PageSidebar({
         )}
       </nav>
       <div className={"shrink-0 border-t border-white/15 dark:border-[var(--sidebar-border)] py-4 " + (collapsed ? "px-2" : "px-4")}>
-        <div className={"flex items-center " + (collapsed ? "flex-col gap-2" : "gap-3")}>
-          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white dark:bg-[var(--primary)]" title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}>
-            {(userName?.charAt(0) ?? "A").toUpperCase()}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-semibold text-white">{userName ?? "User"}</div>
-              <span className={["mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold", "bg-white/20 text-white/90 dark:bg-[var(--sidebar-active-bg)] dark:text-white"].join(" ")}>
-                {pretty}
-              </span>
+        <div className={"flex " + (collapsed ? "flex-col items-center gap-2" : "flex-col gap-2.5")}>
+          <div className="flex w-full min-w-0 items-center gap-3">
+            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white dark:bg-[var(--primary)]" title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}>
+              {(userName?.charAt(0) ?? "A").toUpperCase()}
             </div>
-          )}
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-white" title={userName ?? "User"}>{userName ?? "User"}</div>
+                <span className={["mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold", "bg-white/20 text-white/90 dark:bg-[var(--sidebar-active-bg)] dark:text-white"].join(" ")}>
+                  {pretty}
+                </span>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => onLogout?.()}
             title="Sign out"
-            className={"flex items-center rounded-lg border border-white/30 text-2xs font-medium text-white/80 transition hover:border-red-300 hover:bg-red-500/10 hover:text-red-200 " + (collapsed ? "p-2" : "gap-1.5 px-2.5 py-2")}
+            className={"flex items-center justify-center rounded-lg border border-white/30 text-2xs font-medium text-white/80 transition hover:border-red-300 hover:bg-red-500/10 hover:text-red-200 " + (collapsed ? "p-2" : "w-full gap-1.5 px-2.5 py-2")}
           >
             <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -501,7 +503,7 @@ export default function PageSidebar({
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-gradient-to-b from-violet-700 to-violet-900 transition-all border-violet-800/60 dark:bg-none dark:bg-[var(--sidebar-bg)] dark:border-[var(--sidebar-border)] lg:static lg:z-auto lg:translate-x-0 " + (collapsed ? "w-[72px]" : "w-[250px]"),
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-gradient-to-b from-violet-700 to-violet-900 transition-all border-violet-800/60 dark:bg-none dark:bg-[var(--sidebar-bg)] dark:border-[var(--sidebar-border)] lg:static lg:z-auto lg:translate-x-0 " + (collapsed ? "w-[72px]" : "w-[280px]"),
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}

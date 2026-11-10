@@ -103,6 +103,7 @@ export default function Chat({ onNavigate, userName }: Props) {
   const history = useRef<{ role: string; content: string }[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([]);
   /* Whether the newest answer is out of view. The conversation is long by nature, and
      scrolling up to re-read an old answer used to leave no way back except dragging the
      scrollbar — so the page offers one: "Scroll to end". */
@@ -207,13 +208,27 @@ export default function Chat({ onNavigate, userName }: Props) {
         window.setTimeout(() => composerRef.current?.focus(), 30);
       }
     };
+    /* Quick actions: "Create IT ticket" is an action, not a question — it opens the same
+       Jira Service Management form the Escalate button opens, pre-filled from this
+       conversation, rather than making the user type "I want a ticket" first. */
+    const onOpenTicket = () => {
+      const firstUser = messagesRef.current.find((m) => m.role === "user")?.content ?? "";
+      const lastAnswer = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
+      setEscalatePreset({
+        subject: (firstUser || lastAnswer?.content || "Support request").slice(0, 160),
+        description: lastAnswer?.content ?? firstUser,
+        domain: lastAnswer?.domain,
+      });
+    };
     window.addEventListener("ith:open-conversation", onOpen);
     window.addEventListener("ith:new-chat", onNew);
     window.addEventListener("ith:ask", onAsk);
+    window.addEventListener("ith:open-ticket", onOpenTicket);
     return () => {
       window.removeEventListener("ith:open-conversation", onOpen);
       window.removeEventListener("ith:new-chat", onNew);
       window.removeEventListener("ith:ask", onAsk);
+      window.removeEventListener("ith:open-ticket", onOpenTicket);
     };
   }, [openConversation, startNewChat]);
 
@@ -369,6 +384,8 @@ export default function Chat({ onNavigate, userName }: Props) {
       notify("Feedback could not be saved.");
     }
   };
+
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const latest = useMemo<Source[]>(() => latestSources(messages), [messages]);
   const lastAnswer = useMemo(() => [...messages].reverse().find((m) => m.role === "assistant" && m.content), [messages]);
