@@ -498,7 +498,7 @@ export default function Dashboard({ role, perms }: Props) {
                 scrolls again — a phone should not be squeezed to fit a desktop board. */}
             <div
               data-board="fill"
-              className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden max-lg:overflow-visible lg:grid-cols-12"
+              className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden max-lg:flex-none max-lg:overflow-visible lg:grid-cols-12"
               style={{ ["--board-rows" as string]: role === "admin" ? BOARD_ROWS_ADMIN : BOARD_ROWS_USER }}
             >
               {panels.map((panel) => {
@@ -509,7 +509,11 @@ export default function Dashboard({ role, perms }: Props) {
                     data-panel={panel.type}
                     className={[
                       "flex min-h-0 min-w-0 flex-col",
-                      tall ? "max-lg:h-[300px]" : "",
+                      /* A phone stacks the board and the page scrolls. The band keeps a
+                         bounded height (lists scroll inside their card) — what changed is
+                         the board no longer flexes, so the page's scroll range matches the
+                         content and the last screen is not blank. */
+                      tall ? "max-lg:h-[340px]" : "",
                     ].join(" ")}
                     style={{
                       ["--span" as string]: panel.span,
