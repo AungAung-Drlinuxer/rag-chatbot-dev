@@ -181,21 +181,21 @@ export default function Login({
                     {appName} · assistant workspace
                   </span>
                 </div>
-                {/* The asset is 1230x457 (2.69:1) with its own white margin already
-                    trimmed off, so it can fill the frame edge to edge.
+                {/* The asset is 1280x548 (2.34:1), artwork to the edges — no white margin
+                    to letterbox.
 
-                    The rule: the image keeps ITS ratio at every width and every zoom
-                    level — `w-full h-auto` plus the intrinsic ratio. No `object-cover`
-                    and no viewport-height (`vh`) height: those were what cropped the
-                    drawing at some widths ("ဟိုမရောက် ဒီမရောက်") and made it change size
-                    when the browser zoom moved. Nothing is cut, nothing stretches. */}
+                    The rule: the width drives the size, the height follows from the
+                    image's own ratio. No `object-cover`, no `vh` height, and a pixel
+                    max-height instead of a viewport one — so a browser zoom changes how
+                    big everything looks, but never re-crops the drawing or makes it jump.
+                    Nothing is cut, nothing stretches. */}
                 <img
                   src="/login-illustration.jpg"
-                  width={1230}
-                  height={457}
+                  width={1280}
+                  height={548}
                   alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                  className="pointer-events-none block h-auto w-full max-w-full select-none"
-                  style={{ aspectRatio: "1230 / 457" }}
+                  className="pointer-events-none mx-auto block h-auto w-full max-w-full select-none object-contain"
+                  style={{ aspectRatio: "1280 / 548", maxHeight: 460 }}
                   fetchPriority="high"
                   decoding="async"
                   draggable={false}
@@ -244,7 +244,7 @@ export default function Login({
                 alt=""
                 aria-hidden
                 className="relative mt-3 block h-auto w-full max-w-full rounded-xl shadow-sm ring-1 ring-white/15"
-                style={{ aspectRatio: "1230 / 457" }}
+                style={{ aspectRatio: "1280 / 548", maxHeight: 460 }}
                 decoding="async"
                 draggable={false}
               />
