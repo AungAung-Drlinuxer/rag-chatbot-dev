@@ -139,7 +139,7 @@ export default function Settings({ role }: { role?: string }) {
   const [darkMode, setDarkMode] = useState(false);
   const [compact, setCompact] = useState(false);
   const [animations, setAnimations] = useState(true);
-  const [chatFontSize, setChatFontSize] = useState(14);
+  const [chatFontSize, setChatFontSize] = useState(16);
   const [sourceCitations, setSourceCitations] = useState(true);
   const [showTokenUsage, setShowTokenUsage] = useState(true);
   const [markdownRendering, setMarkdownRendering] = useState(true);

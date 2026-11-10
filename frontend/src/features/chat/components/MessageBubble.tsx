@@ -128,7 +128,7 @@ function MessageBubble({
     return (
       <div className="group/msg flex justify-end gap-3">
         <div className="min-w-0 max-w-[85%]">
-          <div className="min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-md bg-[var(--primary)] px-5 py-3.5 text-[length:var(--chat-font-size,14px)] leading-[1.7] text-[var(--primary-foreground)]">
+          <div className="min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-md bg-[var(--primary)] px-5 py-3.5 text-[length:var(--chat-font-size,16px)] leading-[1.7] text-[var(--primary-foreground)]">
             {editing ? (
               /* v1.3.1 — in-place edit (ChatGPT-style): textarea inside the bubble */
               <div className="flex flex-col gap-2">

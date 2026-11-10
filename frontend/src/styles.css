@@ -27,14 +27,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --focus-ring: 0 0 0 2px var(--background), 0 0 0 4px var(--accent-foreground);
-  --fs-2xs: 10px;   /* B-2 ramp: badges/chips (replaces text-[9px]) */
-  --fs-xs: 11px;    /* meta labels */
-  --fs-sm: 12px;    /* body-dense */
-  --fs-md: 13px;    /* body */
-  --fs-lg: 14px;    /* subhead */
-  --fs-xl: 16px;    /* h2 */
-  --fs-2xl: 20px;   /* h1 */
-  --fs-3xl: 24px;   /* display/KPI */
+  /* B-2 ramp, raised one step: the app was set at 10-13px for badges and body copy, which
+     reads as miniature on a 1440-1920 display. Body copy is now 15-16px, meta 12-13px. */
+  --fs-2xs: 12px;   /* B-2 ramp: badges/chips */
+  --fs-xs: 13px;    /* meta labels */
+  --fs-sm: 14px;    /* body-dense */
+  --fs-md: 15px;    /* body */
+  --fs-lg: 16px;    /* subhead */
+  --fs-xl: 18px;    /* h2 */
+  --fs-2xl: 22px;   /* h1 */
+  --fs-3xl: 26px;   /* display/KPI */
 
   /* The B-2 ramp as Tailwind UTILITIES. These must be declared inside @theme: Tailwind v4
      only emits a `text-*` utility for a token declared here. Declared in :root instead,
@@ -42,10 +44,20 @@
      parent's size (16px inside a <p>) — which is how 332 call sites ended up with
      oversized meta text. `--fs-*` above is the same ramp for raw CSS; these two are the
      utility-bearing ones. */
-  --text-3xs: 9px;
+  --text-3xs: 11px;
   --text-3xs--line-height: 1.4;
-  --text-2xs: 10px;
+  --text-2xs: 12px;
   --text-2xs--line-height: 1.45;
+  /* Tailwind's own steps are raised with them, so `text-xs` / `text-sm` on the pages read
+     at a normal size instead of 12/14px. */
+  --text-xs: 14px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 16px;
+  --text-sm--line-height: 1.55;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 19px;
+  --text-lg--line-height: 1.5;
 
   --dur-fast: 150ms;  /* B-8 unified interactive timing */
   --dur-slow: 200ms;  /* B-8 overlays / panels */
@@ -171,7 +183,7 @@
   --bg: var(--background); --surface: var(--card); --surface-2: var(--muted); --text: var(--foreground);
   --text-muted: var(--muted-foreground); --accent-2: #7C3AED; --accent-soft: #F5F3FF;
   --ok: #16a34a; --warn: #d97706; --danger: #dc2626;
-  --chat-font-size: 14px;
+  --chat-font-size: 16px;
 }
 
 [data-theme="dark"] {
@@ -253,6 +265,7 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   font-family: var(--font); background: var(--background); color: var(--foreground);
   -webkit-font-smoothing: antialiased; line-height: 1.6;
+  font-size: 16px;
 }
 .app { display: flex; flex-direction: column; height: 100vh; }
 
@@ -321,7 +334,7 @@ body {
 
 /* ---- Chat ---- */
 .chat { display: flex; flex-direction: column; min-height: 0; }
-.chat-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; font-size: var(--chat-font-size, 14px); }
+.chat-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; font-size: var(--chat-font-size, 16px); }
 .msg-row { display: flex; gap: 10px; align-items: flex-start; }
 .msg-row.user { justify-content: flex-end; }
 .avatar {
@@ -334,7 +347,7 @@ body {
 .msg { min-width: 0; max-width: min(78%, 680px); display: flex; flex-direction: column; gap: 4px; }
 .msg.user { align-items: flex-end; }
 .msg.assistant { align-items: flex-start; }
-.bubble { padding: 11px 14px; border-radius: 12px; line-height: 1.6; font-size: var(--chat-font-size, 14px); }
+.bubble { padding: 11px 14px; border-radius: 12px; line-height: 1.6; font-size: var(--chat-font-size, 16px); }
 .msg.user .bubble { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
 .msg.assistant .bubble { background: var(--card); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; box-shadow: var(--shadow); }
 [data-theme="dark"] .msg.assistant .bubble { background: var(--card); border-color: var(--border); }
@@ -448,7 +461,7 @@ body {
 /* ---- Markdown ---- */
 /* Chat text size is a user preference: --chat-font-size is set by the theme engine.
    It was 14px literally here, so changing the preference in Settings did nothing. */
-.md { font-size: var(--chat-font-size, 14px); }
+.md { font-size: var(--chat-font-size, 16px); }
 .md h4, .md h5 { margin: 8px 0 4px; }
 .md p { margin: 4px 0; }
 .md ul, .md ol { padding-left: 18px; margin: 4px 0; }

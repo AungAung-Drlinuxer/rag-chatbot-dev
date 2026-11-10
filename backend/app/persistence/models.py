@@ -218,7 +218,7 @@ class UserSettings(Base):
     # Appearance
     theme: Mapped[str] = mapped_column(String(16), default="system")            # light|dark|system
     density: Mapped[str] = mapped_column(String(16), default="comfortable")   # comfortable|compact
-    chat_font_size: Mapped[int] = mapped_column(SmallInteger, default=14)
+    chat_font_size: Mapped[int] = mapped_column(SmallInteger, default=16)
     # Chat behavior
     show_token_usage: Mapped[bool] = mapped_column(default=True)
     show_rag_sources: Mapped[bool] = mapped_column(default=True)
