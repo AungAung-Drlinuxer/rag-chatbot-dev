@@ -242,7 +242,7 @@ export default function PageSidebar({
         </div>
       )}
 
-      <nav className={"flex-1 py-3 " + (collapsed ? "px-2" : "px-3")}>
+      <nav className={"min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3 " + (collapsed ? "px-2" : "px-3")}>
         {!collapsed && (
           <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55 dark:text-[var(--sidebar-text-muted)]">
             Workspace
@@ -318,7 +318,7 @@ export default function PageSidebar({
             </div>
 
             {historyOpen && (
-              <div className="mt-1 max-h-60 space-y-0.5 overflow-y-auto pr-1">
+              <div className="mt-1 max-h-48 space-y-0.5 overflow-y-auto pr-1">
 
                 {conversations.length === 0 ? (
                   <p className="px-2 py-2 text-2xs text-white/55 italic">No recent chats</p>
@@ -429,7 +429,7 @@ export default function PageSidebar({
           </div>
         )}
       </nav>
-      <div className={"border-t border-white/15 dark:border-[var(--sidebar-border)] py-4 " + (collapsed ? "px-2" : "px-4")}>
+      <div className={"shrink-0 border-t border-white/15 dark:border-[var(--sidebar-border)] py-4 " + (collapsed ? "px-2" : "px-4")}>
         <div className={"flex items-center " + (collapsed ? "flex-col gap-2" : "gap-3")}>
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white dark:bg-[var(--primary)]" title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}>
             {(userName?.charAt(0) ?? "A").toUpperCase()}
