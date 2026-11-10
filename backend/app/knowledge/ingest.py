@@ -172,6 +172,43 @@ def ingest_article(art: dict) -> str:
     return "updated" if existing else "inserted"
 
 
+def _orphan_ids(live_ids: set[str], known_ids: set[str]) -> list[str]:
+    """Rows in the KB whose page is gone from the source. Sorted for a stable log line."""
+    return sorted(known_ids - live_ids)
+
+
+def _prune_orphans(live_ids: set[str]) -> int:
+    """Delete KB rows whose source page no longer exists; returns how many were removed.
+
+    A Confluence delete only moves the page to the trash — the sync itself only ever
+    inserted or updated, so the kb_meta row and its vectors stayed behind and the Knowledge
+    list kept advertising a page that now 404s. Pruning here is what makes "deleted in
+    Confluence" mean "gone from the KB".
+
+    Guard: an empty load means the connector is unconfigured or the fetch failed, never a
+    request to empty the knowledge base — so nothing is pruned when no page came back.
+    """
+    if not live_ids:
+        logger.warning("kb prune skipped: the sync loaded no pages")
+        return 0
+    with SessionLocal() as s:
+        known = {r[0] for r in s.execute(text("SELECT page_id FROM kb_meta")).fetchall()}
+        orphans = _orphan_ids(live_ids, known)
+        for pid in orphans:
+            _delete_vectors(pid)
+            s.execute(text("DELETE FROM kb_meta WHERE page_id = :p"), {"p": pid})
+        s.commit()
+    if orphans:
+        logger.info("kb prune removed %d orphaned page(s): %s", len(orphans), orphans[:10])
+    try:
+        from app.rag.bm25_index import BM25IndexManager
+
+        BM25IndexManager.get_instance().invalidate()
+    except Exception as exc:  # a stale cache must never fail the sync
+        logger.debug("BM25 index invalidation ignored: %s", exc)
+    return len(orphans)
+
+
 def register_domains(domain_keys: list[str]) -> int:
     """Make every domain that actually has articles routable.
 
@@ -261,7 +298,7 @@ def sync_all(updated_by: str | None = None) -> dict:
 
 def _sync_all_locked(updated_by: str | None, started: float) -> dict:
     articles = load_all()
-    stats = {"pages": len(articles), "inserted": 0, "updated": 0, "skipped": 0}
+    stats = {"pages": len(articles), "inserted": 0, "updated": 0, "skipped": 0, "removed": 0}
     try:
         from app.persistence.database import init_db
         init_db()  # ensure kb_meta table exists
@@ -270,6 +307,12 @@ def _sync_all_locked(updated_by: str | None, started: float) -> dict:
     for art in articles:
         status = ingest_article({**art, "updated_by": updated_by or art.get("updated_by")})
         stats[status] += 1
+    try:
+        # Pages deleted at the source leave their row (and vectors) behind, so "deleted in
+        # Confluence" only becomes "gone from the KB" if the sync prunes what it no longer sees.
+        stats["removed"] = _prune_orphans({a["page_id"] for a in articles})
+    except Exception as exc:  # a prune failure must not lose the ingest that just succeeded
+        logger.warning("kb prune skipped (%s): %s", type(exc).__name__, exc)
     try:
         # Register what actually landed in the KB, not the raw loader values: a loader may
         # emit a space key ("ihkb") that the classifier later rewrites, and registering that
