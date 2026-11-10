@@ -243,3 +243,32 @@ def test_callback_with_unknown_state_returns_to_login():
     r = client.get("/api/auth/sso/callback?code=abc&state=not-a-state")
     assert r.status_code == 302
     assert "sso_error=failed" in r.headers["location"]
+
+
+def test_sso_enabled_publishes_the_provider_without_secrets(monkeypatch):
+    """The login page labels the button from this response.
+
+    It may name the provider and the realm — both are already visible in the browser's
+    redirect — but never the client secret.
+    """
+    from fastapi.testclient import TestClient
+
+    import app.auth.sso as sso_mod
+    from app.main import app
+
+    monkeypatch.setattr(sso_mod, "enabled", lambda: True)
+    monkeypatch.setattr(sso_mod, "sso_cfg", lambda: {
+        "issuer": "https://kc.example/realms/ihkp",
+        "realm": "ihkp",
+        "client_id": "it-help",
+        "client_secret": "do-not-leak",
+        "redirect_uri": "https://dev-chat.example/api/auth/sso/callback",
+    })
+
+    body = TestClient(app).get("/api/auth/sso/enabled").json()
+    assert body["enabled"] is True
+    assert body["provider"] == "keycloak"
+    assert body["label"] == "Keycloak"
+    assert body["realm"] == "ihkp"
+    assert "do-not-leak" not in str(body)
+    assert "client_secret" not in body

@@ -23,7 +23,7 @@ import {
   loadMeSync,
   saveMeCache,
 } from "@/shared/api/client";
-import { login, getMe, exchangeSsoCode, getSsoEnabled } from "@/features/auth/api";
+import { login, getMe, exchangeSsoCode, getSsoEnabled, type SsoInfo } from "@/features/auth/api";
 import { getMySettings } from "@/features/settings/api";
 
 import LoginPage from "@/features/auth/pages/LoginPage";
@@ -99,7 +99,7 @@ export default function App() {
   const [role, setRole] = useState(initialMe?.role ?? "");
   const [perms, setPerms] = useState<Record<string, boolean>>(initialMe?.permissions ?? {});
   const [meDisplay, setMeDisplay] = useState(initialMe?.displayRole ?? "");
-  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [sso, setSso] = useState<SsoInfo>({ enabled: false, provider: "", label: "", realm: "" });
 
   /** Apply /api/me and remember it for the next refresh's first paint. */
   function applyMe(m: { role?: string; displayRole?: string; permissions?: Record<string, boolean> }) {
@@ -123,7 +123,7 @@ export default function App() {
   }
 
   /** Identity provider is only offered when a realm is actually configured. */
-  useEffect(() => { getSsoEnabled().then(setSsoEnabled).catch(() => setSsoEnabled(false)); }, []);
+  useEffect(() => { getSsoEnabled().then(setSso).catch(() => setSso({ enabled: false, provider: "", label: "", realm: "" })); }, []);
 
   // SSO returns to `#/sso?code=…` (success) or `#/login?sso_error=…` (everything else).
   // The reason travels as a short code, never as provider text, so nothing from the
@@ -263,7 +263,7 @@ export default function App() {
         loginUser={loginUser} setLoginUser={setLoginUser}
         loginPass={loginPass} setLoginPass={setLoginPass}
         loginErr={loginErr} onSubmit={onLogin}
-        ssoEnabled={ssoEnabled}
+        sso={sso}
         onSso={() => { window.location.href = `${BASE}/api/auth/sso/login`; }}
       />
     );

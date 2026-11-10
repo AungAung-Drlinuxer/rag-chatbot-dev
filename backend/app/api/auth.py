@@ -294,8 +294,20 @@ class SsoExchangeRequest(BaseModel):
 
 @router.get("/api/auth/sso/enabled")
 def sso_enabled() -> dict:
-    """Login page asks this to decide whether to draw the SSO button (no auth)."""
-    return {"enabled": sso.enabled()}
+    """What the login page needs to offer single sign-on (no auth, no secrets).
+
+    The provider and the realm name are public knowledge — they are in the redirect the
+    browser already follows — and the page needs them to label the button honestly
+    ("Sign in with Keycloak · realm IHKP") instead of the generic "SSO".
+    """
+    enabled = sso.enabled()
+    cfg = sso.sso_cfg() if enabled else {}
+    return {
+        "enabled": enabled,
+        "provider": "keycloak" if enabled else "",
+        "label": "Keycloak" if enabled else "",
+        "realm": cfg.get("realm", "") if enabled else "",
+    }
 
 
 @router.get("/api/auth/sso/login")

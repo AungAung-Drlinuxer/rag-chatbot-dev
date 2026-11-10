@@ -37,15 +37,31 @@ export async function healthPing(): Promise<boolean> {
   }
 }
 
-/** Is an OIDC realm configured? The login page only draws the SSO button when it is. */
-export async function getSsoEnabled(): Promise<boolean> {
+export type SsoInfo = {
+  enabled: boolean;
+  /** "keycloak" today; the page labels the button from this, never from a guess. */
+  provider: string;
+  label: string;
+  realm: string;
+};
+
+const NO_SSO: SsoInfo = { enabled: false, provider: "", label: "", realm: "" };
+
+/** Is an OIDC realm configured, and which one? The login page offers the button only
+ *  when it is, and names the provider instead of saying a generic "SSO". */
+export async function getSsoEnabled(): Promise<SsoInfo> {
   try {
     const r = await apiFetch(`${BASE}/api/auth/sso/enabled`);
-    if (!r.ok) return false;
+    if (!r.ok) return NO_SSO;
     const j = await r.json();
-    return !!j?.enabled;
+    return {
+      enabled: !!j?.enabled,
+      provider: String(j?.provider ?? ""),
+      label: String(j?.label ?? ""),
+      realm: String(j?.realm ?? ""),
+    };
   } catch {
-    return false;
+    return NO_SSO;
   }
 }
 

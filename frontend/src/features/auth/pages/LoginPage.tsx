@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  KeyRound,
   Link2,
   Loader2,
   LockKeyhole,
@@ -46,8 +45,24 @@ type Props = {
   onSubmit: (e: FormEvent) => void;
   /** True when an OIDC realm is configured — shows the second way in. */
   ssoEnabled?: boolean;
+  /** Provider metadata from /api/auth/sso/enabled — used to name the provider. */
+  sso?: { enabled: boolean; provider: string; label: string; realm: string };
   onSso?: () => void;
 };
+
+/** Keycloak's mark, drawn small: a key head with a shaft and two teeth. Uses currentColor
+ *  so it inherits the theme's primary colour instead of hard-coding Keycloak blue. */
+function KeycloakMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="8" r="4.2" />
+      <path d="M11 11l9 9" />
+      <path d="M16.5 15.5l2.5-2.5" />
+      <path d="M19 18l2-2" />
+    </svg>
+  );
+}
 
 export default function Login({
   loginUser,
@@ -57,6 +72,7 @@ export default function Login({
   loginErr,
   onSubmit,
   ssoEnabled = false,
+  sso,
   onSso,
 }: Props) {
   const [showPass, setShowPass] = useState(false);
@@ -66,6 +82,13 @@ export default function Login({
   const [backendUp, setBackendUp] = useState<boolean | null>(null);
 
   const appName = branding.appName || "IT Help Chatbot";
+
+  /* Single sign-on is offered under its real name. "SSO" told the user nothing about
+     where they were being sent; Keycloak is what the realm actually is, and the realm
+     name is public (it is in the redirect the browser follows). */
+  const showSso = sso ? sso.enabled : ssoEnabled;
+  const ssoLabel = sso?.label || "Keycloak";
+  const ssoRealm = sso?.realm || "";
 
 
   // v1.5.1 — client-side validation before hitting the server
@@ -325,7 +348,7 @@ export default function Login({
                     )}
                   </button>
 
-                  {ssoEnabled && onSso && (
+                  {showSso && onSso && (
                     <>
                       <div className="flex items-center gap-3 py-1" aria-hidden="true">
                         <span className="h-px flex-1 bg-[var(--border)]" />
@@ -335,13 +358,15 @@ export default function Login({
                       <button
                         type="button"
                         onClick={onSso}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted/50 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 active:scale-[0.99]"
+                        className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-[var(--border)] bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted/50 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 active:scale-[0.99]"
                       >
-                        <KeyRound className="size-4 text-[var(--primary)]" />
-                        Sign in with SSO
+                        <KeycloakMark className="size-4 shrink-0 text-[var(--primary)]" />
+                        <span>Sign in with {ssoLabel}</span>
                       </button>
                       <p className="text-center text-2xs text-muted-foreground">
-                        Uses your organisation&apos;s identity provider. Ask IT if you are not enrolled.
+                        {ssoRealm
+                          ? `via ${ssoLabel} single sign-on · realm ${ssoRealm}. Ask IT if you are not enrolled.`
+                          : `via ${ssoLabel} single sign-on. Ask IT if you are not enrolled.`}
                       </p>
                     </>
                   )}

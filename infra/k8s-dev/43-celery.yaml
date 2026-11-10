@@ -1,6 +1,6 @@
 # Background jobs for the dev workspace.
 #
-# Both pods use the SAME image as the backend (backend:dev-1.0.68) and the same config/secrets,
+# Both pods use the SAME image as the backend (backend:dev-1.0.69) and the same config/secrets,
 # so a scheduled job can never talk to a different database or broker than the API it belongs
 # to. Beat only enqueues; the worker does the work (KB sync every 30 minutes).
 #
@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: celery-worker
-          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.68
+          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.69
           imagePullPolicy: Always
           command:
             - celery
@@ -71,7 +71,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: celery-beat
-          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.68
+          image: harbor.drlinuxer.com/rag-chatbot-dev/backend:dev-1.0.69
           imagePullPolicy: Always
           command:
             - celery
