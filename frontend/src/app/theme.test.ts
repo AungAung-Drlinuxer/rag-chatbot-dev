@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { applyStoredTheme, applyUserPrefs } from "./theme";
+import { applyStoredTheme, applyThemeChoice, applyUserPrefs, readStoredTheme } from "./theme";
 
 describe("theme engine", () => {
   beforeEach(() => {
+    localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
     delete (document.documentElement.dataset as any).compact;
     document.documentElement.classList.remove("animations-off");
@@ -42,6 +43,27 @@ describe("theme engine", () => {
     applyUserPrefs({ theme: "system" });
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     window.matchMedia = original;
+  });
+
+  /* Signing out is the case this cache exists for: the settings fetch no longer runs, so
+     the login page has only the local word to go on. */
+  it("remembers the theme applied by the Settings preview", () => {
+    applyThemeChoice({ dark: true, dense: false, animations: true, fontSize: 14 });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(readStoredTheme()).toBe("dark");
+  });
+
+  it("restores the remembered theme on a fresh document (signed out / reloaded)", () => {
+    applyUserPrefs({ theme: "dark" });
+    document.documentElement.removeAttribute("data-theme");
+    applyStoredTheme();
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+
+  it("lets the server preference move the local copy", () => {
+    applyThemeChoice({ dark: true, dense: false, animations: true, fontSize: 14 });
+    applyUserPrefs({ theme: "light" });
+    expect(readStoredTheme()).toBe("light");
   });
 
   it("explicit theme wins over a stale darkMode flag", () => {

@@ -25,6 +25,7 @@ import { Image as ImageIcon } from "lucide-react";
 import {
   getMySettings, updateMySettings, getIntegrationSettings,
 } from "@/features/settings/api";
+import { applyThemeChoice } from "@/app/theme";
 
 /* v1.6.90 — Settings re-skinned to the workspace mockup:
    breadcrumb + H1 + right-aligned access badge, a horizontal TAB row that
@@ -99,12 +100,10 @@ function SectionCard({ icon, title, description, children }: {
   );
 }
 
+/* The preview writes through the theme engine, so the choice is remembered for the
+   signed-out login page too. It used to set the attribute directly and lose it. */
 function applyThemeNow(dark: boolean, dense: boolean, anim: boolean, fontSize: number) {
-  const root = document.documentElement;
-  root.setAttribute("data-theme", dark ? "dark" : "light");
-  root.dataset.compact = dense ? "1" : "0";
-  root.classList.toggle("animations-off", !anim);
-  root.style.setProperty("--chat-font-size", `${fontSize}px`);
+  applyThemeChoice({ dark, dense, animations: anim, fontSize });
 }
 
 /** The exact payload the preferences Save writes, and the shape the dirty check
