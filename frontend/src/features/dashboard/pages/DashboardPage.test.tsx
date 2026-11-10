@@ -203,8 +203,9 @@ describe("DashboardPage — data rendering", () => {
 
     const text = rootEl.textContent!;
     expect(text).not.toContain("Customize");
+    // One report pair across the console: Print, then Export CSV.
     expect(text).toContain("Export CSV");
-    expect(text).toContain("Report");
+    expect(text).toContain("Print");
   });
 
   it("names the failing dependency and the guardrail counter separately", async () => {

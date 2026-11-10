@@ -4,9 +4,7 @@ import {
   ArrowDown,
   Clock,
   Copy,
-  Download,
   ListFilter,
-  Printer,
   RefreshCw,
   ScrollText,
   Search,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 import { listAudits } from "@/features/audits/api";
 import { downloadCsv, printReport } from "@/shared/report";
+import { ReportActions } from "@/shared/ReportActions";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 
 /**
@@ -332,22 +331,12 @@ export default function AuditsPage() {
               </button>
               {/* Primary: exporting is the page's one "do something" action, so it gets
                   the brand fill that the secondary Refresh deliberately does not. */}
-              <button
-                onClick={printReportSheet}
+              <ReportActions
+                onPrint={printReportSheet}
+                onExport={exportCsv}
                 disabled={filtered.length === 0}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50"
-              >
-                <Printer className="size-3.5" />
-                Print
-              </button>
-              <button
-                onClick={exportCsv}
-                disabled={filtered.length === 0}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:opacity-50"
-              >
-                <Download className="size-3.5" />
-                Export CSV
-              </button>
+                title={`Export ${filtered.length} events as CSV`}
+              />
             </div>
           }
         />

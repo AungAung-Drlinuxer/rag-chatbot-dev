@@ -1,6 +1,5 @@
 import {
   BellRing,
-  Bell,
   BookOpen,
   Bot,
   Check,
@@ -88,10 +87,9 @@ const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: R
     group: "Customize",
     items: [
       { id: "skills", label: "AI service", icon: <BookOpen className="size-4" /> },
-      /* The bell's own preferences — what it may tell you and a way to clear it. Kept
-         separate from the admin-only SMTP tab, which is about the mail server, not alerts. */
-      { id: "alerts", label: "Notifications", icon: <BellRing className="size-4" /> },
-      { id: "notifications", label: "Email server", icon: <Bell className="size-4" /> },
+      /* One tab, not two: both answer "how does this workspace tell me things", and the old
+         pair (Notifications + Email server) read as a duplicate row in the sidebar. */
+      { id: "notifications", label: "Email & Notifications", icon: <BellRing className="size-4" /> },
     ],
   },
 ];
@@ -292,7 +290,7 @@ export default function Settings({ role }: { role?: string }) {
   const visibleItems = SETTINGS_NAV
     .flatMap((group) => group.items)
     // Everyone gets their own notification preferences; the rest is administrator work.
-    .filter((item) => isAdmin || item.id === "general" || item.id === "alerts");
+    .filter((item) => isAdmin || item.id === "general" || item.id === "notifications");
 
   // Right-rail facts. Both are the app's real values, not decoration: the access
   // level is the signed-in role and the environment is the build mode the app runs.
@@ -604,20 +602,21 @@ export default function Settings({ role }: { role?: string }) {
             </div>
             )}
 
-            {/* Notification preferences — every role (their own feed scoped server-side) */}
-            {active === "alerts" && (
-              <SectionCard
-                icon={<BellRing className="size-4" />}
-                iconTone="bg-amber-50 dark:bg-amber-950/40"
-                title="Notifications"
-                description="What the bell may tell you, how it sounds, and how to clear it."
-              >
-                <NotificationSettings isAdmin={isAdmin} />
-              </SectionCard>
+            {/* Email & Notifications — one tab. The bell's switches are personal (every
+                role), the SMTP server below them is administrator-only. */}
+            {active === "notifications" && (
+              <>
+                <SectionCard
+                  icon={<BellRing className="size-4" />}
+                  iconTone="bg-amber-50 dark:bg-amber-950/40"
+                  title="Notifications"
+                  description="What the bell may tell you, how it sounds, and how to clear it."
+                >
+                  <NotificationSettings isAdmin={isAdmin} />
+                </SectionCard>
+                {isAdmin && <EmailServerSettings />}
+              </>
             )}
-
-            {/* Mail (SMTP) — admin only; the Email server tab */}
-            {isAdmin && active === "notifications" && <EmailServerSettings />}
 
 
             {/* ==================== AI ASSISTANT ==================== */}

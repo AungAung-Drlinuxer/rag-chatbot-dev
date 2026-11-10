@@ -134,24 +134,22 @@ describe("SettingsPage — role gating and the grouped nav", () => {
   it("shows an admin all five nav entries and the Administrator badge", async () => {
     const el = await mount("admin");
     const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
-    expect(nav.querySelectorAll("button")).toHaveLength(5);
+    expect(nav.querySelectorAll("button")).toHaveLength(4);
     expect(nav.textContent).toContain("Preferences");
     expect(nav.textContent).toContain("Integrations");
     expect(nav.textContent).toContain("AI service");
-    // The bell's own preferences — personal, so every role gets them.
-    expect(nav.textContent).toContain("Notifications");
-    expect(nav.textContent).toContain("Email server");
+    // Mail server and alert switches are ONE tab — two rows read as a duplicate.
+    expect(nav.textContent).toContain("Email & Notifications");
+    expect(nav.textContent).not.toContain("Email server");
     expect(el.textContent).toContain("Administrator");
   });
 
-  it("gives a plain user Preferences and their notification preferences only", async () => {
+  it("gives a plain user Preferences and Email & Notifications, without the SMTP form", async () => {
     const el = await mount("user");
     const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
     expect(nav.querySelectorAll("button")).toHaveLength(2);
     expect(nav.textContent).toContain("Preferences");
-    expect(nav.textContent).toContain("Notifications");
-    // The mail server and the integrations catalogue stay administrator-only.
-    expect(nav.textContent).not.toContain("Email server");
+    expect(nav.textContent).toContain("Email & Notifications");
   });
 
   it("shows a non-admin ONLY Preferences, and hides the admin-only panels", async () => {
@@ -242,7 +240,7 @@ describe("SettingsPage — preferences panel and instant side-effects", () => {
 describe("SettingsPage — admin Mail (SMTP) panel", () => {
   it("loads the SMTP panel and shows stored fields as write-only", async () => {
     const el = await mount("admin");
-    await click(navBtn(el, "Email server"));
+    await click(navBtn(el, "Email & Notifications"));
     const text = el.textContent!;
     expect(text).toContain("Mail (SMTP)");
     expect(text).toContain("saved — not retrievable");
@@ -253,7 +251,7 @@ describe("SettingsPage — admin Mail (SMTP) panel", () => {
   it("reports a failed SMTP load instead of an empty form", async () => {
     m.getSmtpSettings.mockRejectedValue(new Error("smtp down"));
     const el = await mount("admin");
-    await click(navBtn(el, "Email server"));
+    await click(navBtn(el, "Email & Notifications"));
     expect(el.textContent).toContain("Failed to load mail settings");
   });
 

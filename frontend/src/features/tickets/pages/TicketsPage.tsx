@@ -1,8 +1,6 @@
 import {
-  Download,
   Filter,
   Plus,
-  Printer,
   RefreshCw,
   Ticket as TicketIcon,
 } from "lucide-react";
@@ -10,6 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
+import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
+import { ReportActions } from "@/shared/ReportActions";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   listTicketDestinations,
@@ -385,58 +385,40 @@ export default function Tickets({ role, userName, onToast }: Props) {
     }));
   }
 
-  function csvCell(v: string) {
-    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
-  }
+  const reportColumns = [
+    { key: "id", label: "Ticket", width: "10%" },
+    { key: "subject", label: "Subject", width: "26%" },
+    { key: "category", label: "Category", width: "12%" },
+    { key: "status", label: "Status", width: "10%" },
+    { key: "priority", label: "Priority", width: "8%" },
+    { key: "requester", label: "Requester", width: "12%" },
+    { key: "assignee", label: "Assignee", width: "12%" },
+    { key: "created", label: "Created", width: "5%" },
+    { key: "updated", label: "Updated", width: "5%" },
+  ];
 
   function exportCsv() {
     const rows = ticketRows();
     if (!rows.length) return;
-    const headers = Object.keys(rows[0]);
-    const body = [
-      headers.join(","),
-      ...rows.map((r) => headers.map((h) => csvCell(String((r as Record<string, unknown>)[h] ?? ""))).join(",")),
-    ].join("\n");
-    const blob = new Blob(["\ufeff" + body], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ticket-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`ticket-report-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, rows);
     onToast(`Report exported — ${rows.length} tickets`);
   }
 
   function printReport() {
     const rows = ticketRows();
-    const w = window.open("", "_blank", "width=900,height=700");
-    if (!w) {
-      onToast("Pop-up blocked — allow pop-ups to print", "err");
-      return;
-    }
-    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    w.document.write(`<!doctype html><html><head><title>Ticket Report</title>
-      <style>
-        body{font-family:Arial,Helvetica,sans-serif;margin:32px;color:#0f172a}
-        h1{font-size:18px;margin:0 0 4px}
-        .meta{font-size:12px;color:#64748b;margin-bottom:16px}
-        table{border-collapse:collapse;width:100%;font-size:11px}
-        th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}
-        th{background:#f1f5f9}
-      </style></head><body>
-      <h1>IT Help — Ticket Report</h1>
-      <div class="meta">Generated ${new Date().toLocaleString()} · ${rows.length} tickets</div>
-      <table><thead><tr><th>Ticket</th><th>Subject</th><th>Category</th><th>Status</th>
-      <th>Priority</th><th>Requester</th><th>Assignee</th><th>Created</th><th>Updated</th></tr></thead>
-      <tbody>${rows
-        .map(
-          (r) =>
-            `<tr><td>${esc(r.id)}</td><td>${esc(r.subject)}</td><td>${esc(r.category)}</td><td>${esc(r.status)}</td><td>${esc(r.priority)}</td><td>${esc(r.requester)}</td><td>${esc(r.assignee)}</td><td>${esc(r.created)}</td><td>${esc(r.updated)}</td></tr>`,
-        )
-        .join("")}</tbody></table>
-      <script>window.onload=function(){window.print()}<\/script>
-      </body></html>`);
-    w.document.close();
+    const ok = printReportSheet({
+      title: "Ticket report",
+      subtitle: "Service desk",
+      columns: reportColumns,
+      rows,
+      meta: [
+        `Tickets: ${rows.length}`,
+        statusFilter && statusFilter !== "All" ? `Status: ${statusFilter}` : "",
+        priorityFilter && priorityFilter !== "All" ? `Priority: ${priorityFilter}` : "",
+        query ? `Search: "${query}"` : "",
+      ].filter(Boolean),
+    });
+    if (!ok) onToast("Pop-up blocked — allow pop-ups to print", "err");
   }
 
   /* ------------------------------------------------------------------ view */
@@ -522,15 +504,12 @@ export default function Tickets({ role, userName, onToast }: Props) {
               </div>
 
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={printReport}
+                <ReportActions
+                  onPrint={printReport}
+                  onExport={exportCsv}
                   disabled={!filteredTickets.length}
-                  className="grid size-8 place-items-center rounded-lg border border-[var(--border)] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
-                  title="Print report"
-                >
-                  <Printer className="size-3.5" />
-                </button>
+                  title={`Export ${filteredTickets.length} tickets as CSV`}
+                />
                 <button
                   type="button"
                   onClick={async () => {
@@ -544,16 +523,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
                   title="Refresh list"
                 >
                   <RefreshIcon className={`size-3.5 ${listBusy ? "animate-spin" : ""}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={exportCsv}
-                  disabled={!filteredTickets.length}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 text-[11px] font-medium text-foreground transition hover:bg-muted disabled:opacity-40"
-                  title="Export CSV"
-                >
-                  <Download className="size-3.5" />
-                  Export
                 </button>
               </div>
             </div>

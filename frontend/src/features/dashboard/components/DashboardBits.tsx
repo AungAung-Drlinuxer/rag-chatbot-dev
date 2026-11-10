@@ -4,13 +4,10 @@
  * Small presentational pieces: section headers, status badges, report buttons.
  */
 
-import {
-  ArrowUpRight,
-  Download,
-  Printer,
-} from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { downloadText, printReport } from "@/shared/report";
+import { ReportActions } from "@/shared/ReportActions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { Conversation, RecentTicket } from "@/features/dashboard/lib/dashboardTypes";
 import { dashboardCsv } from "@/features/dashboard/lib/dashboardUtils";
 
@@ -152,66 +149,63 @@ export function DashboardReportButtons({ stats, conversations, tickets, domains 
   stats: any; conversations: any[]; tickets: any[]; domains: any[];
 }) {
   function exportCsv() {
-    const body = dashboardCsv(stats, conversations, tickets, domains);
-    const blob = new Blob(["\ufeff" + body], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dashboard-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(
+      `dashboard-report-${new Date().toISOString().slice(0, 10)}.csv`,
+      dashboardCsv(stats, conversations, tickets, domains),
+      "text/csv;charset=utf-8",
+    );
   }
 
-  function printReport() {
-    const w = window.open("", "_blank", "width=900,height=700");
-    if (!w) return;
-    const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const rows = (tickets ?? []).map((t) =>
-      `<tr><td>${esc(t.id)}</td><td>${esc(t.subject)}</td><td>${esc(t.status)}</td><td>${esc(t.priority)}</td></tr>`).join("");
-    const convRows = (conversations ?? []).map((c) =>
-      `<tr><td>${esc(c.time)}</td><td>${esc(c.user)}</td><td>${esc(c.question)}</td><td>${esc(c.result)}</td></tr>`).join("");
-    const domRows = (domains ?? []).map((d) =>
-      `<tr><td>${esc(d.name)}</td><td>${esc(d.count)}</td><td>${esc(d.percentage)}%</td></tr>`).join("");
-    w.document.write(`<!doctype html><html><head><title>Dashboard Report</title><style>
-      body{font-family:Arial,sans-serif;margin:32px;color:#0f172a}
-      h1{font-size:18px;margin:0 0 4px}.meta{font-size:12px;color:#64748b;margin-bottom:16px}
-      h2{font-size:14px;margin:20px 0 6px}
-      table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:12px}
-      th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left}
-      th{background:#f1f5f9}tr:nth-child(even) td{background:#f8fafc}
-      .kpis{display:flex;gap:16px;font-size:13px}
-      .kpi{border:1px solid #cbd5e1;border-radius:8px;padding:8px 14px}
-      @media print{button{display:none}}
-    </style></head><body>
-      <h1>IT Help Chatbot — Dashboard Report</h1>
-      <div class="meta">Generated ${new Date().toLocaleString()}</div>
-      ${stats ? `<div class="kpis">
-        <div class="kpi"><b>${esc(stats.total ?? "—")}</b><br>Total questions</div>
-        <div class="kpi"><b>${esc(stats.answered ?? "—")}</b><br>Answered from KB</div>
-        <div class="kpi"><b>${esc(stats.escalated_to_tickets ?? "—")}</b><br>Escalated</div>
-        <div class="kpi"><b>${esc(stats.avg_confidence ?? "—")}</b><br>Avg confidence</div>
-      </div>` : ""}
-      <h2>Domain Breakdown</h2>
-      <table><thead><tr><th>Domain</th><th>Count</th><th>Share</th></tr></thead><tbody>${domRows}</tbody></table>
-      <h2>Recent Tickets</h2>
-      <table><thead><tr><th>Ticket</th><th>Subject</th><th>Status</th><th>Priority</th></tr></thead><tbody>${rows}</tbody></table>
-      <h2>Recent Conversations</h2>
-      <table><thead><tr><th>Time</th><th>User</th><th>Question</th><th>Result</th></tr></thead><tbody>${convRows}</tbody></table>
-      <script>window.onload=function(){window.print()}<\/script>
-    </body></html>`);
-    w.document.close();
+  /* The dashboard's report is the same sheet every other page prints — KPI row, then one
+     titled table per panel — so a printed pack never mixes two house styles. */
+  function printReportSheet() {
+    printReport({
+      title: "Workspace overview",
+      subtitle: "Dashboard",
+      kpis: stats ? [
+        { label: "Total questions", value: String(stats.total ?? "—") },
+        { label: "Answered from KB", value: String(stats.answered ?? "—") },
+        { label: "Escalated", value: String(stats.escalated_to_tickets ?? "—") },
+        { label: "Avg confidence", value: String(stats.avg_confidence ?? "—") },
+      ] : [],
+      sections: [
+        {
+          title: "Domain breakdown",
+          columns: [
+            { key: "name", label: "Domain", width: "60%" },
+            { key: "count", label: "Count", width: "20%" },
+            { key: "share", label: "Share", width: "20%" },
+          ],
+          rows: (domains ?? []).map((d: any) => ({ name: d.name, count: d.count, share: `${d.percentage}%` })),
+        },
+        {
+          title: "Recent tickets",
+          columns: [
+            { key: "id", label: "Ticket", width: "26%" },
+            { key: "subject", label: "Subject", width: "46%" },
+            { key: "status", label: "Status", width: "14%" },
+            { key: "priority", label: "Priority", width: "14%" },
+          ],
+          rows: (tickets ?? []).map((t: any) => ({ id: t.id, subject: t.subject, status: t.status, priority: t.priority })),
+        },
+        {
+          title: "Recent conversations",
+          columns: [
+            { key: "time", label: "Time", width: "18%" },
+            { key: "user", label: "User", width: "18%" },
+            { key: "question", label: "Question", width: "46%" },
+            { key: "result", label: "Result", width: "18%" },
+          ],
+          rows: (conversations ?? []).map((c: any) => ({ time: c.time, user: c.user, question: c.question, result: c.result })),
+        },
+      ],
+      meta: [`Tickets: ${(tickets ?? []).length}`, `Conversations: ${(conversations ?? []).length}`],
+    });
   }
 
   return (
     <>
-      <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCsv} title="Download all dashboard data as CSV">
-        <Download className="mr-1.5 size-3.5" />
-        Export CSV
-      </Button>
-      <Button variant="outline" size="sm" className="rounded-xl" onClick={printReport} title="Open a printable report in a new tab">
-        <Printer className="mr-1.5 size-3.5" />
-        Report
-      </Button>
+      <ReportActions onPrint={printReportSheet} onExport={exportCsv} />
     </>
   );
 }

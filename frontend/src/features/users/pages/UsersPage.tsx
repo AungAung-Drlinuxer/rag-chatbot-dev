@@ -4,10 +4,8 @@ import {
   CalendarDays,
   ChevronDown,
   Clock,
-  Download,
   Laptop,
   Mail,
-  Printer,
   AlertTriangle,
   Check,
   KeyRound,
@@ -25,6 +23,8 @@ import {
 } from "lucide-react";
 
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
+import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
+import { ReportActions } from "@/shared/ReportActions";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -266,41 +266,47 @@ export default function Users() {
     return ["All", ...Array.from(new Set(values))];
   }, [users]);
 
+  const reportColumns = [
+    { key: "name", label: "Name", width: "18%" },
+    { key: "username", label: "Username", width: "14%" },
+    { key: "email", label: "Email", width: "22%" },
+    { key: "department", label: "Department", width: "14%" },
+    { key: "role", label: "Role", width: "10%" },
+    { key: "status", label: "Status", width: "8%" },
+    { key: "lastLogin", label: "Last login", width: "8%" },
+    { key: "joined", label: "Joined", width: "6%" },
+  ];
+
+  const reportRows = filteredUsers.map((u) => ({
+    name: u.name,
+    username: `@${u.username}`,
+    email: u.email,
+    department: u.department || "—",
+    role: u.role,
+    status: u.status,
+    lastLogin: formatDateTime(u.lastLogin),
+    joined: formatDate(u.joined),
+  }));
+
   function exportCsv() {
-    const header = "Name,Username,Email,Department,Role,Status,Last login,Joined";
-    const rows = filteredUsers.map((u) =>
-      [u.name, u.username, u.email, u.department, u.role, u.status, u.lastLogin, u.joined]
-        .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
-    const csv = "\ufeff" + [header, ...rows].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    a.download = `users-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    downloadCsv(`users-report-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, reportRows);
   }
 
   function printReport() {
-    const rows = filteredUsers.map((u) => `
-      <tr>
-        <td>${u.name}</td><td>@${u.username}</td><td>${u.email}</td>
-        <td>${u.department || "—"}</td><td>${u.role}</td><td>${u.status}</td>
-        <td>${formatDateTime(u.lastLogin)}</td><td>${formatDate(u.joined)}</td>
-      </tr>`).join("");
-    const w = window.open("", "_blank", "width=1000,height=700");
-    if (!w) return;
-    w.document.write(`<html><head><title>Users report</title>
-      <style>body{font-family:Inter,Segoe UI,sans-serif;padding:24px;color:#0f172a}
-      h1{font-size:18px;margin:0 0 4px}p{font-size:11px;color:#64748b;margin:0 0 16px}
-      table{width:100%;border-collapse:collapse;font-size:11px}
-      th{text-align:left;background:#f1f5f9;padding:8px;border-bottom:2px solid #e2e8f0}
-      td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
-      .meta{margin-bottom:16px;font-size:10px;color:#94a3b8}</style></head><body>
-      <h1>Users report — IT Help Chatbot</h1>
-      <p class="meta">${filteredUsers.length} users · generated ${new Date().toLocaleString()} · filters: search="${search || "-"}", status=${statusFilter}, role=${roleFilter}, department=${departmentFilter}</p>
-      <table><thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Department</th><th>Role</th><th>Status</th><th>Last login</th><th>Joined</th></tr></thead>
-      <tbody>${rows}</tbody></table></body></html>`);
-    w.document.close();
-    w.focus();
-    w.print();
+    const ok = printReportSheet({
+      title: "Users report",
+      subtitle: "Workspace · Directory",
+      columns: reportColumns,
+      rows: reportRows,
+      meta: [
+        `Users: ${reportRows.length}`,
+        search ? `Search: "${search}"` : "",
+        statusFilter !== "All" ? `Status: ${statusFilter}` : "",
+        roleFilter !== "All" ? `Role: ${roleFilter}` : "",
+        departmentFilter !== "All" ? `Department: ${departmentFilter}` : "",
+      ].filter(Boolean),
+    });
+    if (!ok) window.alert("Your browser blocked the print window. Allow pop-ups for this site and try again.");
   }
 
   function resetFilters() {
@@ -353,16 +359,12 @@ export default function Users() {
                 className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50">
                 <RefreshCw className={["size-3.5", refreshing ? "animate-spin" : ""].join(" ")} />
               </button>
-              <button type="button" onClick={exportCsv} disabled={filteredUsers.length === 0}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-medium text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50">
-                <Download className="size-3.5" />
-                Export CSV
-              </button>
-              <button type="button" onClick={printReport} disabled={filteredUsers.length === 0}
-                aria-label="Print report" title="Print report"
-                className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50">
-                <Printer className="size-3.5" />
-              </button>
+              <ReportActions
+                onPrint={printReport}
+                onExport={exportCsv}
+                disabled={filteredUsers.length === 0}
+                title={`Export ${filteredUsers.length} users as CSV`}
+              />
               <button type="button" onClick={() => setShowAddUser(true)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90">
                 <Plus className="size-4" />
@@ -691,9 +693,11 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
   return (
     <tr className="border-b border-[var(--border)] transition hover:bg-[var(--muted)]/40">
       <td className="px-4 py-3.5">
-        <button type="button" onClick={onSelect} className="flex min-w-0 items-center gap-3 text-left">
+        {/* w-full + flex-1: without it the name block kept its 26ch max-width inside a
+            narrower fixed cell and painted the email over the Department column. */}
+        <button type="button" onClick={onSelect} className="flex w-full min-w-0 items-center gap-3 text-left">
           <Avatar name={user.name} />
-          <span className="min-w-0 max-w-[26ch]">
+          <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-xs font-semibold" title={user.name}>{user.name}</span>
               {user.username.endsWith("-svc") && (

@@ -156,7 +156,7 @@ function Trend({ title }: PanelBodyProps) {
     });
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">{title}</h2>
           <p className="mt-0.5 text-2xs text-muted-foreground">
@@ -406,8 +406,8 @@ function Health({ title }: PanelBodyProps) {
         )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
-        <span>{count === 0 ? "No dependencies reporting" : `${count} dependencies reporting`}</span>
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
+        <span className="min-w-0 truncate">{count === 0 ? "No dependencies reporting" : `${count} dependencies reporting`}</span>
         <a
           href="http://10.10.10.18:3000/d/rag-platform-health"
           target="_blank"
@@ -494,10 +494,10 @@ function UsageKpis({ title }: PanelBodyProps) {
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2.5 py-1.5 transition-colors hover:border-[var(--primary)]/30"
+            className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2.5 py-1.5 transition-colors hover:border-[var(--primary)]/30"
             title={tile.hint}
           >
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
               <span className={tile.tone}>{tile.icon}</span>
               <span className="truncate">{tile.label}</span>
             </div>
@@ -679,8 +679,8 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
 
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <ShieldAlert className="size-4" />
           </div>
