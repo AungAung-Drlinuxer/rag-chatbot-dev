@@ -77,6 +77,22 @@ def _day_labels(start_iso: str, n: int) -> list[str]:
     return [(first + timedelta(days=i)).isoformat() for i in range(n)]
 
 
+PRIVILEGED = ("admin", "agent", "knowledge", "domain_manager")
+
+
+def _scoped(user: str) -> bool:
+    """True when this caller may see the whole organization's numbers.
+
+    A plain `user` gets their OWN week, not the company's: the Overview page was
+    showing every colleague's question count, escalation count and the list of
+    usernames — an ACL hole that no page-level gate would have closed, because the
+    page is legitimately theirs.
+    """
+    from app.auth.rbac import get_role
+
+    return get_role(user) in PRIVILEGED
+
+
 @router.get("/dashboard/stats")
 def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     """v1.1.6 — real week-over-week deltas (the frontend previously showed
@@ -95,15 +111,25 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
         cur = _rows(sql_where, base)
         return int(cur[0]["n"] or 0)
 
+    org = _scoped(user)
+    # One fragment per table, so a personal Overview and an organization Overview share the
+    # same SQL instead of drifting into two copies.
+    mine = "" if org else " AND s.username = :user"
+    mine_t = "" if org else " AND created_by = :user"
+    mine_a = "" if org else " AND username = :user"
+    who = {} if org else {"user": user}
+
     chats_week = _rows(
-        "SELECT count(*) AS n FROM chat_messages "
-        "WHERE role = 'user' AND created_at >= :since",
-        {"since": week_ago},
+        "SELECT count(*) AS n FROM chat_messages m "
+        "JOIN chat_sessions s ON s.id = m.session_id "
+        "WHERE m.role = 'user' AND m.created_at >= :since" + mine,
+        {"since": week_ago, **who},
     )[0]["n"]
     chats_prev = _rows(
-        "SELECT count(*) AS n FROM chat_messages "
-        "WHERE role = 'user' AND created_at >= :since2 AND created_at < :since",
-        {"since": week_ago, "since2": two_weeks_ago},
+        "SELECT count(*) AS n FROM chat_messages m "
+        "JOIN chat_sessions s ON s.id = m.session_id "
+        "WHERE m.role = 'user' AND m.created_at >= :since2 AND m.created_at < :since" + mine,
+        {"since": week_ago, "since2": two_weeks_ago, **who},
     )[0]["n"]
 
     # v0.21.84 — escalation rate must be measured against CONVERSATIONS: a ticket
@@ -111,39 +137,47 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     # Counting every Jira row (mostly manually-created tickets) produced rates >100%.
     escalated_week = _rows(
         "SELECT count(*) AS n FROM jira_tickets "
-        "WHERE session_id IS NOT NULL AND created_at >= :since",
-        {"since": week_ago},
+        "WHERE session_id IS NOT NULL AND created_at >= :since" + mine_t,
+        {"since": week_ago, **who},
     )[0]["n"]
     escalated_prev = _rows(
         "SELECT count(*) AS n FROM jira_tickets "
-        "WHERE session_id IS NOT NULL AND created_at >= :since2 AND created_at < :since",
-        {"since": week_ago, "since2": two_weeks_ago},
+        "WHERE session_id IS NOT NULL AND created_at >= :since2 AND created_at < :since" + mine_t,
+        {"since": week_ago, "since2": two_weeks_ago, **who},
     )[0]["n"]
 
     # resolved ≈ answered turns where decision was 'answer' (meta JSON)
     resolved_week = _rows(
-        "SELECT count(*) AS n FROM chat_messages "
-        "WHERE role = 'assistant' AND created_at >= :since "
-        "AND meta LIKE '%\"decision\": \"answer\"%'",
-        {"since": week_ago},
+        "SELECT count(*) AS n FROM chat_messages m "
+        "JOIN chat_sessions s ON s.id = m.session_id "
+        "WHERE m.role = 'assistant' AND m.created_at >= :since "
+        "AND m.meta LIKE '%\"decision\": \"answer\"%'" + mine,
+        {"since": week_ago, **who},
     )[0]["n"]
     resolved_prev = _rows(
-        "SELECT count(*) AS n FROM chat_messages "
-        "WHERE role = 'assistant' AND created_at >= :since2 AND created_at < :since "
-        "AND meta LIKE '%\"decision\": \"answer\"%'",
-        {"since": week_ago, "since2": two_weeks_ago},
+        "SELECT count(*) AS n FROM chat_messages m "
+        "JOIN chat_sessions s ON s.id = m.session_id "
+        "WHERE m.role = 'assistant' AND m.created_at >= :since2 AND m.created_at < :since "
+        "AND m.meta LIKE '%\"decision\": \"answer\"%'" + mine,
+        {"since": week_ago, "since2": two_weeks_ago, **who},
     )[0]["n"]
 
-    active_users = _rows(
-        "SELECT count(DISTINCT username) AS n FROM chat_sessions "
-        "WHERE started_at >= :since",
-        {"since": week_ago},
-    )[0]["n"]
-    active_users_prev = _rows(
-        "SELECT count(DISTINCT username) AS n FROM chat_sessions "
-        "WHERE started_at >= :since2 AND started_at < :since",
-        {"since": week_ago, "since2": two_weeks_ago},
-    )[0]["n"]
+    if org:
+        active_users = _rows(
+            "SELECT count(DISTINCT username) AS n FROM chat_sessions "
+            "WHERE started_at >= :since",
+            {"since": week_ago},
+        )[0]["n"]
+        active_users_prev = _rows(
+            "SELECT count(DISTINCT username) AS n FROM chat_sessions "
+            "WHERE started_at >= :since2 AND started_at < :since",
+            {"since": week_ago, "since2": two_weeks_ago},
+        )[0]["n"]
+    else:
+        # "Active users" for one person is whether *they* were active — never a count of
+        # colleagues, which is what leaked the organization's size on the user's own page.
+        active_users = int(chats_week or 0) > 0
+        active_users_prev = int(chats_prev or 0) > 0
 
     kb_pages = _rows("SELECT count(*) AS n FROM kb_meta")[0]["n"]
 
@@ -151,8 +185,8 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     attacks_blocked_week = _rows(
         "SELECT count(*) AS n FROM audit_log "
         "WHERE action IN ('guardrail.injection','guardrail.overflow') "
-        "AND created_at >= :since",
-        {"since": week_ago},
+        "AND created_at >= :since" + mine_a,
+        {"since": week_ago, **who},
     )[0]["n"]
 
     def _pct(cur: int, prev: int) -> float | None:
@@ -288,11 +322,14 @@ def dashboard_recent_conversations(
     limit: int = 10, user: str = Depends(get_current_user)
 ) -> dict:
     limit = max(1, min(limit, 50))
+    org = _scoped(user)
     rows = _rows(
         "SELECT m.created_at, s.username, m.content, m.meta "
         "FROM chat_messages m JOIN chat_sessions s ON s.id = m.session_id "
-        "WHERE m.role = 'user' ORDER BY m.created_at DESC LIMIT :limit",
-        {"limit": limit},
+        "WHERE m.role = 'user'"
+        + ("" if org else " AND s.username = :user")
+        + " ORDER BY m.created_at DESC LIMIT :limit",
+        {"limit": limit, **({} if org else {"user": user})},
     )
     out = []
     for r in rows:

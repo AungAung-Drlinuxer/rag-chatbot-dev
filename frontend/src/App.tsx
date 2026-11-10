@@ -12,6 +12,8 @@ import CommandPalette from "@/components/CommandPalette";
 import { NeedHelpCard } from "@/components/NeedHelpCard";
 import { FloatingChatProvider, FloatingChatPopup } from "@/components/FloatingChat";
 import { useHashNav } from "@/app/router";
+import { denied } from "@/app/acl";
+import AccessRestricted from "@/components/AccessRestricted";
 import { useSidebarCollapsed } from "@/app/useSidebar";
 import { applyStoredTheme, applyUserPrefs } from "@/app/theme";
 import { usernameFromToken } from "@/app/session";
@@ -251,6 +253,14 @@ export default function App() {
     );
   }
 
+  const block = denied(nav, perms);
+  const roleLabel = meDisplay || ({ admin: "Administrator", agent: "IT Support",
+    knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"];
+
+  if (block) {
+    return shell(nav, <AccessRestricted capability={block.label} roleLabel={roleLabel} />);
+  }
+
   return (
     <FloatingChatProvider>
       {(() => { switch (nav) {
@@ -266,7 +276,8 @@ export default function App() {
       // Its own page again: routing configuration and article reading are different jobs.
       return shell("domains", <DomainsPage role={role} perms={perms} />);
     case "users":
-      return shell("users", <UsersPage />);    case "history":
+      return shell("users", <UsersPage />);
+    case "history":
       return shell("history", <ConversationHistoryPage />);
     case "audits":
       return shell("audits", <AuditsPage />);
