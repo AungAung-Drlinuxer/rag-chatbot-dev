@@ -379,8 +379,10 @@ export default function Knowledge({ role, onToast }: Props) {
   // browser only ever reordered the 50 loaded rows while looking like it had
   // searched the whole KB, which is the same class of wrong answer as the old
   // "50 articles" total.
-  // The mockup's footer reads "10 / page", so 10 is the default page size.
-  const [pageSize, setPageSize] = useState(10);
+  /* Ten per page, fixed — the same unit as Users, Conversations and the Audit log, so the
+     four lists can be read page for page. A size selector made the Knowledge page the only
+     place where "page 2" meant a different amount of work. */
+  const pageSize = 10;
   const [sortKey, setSortKey] = useState<"last_synced" | "title" | "domain">("last_synced");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [providerFilter, setProviderFilter] = useState<string>("all");
@@ -1141,13 +1143,9 @@ export default function Knowledge({ role, onToast }: Props) {
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={pageSize}
-                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); setSearchMode(false); }}
-                  className="h-8 rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none focus:border-[var(--primary)]"
-                  title="Rows per page" aria-label="Rows per page">
-                  {[10, 25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} / page</option>)}
-                </select>
+                <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
+                  {pageSize} / page
+                </span>
 
                 <nav aria-label="Pagination" className="flex items-center gap-1">
                   <button
