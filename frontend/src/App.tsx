@@ -254,7 +254,7 @@ export default function App() {
   }
 
   const block = denied(nav, perms);
-  const roleLabel = meDisplay || ({ admin: "Administrator", agent: "IT Support",
+  const roleLabel = meDisplay || ({ admin: "Administrator",
     knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"];
 
   if (block) {

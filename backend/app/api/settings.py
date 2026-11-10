@@ -332,7 +332,7 @@ def _reload_after_change(key: str) -> None:
         reload_ldap_cfg()
 
 @router.get("/settings/integrations/{key}")
-def get_integration_settings(key: str, user: str = Depends(get_current_user)) -> dict:
+def get_integration_settings(key: str, user: str = Depends(require_role("admin"))) -> dict:
     """Return the integration's configuration WITHOUT any stored value.
 
     v1.6.35 — WRITE-ONLY. The previous filter dropped only `*_token` / `*_password`,
@@ -388,7 +388,7 @@ def get_integration_settings(key: str, user: str = Depends(get_current_user)) ->
 
 @router.delete("/settings/integrations/{key}")
 def delete_integration_settings(
-    key: str, confirm: str = "", user: str = Depends(get_current_user)
+    key: str, confirm: str = "", user: str = Depends(require_role("admin"))
 ) -> dict:
     """Remove a stored integration configuration entirely ("disconnect").
 
@@ -419,7 +419,7 @@ def delete_integration_settings(
 
 
 @router.put("/settings/integrations/{key}")
-def put_integration_settings(key: str, payload: dict, user: str = Depends(get_current_user)) -> dict:
+def put_integration_settings(key: str, payload: dict, user: str = Depends(require_role("admin"))) -> dict:
     if key not in INTEGRATION_KEYS:
         raise HTTPException(status_code=404, detail="Unknown integration")
     data = payload.get("settings")
@@ -510,7 +510,7 @@ def _kickoff_kb_sync() -> str:
 
 
 @router.post("/settings/integrations/{key}/test")
-def test_integration(key: str, user: str = Depends(get_current_user)) -> dict:
+def test_integration(key: str, user: str = Depends(require_role("admin"))) -> dict:
     """Connectivity test for Confluence / Jira."""
     import httpx
     with SessionLocal() as s:
@@ -616,7 +616,7 @@ def test_integration(key: str, user: str = Depends(get_current_user)) -> dict:
 
 
 @router.get("/settings/integrations/llm/models")
-def list_llm_models(user: str = Depends(get_current_user)) -> dict:
+def list_llm_models(user: str = Depends(require_role("admin"))) -> dict:
     """Fetch the model catalogue from the configured provider (saved key required).
 
     Returns [{id, name}] sorted by id. Used by the Settings -> Integrations ->

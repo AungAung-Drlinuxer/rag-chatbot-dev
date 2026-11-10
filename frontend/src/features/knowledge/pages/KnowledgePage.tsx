@@ -639,7 +639,7 @@ export default function Knowledge({ role, onToast }: Props) {
         breadcrumbs={["Workspace", "Knowledge"]}
         eyebrow="Administration"
         icon={<BookOpen className="size-5" />}
-        badge={role === "admin" ? "Administrator" : role === "agent" ? "IT Support" : role === "knowledge" ? "Knowledge Manager" : "User"}
+        badge={role === "admin" ? "Administrator" : role === "knowledge" ? "Knowledge Manager" : "User"}
         title="Knowledge base"
         description="Keep your assistant's knowledge organized, searchable, and up to date."
         actions={

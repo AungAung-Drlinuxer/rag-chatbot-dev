@@ -14,7 +14,7 @@ export default function AccessRestricted({
 }: {
   /** human name of the capability, e.g. "Manage users, roles & settings" */
   capability: string;
-  /** the caller's role, already prettified ("User", "IT Support", …) */
+  /** the caller's role, already prettified ("User", "Knowledge Manager", …) */
   roleLabel?: string;
 }) {
   return (

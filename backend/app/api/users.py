@@ -226,11 +226,13 @@ def update_user_role(username: str, payload: dict, user: str = Depends(get_curre
     if get_role(user) != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     role = (payload.get("role") or "").strip().lower()
-    # Map display names to backend enum
-    # v1.1.1 — domain_manager merged into knowledge; legacy input names map there too
-    role = {"it support": "agent", "knowledge manager": "knowledge", "domain manager": "knowledge", "domain_manager": "knowledge", "administrator": "admin", "user": "user", "admin": "admin", "agent": "agent"}.get(role, role)
-    if role not in ("admin", "agent", "user", "knowledge"):
-        raise HTTPException(status_code=400, detail="role must be admin|agent|user|knowledge")
+    # Display names → enum. The "IT Support" role no longer exists; an old value maps to
+    # User rather than silently granting ticket visibility across the organization.
+    role = {"knowledge manager": "knowledge", "domain manager": "knowledge", "domain_manager": "knowledge",
+            "administrator": "admin", "admin": "admin", "user": "user",
+            "it support": "user", "agent": "user"}.get(role, role)
+    if role not in ("admin", "user", "knowledge"):
+        raise HTTPException(status_code=400, detail="role must be admin|user|knowledge")
     with SessionLocal() as s:
         s.execute(text(
             "INSERT INTO users (username, role_override) VALUES (:u, :r) "

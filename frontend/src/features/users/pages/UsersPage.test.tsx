@@ -157,9 +157,11 @@ describe("UsersPage — loading and the directory table", () => {
 
   it("normalises backend role enums to the canonical display role", async () => {
     const el = await mount();
-    // "agent" must never leak through as a raw token; it is "IT Support".
-    expect(el.textContent).toContain("IT Support");
+    // "agent" is a removed role: it must render as "User", never as a raw token and
+    // never as the retired "IT Support" label.
     expect(el.textContent).not.toMatch(/\bagent\b/);
+    expect(el.textContent).not.toContain("IT Support");
+    expect(el.textContent).toContain("User");
   });
 
   it("flags a service account with the 'system' chip", async () => {

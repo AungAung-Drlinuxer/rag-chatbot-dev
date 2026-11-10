@@ -95,9 +95,10 @@ def test_plain_user_recent_conversations_only_returns_their_own(fake_db, monkeyp
     assert params.get("user") == "alice"
 
 
-def test_agent_sees_the_organization(fake_db, monkeypatch):
-    """Support staff need the org view; only the plain user is narrowed."""
-    _user(monkeypatch, "agent")
+def test_knowledge_manager_sees_the_organization(fake_db, monkeypatch):
+    """The Knowledge Manager owns org-wide content, so they keep the org view; the
+    plain user is the only role that is narrowed."""
+    _user(monkeypatch, "knowledge")
     dash.dashboard_recent_conversations(limit=5, user="bob")
     sql, params = fake_db[-1]
     assert "s.username = :user" not in sql

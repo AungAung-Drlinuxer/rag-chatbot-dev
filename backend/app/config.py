@@ -87,14 +87,14 @@ class Settings(BaseSettings):
     rbac_admin_groups: str = "it-help-admins"    # space-separated LDAP groups → admin
     rbac_agent_groups: str = "it-help-agents"
     dev_admin_usernames: str = ""               # install-specific; set via env when needed
-    # role=domains (comma-sep per role; "*" = all). e.g. "user=general,system;agent=database,security,network,system;admin=*"
+    # role=domains (comma-sep per role; "*" = all). Roles are user / knowledge / admin
+    # (the old "agent" entry is gone; a leftover makes no difference — it matches nothing).
     # v1.6.34 — `knowledge` was absent from this map, so allowed_domains() returned an
     # EMPTY set and a Knowledge Manager saw no KB content at all in chat (every chunk
     # was filtered out by the domain gate). They curate the whole base, so they get
     # unrestricted READ; write/manage authority stays with the capability map.
     role_domains: str = (
         "user=general,system;"
-        "agent=database,security,network,system,general;"
         "knowledge=*;"
         "admin=*"
     )

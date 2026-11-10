@@ -65,7 +65,6 @@ type UserStatus = "Active" | "Inactive" | "Locked" | "Disabled" | "Pending";
 // both KB articles and the Domains & Routing engine).
 type UserRole =
   | "Administrator"
-  | "IT Support"
   | "Knowledge Manager"
   | "User";
 
@@ -118,17 +117,18 @@ const EMPTY_PERMISSIONS: PermissionMap = {
 /* Role descriptions — shown in the role dropdown so admins pick correctly */
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   Administrator: "Full control: users, KB, domains, tickets, settings",
-  "IT Support": "Works tickets (view/edit all), syncs KB, receives escalations",
-  "Knowledge Manager": "Manages KB articles AND the Domains & Routing engine",
-  User: "End user: chat + search KB + own tickets only",
+  "Knowledge Manager": "Chat, search, create tickets, manage KB & routing domains",
+  User: "Chat, search the knowledge base, create tickets",
 };
 
 /* Normalize any backend/local variant (Agent, Admin, agent, IT Support…) to the
    canonical display role used across the UI. Backend /api/users capitalizes the
    role_override (agent -> Agent, admin -> Admin), LDAP-derived rows may be
-   "IT Support"/"Administrator", and overrides may be raw enum keys. */
+   "Knowledge Manager"/"Administrator", and overrides may be raw enum keys. An old
+   "IT Support" value is read as User, because that role no longer exists. */
 const ROLE_ALIASES: Record<string, UserRole> = {
-  "agent": "IT Support",
+  // The IT Support role was removed; its accounts are plain users (least privilege).
+  "agent": "User",
   "admin": "Administrator",
   "administrator": "Administrator",
   "knowledge": "Knowledge Manager",
@@ -136,21 +136,20 @@ const ROLE_ALIASES: Record<string, UserRole> = {
   // legacy merged role — domain manager == Knowledge Manager
   "domain_manager": "Knowledge Manager",
   "domain manager": "Knowledge Manager",
-  "it support": "IT Support",
+  "it support": "User",
   "user": "User",
 };
 
 function normalizeRole(raw: string | null | undefined): UserRole {
   const key = (raw || "").trim().toLowerCase();
-  return ROLE_ALIASES[key] ?? (([ "Administrator", "IT Support", "Knowledge Manager", "User" ].includes(raw || "") ? raw : "User") as UserRole);
+  return ROLE_ALIASES[key] ?? (([ "Administrator", "Knowledge Manager", "User" ].includes(raw || "") ? raw : "User") as UserRole);
 }
 
 /* Canonical role → permission defaults (matches backend /api/rbac/matrix) */
 const ROLE_DEFAULTS: Record<UserRole, PermissionMap> = {
   Administrator: { chatbot: true, kb_search: true, create_tickets: true, manage_kb: true, manage_users: true, manage_domains: true },
-  "Knowledge Manager": { chatbot: true, kb_search: true, create_tickets: false, manage_kb: true, manage_users: false, manage_domains: true },
-  "IT Support": { chatbot: true, kb_search: true, create_tickets: true, manage_kb: false, manage_users: false, manage_domains: false },
-  User: { chatbot: true, kb_search: true, create_tickets: false, manage_kb: false, manage_users: false, manage_domains: false },
+  "Knowledge Manager": { chatbot: true, kb_search: true, create_tickets: true, manage_kb: true, manage_users: false, manage_domains: true },
+  User: { chatbot: true, kb_search: true, create_tickets: true, manage_kb: false, manage_users: false, manage_domains: false },
 };
 
 /* Avatar tones — a deterministic colour per person, so two rows are told apart
@@ -424,7 +423,7 @@ export default function Users() {
             <FilterSelect label="Status" allLabel="All statuses" value={statusFilter} onChange={setStatusFilter}
               options={["All", "Active", "Inactive", "Locked", "Disabled"]} />
             <FilterSelect label="Role" allLabel="All roles" value={roleFilter} onChange={setRoleFilter}
-              options={["All", "Administrator", "IT Support", "Knowledge Manager", "User"]} />
+              options={["All", "Administrator", "Knowledge Manager", "User"]} />
             <FilterSelect label="Department" allLabel="All departments" value={departmentFilter} onChange={setDepartmentFilter}
               options={departmentOptions} />
             <button type="button" onClick={resetFilters} disabled={!hasFilters}
@@ -570,7 +569,7 @@ export default function Users() {
           <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By role</h2>
             <div className="mt-3 space-y-2.5">
-              {["Administrator", "IT Support", "Knowledge Manager", "User"].map((role) => {
+              {["Administrator", "Knowledge Manager", "User"].map((role) => {
                 const n = users.filter((u) => u.role === role).length;
                 const pct = totalUsers ? Math.round((n / totalUsers) * 100) : 0;
                 return (
@@ -763,7 +762,6 @@ function RoleBadge({ role }: { role: UserRole }) {
   // v1.5.6 — distinct role colors: Administrator=violet, IT Support=sky, KM=teal, User=slate
   const styles: Record<UserRole, string> = {
     Administrator: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
-    "IT Support": "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-300",
     "Knowledge Manager": "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
     User: "border-[var(--border)] bg-[var(--muted)] text-muted-foreground",
   };
@@ -1083,7 +1081,6 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                     className="h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-background pl-3 pr-9 text-xs font-medium outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
                   >
                     <option value="Administrator">Administrator</option>
-                    <option value="IT Support">IT Support</option>
                     <option value="Knowledge Manager">Knowledge Manager</option>
                     <option value="User">User</option>
                   </select>
@@ -1343,7 +1340,6 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
               <select value={role} onChange={(event) => setRole(event.target.value as UserRole)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-xs outline-none" aria-label="Role">
                 <option value="User">User</option>
-                <option value="IT Support">IT Support</option>
                 <option value="Knowledge Manager">Knowledge Manager</option>
                 <option value="Administrator">Administrator</option>
               </select>

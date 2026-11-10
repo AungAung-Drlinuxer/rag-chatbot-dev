@@ -33,7 +33,7 @@ def articles_search(req: ArticleSearchRequest, user: str = Depends(get_current_u
 
 @router.post("/api/articles/sync")
 def articles_sync(user: str = Depends(get_current_user),
-                  role: str = Depends(require_role("admin", "agent"))) -> dict:
+                  role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Queue a KB sync and return immediately.
 
     This used to run the whole sync inside the request. A real sync takes ~90s (the
@@ -78,7 +78,7 @@ def articles_sync(user: str = Depends(get_current_user),
 
 @router.post("/api/articles/draft")
 def article_draft(req: ArticleDraftRequest, user: str = Depends(get_current_user),
-                  role: str = Depends(require_role("admin", "agent"))) -> dict:
+                  role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """AI writing assist — generate a KB article draft for the given topic/domain."""
     from app.orchestration.orchestrator import answer_chain
 
@@ -100,7 +100,7 @@ def article_draft(req: ArticleDraftRequest, user: str = Depends(get_current_user
 
 @router.post("/api/articles")
 def article_create(req: ArticleRequest, user: str = Depends(get_current_user),
-                   role: str = Depends(require_role("admin", "agent"))) -> dict:
+                   role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Add a KB article — v0.19.0: writes to Confluence (domain section) when
     the space is configured, then ingests locally. Falls back to local-only
     (page_id kept) if the Confluence write fails."""
@@ -128,7 +128,7 @@ def article_create(req: ArticleRequest, user: str = Depends(get_current_user),
 
 @router.put("/api/articles/{page_id}")
 def article_update(page_id: str, req: ArticleRequest, user: str = Depends(get_current_user),
-                   role: str = Depends(require_role("admin", "agent"))) -> dict:
+                   role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Update a KB article (change-detected → re-embed)."""
     from app.knowledge.ingest import ingest_article
 
@@ -372,7 +372,7 @@ def sync_status(user: str = Depends(get_current_user)) -> dict:
 
 @router.delete("/api/articles/{page_id}")
 def article_delete(page_id: str, user: str = Depends(get_current_user),
-                   role: str = Depends(require_role("admin", "agent"))) -> dict:
+                   role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Remove a KB article (vectors + sync meta)."""
     from app.knowledge.ingest import _delete_vectors
     from app.persistence.models import KbMeta
@@ -402,7 +402,7 @@ def article_delete(page_id: str, user: str = Depends(get_current_user),
 @router.post("/api/knowledge/articles/bulk-move")
 def articles_bulk_move(req: dict,
                        user: str = Depends(get_current_user),
-                       role: str = Depends(require_role("admin", "agent"))) -> dict:
+                       role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Reassign many articles to one domain (kb_meta + stored chunk metadata)."""
     from app.knowledge.reclassify import _apply_change
 
@@ -434,7 +434,7 @@ def articles_bulk_move(req: dict,
 @router.post("/api/knowledge/articles/bulk-delete")
 def articles_bulk_delete(req: dict,
                          user: str = Depends(get_current_user),
-                         role: str = Depends(require_role("admin", "agent"))) -> dict:
+                         role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Remove many KB articles (vectors + sync meta)."""
     from app.knowledge.ingest import _delete_vectors
     from app.persistence.models import KbMeta
@@ -476,7 +476,7 @@ def articles_bulk_delete(req: dict,
 @router.post("/api/knowledge/reclassify")
 def reclassify_start(req: dict | None = None,
                      user: str = Depends(get_current_user),
-                     role: str = Depends(require_role("admin", "agent"))) -> dict:
+                     role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Start re-classifying the KB with the LLM. `{"apply": true}` also applies it."""
     from app.knowledge.reclassify import start_reclassify
 
@@ -490,7 +490,7 @@ def reclassify_start(req: dict | None = None,
 
 @router.get("/api/knowledge/reclassify/status")
 def reclassify_progress(user: str = Depends(get_current_user),
-                        role: str = Depends(require_role("admin", "agent"))) -> dict:
+                        role: str = Depends(require_role("admin", "knowledge"))) -> dict:
     """Poll progress; `changes` is the proposed (or applied) diff."""
     from app.knowledge.reclassify import reclassify_status
 

@@ -62,7 +62,9 @@ User Question
 - Source-badge unification (Jira + OpenProject tickets in one board)
 
 ### 3.4 Enterprise Administration
-- **RBAC** (4 roles): Administrator, IT Support, Knowledge Manager, User
+- **RBAC** (3 roles): Administrator (everything), Knowledge Manager (chat, search,
+  create tickets, manage KB & routing domains), User (chat, search, create tickets).
+  The former "IT Support" role was removed; its accounts resolve to User.
   - Capability matrix (chatbot, kb_search, create_tickets, manage_kb, manage_users, manage_domains)
   - Per-user permission overrides + AD/LDAP group mapping
 - **Authentication**: LDAP/AD primary, local accounts for service users

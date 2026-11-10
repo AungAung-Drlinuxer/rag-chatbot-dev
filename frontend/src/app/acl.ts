@@ -10,6 +10,7 @@
  * and blocking during that window would flash "Access restricted" on every reload.
  */
 export const NAV_CAPABILITY: Record<string, { cap: string; label: string }> = {
+  articles: { cap: "manage_kb", label: "Manage the knowledge base & articles" },
   users: { cap: "manage_users", label: "Manage users, roles & settings" },
   history: { cap: "manage_users", label: "Review organization conversation history" },
   audits: { cap: "manage_users", label: "View platform audit trail" },

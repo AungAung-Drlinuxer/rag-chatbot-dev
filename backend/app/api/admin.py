@@ -75,7 +75,7 @@ def _secret_status(value: str | None) -> str:
 
 
 @router.get("/api/integrations/status")
-def integrations_status(user: str = Depends(get_current_user)) -> dict:
+def integrations_status(user: str = Depends(require_role("admin"))) -> dict:
     """Integration status grid for the Settings panel — values never exposed."""
     from app.config import SETTINGS as S
     from app.runtime import metadata as runtime_metadata
@@ -349,7 +349,7 @@ def set_domain_assignees(domain_id: int, req: DomainAssigneesRequest,
 class GroupRequest(BaseModel):
     name: str
     description: str | None = None
-    role: str = "agent"
+    role: str = "knowledge"
     members: list[str] = []
 
 
@@ -390,7 +390,7 @@ def create_group(req: GroupRequest, user: str = Depends(require_cap("manage_user
         if s.get(AppGroup, name):
             raise HTTPException(status_code=400, detail=f"Group '{name}' already exists")
         s.add(AppGroup(name=name, description=(req.description or "")[:255] or None,
-                       role=(req.role or "agent")[:32]))
+                       role=(req.role or "knowledge")[:32]))
         for u in dict.fromkeys(x.strip() for x in req.members if x.strip()):
             s.add(GroupMember(group_name=name, username=u[:64]))
         s.commit()
@@ -412,7 +412,7 @@ def update_group(name: str, req: GroupUpdateRequest,
         if req.description is not None:
             g.description = req.description[:255] or None
         if req.role is not None:
-            g.role = req.role[:32] or "agent"
+            g.role = req.role[:32] or "knowledge"
         if req.members is not None:
             s.query(GroupMember).filter(GroupMember.group_name == name).delete()
             for u in dict.fromkeys(x.strip() for x in req.members if x.strip()):

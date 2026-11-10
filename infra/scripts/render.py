@@ -25,8 +25,8 @@ OUT = ROOT / "infra" / ".rendered"
 DEFAULTS = {
     "NAMESPACE": "rag-chatbot-dev",
     "REGISTRY": "harbor.drlinuxer.com/rag-chatbot-dev",
-    "FRONTEND_TAG": "dev-1.0.76",
-    "BACKEND_TAG": "dev-1.0.63",
+    "FRONTEND_TAG": "dev-1.0.78",
+    "BACKEND_TAG": "dev-1.0.67",
     "OLLAMA_TAG": "0.5.7-models",
     "RERANK_TAG": "1.0.2",
     "DOMAIN": "dev-chat.drlinuxer.com",

@@ -15,7 +15,20 @@ from app.config import SETTINGS
 
 logger = logging.getLogger("rbac")
 
-ROLES = ("admin", "agent", "user", "knowledge")  # v1.1.1: domain_manager merged into knowledge
+# Three roles, by design: User (asks + searches + raises tickets), Knowledge Manager
+# (owns articles and routing), Administrator (everything). The former "IT Support" role
+# was removed — its duties are split between the other two — and `domain_manager` stays
+# only as a legacy alias of knowledge.
+ROLES = ("admin", "knowledge", "user")
+
+_LEGACY_ROLES = {"agent": "user", "it support": "user", "domain_manager": "knowledge"}
+
+
+def normalize_role(role: str | None) -> str:
+    """Map a stored/legacy role onto one of ROLES. Unknown → 'user' (least privilege)."""
+    key = (role or "").strip().lower()
+    key = _LEGACY_ROLES.get(key, key)
+    return key if key in ROLES else "user"
 
 
 def get_groups(username: str) -> list[str]:
@@ -66,7 +79,7 @@ def get_role(username: str) -> str:
                 _t("SELECT role_override FROM users WHERE username = :u"), {"u": username}
             ).first()
         if row and row.role_override:
-            return row.role_override
+            return normalize_role(row.role_override)
     except Exception as exc:
         # Fail safe, but never silently: a DB outage here silently downgrades a
         # user to group-derived roles, which looks like a permissions bug with
@@ -76,8 +89,10 @@ def get_role(username: str) -> str:
     groups = set(get_groups(username))
     if groups & {g.strip() for g in SETTINGS.rbac_admin_groups.split(",") if g.strip()}:
         return "admin"
+    # The old agent group now maps to Knowledge Manager only if it is also listed there;
+    # otherwise a directory member is a plain user.
     if groups & {g.strip() for g in SETTINGS.rbac_agent_groups.split(",") if g.strip()}:
-        return "agent"
+        return "knowledge"
     return "user"
 
 
@@ -105,7 +120,7 @@ def allowed_domains(role: str) -> set[str] | None:
 
 def require_role(*roles: str):
     """FastAPI dependency factory — returns the role or 403 if the user lacks one."""
-    _ROLE_LABEL = {"admin": "Administrator", "agent": "IT Support",
+    _ROLE_LABEL = {"admin": "Administrator",
                    "knowledge": "Knowledge Manager", "user": "User"}
 
     def dependency(user: str = Depends(get_current_user)) -> str:
@@ -208,17 +223,16 @@ CAPABILITIES = {
 # the same matrix row for backward compatibility.
 _MATRIX_ROLE_FOR = {
     "admin": "Administrator",
-    "agent": "IT Support",
     "knowledge": "Knowledge Manager",
     "domain_manager": "Knowledge Manager",  # legacy alias — merged role
+    "agent": "User",  # removed role: least privilege, never a silent promotion
     "user": "User",
 }
 
 _DEFAULT_MATRIX = {
     "Administrator": {"chatbot": True, "kb_search": True, "create_tickets": True, "manage_kb": True, "manage_users": True, "manage_domains": True},
-    "IT Support": {"chatbot": True, "kb_search": True, "create_tickets": True, "manage_kb": False, "manage_users": False, "manage_domains": False},
-    "Knowledge Manager": {"chatbot": True, "kb_search": True, "create_tickets": False, "manage_kb": True, "manage_users": False, "manage_domains": True},
-    "User": {"chatbot": True, "kb_search": True, "create_tickets": False, "manage_kb": False, "manage_users": False, "manage_domains": False},
+    "Knowledge Manager": {"chatbot": True, "kb_search": True, "create_tickets": True, "manage_kb": True, "manage_users": False, "manage_domains": True},
+    "User": {"chatbot": True, "kb_search": True, "create_tickets": True, "manage_kb": False, "manage_users": False, "manage_domains": False},
 }
 
 
@@ -238,7 +252,7 @@ def effective_role(username: str) -> str:
                 {"u": username},
             ).first()
         if row and row.role_override:
-            return row.role_override
+            return normalize_role(row.role_override)
     except Exception as exc:
         logger.warning("effective-role override lookup failed for %s: %s", username, exc)
     return get_role(username)
@@ -283,7 +297,7 @@ def _group_permissions(username: str) -> dict | None:
         return None
     if not rows:
         return None
-    rank = {"admin": 3, "agent": 2, "knowledge": 2, "domain_manager": 2, "user": 1}  # domain_manager = legacy alias of knowledge
+    rank = {"admin": 3, "knowledge": 2, "domain_manager": 2, "user": 1}  # domain_manager = legacy alias
     best = max(rows, key=lambda r: rank.get(r["role"], 1))
     extra = best["permissions"] or {}
     return {"role": best["role"], "extra": extra}

@@ -30,12 +30,11 @@ def _rows(sql: str, params: dict | None = None) -> list[dict]:
 # any non-Administrator permission via PUT /api/rbac/matrix.
 # v1.1.1 — Domain Manager merged into Knowledge Manager (single role owns
 # manage_kb + manage_domains since the Knowledge page hosts both engines).
-_RBAC_DEFAULT_MATRIX: dict[str, dict[str, bool]] = {
-    "Administrator": {"chatbot": True,  "kb_search": True, "create_tickets": True, "manage_kb": True, "manage_users": True, "manage_domains": True},
-    "IT Support":    {"chatbot": True,  "kb_search": True, "create_tickets": True, "manage_kb": False, "manage_users": False, "manage_domains": False},
-    "Knowledge Manager": {"chatbot": True, "kb_search": True, "create_tickets": False, "manage_kb": True, "manage_users": False, "manage_domains": True},
-    "User":          {"chatbot": True,  "kb_search": True, "create_tickets": False, "manage_kb": False, "manage_users": False, "manage_domains": False},
-}
+# ONE source of truth: the matrix lives in app.auth.rbac and the enforcement reads it
+# from there. A second copy here is what kept the removed "IT Support" role on screen
+# after the role itself was deleted.
+from app.auth.rbac import _DEFAULT_MATRIX as _RBAC_DEFAULT_MATRIX
+
 _RBAC_ROLES = tuple(_RBAC_DEFAULT_MATRIX.keys())
 
 

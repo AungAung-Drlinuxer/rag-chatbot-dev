@@ -93,7 +93,7 @@ def _role_of(user: str) -> str:
 
 def fetch_ticket_context(user: str, query: str) -> tuple[str, list[dict]]:
     """Return (LLM context, structured rows) scoped by RBAC. ('' , []) if nothing found."""
-    privileged = _role_of(user) in ("admin", "agent")
+    privileged = _role_of(user) == "admin"
 
     where = "WHERE created_by = :user" if not privileged else ""
     params: dict = {"user": user, "limit": 10}

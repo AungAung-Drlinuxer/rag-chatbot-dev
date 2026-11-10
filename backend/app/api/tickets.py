@@ -238,7 +238,7 @@ def list_tickets(
 ) -> dict:
     role = get_role(user)
     limit = max(1, min(limit, 200))
-    privileged = role in ("admin", "agent")
+    privileged = role == "admin"
 
     # Tickets reconciliation found gone from Jira stay in the table (status='deleted') so the
     # escalation history survives, but they must not appear on the board.
@@ -420,7 +420,7 @@ def _resolve_ticket(ticket_ref: str, user: str):
         if row is None:
             return None
         role = get_role(user)
-        if role not in ("admin", "agent") and (row.created_by or "") != user:
+        if role != "admin" and (row.created_by or "") != user:
             return None
         return row
 
@@ -529,7 +529,7 @@ class TicketUpdateRequest(BaseModel):
 @router.put("/tickets/{ticket_ref}")
 def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
                   user: str = Depends(get_current_user),
-                  _role: str = Depends(require_role("admin", "agent"))) -> dict:
+                  _role: str = Depends(require_role("admin"))) -> dict:
     # v0.22.00 — BUGFIX: `user` previously got require_role's return value (the ROLE
     # string "admin"), so _resolve_ticket checked ownership against "admin" and every
     # agent/admin status edit 404'd. Identity and authorization are separate deps now.
@@ -713,7 +713,7 @@ def ticket_attachment_add(ticket_ref: str, req: AttachmentRequest,
 @router.delete("/tickets/{ticket_ref}/attachments/{att_id}")
 def ticket_attachment_delete(ticket_ref: str, att_id: int,
                              user: str = Depends(get_current_user),
-                             _role: str = Depends(require_role("admin", "agent"))) -> dict:
+                             _role: str = Depends(require_role("admin"))) -> dict:
     """Remove an attachment from the issue and from the mirror.
 
     The Jira side goes first: a row deleted locally but still hanging on the issue is an

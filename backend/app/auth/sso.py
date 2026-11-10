@@ -294,7 +294,7 @@ def role_from_claims(claims: dict) -> str | None:
     if groups & admins:
         return "admin"
     if groups & agents:
-        return "agent"
+        return "knowledge"
     return None
 
 

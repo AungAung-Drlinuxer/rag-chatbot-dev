@@ -148,6 +148,10 @@ describe("SettingsPage — role gating and the grouped nav", () => {
     expect(nav.textContent).not.toContain("Integrations");
     // Branding lives inside the general panel but is admin-gated.
     expect(el.querySelector('[data-stub="branding"]')).toBeNull();
+    // Integrations are fully administrator-only: no panel, and no "My integrations"
+    // catalogue either — it probed every provider's configuration on mount.
+    expect(el.querySelector('[data-stub="integrations"]')).toBeNull();
+    expect(el.textContent).not.toContain("My integrations");
   });
 
   it("opens the Integrations panel (with service status) from the nav", async () => {

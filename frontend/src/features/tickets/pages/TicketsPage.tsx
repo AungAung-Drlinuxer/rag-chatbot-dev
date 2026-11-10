@@ -63,7 +63,7 @@ type Props = {
 const PAGE_SIZE = 10;
 
 export default function Tickets({ role, userName, onToast }: Props) {
-  const canManage = role === "admin" || role === "agent";
+  const canManage = role === "admin";
 
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [ticketsError, setTicketsError] = useState<string | null>(null);

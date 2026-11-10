@@ -125,7 +125,7 @@ export default function PageSidebar({
   const items: Array<{ id: string; label: string; icon: React.ReactNode; cap?: string; capLabel?: string }> = [
     { id: "chat", label: "Chat", icon: <MessageSquare className="size-4" />, cap: "chatbot", capLabel: "Ask the AI assistant" },
     { id: "dashboard", label: "Overview", icon: <Home className="size-4" /> },
-    { id: "articles", label: "Knowledge", icon: <BookOpen className="size-4" />, cap: "kb_search", capLabel: "Search the knowledge base" },
+    { id: "articles", label: "Knowledge", icon: <BookOpen className="size-4" />, cap: "manage_kb", capLabel: "Manage the knowledge base & articles" },
     { id: "domains", label: "Domains & Routing", icon: <Layers className="size-4" />, cap: "manage_domains", capLabel: "Manage classification domains & Jira routing" },
     { id: "tickets", label: "Tickets", icon: <TicketIcon className="size-4" /> },
     { id: "users", label: "Users", icon: <UsersIcon className="size-4" />, cap: "manage_users", capLabel: "Manage users, roles & settings" },
@@ -133,7 +133,7 @@ export default function PageSidebar({
     { id: "audits", label: "Audit Log", icon: <ScrollText className="size-4" />, cap: "manage_users", capLabel: "View platform audit trail" },
     { id: "settings", label: "Settings", icon: <SettingsIcon className="size-4" /> },
   ];
-  const pretty = displayRole || ({ admin: "Administrator", agent: "IT Support", knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"] || "User";
+  const pretty = displayRole || ({ admin: "Administrator", knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"] || "User";
 
   const navBody = (
     <>

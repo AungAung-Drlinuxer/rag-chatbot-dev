@@ -417,20 +417,10 @@ export default function Settings({ role }: { role?: string }) {
               </SectionCard>
             )}
 
-            {/* Members choose WHICH tools they use; the connections themselves stay
-                admin-configured, so this deliberately renders without any editor. */}
-            {!isAdmin && active === "general" && (
-              <SectionCard
-                icon={<Plug className="h-5 w-5 text-[var(--primary)]" />}
-                iconTone="bg-[var(--accent)]"
-                title="My integrations"
-                description="Pick the tools you work with. An administrator sets up each connection once."
-              >
-                <div className="p-5">
-                  <IntegrationsConfig variant="personal" />
-                </div>
-              </SectionCard>
-            )}
+            {/* Integrations are administrator-only: the configuration screen holds
+                credentials (LLM key, Jira token, LDAP bind, SMTP) and the connection
+                tests, so a member must not reach it at all — not even the read-only
+                "my tools" catalogue, which probed every provider's config on mount. */}
 
             {/* Branding — admin only (logo on login + sidebar) */}
             {isAdmin && active === "general" && (

@@ -197,7 +197,7 @@ def test_one_time_code_roundtrip():
 
 
 def test_role_mapping_from_realm_roles_and_groups():
-    assert sso.role_from_claims({"realm_access": {"roles": ["it-help-agents"]}}) == "agent"
+    assert sso.role_from_claims({"realm_access": {"roles": ["it-help-agents"]}}) == "knowledge"
     assert sso.role_from_claims({"groups": ["staff"]}) is None
 
 

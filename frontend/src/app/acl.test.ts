@@ -13,7 +13,7 @@ const ADMIN = {
 
 describe("page ACL", () => {
   it("blocks the admin pages for a plain user", () => {
-    for (const nav of ["users", "history", "audits", "domains"]) {
+    for (const nav of ["users", "history", "audits", "domains", "articles"]) {
       expect(denied(nav, USER)?.cap).toBeTruthy();
     }
   });
@@ -32,7 +32,7 @@ describe("page ACL", () => {
   });
 
   it("never blocks a page that needs no capability", () => {
-    for (const nav of ["chat", "dashboard", "articles", "tickets", "settings"]) {
+    for (const nav of ["chat", "dashboard", "tickets", "settings"]) {
       expect(denied(nav, USER)).toBeNull();
     }
   });

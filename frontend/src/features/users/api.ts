@@ -4,7 +4,7 @@ import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
 export async function updateUserRole(username: string, role: string) {
   // Normalize display labels (IT Support / Knowledge Manager) to backend enum
   const norm = (role || "").trim().toLowerCase()
-    .replace(/^it support$/, "agent")
+    .replace(/^it support$/, "user")
     .replace(/^knowledge manager$/, "knowledge")
     .replace(/^administrator$/, "admin")
     .replace(/^user$/, "user");
@@ -128,7 +128,7 @@ export async function createGroup(name: string, members: string[] = []) {
   const r = await apiFetch(`${BASE}/api/admin/groups`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ name, members, role: "agent" }),
+    body: JSON.stringify({ name, members, role: "knowledge" }),
   });
   if (!r.ok) {
     const body = await r.json().catch(() => ({} as { detail?: string }));

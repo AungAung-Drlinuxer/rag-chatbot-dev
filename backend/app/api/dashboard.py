@@ -77,7 +77,7 @@ def _day_labels(start_iso: str, n: int) -> list[str]:
     return [(first + timedelta(days=i)).isoformat() for i in range(n)]
 
 
-PRIVILEGED = ("admin", "agent", "knowledge", "domain_manager")
+PRIVILEGED = ("admin", "knowledge", "domain_manager")
 
 
 def _scoped(user: str) -> bool:
