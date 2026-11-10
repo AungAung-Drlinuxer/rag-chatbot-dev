@@ -138,11 +138,15 @@ export default function PageSidebar({
     { id: "audits", label: "Audit Log", icon: <ScrollText className="size-4" />, cap: "manage_users", capLabel: "View platform audit trail" },
     { id: "settings", label: "Settings", icon: <SettingsIcon className="size-4" /> },
   ];
-  const visible = items.filter((item) => {
-    if (!item.cap) return true;
-    if (perms) return perms[item.cap] !== false;
-    return item.cap === "chatbot"; // boot: only the one capability every role has
-  });
+  // STRICT: a capped entry renders only when the caller's permissions say so. Anything
+  // else — undefined while /api/me is in flight, or an empty object on a cold start —
+  // renders nothing rather than rendering it and then removing it one second later. The
+  // capability list is cached with the session, so a refresh's first paint is already
+  // correct.
+  // `chatbot` is held by every role, so Chat does not need to wait for /api/me — that
+  // only made it pop in a moment after the rest of the menu.
+  const visible = items.filter((item) =>
+    !item.cap || item.cap === "chatbot" || perms?.[item.cap] === true);
 
   const pretty = displayRole || ({ admin: "Administrator", knowledge: "Knowledge Manager", domain_manager: "Knowledge Manager" } as Record<string, string>)[role || "user"] || "User";
 

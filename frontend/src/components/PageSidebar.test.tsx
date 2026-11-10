@@ -102,8 +102,12 @@ describe("PageSidebar — the menu follows the role", () => {
     expect(navLabels()).toEqual(ALL);
   });
 
-  it("while permissions load, only the always-available entries render", async () => {
+  it("renders nothing capability-gated while permissions are still loading", async () => {
+    // The menu used to paint every entry and then remove the forbidden ones a second
+    // later — the "other pages flash, then disappear on refresh" bug. Nothing gated may
+    // render before the answer is known.
     await mount(undefined);
     expect(navLabels()).toEqual(["Chat", "Overview", "Tickets", "Settings"]);
+    expect(host.textContent).not.toContain("Knowledge");
   });
 });

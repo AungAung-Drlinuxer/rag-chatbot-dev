@@ -108,4 +108,41 @@ export async function loadTokens(): Promise<{ access: string; refresh: string } 
 export async function clearTokens() {
   if (inTauri()) return invoke("clear_tokens");
   sessionStorage.removeItem("tokens");
+  sessionStorage.removeItem("me");
+}
+
+/**
+ * The caller's identity and capabilities, cached for the next paint.
+ *
+ * The sidebar is rendered from `permissions`, which arrived only after `/api/me`
+ * resolved. On every refresh the menu therefore painted a permissive default and then
+ * corrected itself — a visible flash of entries the role cannot use. Caching the last
+ * answer next to the tokens lets the first paint already be the right one.
+ */
+export type MeCache = {
+  role: string;
+  displayRole: string;
+  permissions: Record<string, boolean>;
+};
+
+export function saveMeCache(me: MeCache) {
+  if (inTauri()) return; // desktop keeps the keyring; no sessionStorage copy to police
+  try {
+    sessionStorage.setItem("me", JSON.stringify(me));
+  } catch {
+    /* quota or private mode — the menu still renders once /api/me answers */
+  }
+}
+
+export function loadMeSync(): MeCache | null {
+  if (inTauri()) return null;
+  try {
+    const raw = sessionStorage.getItem("me");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as MeCache;
+    if (!parsed || typeof parsed !== "object" || !parsed.permissions) return null;
+    return { role: parsed.role ?? "", displayRole: parsed.displayRole ?? "", permissions: parsed.permissions };
+  } catch {
+    return null;
+  }
 }

@@ -20,6 +20,8 @@ import { usernameFromToken } from "@/app/session";
 import {
   setAuthToken, setRefreshToken, loadTokens, saveTokens, clearTokens, BASE,
   loadTokensSync,
+  loadMeSync,
+  saveMeCache,
 } from "@/shared/api/client";
 import { login, getMe, exchangeSsoCode, getSsoEnabled } from "@/features/auth/api";
 import { getMySettings } from "@/features/settings/api";
@@ -89,10 +91,24 @@ export default function App() {
   const [userName, setUserName] = useState(
     initialSession?.access ? usernameFromToken(initialSession.access) : "",
   );
-  const [role, setRole] = useState("");
-  const [perms, setPerms] = useState<Record<string, boolean>>({});
-  const [meDisplay, setMeDisplay] = useState("");
+  /* The menu is drawn from `permissions`. Seeding them from the tab's cached identity
+     means the first paint after a refresh is already the right menu — before, the state
+     started empty, every entry rendered for a moment, and the restriction landed a second
+     later (the "other pages flash, then disappear" report). */
+  const initialMe = useState(() => loadMeSync())[0];
+  const [role, setRole] = useState(initialMe?.role ?? "");
+  const [perms, setPerms] = useState<Record<string, boolean>>(initialMe?.permissions ?? {});
+  const [meDisplay, setMeDisplay] = useState(initialMe?.displayRole ?? "");
   const [ssoEnabled, setSsoEnabled] = useState(false);
+
+  /** Apply /api/me and remember it for the next refresh's first paint. */
+  function applyMe(m: { role?: string; displayRole?: string; permissions?: Record<string, boolean> }) {
+    const permissions = m.permissions ?? {};
+    setRole(m.role ?? "");
+    setPerms(permissions);
+    setMeDisplay(m.displayRole ?? "");
+    saveMeCache({ role: m.role ?? "", displayRole: m.displayRole ?? "", permissions });
+  }
 
   /** Shared by password login and the SSO callback — one place that completes a session. */
   async function applySession(data: { access_token: string; refresh_token?: string; username?: string }, fallbackUser = "") {
@@ -102,7 +118,7 @@ export default function App() {
     setUserName(data.username ?? fallbackUser);
     setAuthed(true);
     setNav("chat");
-    getMe().then((m) => { setRole(m.role); setPerms(m.permissions ?? {}); setMeDisplay(m.displayRole ?? ""); }).catch(() => {});
+    getMe().then(applyMe).catch(() => {});
     getMySettings().then(applyUserPrefs).catch(() => {});
   }
 
@@ -148,7 +164,7 @@ export default function App() {
         setRefreshToken(t.refresh ?? null);
         setUserName(usernameFromToken(t.access));
         setAuthed(true);
-        getMe().then((m) => { setRole(m.role); setPerms(m.permissions ?? {}); setMeDisplay(m.displayRole ?? ""); }).catch(() => {});
+        getMe().then(applyMe).catch(() => {});
         getMySettings().then(applyUserPrefs).catch(() => {}); // theme engine on restore
       }
     }).catch(() => {}).finally(() => setBooted(true));
