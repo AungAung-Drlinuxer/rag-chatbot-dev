@@ -16,6 +16,8 @@ import ssl as _ssl
 import threading
 from email.mime.text import MIMEText
 
+from app.branding import mail_prefix
+
 log = logging.getLogger("notifier")
 
 _ALERT_KEYS = ("approval_request", "ticket_created", "ticket_status_change")
@@ -145,7 +147,7 @@ def notify_ticket_created(username: str | None, jira_key: str | None,
         return
     send_alert(
         "ticket_created",
-        f"[iTH] Ticket {jira_key} created",
+        f"{mail_prefix()} Ticket {jira_key} created",
         f"Your request was escalated to Jira.\n\n"
         f"Ticket: {jira_key}\nSubject: {subject}\n"
         f"Status: Open — the IT team will follow up.\n",
@@ -159,7 +161,7 @@ def notify_ticket_status(username: str | None, jira_key: str,
         return
     send_alert(
         "ticket_status_change",
-        f"[iTH] Ticket {jira_key} → {new.upper()}",
+        f"{mail_prefix()} Ticket {jira_key} → {new.upper()}",
         f"Ticket {jira_key} status changed: {old} → {new}\n",
         to_addr=user_email(username),
     )

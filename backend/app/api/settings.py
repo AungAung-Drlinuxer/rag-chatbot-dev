@@ -235,8 +235,12 @@ def send_test_email(payload: dict, user: str = Depends(get_current_user)) -> dic
     msg = MIMEMultipart()
     msg["From"] = from_addr
     msg["To"] = to_addr
-    msg["Subject"] = "iTH Enterprise — Test email"
-    msg.attach(MIMEText("SMTP configuration test successful. (iTH Enterprise Assistant)", "plain", "utf-8"))
+    # No product name is baked in: the brand the administrator set, or the neutral
+    # default. A test email that says somebody else's product name is a support ticket.
+    from app.branding import app_name as _app_name
+    brand = _app_name()
+    msg["Subject"] = f"{brand} — Test email"
+    msg.attach(MIMEText(f"SMTP configuration test successful. ({brand})", "plain", "utf-8"))
     try:
         use_ssl = port == 465
         if use_ssl:

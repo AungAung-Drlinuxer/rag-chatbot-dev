@@ -388,9 +388,10 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
                 # v0.21.92 — alert admins (SMTP) that an escalation awaits review
                 try:
                     from app.notifier import send_alert
+                    from app.branding import mail_prefix
                     send_alert(
                         "approval_request",
-                        "[iTH] Escalation awaiting approval",
+                        f"{mail_prefix()} Escalation awaiting approval",
                         f"User: {user}\nQuestion: {req.message}\n"
                         f"Approve/reject in Chat → approval queue.\n",
                         to_admins=True,

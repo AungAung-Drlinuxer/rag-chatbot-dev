@@ -682,8 +682,10 @@ function IntegrationStatusCards() {
     // The model provider's status lives in the AI service section now — it shows the
     // provider, model, key state and detection count, which is strictly more than this
     // card said. Keeping a second copy here is how the two screens drifted apart before.
-    { key: "redis", name: "Redis (Cache & Queue)", desc: "Caching and asynchronous task queue.",
-      detail: "Mode: Sentinel" },
+    // Redis is infrastructure, not an integration: single sign-on is what the fourth slot
+    // is for, and it is the one provider the catalogue lists that had no status anywhere.
+    { key: "keycloak", name: "Keycloak SSO", desc: "Single sign-on over OpenID Connect.",
+      detail: cfg.keycloak?.issuer ? `Issuer: ${cfg.keycloak.issuer}` : "Issuer: (not set)" },
   ];
 
   return (

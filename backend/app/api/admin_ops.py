@@ -350,12 +350,13 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
     # (2) email the requester
     try:
         from app.notifier import notify_ticket_created, send_alert, user_email
+        from app.branding import mail_prefix
         if decision == "approved" and ticket_id:
             notify_ticket_created(requester, ticket_id, (res.get("question") or "")[:120])
         elif decision == "rejected":
             send_alert(
                 "escalation_rejected",
-                "[iTH] Your escalation was not approved",
+                f"{mail_prefix()} Your escalation was not approved",
                 f"Your escalation request was reviewed and not approved.\n\n"
                 f"Request: {(res.get('question') or '')[:200]}\n"
                 f"Please contact the IT helpdesk if you still need assistance.\n",

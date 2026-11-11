@@ -72,6 +72,23 @@ describe("Settings → Integrations", () => {
     expect(text).not.toContain("Add integration");
   });
 
+  it("keeps the catalogue on screen — there is no browse mode to close", async () => {
+    const el = await mount();
+    expect(el.textContent).not.toContain("Close catalogue");
+    expect(el.textContent).not.toContain("Browse integrations");
+    // Every provider card is still there with its switch, so the list is the page.
+    expect(el.querySelectorAll("[data-integration]").length).toBe(4);
+    expect(el.querySelectorAll("[data-integration] button[role=\"switch\"]").length).toBe(4);
+  });
+
+  it("shows the configuration panel under the list instead of replacing it", async () => {
+    const el = await mount();
+    // All four are on in this fixture, so the first enabled provider's panel is open...
+    expect(el.querySelector("#integration-panel")).toBeTruthy();
+    // ...and the four cards are still rendered behind it.
+    expect(el.querySelectorAll("[data-integration]").length).toBe(4);
+  });
+
   it("still renders the four supported integrations with their panels", async () => {
     const text = (await mount()).textContent!;
     expect(text).toContain("Confluence");

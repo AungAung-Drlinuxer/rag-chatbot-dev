@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen, CheckCircle2, ExternalLink, Info, KeyRound, Loader2, Loader as LoaderIcon, Lock,
-  Pencil, Plug, Plus, Save, Search, Settings2, ShieldCheck, Ticket, Trash2, Users, XCircle,
-  Eye, EyeOff, ChevronRight, Check,
+  Pencil, Plug, Save, Search, ShieldCheck, Ticket, Trash2, Users, XCircle,
+  Eye, EyeOff, ChevronRight,
 } from "lucide-react";
 import {
   deleteIntegrationSettings, getIntegrationSettings, getMySettings, putIntegrationSettings, testIntegration, updateMySettings,
@@ -770,7 +770,6 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<ProviderKey | null>(null);
-  const [browsing, setBrowsing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [prefs, setPrefs] = useState<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
@@ -793,11 +792,9 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
         setEnabled(clean);
         const first = PROVIDERS.find((p) => clean[p.key]);
         setSelected(first ? first.key : null);
-        // Nothing switched on yet is the honest first-run state: open the catalogue.
-        // A member's view IS the catalogue, so it starts open either way.
-        if (!first || personal) setBrowsing(true);
+
       })
-      .catch(() => { if (mounted) setBrowsing(true); })
+      .catch(() => { /* the catalogue renders anyway; its toggles start empty */ })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
     // `personal` only decides whether the catalogue opens first; re-running on its
@@ -846,8 +843,9 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
     else delete map[key];
     setEnabled(map);
     if (next) {
+      // Stay on the catalogue: switching a provider on opens its panel underneath the list
+      // instead of replacing it.
       setSelected(key);
-      setBrowsing(false);
     } else if (selected === key) {
       const rest = PROVIDERS.find((p) => map[p.key]);
       setSelected(rest ? rest.key : null);
@@ -874,113 +872,37 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
         </p>
       )}
 
-      {browsing || personal ? (
-        <>
-          {/* The count and the way out stay visible while browsing, and the bar makes
-              "how much of this am I actually using" readable at a glance. */}
-          <IntegrationSummary
-            onCount={enabledList.length}
-            total={PROVIDERS.length}
-            connected={Object.values(status).filter(Boolean).length}
-            personal={personal}
-            action={!personal ? (
-              <button
-                type="button"
-                onClick={() => setBrowsing(false)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
-              >
-                <Check className="size-3.5" /> Close catalogue
-              </button>
-            ) : undefined}
-          />
-          <Catalog enabled={enabled} status={status} onToggle={toggle} personal={personal} onConfigure={(k) => { setSelected(k); setBrowsing(false); }} />
-        </>
-      ) : (
-        <>
-          {/* ---- enabled services: the same summary strip, plus the way back in ---- */}
-          <IntegrationSummary
-            onCount={enabledList.length}
-            total={PROVIDERS.length}
-            connected={Object.values(status).filter(Boolean).length}
-            personal={personal}
-            action={!personal ? (
-              <button
-                type="button"
-                onClick={() => setBrowsing(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.99]"
-              >
-                <Plus className="size-3.5" /> Browse integrations
-              </button>
-            ) : undefined}
-          />
+      {/* The catalogue is the page. There is no browse mode to enter or leave: the count,
+          the search and every provider stay in front of you, and switching one on opens its
+          panel below the list rather than taking the list away. */}
+      <IntegrationSummary
+        onCount={enabledList.length}
+        total={PROVIDERS.length}
+        connected={Object.values(status).filter(Boolean).length}
+        personal={personal}
+      />
 
-          <section data-slot="card" className="overflow-hidden">
-            {enabledList.length === 0 ? (
-              <div className="px-6 py-10 text-center">
-                <div className="mx-auto grid size-11 place-items-center rounded-xl bg-[var(--muted)] text-muted-foreground">
-                  <Settings2 className="size-5" aria-hidden />
-                </div>
-                <p className="mt-3 text-sm font-semibold">No integrations enabled</p>
-                <p className="mx-auto mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
-                  Pick only the tools your workspace actually uses. Each one you enable gets its own configuration panel here.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setBrowsing(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[11px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
-                >
-                  <Plus className="size-3.5" /> Browse integrations
-                </button>
-              </div>
-            ) : (
-              <ul className="divide-y divide-[var(--border)]">
-                {enabledList.map((p) => {
-                  const on = selected === p.key;
-                  const Icon = p.icon;
-                  const configured = status[p.key];
-                  return (
-                    <li key={p.key}>
-                      <button
-                        type="button"
-                        onClick={() => setSelected(p.key)}
-                        aria-current={on ? "true" : undefined}
-                        className={[
-                          "flex w-full items-center gap-3 px-5 py-2.5 text-left transition",
-                          on ? "bg-[var(--accent-soft)]/60" : "hover:bg-muted/40",
-                        ].join(" ")}
-                      >
-                        <span className={[
-                          "grid size-7 shrink-0 place-items-center rounded-lg",
-                          on ? "bg-[var(--accent)] text-[var(--accent-foreground)]" : "bg-[var(--muted)] text-muted-foreground",
-                        ].join(" ")}>
-                          <Icon className="size-3.5" aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-semibold">{p.name}</span>
-                          <span className="mt-0.5 block truncate text-2xs text-muted-foreground">
-                            {p.category}
-                          </span>
-                        </span>
-                        <span className="shrink-0">
-                          <StatusChip configured={configured} />
-                        </span>
-                        <ChevronRight className={["size-3.5 shrink-0 transition", on ? "text-[var(--primary)]" : "text-muted-foreground/50"].join(" ")} aria-hidden />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+      <Catalog
+        enabled={enabled}
+        status={status}
+        onToggle={toggle}
+        personal={personal}
+        onConfigure={(k) => {
+          setSelected(k);
+          requestAnimationFrame(() => {
+            document.getElementById("integration-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }}
+      />
 
-          {activeProvider && (
-            <ProviderEditor
-              key={activeProvider.key}
-              provider={activeProvider}
-              onConfigured={markConfigured}
-            />
-          )}
-        </>
+      {!personal && activeProvider && (
+        <div id="integration-panel" className="scroll-mt-4">
+          <ProviderEditor
+            key={activeProvider.key}
+            provider={activeProvider}
+            onConfigured={markConfigured}
+          />
+        </div>
       )}
     </div>
   );
