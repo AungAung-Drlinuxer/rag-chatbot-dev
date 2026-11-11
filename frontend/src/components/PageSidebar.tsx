@@ -507,7 +507,7 @@ export default function PageSidebar({
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-gradient-to-b from-violet-700 to-violet-900 transition-all border-violet-800/60 dark:bg-none dark:bg-[var(--sidebar-bg)] dark:border-[var(--sidebar-border)] lg:static lg:z-auto lg:translate-x-0 " + (collapsed ? "w-[72px]" : "w-[280px]"),
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-gradient-to-b from-violet-700 to-violet-900 transition-all border-violet-800/60 dark:bg-none dark:bg-[var(--sidebar-bg)] dark:border-[var(--sidebar-border)] lg:static lg:z-auto lg:translate-x-0 " + (collapsed ? "w-[72px]" : "w-[256px]"),
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}

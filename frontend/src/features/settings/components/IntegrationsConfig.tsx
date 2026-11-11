@@ -679,8 +679,8 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
         </div>
       </div>
 
-      {/* cards */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/* cards: 2 x 2 grid on desktop with aligned dimensions & actions */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
         {shown.map((p) => {
           const on = !!enabled[p.key];
           const Icon = p.icon;
@@ -689,13 +689,13 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
               key={p.key}
               data-integration={p.key}
               className={[
-                "group flex min-h-[168px] flex-col overflow-hidden rounded-xl border bg-card transition duration-150",
+                "group flex min-h-[178px] flex-col justify-between overflow-hidden rounded-xl border bg-card transition duration-150",
                 on
                   ? "border-[var(--primary)]/55 shadow-[inset_0_0_0_1px_var(--primary)]/10"
                   : "border-[var(--border)] hover:-translate-y-0.5 hover:border-[var(--primary)]/35 hover:shadow-[var(--elev-2)]",
               ].join(" ")}
             >
-              <div className="flex items-start gap-3 px-4 pt-4">
+              <div className="flex items-start gap-3.5 px-4 pt-4">
                 <div
                   className={[
                     "grid size-10 shrink-0 place-items-center rounded-xl transition",
@@ -723,19 +723,39 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
                 </div>
               </div>
 
-              <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] bg-[var(--muted)]/25 px-4 py-2.5">
+              <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] bg-[var(--muted)]/25 px-4 py-3">
                 <StatusChip configured={status[p.key]} enabled={on} />
-                {on && !personal ? (
-                  <button
-                    type="button"
-                    onClick={() => onConfigure(p.key)}
-                    className="inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 text-2xs font-semibold text-[var(--primary)] transition hover:gap-1.5 hover:underline"
-                  >
-                    Configure <ChevronRight className="size-3.5" />
-                  </button>
-                ) : on ? (
-                  <span className="shrink-0 text-2xs text-muted-foreground">Set up by admin</span>
-                ) : null}
+                <div className="flex items-center gap-2">
+                  {p.docs && (
+                    <a
+                      href={p.docs}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1 text-2xs font-medium text-muted-foreground transition hover:text-foreground hover:underline"
+                    >
+                      View docs <ExternalLink className="size-3" />
+                    </a>
+                  )}
+                  {on && !personal ? (
+                    <button
+                      type="button"
+                      onClick={() => onConfigure(p.key)}
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--primary)] px-2.5 py-1 text-2xs font-semibold text-white transition hover:opacity-90"
+                    >
+                      Configure <ChevronRight className="size-3" />
+                    </button>
+                  ) : on ? (
+                    <span className="shrink-0 text-2xs text-muted-foreground">Set up by admin</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onConfigure(p.key)}
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                      Configure <ChevronRight className="size-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

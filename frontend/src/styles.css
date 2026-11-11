@@ -61,13 +61,13 @@
 
   --dur-fast: 150ms;  /* B-8 unified interactive timing */
   --dur-slow: 200ms;  /* B-8 overlays / panels */
-  /* v1.0.1 — Linear/Vercel direction: tight radii. Was xs6/sm8/md10/lg12/xl14, which is a
-     Material-ish roundness; the reference apps use 6px controls and 8px cards. */
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  /* Enterprise SaaS direction: 10-14px rounded corners (card: 12px, modal: 16px). */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
 }
 
 :root {
@@ -187,40 +187,44 @@
 }
 
 [data-theme="dark"] {
-  /* v1.3.1 — CHARCOAL-NAVY / PLUM dark theme.
-     Canvas is charcoal with a navy undertone; panels step up through muted plum
-     (--card) into a cooler slate-indigo (--popover / --muted); violet stays the one
-     accent. Measured on --card #1E1A2A: muted text #9C93B4 = 5.4:1 (AA),
-     foreground #EDEAF4 = 13.6:1 (AAA), violet text #C4B5FD = 7.4:1 (AA). */
-  --background: #14121B;
+  /* Modern Enterprise SaaS Dark Theme:
+     Base: #09090F (Deep Navy / Dark Slate)
+     Sidebar: #11111B
+     Surface: #191927
+     Elevated: #222236
+     Primary: #8B5CF6 (Purple)
+     Secondary: #6366F1 (Indigo)
+     Accent: #3B82F6 (Blue)
+     Lavender: #A78BFA
+     Border: #2A253A (Subtle purple-gray) */
+  --background: #09090F;
   --foreground: #EDEAF4;
-  --card: #1E1A2A;
+  --card: #191927;
   --card-foreground: #EDEAF4;
-  --popover: #262134; --popover-foreground: #EDEAF4;
+  --popover: #222236; --popover-foreground: #EDEAF4;
   --primary: #8B5CF6;
   --primary-foreground: #FFFFFF;
-  --secondary: #262134;
-  --secondary-foreground: #CFC8DF;
-  --muted: #221E30;
+  --secondary: #6366F1;
+  --secondary-foreground: #FFFFFF;
+  --accent-blue: #3B82F6;
+  --lavender: #A78BFA;
+  --muted: #222236;
   --muted-foreground: #9C93B4;
   --accent: rgba(139, 92, 246, 0.16);
-  /* Accent TEXT is lifted (#C4B5FD) so it clears AA on the plum panels; filled
-     buttons keep the violet #8B5CF6. */
   --accent-foreground: #C4B5FD;
   --destructive: #f87171;
-  --destructive-foreground: #14121B;
-  --border: #342C46;
-  --input: #342C46;
+  --destructive-foreground: #09090F;
+  --border: #2A253A;
+  --input: #2A253A;
   --ring: #8B5CF6;
-  /* v0.21.65 — sidebar deeper than main panel (two-tone depth) */
-  --sidebar-bg: #100E17;         /* deeper than --background #14121B */
-  --sidebar-border: #241E33;
+  --sidebar-bg: #11111B;
+  --sidebar-border: #1E1A2C;
   --sidebar-text: #CFC8DF;
   --sidebar-text-muted: #8A82A0;
-    --sidebar-hover: rgba(139, 92, 246, 0.16);
-    --sidebar-active-bg: rgba(139, 92, 246, 0.26);
-    --sidebar-active-text: #C4B5FD;
-  --topbar-bg: #1E1A2A;
+  --sidebar-hover: rgba(139, 92, 246, 0.16);
+  --sidebar-active-bg: rgba(139, 92, 246, 0.26);
+  --sidebar-active-text: #C4B5FD;
+  --topbar-bg: #191927;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
   --shadow-md: 0 4px 6px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.3);
   --shadow-lg: 0 10px 15px rgba(0,0,0,.4), 0 4px 6px rgba(0,0,0,.3);
@@ -654,27 +658,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
   --danger: #dc2626;
 }
 [data-theme="dark"] {
-  --bg: #14121B;
-  --background: #14121B;
+  --bg: #09090F;
+  --background: #09090F;
   --foreground: #EDEAF4;
-  --card: #1E1A2A;
+  --card: #191927;
   --card-foreground: #EDEAF4;
-  --popover: #262134;
+  --popover: #222236;
   --popover-foreground: #EDEAF4;
   --primary: #8B5CF6;
   --primary-foreground: #FFFFFF;
-  --secondary: #262134;
-  --secondary-foreground: #CFC8DF;
-  --muted: #221E30;
+  --secondary: #6366F1;
+  --secondary-foreground: #FFFFFF;
+  --accent-blue: #3B82F6;
+  --lavender: #A78BFA;
+  --muted: #222236;
   --muted-foreground: #9C93B4;
   --accent: rgba(139, 92, 246, .16);
   --accent-foreground: #C4B5FD;
   --accent-soft: rgba(139, 92, 246, .16);
   --accent-2: #8B5CF6;
   --destructive: #f87171;
-  --destructive-foreground: #14121B;
-  --border: #342C46;
-  --input: #342C46;
+  --destructive-foreground: #09090F;
+  --border: #2A253A;
+  --input: #2A253A;
   --ring: #8B5CF6;
   --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
   --shadow-md: 0 2px 4px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
@@ -1094,8 +1100,13 @@ code, pre, .mono { font-family: var(--mono); }
   box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-2);
 }
 
-/* Overlays sit above the ramp, not beside it. */
-[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"] {
+/* Overlays sit above the ramp, not beside it. Modal radius: 16px. */
+[role="dialog"], [role="alertdialog"] {
+  border-radius: var(--radius-2xl);
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-3);
+}
+[role="menu"], [role="listbox"] {
+  border-radius: var(--radius-lg);
   box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-3);
 }
 
