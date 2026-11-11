@@ -41,7 +41,9 @@ export function fitScale({ screenWidth, innerWidth, dpr }: FitInput): number {
   // Dense displays already draw finer; scaling them up again would look oversized.
   const densityPenalty = dpr >= 1.5 ? 0.9 : 1;
   const raw = Math.pow(density, 0.35) * densityPenalty;
-  const clamped = Math.min(1.2, Math.max(0.9, raw));
+  // Never larger than the design: upscaling a 1080p screen made every page read as oversized,
+  // and the OS/browser already handles a dense display. Shrinking narrow screens stays.
+  const clamped = Math.min(1, Math.max(0.9, raw));
   return Math.round(clamped * 20) / 20; // 0.05 steps
 }
 

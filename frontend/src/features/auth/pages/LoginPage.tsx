@@ -133,7 +133,7 @@ export default function Login({
         />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1680px] lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(400px,520px)]">
+      <div className="relative mx-auto grid w-full max-w-[1680px] lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(430px,560px)]">
         {/* ============================ BRAND COLUMN ============================ */}
         <section className="relative hidden min-h-0 flex-col p-4 lg:flex xl:p-6">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-gradient-to-b from-card via-card to-muted/40 shadow-xs">
@@ -155,9 +155,9 @@ export default function Login({
             </header>
 
             {/* flexible content area */}
-            <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 overflow-y-auto px-6 py-6 xl:px-8 xl:py-8">
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 overflow-y-auto px-6 py-5 xl:px-8 xl:py-6">
               <div>
-                <h1 className="max-w-[16ch] text-[clamp(1.75rem,2.4vw,2.75rem)] font-semibold leading-[1.06] tracking-tight">
+                <h1 className="max-w-[18ch] text-[clamp(1.55rem,1.9vw,2.1rem)] font-semibold leading-[1.1] tracking-tight">
                   Find the right{" "}
                   <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent-foreground)] bg-clip-text text-transparent">
                     IT answer faster.
@@ -195,7 +195,7 @@ export default function Login({
                   height={548}
                   alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
                   className="pointer-events-none mx-auto block h-auto w-full max-w-full select-none object-contain"
-                  style={{ aspectRatio: "1280 / 548", maxHeight: 460 }}
+                  style={{ aspectRatio: "1280 / 548", maxHeight: 320, maxWidth: 680 }}
                   fetchPriority="high"
                   decoding="async"
                   draggable={false}

@@ -72,7 +72,7 @@ export function KpiCard({
         )}
       </div>
 
-      <div className="mt-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums">
+      <div className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums">
         {loading ? (
           <div className="h-6 w-14 animate-pulse rounded bg-muted" />
         ) : (

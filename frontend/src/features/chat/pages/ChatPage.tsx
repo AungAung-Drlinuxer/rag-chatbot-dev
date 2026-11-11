@@ -58,7 +58,7 @@ function Greeting({ name, composer }: { name: string; composer: React.ReactNode 
         <Sparkles className="size-[18px]" aria-hidden />
       </span>
 
-      <h1 className="text-[30px] font-semibold leading-tight tracking-tight sm:text-[38px]">
+      <h1 className="text-[24px] font-semibold leading-tight tracking-tight sm:text-[28px]">
         {greetingFor()}, {name}
       </h1>
       <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">

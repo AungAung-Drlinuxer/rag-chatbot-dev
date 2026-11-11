@@ -20,8 +20,10 @@ describe("fitScale", () => {
     expect(fitScale({ screenWidth: 1440, innerWidth: 1440, dpr: 1 })).toBe(1);
   });
 
-  it("grows a little on a 1080p 24-inch screen", () => {
-    expect(fitScale({ screenWidth: 1920, innerWidth: 1920, dpr: 1 })).toBe(1.1);
+  it("never grows: a 1080p 24-inch screen stays at 1", () => {
+    // The first version scaled up here and every page read as oversized on a desk monitor.
+    expect(fitScale({ screenWidth: 1920, innerWidth: 1920, dpr: 1 })).toBe(1);
+    expect(fitScale({ screenWidth: 2560, innerWidth: 2560, dpr: 1 })).toBe(1);
   });
 
   it("does not inflate a 4K screen that is already dense", () => {
@@ -36,13 +38,13 @@ describe("fitScale", () => {
     expect(fitScale({ screenWidth: 1024, innerWidth: 1024, dpr: 1 })).toBe(0.9);
   });
 
-  it("never exceeds 1.2, even on a very wide display", () => {
-    expect(fitScale({ screenWidth: 5120, innerWidth: 5120, dpr: 1 })).toBe(1.2);
+  it("never exceeds 1, even on a very wide display", () => {
+    expect(fitScale({ screenWidth: 5120, innerWidth: 5120, dpr: 1 })).toBe(1);
   });
 
   it("uses a window wider than the reported screen", () => {
     // A stale `screen` report must not shrink the interface on a maximised window.
-    expect(fitScale({ screenWidth: 800, innerWidth: 1920, dpr: 1 })).toBe(1.1);
+    expect(fitScale({ screenWidth: 800, innerWidth: 1920, dpr: 1 })).toBe(1);
   });
 });
 
