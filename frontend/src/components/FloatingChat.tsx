@@ -312,7 +312,7 @@ export function FloatingChatPopup() {
       >
         <Bot className="size-6" />
         {messages.length > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full border-2 border-white bg-emerald-500 text-xs font-bold text-white dark:border-[#0B1220]">
+          <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full border-2 border-white bg-emerald-500 text-2xs font-bold text-white dark:border-[#0B1220]">
             {messages.filter((m) => m.role === "assistant" && !m.failed).length || "•"}
           </span>
         )}
@@ -409,14 +409,14 @@ export function FloatingChatPopup() {
                       <div className="mt-1.5 flex justify-end gap-1.5">
                         <button
                           onClick={() => { setEditingId(null); setEditText(""); }}
-                          className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-black/5 dark:hover:bg-white/10"
+                          className="rounded-md px-2 py-1 text-2xs font-medium text-slate-500 hover:bg-black/5 dark:hover:bg-white/10"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={submitEdit}
                           disabled={!editText.trim()}
-                          className="rounded-md bg-[var(--primary)] px-2.5 py-1 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-50"
+                          className="rounded-md bg-[var(--primary)] px-2.5 py-1 text-2xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-50"
                         >
                           Resend
                         </button>
@@ -440,7 +440,7 @@ export function FloatingChatPopup() {
                       <button
                         onClick={() => retryFailed(m)}
                         disabled={isTyping}
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1.5 text-2xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
                       >
                         <RefreshCw className={`size-3 ${isTyping ? "animate-spin" : ""}`} />
                         Retry
@@ -448,11 +448,11 @@ export function FloatingChatPopup() {
                     )}
                     {preferences.show_rag_sources && (m.sources?.length ?? 0) > 0 && (
                       <div className="mt-2 border-t border-[var(--border)] pt-2">
-                        <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                        <div className="mb-1 flex items-center gap-1 text-2xs font-semibold text-muted-foreground">
                           <Sparkles className="size-3 text-[var(--primary)]" /> Sources
                         </div>
                         {m.sources!.slice(0, 3).map((s, i) => (
-                          <div key={i} className="mb-1 truncate rounded-lg bg-[var(--accent-soft)] px-2 py-1 text-xs text-[var(--accent-foreground)]">
+                          <div key={i} className="mb-1 truncate rounded-lg bg-[var(--accent-soft)] px-2 py-1 text-2xs text-[var(--accent-foreground)]">
                             📄 {s.title}
                             {s.relevance != null && <span className="ml-1 text-emerald-600 dark:text-emerald-400">{s.relevance}%</span>}
                           </div>
@@ -460,7 +460,7 @@ export function FloatingChatPopup() {
                       </div>
                     )}
                     {m.confidence != null && (
-                      <div className="mt-1.5 text-xs text-muted-foreground">
+                      <div className="mt-1.5 text-2xs text-muted-foreground">
                         Confidence:{" "}
                         <span className={m.confidence >= 85 ? "font-semibold text-emerald-600" : m.confidence >= 70 ? "font-semibold text-amber-600" : "font-semibold text-red-500"}>
                           {m.confidence >= 85 ? "High" : m.confidence >= 70 ? "Medium" : "Low"} ({m.confidence}%)
@@ -533,7 +533,7 @@ export function FloatingChatPopup() {
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute inset-x-0 bottom-[74px] z-10 mx-auto w-fit rounded-full bg-slate-900/90 px-3 py-1 text-xs font-medium text-white shadow-lg dark:bg-slate-100/95 dark:text-slate-900"
+          className="pointer-events-none absolute inset-x-0 bottom-[74px] z-10 mx-auto w-fit rounded-full bg-slate-900/90 px-3 py-1 text-2xs font-medium text-white shadow-lg dark:bg-slate-100/95 dark:text-slate-900"
         >
           {notice}
         </div>
@@ -557,7 +557,7 @@ export function FloatingChatPopup() {
             }}
           />
         </form>
-        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[14px] text-muted-foreground">
+        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
           <Shield className="size-3 text-muted-foreground" />
           AI answers may require verification - RBAC protected
         </div>

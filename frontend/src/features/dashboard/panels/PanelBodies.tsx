@@ -44,7 +44,7 @@ function Attention({ title }: PanelBodyProps) {
               <CheckCircle2 className="size-3.5 text-[var(--ok)]" />
             )}
             {title}
-            <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+            <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
               {loading ? "…" : attention.length}
             </span>
           </h2>
@@ -65,7 +65,7 @@ function Attention({ title }: PanelBodyProps) {
           </span>
           <div className="min-w-0">
             <p className="text-xs font-semibold">All clear</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">
               {(health ?? []).length} dependencies healthy · {totals.resolvedPct}% of conversations resolved without a human
               {totals.gatePassPct === null ? "" : ` · ${totals.gatePassPct}% passed the confidence gate`}
             </p>
@@ -83,7 +83,7 @@ function Attention({ title }: PanelBodyProps) {
               />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold">{a.title}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{a.detail}</p>
+                <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">{a.detail}</p>
               </div>
             </div>
           ))}
@@ -159,12 +159,12 @@ function Trend({ title }: PanelBodyProps) {
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 px-3.5 pb-2 pt-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-2xs text-muted-foreground">
             {win.kind === "custom" ? rangeLabel : `last ${win.days} days`} · split by what the assistant did with each conversation
           </p>
         </div>
         {/* The legend doubles as the series filter, like the reference board. */}
-        <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-1 text-2xs text-muted-foreground">
           <Legend label={`Total (${fmtInt(totals.total)})`} className="bg-[var(--primary)]" active={visible.total} onClick={() => toggle("total")} />
           <Legend label={`Resolved (${fmtInt(totals.resolved)})`} className="bg-[var(--ok)]" active={visible.resolved} onClick={() => toggle("resolved")} />
           <Legend label={`Escalated (${fmtInt(totals.escalated)})`} className="bg-[var(--warn)]" active={visible.escalated} onClick={() => toggle("escalated")} />
@@ -185,7 +185,7 @@ function Quality({ title }: PanelBodyProps) {
     <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="mb-3">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">How often the bot finished without a human</p>
+        <p className="mt-0.5 text-2xs text-muted-foreground">How often the bot finished without a human</p>
       </div>
 
       <div className="flex items-center gap-4">
@@ -196,7 +196,7 @@ function Quality({ title }: PanelBodyProps) {
             { label: "Escalated to IT", pct: totals.escalatedPct, cls: "bg-[var(--warn)]" },
             { label: "No action taken", pct: totals.unresolvedPct, cls: "bg-[var(--border)]" },
           ].map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3 text-xs">
+            <div key={row.label} className="flex items-center justify-between gap-3 text-2xs">
               <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                 <span className={`size-2 shrink-0 rounded-full ${row.cls}`} aria-hidden />
                 <span className="truncate">{row.label}</span>
@@ -209,20 +209,20 @@ function Quality({ title }: PanelBodyProps) {
 
       <div className="mt-4 rounded-xl border border-[var(--border)] bg-muted/30 p-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             <Gauge className="size-3" /> Confidence gate
           </p>
           <span className="text-xs font-semibold tabular-nums">
             {totals.gatePassPct === null ? "—" : `${totals.gatePassPct}%`}
           </span>
         </div>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
           {totals.gateTotal > 0
             ? `${totals.gateAnswered} answered · ${totals.gateCautioned} cautioned`
             : "No gated answers in this window."}
         </p>
         {gateTrend.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">No gate data yet</p>
+          <p className="mt-2 text-2xs text-muted-foreground">No gate data yet</p>
         ) : (
           <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-[var(--warn)]/35" aria-hidden>
             <span className="h-full rounded-full bg-[var(--ok)]" style={{ width: `${totals.gatePassPct ?? 0}%` }} />
@@ -260,7 +260,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
 
       <div data-list-scroll className="mt-2.5 min-h-0 flex-1 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-card text-muted-foreground text-[14px] uppercase tracking-wider">
+          <thead className="sticky top-0 bg-card text-muted-foreground text-[10px] uppercase tracking-wider">
             <tr className="border-b border-[var(--border)]">
               <th className="py-1.5 pr-2 text-left font-semibold">Model</th>
               <th className="px-1.5 py-1.5 text-right font-semibold">Ans</th>
@@ -295,7 +295,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
         </table>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[14px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
         <span className="truncate">
           {rows[0] ? `Default LLM: ${rows[0].model}` : "No model traffic in this window"}
         </span>
@@ -315,7 +315,7 @@ function Domains({ title }: PanelBodyProps) {
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
-        <span className="rounded-full border border-slate-700/60 bg-slate-800 px-2 py-0.5 text-[14px] font-medium text-slate-300">
+        <span className="rounded-full border border-slate-700/60 bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
           {totalArticles === null ? "— articles" : `${totalArticles} articles`}
         </span>
       </div>
@@ -342,7 +342,7 @@ function Workspace({ title }: PanelBodyProps) {
     <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <h2 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide">{title || "Workspace Stats"}</h2>
-        <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">Live</span>
+        <span className="shrink-0 whitespace-nowrap text-3xs text-muted-foreground">Live</span>
       </div>
 
       <div className="mt-2 flex min-h-0 flex-1 flex-col justify-evenly gap-1.5">
@@ -371,7 +371,7 @@ function Workspace({ title }: PanelBodyProps) {
         )}
       </div>
 
-      <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-[var(--border)] pt-1.5 text-xs">
+      <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-[var(--border)] pt-1.5 text-3xs">
         <span className="truncate text-muted-foreground">Guardrails: active</span>
         <span className="shrink-0 font-semibold text-emerald-400">100%</span>
       </div>
@@ -388,10 +388,10 @@ function Health({ title }: PanelBodyProps) {
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
           {healthDown.length > 0 && (
-            <p className="text-[14px] text-[var(--danger)]">Failing: {healthDown.join(", ")}</p>
+            <p className="text-[10px] text-[var(--danger)]">Failing: {healthDown.join(", ")}</p>
           )}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[14px] font-medium text-emerald-300">
+        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-medium text-emerald-300">
           {healthSummary.overall || "Unknown"}
         </span>
       </div>
@@ -406,7 +406,7 @@ function Health({ title }: PanelBodyProps) {
         )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[14px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
         <span className="min-w-0 truncate">{count === 0 ? "No dependencies reporting" : `${count} dependencies reporting`}</span>
         <a
           href="http://10.10.10.18:3000/d/rag-platform-health"
@@ -429,7 +429,7 @@ function Note({ panel, title }: PanelBodyProps) {
       {body ? (
         <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">{body}</p>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-2xs text-muted-foreground">
           Empty note — edit this panel to add text (a runbook link, a rotation reminder, anything).
         </p>
       )}
@@ -448,7 +448,7 @@ function Note({ panel, title }: PanelBodyProps) {
 const LoadingUsage = ({ title }: { title: string }) => (
   <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
     <h2 className="text-sm font-semibold">{title}</h2>
-    <p className="mt-1 text-xs text-muted-foreground">Loading usage…</p>
+    <p className="mt-1 text-2xs text-muted-foreground">Loading usage…</p>
   </section>
 );
 
@@ -456,7 +456,7 @@ function LockedUsage({ title, reason }: { title: string; reason: string }) {
   return (
     <section className="rounded-2xl border border-dashed border-[var(--border)] bg-card p-4">
       <h2 className="text-sm font-semibold">{title}</h2>
-      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <p className="mt-1 flex items-center gap-1.5 text-2xs text-muted-foreground">
         <ShieldAlert className="size-3.5" /> {reason}
       </p>
     </section>
@@ -481,10 +481,10 @@ function UsageKpis({ title }: PanelBodyProps) {
     <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <span className="text-xs text-muted-foreground">{usage?.range.label ?? ""}</span>
+        <span className="text-2xs text-muted-foreground">{usage?.range.label ?? ""}</span>
       </div>
       {usageError && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--danger)]">
+        <p className="mt-2 flex items-center gap-1.5 text-2xs text-[var(--danger)]">
           <AlertTriangle className="size-3.5" /> {usageError}
         </p>
       )}
@@ -497,7 +497,7 @@ function UsageKpis({ title }: PanelBodyProps) {
             className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2.5 py-1.5 transition-colors hover:border-[var(--primary)]/30"
             title={tile.hint}
           >
-            <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
               <span className={tile.tone}>{tile.icon}</span>
               <span className="truncate">{tile.label}</span>
             </div>
@@ -506,7 +506,7 @@ function UsageKpis({ title }: PanelBodyProps) {
             {tile.stack ? (
               <div className="mt-1 space-y-0.5" title={tile.value}>
                 {tile.stack.map((line) => (
-                  <p key={line} className={`truncate text-[14px] font-bold leading-tight tabular-nums ${tile.tone}`}>
+                  <p key={line} className={`truncate text-[13px] font-bold leading-tight tabular-nums ${tile.tone}`}>
                     {line}
                   </p>
                 ))}
@@ -514,7 +514,7 @@ function UsageKpis({ title }: PanelBodyProps) {
             ) : (
               <p className={`mt-1 truncate text-lg font-bold tabular-nums leading-none ${tile.tone}`}>{tile.value}</p>
             )}
-            <p className="truncate text-[14px] text-muted-foreground">{tile.caption}</p>
+            <p className="truncate text-[10px] text-muted-foreground">{tile.caption}</p>
           </div>
         ))}
       </div>
@@ -526,7 +526,7 @@ function UsageKpis({ title }: PanelBodyProps) {
           flex:none because the board's fill rule stretches the LAST child of every panel to
           absorb leftover height — a footer is content, not a scroll area. */}
       {role === "admin" && (
-        <div style={{ flex: "0 0 auto" }} className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[14px]">
+        <div style={{ flex: "0 0 auto" }} className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[11px]">
           <span className="text-muted-foreground">Self-service rate</span>
           <span className="font-semibold tabular-nums text-[var(--ok)]">{totals.resolvedPct}% resolved</span>
         </div>
@@ -545,20 +545,20 @@ function CostTrend({ title }: PanelBodyProps) {
     <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <h2 className="text-sm font-semibold">{title}</h2>
       {tokens === 0 ? (
-        <p className="mt-6 text-center text-xs text-muted-foreground">No answers in this window.</p>
+        <p className="mt-6 text-center text-2xs text-muted-foreground">No answers in this window.</p>
       ) : (
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-xs text-muted-foreground">Tokens / day</p>
+            <p className="text-2xs text-muted-foreground">Tokens / day</p>
             <DayColumns data={series} pick={(d) => d.tokens_in + d.tokens_out} format={fmtInt} fill />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Cost / day</p>
+            <p className="text-2xs text-muted-foreground">Cost / day</p>
             <DayColumns data={series} pick={(d) => Number(d.cost)} format={fmtCost} fill />
           </div>
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-2xs text-muted-foreground">
         Estimate from the app&apos;s price table — not the provider invoice.
       </p>
     </section>
@@ -575,10 +575,10 @@ function ModelCost({ title }: PanelBodyProps) {
     <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <span className="text-xs text-muted-foreground">{fmtCost(usage?.totals.cost_usd ?? 0)} total</span>
+        <span className="text-2xs text-muted-foreground">{fmtCost(usage?.totals.cost_usd ?? 0)} total</span>
       </div>
       <div className="mt-3 space-y-2.5">
-        {models.length === 0 && <p className="text-xs text-muted-foreground">No usage recorded yet.</p>}
+        {models.length === 0 && <p className="text-2xs text-muted-foreground">No usage recorded yet.</p>}
         {models.map((m) => (
           <BarRow
             key={m.model}
@@ -601,14 +601,14 @@ function OutcomeMix({ title }: PanelBodyProps) {
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <h2 className="text-sm font-semibold">{title}</h2>
-      <p className="mt-0.5 text-xs text-muted-foreground">
+      <p className="mt-0.5 text-2xs text-muted-foreground">
         Gate pass rate {totals.gatePassPct == null ? "—" : `${totals.gatePassPct}%`}
       </p>
       <div className="mt-3 space-y-2">
-        {usageDenied && <p className="text-xs text-muted-foreground">Outcome detail needs administrator access.</p>}
-        {!usageDenied && total === 0 && <p className="text-xs text-muted-foreground">No answers in this window.</p>}
+        {usageDenied && <p className="text-2xs text-muted-foreground">Outcome detail needs administrator access.</p>}
+        {!usageDenied && total === 0 && <p className="text-2xs text-muted-foreground">No answers in this window.</p>}
         {!usageDenied && decisions.map((d) => (
-          <div key={d.decision} className="flex items-center justify-between gap-2 text-xs">
+          <div key={d.decision} className="flex items-center justify-between gap-2 text-2xs">
             <span className="flex items-center gap-1.5 capitalize text-muted-foreground">
               <span className={[
                 "size-2 rounded-full",
@@ -625,7 +625,7 @@ function OutcomeMix({ title }: PanelBodyProps) {
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-xs">
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-2xs">
         <span className="text-muted-foreground">Resolved / escalated (conversations)</span>
         <span className="font-medium tabular-nums">{fmtInt(totals.resolved)} / {fmtInt(totals.escalated)}</span>
       </div>
@@ -702,7 +702,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
 
       <div data-list-scroll className="min-h-0 flex-1 overflow-auto border-t border-[var(--border)]">
         <table className="w-full text-left text-xs">
-          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[14px]">
+          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[10px]">
             <tr className="border-b border-[var(--border)]">
               <th className="px-4 py-2.5 font-semibold">When</th>
               <th className="px-4 py-2.5 font-semibold">Type</th>
@@ -719,19 +719,19 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
               const evId = e.id ? `evt-${e.id}` : null;
               return (
                 <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
-                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[14px] text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
                   <td className="whitespace-nowrap px-4 py-2.5">
-                    <span className="inline-block rounded border border-rose-500/25 bg-rose-500/15 px-2 py-0.5 text-[14px] font-semibold text-rose-300">
+                    <span className="inline-block rounded border border-rose-500/25 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
                       {evType}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">
-                    <span className={`inline-block rounded px-2 py-0.5 text-[14px] font-medium ${riskBadgeStyle(evRisk)}`}>
+                    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${riskBadgeStyle(evRisk)}`}>
                       {evRisk}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 font-medium text-foreground">{e.username || "—"}</td>
-                  <td className="max-w-xs truncate px-4 py-2.5 font-mono text-[14px] text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
+                  <td className="max-w-xs truncate px-4 py-2.5 font-mono text-[11px] text-muted-foreground" title={e.detail || ""}>{e.detail || "—"}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
                     <button
                       type="button"
@@ -756,7 +756,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
         </table>
       </div>
 
-      <div className="mt-auto flex flex-wrap items-center justify-between border-t border-[var(--border)] px-4 py-2 text-[14px] text-muted-foreground">
+      <div className="mt-auto flex flex-wrap items-center justify-between border-t border-[var(--border)] px-4 py-2 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>{win.kind === "custom" ? rangeLabel : "Last 7 days"}</span>
           <span>•</span>
@@ -822,14 +822,14 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
 
               <div>
                 <p className="font-medium text-muted-foreground mb-1">Regex Pattern / Refusal Log Context:</p>
-                <div className="max-h-36 overflow-auto rounded-lg border border-[var(--border)] bg-background p-3 font-mono text-[14px] leading-relaxed break-all text-foreground">
+                <div className="max-h-36 overflow-auto rounded-lg border border-[var(--border)] bg-background p-3 font-mono text-[11px] leading-relaxed break-all text-foreground">
                   {open.detail || "No detail recorded for this event."}
                 </div>
               </div>
 
               <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3 text-indigo-300">
                 <div className="font-semibold mb-1 text-xs">Automated Action Taken:</div>
-                <p className="text-[14px] text-indigo-300/80 leading-relaxed">
+                <p className="text-[11px] text-indigo-300/80 leading-relaxed">
                   The query was blocked before passing to the model provider. A standard refusal response was rendered to the end user.
                 </p>
               </div>
@@ -854,7 +854,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
 const Empty = ({ title }: PanelBodyProps) => (
   <section className="rounded-2xl border border-dashed border-[var(--border)] bg-card p-4">
     <h2 className="text-sm font-semibold">{title}</h2>
-    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <p className="mt-1 flex items-center gap-1.5 text-2xs text-muted-foreground">
       <Activity className="size-3.5" /> This panel type is not available in this build — edit or remove it.
     </p>
   </section>

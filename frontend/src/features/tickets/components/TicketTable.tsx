@@ -48,7 +48,7 @@ export function StatusPill({ status }: { status: Ticket["status"] }) {
   return (
     <span
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-2xs font-medium",
         STATUS_PILL[status] ?? "border-[var(--border)] bg-muted text-muted-foreground",
       ].join(" ")}
     >
@@ -76,7 +76,7 @@ function DueChip({ iso }: { iso: string }) {
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-medium",
         overdue
           ? "bg-[var(--danger)]/12 text-[var(--danger)]"
           : soon
@@ -114,7 +114,7 @@ function SortTh({
         onClick={() => onSort(k)}
         aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
         className={[
-          "inline-flex items-center gap-1 rounded text-xs uppercase tracking-wide transition",
+          "inline-flex items-center gap-1 rounded text-2xs uppercase tracking-wide transition",
           active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
         ].join(" ")}
       >
@@ -201,16 +201,16 @@ export function TicketTable({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onSelect(t); }}
-                      className="font-mono text-xs font-semibold text-[var(--accent-foreground)] hover:underline"
+                      className="font-mono text-2xs font-semibold text-[var(--accent-foreground)] hover:underline"
                     >
                       {t.id}
                     </button>
-                    <p className="mt-1 text-xs text-muted-foreground">{relTime(t.updated_at)}</p>
+                    <p className="mt-1 text-2xs text-muted-foreground">{relTime(t.updated_at)}</p>
                   </td>
 
                   <td className="px-4 py-3 align-top">
                     <p className="truncate font-medium text-foreground" title={t.subject}>{t.subject}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
                       <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t.category}</span>
                       <span className="inline-flex items-center gap-1">
                         <UserRound className="size-3" aria-hidden />
@@ -242,13 +242,13 @@ export function TicketTable({
                 className={["flex w-full flex-col gap-2 px-4 py-3 text-left transition", selected ? "bg-[var(--accent-soft)]" : "active:bg-muted/60"].join(" ")}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-semibold text-[var(--accent-foreground)]">{t.id}</span>
+                  <span className="font-mono text-2xs font-semibold text-[var(--accent-foreground)]">{t.id}</span>
                   <StatusPill status={t.status} />
                 </div>
 
                 <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">{t.subject}</p>
 
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
                   <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t.category}</span>
                   <span className="inline-flex items-center gap-1">
                     <UserRound className="size-3" aria-hidden />
@@ -261,7 +261,7 @@ export function TicketTable({
 
                 <div className="flex items-center justify-between gap-2">
                   <Priority value={t.priority} />
-                  <span className="text-xs text-muted-foreground">{relTime(t.updated_at)}</span>
+                  <span className="text-2xs text-muted-foreground">{relTime(t.updated_at)}</span>
                 </div>
               </button>
             </li>
@@ -271,7 +271,7 @@ export function TicketTable({
 
       {/* ---------- range + pager ---------- */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3 sm:px-5">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-2xs text-muted-foreground">
           {pageCount <= 1
             ? `Showing all ${total} ticket${total === 1 ? "" : "s"}`
             : `Showing ${from}–${to} of ${total} tickets`}
@@ -292,14 +292,14 @@ export function TicketTable({
             const gap = i > 0 && n - pageNumbers[i - 1] > 1;
             return (
               <span key={n} className="flex items-center gap-1">
-                {gap && <span className="px-0.5 text-xs text-muted-foreground">…</span>}
+                {gap && <span className="px-0.5 text-2xs text-muted-foreground">…</span>}
                 <button
                   type="button"
                   onClick={() => onPage(n)}
                   aria-label={`Page ${n}`}
                   aria-current={n === page ? "page" : undefined}
                   className={[
-                    "grid size-8 place-items-center rounded-lg border text-xs font-medium transition",
+                    "grid size-8 place-items-center rounded-lg border text-2xs font-medium transition",
                     n === page
                       ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
                       : "border-[var(--border)] bg-card text-muted-foreground hover:bg-muted hover:text-foreground",

@@ -183,7 +183,7 @@ export function DomainAssigneesDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-lg text-[14px]"
+                  className="h-8 rounded-lg text-[11px]"
                   disabled={!newGroup.trim() || busyGroup === newGroup.trim()}
                   onClick={() => void addGroup()}
                 >
@@ -192,7 +192,7 @@ export function DomainAssigneesDialog({
               </div>
 
               {allGroups.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   No groups yet — create one above, then tick its members so it can take tickets.
                 </p>
               ) : (
@@ -213,7 +213,7 @@ export function DomainAssigneesDialog({
                           aria-expanded={expanded === g.name}
                         >
                           <span className="truncate font-medium">{g.name}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             {g.members.length} member{g.members.length === 1 ? "" : "s"}
                           </span>
                           <ChevronDown
@@ -234,7 +234,7 @@ export function DomainAssigneesDialog({
                       {expanded === g.name && (
                         <div className="border-t border-[var(--border)] px-3 py-2">
                           {people.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No assignable users yet.</p>
+                            <p className="text-2xs text-muted-foreground">No assignable users yet.</p>
                           ) : (
                             <div className="grid gap-1 sm:grid-cols-2">
                               {people.map((p) => (
@@ -261,11 +261,11 @@ export function DomainAssigneesDialog({
 
             <fieldset>
               <legend className="mb-1.5 text-xs font-semibold">People</legend>
-              <p className="mb-1.5 text-xs text-muted-foreground">
+              <p className="mb-1.5 text-2xs text-muted-foreground">
                 Individuals assigned directly, on top of any group above.
               </p>
               {people.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   No assignable users (admin/agent) yet. Users get a role after LDAP sync or on
                   the Users page.
                 </p>
@@ -280,7 +280,7 @@ export function DomainAssigneesDialog({
                         aria-label={`User ${u.username}`}
                       />
                       <span className="truncate">{u.username}</span>
-                      {u.role && <span className="ml-auto text-xs text-muted-foreground">{u.role}</span>}
+                      {u.role && <span className="ml-auto text-2xs text-muted-foreground">{u.role}</span>}
                     </label>
                   ))}
                 </div>

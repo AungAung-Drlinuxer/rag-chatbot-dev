@@ -32,7 +32,7 @@ export function SectionHeading({
         </span>
         <div className="min-w-0">
           <h3 className="text-xs font-semibold leading-tight">{title}</h3>
-          {hint && <p className="mt-0.5 text-xs leading-4 text-muted-foreground">{hint}</p>}
+          {hint && <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">{hint}</p>}
         </div>
       </div>
       {action}
@@ -65,12 +65,12 @@ export function MetaItem({
 }) {
   return (
     <div className="bg-card px-3 py-2.5">
-      <dt className="flex items-center gap-1 text-[14px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <dt className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {icon}
         {label}
       </dt>
       <dd
-        className={["mt-1 truncate text-xs font-medium text-foreground", mono ? "font-mono text-xs" : ""].join(" ")}
+        className={["mt-1 truncate text-xs font-medium text-foreground", mono ? "font-mono text-2xs" : ""].join(" ")}
         title={title ?? (typeof value === "string" ? value : undefined)}
       >
         {value}
@@ -123,8 +123,8 @@ export function NoticeCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={["text-xs font-semibold", t.title].join(" ")}>{title}</p>
-          <div className={["mt-1 text-xs leading-4", t.body].join(" ")}>{children}</div>
+          <p className={["text-2xs font-semibold", t.title].join(" ")}>{title}</p>
+          <div className={["mt-1 text-2xs leading-4", t.body].join(" ")}>{children}</div>
           {footer && <div className="mt-2">{footer}</div>}
         </div>
       </div>
@@ -182,18 +182,18 @@ export function PermissionMatrix({ rows, loading }: { rows: PermissionRow[]; loa
             >
               {row.enabled ? <Check className="size-2.5" /> : <Minus className="size-2.5" />}
             </span>
-            <span className={["truncate text-xs", row.enabled ? "font-medium text-foreground" : "text-muted-foreground"].join(" ")}>
+            <span className={["truncate text-2xs", row.enabled ? "font-medium text-foreground" : "text-muted-foreground"].join(" ")}>
               {row.label}
             </span>
             {row.changed && (
-              <span className="ml-auto shrink-0 text-[14px] font-semibold uppercase tracking-wide">
+              <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wide">
                 {row.enabled ? <span className="text-[var(--ok)]">new</span> : <span className="text-[var(--danger)]">lost</span>}
               </span>
             )}
           </div>
         ))}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-2xs text-muted-foreground">
         {granted} of {rows.length} capabilities {loading ? "" : "in this preview"}
       </p>
     </div>
@@ -231,7 +231,7 @@ export function LocalPasswordForm({ username }: { username: string }) {
 
   return (
     <div className="space-y-2">
-      <label htmlFor="new-password" className="block text-xs font-semibold text-muted-foreground">
+      <label htmlFor="new-password" className="block text-2xs font-semibold text-muted-foreground">
         New password
       </label>
       <input
@@ -249,7 +249,7 @@ export function LocalPasswordForm({ username }: { username: string }) {
         ].join(" ")}
       />
       <div className="flex items-center justify-between gap-2">
-        <p id="new-password-hint" className="min-w-0 text-xs">
+        <p id="new-password-hint" className="min-w-0 text-2xs">
           {tooShort ? (
             <span className="text-[var(--danger)]">Use at least 8 characters.</span>
           ) : message ? (
@@ -264,7 +264,7 @@ export function LocalPasswordForm({ username }: { username: string }) {
           type="button"
           onClick={savePassword}
           disabled={busy || password.length < 8}
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <KeyRound className="size-3" aria-hidden />
           {busy ? "Updating…" : "Update password"}
@@ -281,7 +281,7 @@ export function ResetLink({ label, onClick }: { label: string; onClick: () => vo
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
     >
       <RotateCcw className="size-3" aria-hidden />
       {label}

@@ -98,7 +98,7 @@ export default function SourcePanel({
           {/* The mockup heads this panel with the retrieval summary — how many
               references arrived and how many distinct titles they collapse to. Both
               figures come from the sources already in hand. */}
-          <p className="text-xs leading-tight text-muted-foreground">
+          <p className="text-2xs leading-tight text-muted-foreground">
             {sources.length === 0
               ? "Retrieved for this answer"
               : `${referenceLabel(sources.length)} grouped into ${groups.length} title${groups.length === 1 ? "" : "s"}`}
@@ -107,7 +107,7 @@ export default function SourcePanel({
         <div className="flex shrink-0 items-center gap-1.5">
           {sources.length > 0 && (
             <span
-              className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground"
+              className="rounded-full bg-muted px-1.5 py-0.5 text-2xs font-semibold tabular-nums text-muted-foreground"
               title={`${sources.length} sources retrieved`}
             >
               {sources.length}
@@ -121,7 +121,7 @@ export default function SourcePanel({
 
       {/* ---------------- meta: the numbers, one line ---------------- */}
       <div className="shrink-0 border-b border-[var(--border)] px-4 py-2.5">
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-2xs text-muted-foreground">
             <span className="font-semibold tabular-nums text-foreground">
               {shown ?? "—"}
             </span>
@@ -145,7 +145,7 @@ export default function SourcePanel({
             type="button"
             onClick={() => setDetails((v) => !v)}
             aria-expanded={details}
-            className="mt-1.5 inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            className="mt-1.5 inline-flex items-center gap-1 rounded-sm text-2xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             Retrieval details
             <ChevronDown
@@ -153,7 +153,7 @@ export default function SourcePanel({
             />
           </button>
           {details && (
-            <dl className="mt-2 space-y-1.5 border-t border-[var(--border)] pt-2 text-xs">
+            <dl className="mt-2 space-y-1.5 border-t border-[var(--border)] pt-2 text-2xs">
               <DetailRow label="Chunks retrieved" value={chunks != null ? String(chunks) : "—"} />
               <DetailRow label="Sources cited" value={cited != null ? String(cited) : "—"} />
               <DetailRow label="Search type" value={searchType ?? "—"} />
@@ -207,7 +207,7 @@ export default function SourcePanel({
             <button
               type="button"
               onClick={() => setQ("")}
-              className="mt-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-medium text-foreground transition duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              className="mt-2 rounded-lg border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-foreground transition duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
               Clear filter
             </button>
@@ -230,7 +230,7 @@ export default function SourcePanel({
           the answer's confidence are different measurements; saying so stops a high
           match % from being read as an answer-quality score. */}
       {sources.length > 0 && (
-        <p className="shrink-0 border-t border-[var(--border)] px-4 py-2 text-xs leading-snug text-muted-foreground">
+        <p className="shrink-0 border-t border-[var(--border)] px-4 py-2 text-2xs leading-snug text-muted-foreground">
           Retrieval match scores are separate from the answer&apos;s confidence score.
         </p>
       )}

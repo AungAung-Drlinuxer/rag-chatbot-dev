@@ -248,9 +248,8 @@ describe("MarkdownMessage — rich answers (headings, emoji, checklists)", () =>
 
   it("gives the body a readable type scale instead of one flat size", () => {
     const html = renderToStaticMarkup(<MarkdownMessage content={RICH_ANSWER} />);
-    // full answers are 14px (the app-wide floor) with a 16px h1 / 16px h2 — compact widget
-    // keeps its own scale
-    expect(wrapperClass(html)).toContain("text-[14px]");
+    // full answers are 13.5px with a 16px h1 / 14px h2 — compact widget keeps its own scale
+    expect(wrapperClass(html)).toContain("text-[13.5px]");
     expect(wrapperClass(html)).toContain("[&_h2]:text-sm");
   });
 });

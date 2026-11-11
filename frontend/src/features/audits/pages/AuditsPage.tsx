@@ -375,11 +375,11 @@ export default function AuditsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Activity stream</h2>
-              <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+              <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
                 {filtered.length.toLocaleString()} events
               </span>
             </div>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-2xs text-muted-foreground">
               Newest first
               <ArrowDown className="size-3" />
             </span>
@@ -451,7 +451,7 @@ export default function AuditsPage() {
                 <col className="w-[11%]" /><col className="w-[32%]" /><col className="w-[14%]" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-[var(--muted)]/40">
-                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">Time ↓</th>
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">Action</th>
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">User</th>
@@ -480,14 +480,14 @@ export default function AuditsPage() {
                         <span className="ml-2 text-muted-foreground">{fmtTime(r.created_at)}</span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold capitalize ${toneFor(r.action)}`}>
+                        <span className={`inline-flex rounded-md px-2 py-0.5 text-2xs font-semibold capitalize ${toneFor(r.action)}`}>
                           {r.action}
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
                         {r.username ? (
                           <span className="flex items-center gap-2">
-                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-xs font-semibold text-[var(--accent-foreground)]">
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-3xs font-semibold text-[var(--accent-foreground)]">
                               {initials(r.username)}
                             </span>
                             <span className="truncate font-medium" title={r.username}>{r.username}</span>
@@ -507,14 +507,14 @@ export default function AuditsPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${style.text}`}>
+                        <span className={`inline-flex items-center gap-1.5 text-2xs font-semibold ${style.text}`}>
                           <span aria-hidden className={style.dot}>●</span>
                           {style.label}
                         </span>
                         {/* Confidence is only meaningful when the gate did NOT decide —
                             a percentage printed next to a verdict implies it drove it. */}
                         {res === "none" && r.confidence != null && (
-                          <span className="ml-2 text-xs text-muted-foreground">{Math.round(r.confidence * 100)}%</span>
+                          <span className="ml-2 text-2xs text-muted-foreground">{Math.round(r.confidence * 100)}%</span>
                         )}
                       </td>
                     </tr>
@@ -582,12 +582,12 @@ export default function AuditsPage() {
               ))}
               {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
               <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))} />
-              <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-xs text-muted-foreground">10 / page</span>
+              <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
             </div>
           </div>
         </section>
 
-        <p className="mt-3 flex flex-wrap justify-between gap-3 px-1 text-xs text-muted-foreground">
+        <p className="mt-3 flex flex-wrap justify-between gap-3 px-1 text-2xs text-muted-foreground">
           <span>
             Loaded {rows.length.toLocaleString()} of {total.toLocaleString()} events from{" "}
             <code className="font-mono">audit_log</code> · filters apply to loaded rows.
@@ -600,13 +600,13 @@ export default function AuditsPage() {
         <aside className="space-y-4 xl:sticky xl:top-6">
           <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By action</h2>
-            <p className="mt-0.5 text-[14px] text-muted-foreground">Across the {rows.length.toLocaleString()} loaded events.</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Across the {rows.length.toLocaleString()} loaded events.</p>
             <div className="mt-3 space-y-2.5">
               {actionCounts.slice(0, 7).map(([name, n]) => {
                 const pct = rows.length ? Math.round((n / rows.length) * 100) : 0;
                 return (
                   <div key={name}>
-                    <div className="flex items-baseline justify-between gap-2 text-[14px]">
+                    <div className="flex items-baseline justify-between gap-2 text-[11px]">
                       <span className="min-w-0 truncate text-muted-foreground" title={name}>{name}</span>
                       <span className="font-medium tabular-nums">{n}</span>
                     </div>
@@ -616,7 +616,7 @@ export default function AuditsPage() {
                   </div>
                 );
               })}
-              {actionCounts.length === 0 && <p className="text-[14px] text-muted-foreground">No events loaded.</p>}
+              {actionCounts.length === 0 && <p className="text-[11px] text-muted-foreground">No events loaded.</p>}
             </div>
           </section>
 
@@ -624,7 +624,7 @@ export default function AuditsPage() {
             <h2 className="text-sm font-semibold">By result</h2>
             <dl className="mt-3 space-y-2">
               {(["answer", "caution", "none"] as const).map((key) => (
-                <div key={key} className="flex items-baseline justify-between gap-3 text-[14px]">
+                <div key={key} className="flex items-baseline justify-between gap-3 text-[11px]">
                   <dt className="text-muted-foreground">
                     {key === "answer" ? "Answered" : key === "caution" ? "Low confidence" : "No answer"}
                   </dt>
@@ -636,7 +636,7 @@ export default function AuditsPage() {
 
           <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">What is recorded</h2>
-            <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
               Sign-ins, domain and user changes, knowledge edits, tickets and assistant answers —
               written by the backend, never edited from this page.
             </p>
@@ -662,14 +662,14 @@ function SummaryCard({
   return (
     <div className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>{icon}</span>
       </div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums">{value}</span>
-        <span className="text-xs text-muted-foreground">events</span>
+        <span className="text-2xs text-muted-foreground">events</span>
       </div>
-      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{caption}</p>
+      <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
     </div>
   );
 }

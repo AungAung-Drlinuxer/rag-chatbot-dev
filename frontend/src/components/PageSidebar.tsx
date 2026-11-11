@@ -247,7 +247,7 @@ export default function PageSidebar({
 
       <nav className={"min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3 " + (collapsed ? "px-2" : "px-3")}>
         {!collapsed && (
-          <p className="mb-2 px-3 text-[14px] font-bold uppercase tracking-[0.16em] text-white/55 dark:text-[var(--sidebar-text-muted)]">
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55 dark:text-[var(--sidebar-text-muted)]">
             Workspace
           </p>
         )}
@@ -285,14 +285,14 @@ export default function PageSidebar({
         {/* Recent Chat History in Sidebar */}
         {!collapsed && (
           <div className="mt-4 pt-3 border-t border-white/15 dark:border-[var(--sidebar-border)]">
-            <div className="flex items-center justify-between px-2 py-1.5 text-[14px] font-bold uppercase tracking-[0.14em] text-white/60 dark:text-[var(--sidebar-text-muted)]">
+            <div className="flex items-center justify-between px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60 dark:text-[var(--sidebar-text-muted)]">
               <button
                 type="button"
                 onClick={() => setHistoryOpen(!historyOpen)}
                 className="flex items-center gap-1.5 tracking-[0.14em] hover:text-white transition"
               >
                 <span>History</span>
-                <span className="text-xs text-white/50 font-normal dark:text-[var(--sidebar-text-muted)]">({conversations.length})</span>
+                <span className="text-2xs text-white/50 font-normal dark:text-[var(--sidebar-text-muted)]">({conversations.length})</span>
                 {historyOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
               </button>
               {conversations.length > 0 && (
@@ -324,14 +324,14 @@ export default function PageSidebar({
               <div className="mt-1 max-h-48 space-y-0.5 overflow-y-auto pr-1">
 
                 {conversations.length === 0 ? (
-                  <p className="px-2 py-2 text-xs text-white/55 italic">No recent chats</p>
+                  <p className="px-2 py-2 text-2xs text-white/55 italic">No recent chats</p>
                 ) : (
                   /* S1.3 — date grouping (Newest-first buckets) so a long history
                      reads as a timeline instead of one flat list of near-identical
                      question strings. */
                   groupConversations(conversations).map(([bucket, items]) => (
                     <div key={bucket} className="pb-1">
-                      <div className="sticky top-0 z-10 px-2 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide text-white/55">
+                      <div className="sticky top-0 z-10 px-2 pb-1 pt-1.5 text-3xs font-semibold uppercase tracking-wide text-white/55">
                         {bucket}
                       </div>
                       {items.map((c) => {
@@ -359,7 +359,7 @@ export default function PageSidebar({
                           <span className="truncate">{c.title || "Untitled chat"}</span>
                           {(_dupes.get((c.title || "Untitled chat").trim().toLowerCase()) ?? 1) > 1 && (
                             <span
-                              className="shrink-0 rounded bg-white/20 px-1 text-xs font-semibold text-white/85"
+                              className="shrink-0 rounded bg-white/20 px-1 text-3xs font-semibold text-white/85"
                               title="Sessions with this same title"
                             >
                               ×{_dupes.get((c.title || "Untitled chat").trim().toLowerCase())}
@@ -368,7 +368,7 @@ export default function PageSidebar({
                           {/* The mockup puts a terse age on every row; it is what lets the
                               eye skip a bucket it does not care about. */}
                           <span
-                            className="ml-auto shrink-0 pl-1.5 text-xs tabular-nums text-white/50 group-hover:text-white/75"
+                            className="ml-auto shrink-0 pl-1.5 text-2xs tabular-nums text-white/50 group-hover:text-white/75"
                             title={c.last_at || c.updated_at || ""}
                           >
                             {relativeAge(c.last_at ?? c.updated_at)}
@@ -441,7 +441,7 @@ export default function PageSidebar({
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold text-white" title={userName ?? "User"}>{userName ?? "User"}</div>
-                <span className={["mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", "bg-white/20 text-white/90 dark:bg-[var(--sidebar-active-bg)] dark:text-white"].join(" ")}>
+                <span className={["mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold", "bg-white/20 text-white/90 dark:bg-[var(--sidebar-active-bg)] dark:text-white"].join(" ")}>
                   {pretty}
                 </span>
               </div>
@@ -450,7 +450,7 @@ export default function PageSidebar({
           <button
             onClick={() => onLogout?.()}
             title="Sign out"
-            className={"flex items-center justify-center rounded-lg border border-white/30 text-xs font-medium text-white/80 transition hover:border-red-300 hover:bg-red-500/10 hover:text-red-200 " + (collapsed ? "p-2" : "w-full gap-1.5 px-2.5 py-2")}
+            className={"flex items-center justify-center rounded-lg border border-white/30 text-2xs font-medium text-white/80 transition hover:border-red-300 hover:bg-red-500/10 hover:text-red-200 " + (collapsed ? "p-2" : "w-full gap-1.5 px-2.5 py-2")}
           >
             <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -483,7 +483,7 @@ export default function PageSidebar({
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <div className="grid size-8 place-items-center overflow-hidden rounded-lg bg-violet-600 text-xs font-bold text-white">
+          <div className="grid size-8 place-items-center overflow-hidden rounded-lg bg-violet-600 text-2xs font-bold text-white">
             {branding.logo ? (
               <img src={branding.logo} alt="" className="size-full object-contain p-1" />
             ) : (

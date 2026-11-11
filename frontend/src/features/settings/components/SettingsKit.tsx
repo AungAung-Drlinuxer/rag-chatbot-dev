@@ -107,7 +107,7 @@ export function Field({ label, hint, badge, icon, children, className = "" }: {
         {badge}
       </span>
       {children}
-      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-2xs leading-relaxed text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -121,8 +121,8 @@ export function FieldGrid({ children }: { children: ReactNode }) {
 export function Eyebrow({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
     <div className="mb-3 flex flex-wrap items-baseline gap-2 border-b border-[var(--border)] pb-1.5">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</h3>
-      {hint && <span className="text-xs text-muted-foreground/70">{hint}</span>}
+      <h3 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{children}</h3>
+      {hint && <span className="text-2xs text-muted-foreground/70">{hint}</span>}
     </div>
   );
 }
@@ -172,7 +172,7 @@ export function Pill({ tone, children }: {
     muted: "bg-muted text-muted-foreground",
   } as const;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${map[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${map[tone]}`}>
       {children}
     </span>
   );

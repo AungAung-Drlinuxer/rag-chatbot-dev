@@ -308,10 +308,10 @@ export default function Settings({ role }: { role?: string }) {
           description="Manage your workspace, connections, and preferences."
           actions={
             <div className="flex items-center gap-2">
-              <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground">
                 {environment}
               </span>
-              <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-foreground)]">
+              <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-2xs font-semibold text-[var(--accent-foreground)]">
                 {roleLabel}
               </span>
             </div>
@@ -434,7 +434,7 @@ export default function Settings({ role }: { role?: string }) {
                                 <span className={["h-1.5 w-4/5 rounded-sm", option === "dark" ? "bg-[#342C46]" : "bg-[#E3E1EA]"].join(" ")} />
                               </span>
                             </span>
-                            <span className="mt-1 flex items-center gap-1 px-0.5 text-xs font-medium capitalize text-foreground">
+                            <span className="mt-1 flex items-center gap-1 px-0.5 text-2xs font-medium capitalize text-foreground">
                               {option}
                               {on && <Check className="size-3 text-[var(--primary)]" />}
                             </span>
@@ -485,7 +485,7 @@ export default function Settings({ role }: { role?: string }) {
               <aside className="space-y-4 xl:sticky xl:top-6">
                 <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Your setup</h2>
-                  <p className="mt-0.5 text-[14px] text-muted-foreground">What the interface uses right now.</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">What the interface uses right now.</p>
                   <dl className="mt-3 space-y-2.5">
                     {[
                       ["Theme", darkMode ? "Dark" : "Light"],
@@ -496,7 +496,7 @@ export default function Settings({ role }: { role?: string }) {
                       ["Token usage", showTokenUsage ? "Shown" : "Hidden"],
                       ["Markdown", markdownRendering ? "Formatted" : "Plain"],
                     ].map(([k, v]) => (
-                      <div key={k} className="flex items-baseline justify-between gap-3 text-[14px]">
+                      <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
                         <dt className="shrink-0 text-muted-foreground">{k}</dt>
                         <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
                       </div>
@@ -506,7 +506,7 @@ export default function Settings({ role }: { role?: string }) {
 
                 <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Save</h2>
-                  <p className="mt-0.5 text-[14px] leading-relaxed text-muted-foreground">
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
                     Theme, density and motion apply as you change them, but they are stored for this
                     account only when you save.
                   </p>
@@ -530,7 +530,7 @@ export default function Settings({ role }: { role?: string }) {
                     Discard changes
                   </button>
 
-                  <div className="mt-3 text-[14px]" aria-live="polite">
+                  <div className="mt-3 text-[11px]" aria-live="polite">
                     {saving ? (
                       <span className="text-muted-foreground">Saving…</span>
                     ) : saved ? (
@@ -574,7 +574,7 @@ export default function Settings({ role }: { role?: string }) {
                 <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
                   <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
                     <span className="size-1.5 rounded-full bg-[var(--ok)]" />
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service status</h2>
+                    <h2 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Service status</h2>
                   </div>
                   <div className="p-3">
                     <IntegrationStatusCards />
@@ -583,7 +583,7 @@ export default function Settings({ role }: { role?: string }) {
 
                 <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">How this works</h2>
-                  <ul className="mt-2 space-y-2 text-[14px] leading-relaxed text-muted-foreground">
+                  <ul className="mt-2 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
                     <li className="flex gap-1.5">
                       <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
                       Switching a provider on only reveals its panel — nothing connects until you save its fields.
@@ -665,7 +665,7 @@ function IntegrationStatusCards() {
     if (!s) return null;
     const ok = /healthy|ok|up/i.test(s);
     return (
-      <span className={["inline-flex items-center gap-1 text-[14px] font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
+      <span className={["inline-flex items-center gap-1 text-[10px] font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
         <span className={["size-1.5 rounded-full", ok ? "bg-[var(--ok)]" : "bg-[var(--danger)]"].join(" ")} />
         {ok ? "Connected" : s}
       </span>
@@ -700,10 +700,10 @@ function IntegrationStatusCards() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[14px] font-semibold">{c.name}</span>
+              <span className="truncate text-[11px] font-semibold">{c.name}</span>
               {chip(c.key)}
             </div>
-            <p className="mt-0.5 truncate text-[14px] leading-4 text-muted-foreground" title={c.detail}>
+            <p className="mt-0.5 truncate text-[10px] leading-4 text-muted-foreground" title={c.detail}>
               {c.detail}
             </p>
           </div>

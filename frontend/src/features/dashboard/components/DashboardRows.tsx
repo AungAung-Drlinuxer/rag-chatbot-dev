@@ -59,7 +59,7 @@ export function KpiCard({
         {/* Two reserved lines: "Total conversations" and "Escalated to tickets" wrap on a
             phone instead of being cut to "TOTAL CONVERSA…", and every tile stays the same
             height because the slot is reserved. */}
-        <div className="min-h-[2.3em] min-w-0 text-xs font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
+        <div className="min-h-[2.3em] min-w-0 text-2xs font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
           {title}
         </div>
         {icon && (
@@ -72,7 +72,7 @@ export function KpiCard({
         )}
       </div>
 
-      <div className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums">
+      <div className="mt-1.5 text-3xl font-semibold leading-none tracking-tight tabular-nums">
         {loading ? (
           <div className="h-6 w-14 animate-pulse rounded bg-muted" />
         ) : (
@@ -81,7 +81,7 @@ export function KpiCard({
       </div>
 
       {(change != null || description) && (
-        <div className="mt-2 flex items-center gap-1.5 text-xs">
+        <div className="mt-2 flex items-center gap-1.5 text-2xs">
           {change != null &&
             (positive ? (
               <ArrowUpRight className="size-3 text-[var(--ok)]" />
@@ -126,7 +126,7 @@ export function EscalationRow({
   percentage: string;
 }) {
   return (
-    <div className="flex items-center justify-between text-xs">
+    <div className="flex items-center justify-between text-2xs">
 
       <div className="flex items-center gap-2">
         <span
@@ -171,14 +171,14 @@ export function DomainRow({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-foreground">
+        <span className="text-2xs font-medium text-foreground">
           {domain.name}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-2xs font-medium text-foreground">
             {domain.count}
           </span>
-          <span className="w-10 text-right text-xs text-muted-foreground">
+          <span className="w-10 text-right text-2xs text-muted-foreground">
             {domain.percentage}%
           </span>
         </div>
@@ -223,7 +223,7 @@ export function HealthRow({ item }: { item: HealthItem }) {
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium leading-tight text-foreground">{item.name}</div>
         {!healthy && item.detail && (
-          <div className="mt-0.5 truncate text-[14px] leading-tight text-[var(--danger)]" title={item.detail}>
+          <div className="mt-0.5 truncate text-[10px] leading-tight text-[var(--danger)]" title={item.detail}>
             {item.detail}
           </div>
         )}

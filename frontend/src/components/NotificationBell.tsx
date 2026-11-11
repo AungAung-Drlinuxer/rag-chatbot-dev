@@ -320,7 +320,7 @@ export function NotificationBell({
     >
       <Bell className="size-4" />
       {badge > 0 && (
-        <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-[var(--danger)] text-xs font-bold text-white">
+        <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-[var(--danger)] text-3xs font-bold text-white">
           {badge > 9 ? "9+" : badge}
         </span>
       )}
@@ -335,7 +335,7 @@ export function NotificationBell({
       className="z-[60] overflow-y-auto overscroll-contain rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-xl"
     >
       <div className="flex items-center justify-between px-2 pb-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notifications</span>
+        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Notifications</span>
         <div className="flex items-center gap-0.5">
         <button
           type="button"
@@ -343,7 +343,7 @@ export function NotificationBell({
           disabled={notices.length === 0}
           aria-label="Clear notifications"
           title="Clear notifications"
-          className="rounded px-1.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+          className="rounded px-1.5 py-1 text-2xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
         >
           Clear
         </button>
@@ -368,14 +368,14 @@ export function NotificationBell({
             <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
             <div className="min-w-0">
               <p className="font-semibold">Couldn&apos;t load notifications</p>
-              <p className="mt-0.5 break-words text-xs opacity-80">{error}</p>
+              <p className="mt-0.5 break-words text-2xs opacity-80">{error}</p>
             </div>
           </div>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-2 inline-flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-xs font-semibold hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
+              className="mt-2 inline-flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-2xs font-semibold hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40"
             >
               <RefreshCw aria-hidden className="size-3" /> Retry
             </button>
@@ -389,7 +389,7 @@ export function NotificationBell({
       ) : (
         <>
           {error && (
-            <div className="mx-2 mb-1 flex items-center gap-1.5 rounded-md bg-[var(--muted)] px-2 py-1 text-xs text-muted-foreground">
+            <div className="mx-2 mb-1 flex items-center gap-1.5 rounded-md bg-[var(--muted)] px-2 py-1 text-2xs text-muted-foreground">
               <AlertTriangle aria-hidden className="size-3 text-[var(--warn)]" />
               Couldn&apos;t refresh — showing the last known list
             </div>
@@ -459,7 +459,7 @@ function NoticeList({
             <span className={["block truncate text-xs", unreadIds.has(n.id) ? "font-semibold" : "font-medium"].join(" ")}>
               {n.label}
             </span>
-            <span className="block text-xs text-muted-foreground">{n.sub}</span>
+            <span className="block text-2xs text-muted-foreground">{n.sub}</span>
           </span>
         </button>
       ))}

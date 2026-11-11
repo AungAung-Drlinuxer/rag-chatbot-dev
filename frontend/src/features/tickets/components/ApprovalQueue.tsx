@@ -83,7 +83,7 @@ export function ApprovalQueue({
       </header>
       <ul className="divide-y divide-[var(--border)]">
         {pending.map((a) => (
-          <li key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-xs">
+          <li key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-2xs">
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium" title={a.question ?? ""}>{a.question || "Escalation approval requested"}</p>
               <p className="mt-0.5 text-muted-foreground">
@@ -92,10 +92,10 @@ export function ApprovalQueue({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={busy === a.id} onClick={() => decide(a.id, "rejected")}>
+              <Button size="sm" variant="outline" className="h-7 px-2 text-2xs" disabled={busy === a.id} onClick={() => decide(a.id, "rejected")}>
                 <X className="mr-1 size-3" /> Reject
               </Button>
-              <Button size="sm" className="h-7 px-2 text-xs" disabled={busy === a.id} onClick={() => decide(a.id, "approved")}>
+              <Button size="sm" className="h-7 px-2 text-2xs" disabled={busy === a.id} onClick={() => decide(a.id, "approved")}>
                 {busy === a.id ? <Loader2 className="mr-1 size-3 animate-spin" /> : <Check className="mr-1 size-3" />}
                 Approve
               </Button>

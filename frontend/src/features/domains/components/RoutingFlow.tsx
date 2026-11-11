@@ -27,7 +27,7 @@ function Step({
         <span className="mt-2 hidden h-full w-px bg-[var(--border)] sm:block" aria-hidden />
       </div>
       <div className="min-w-0 pb-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           Step {index}
         </p>
         <h3 className="mt-1 text-sm font-semibold leading-snug">{title}</h3>
@@ -45,7 +45,7 @@ export function RoutingFlow() {
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">How a question is routed</h2>
-        <p className="text-xs text-muted-foreground">Keywords pick the domain · Jira takes the escalation</p>
+        <p className="text-2xs text-muted-foreground">Keywords pick the domain · Jira takes the escalation</p>
       </div>
 
       <div className="mt-5 grid gap-5 sm:grid-cols-[1fr_auto_1fr] sm:items-start sm:gap-4">

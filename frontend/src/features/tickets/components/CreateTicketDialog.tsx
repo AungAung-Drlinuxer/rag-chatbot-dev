@@ -180,7 +180,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]/50 px-3 py-2 text-[14px] text-[var(--accent-foreground)]">
+          <div className="flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]/50 px-3 py-2 text-[11px] text-[var(--accent-foreground)]">
             <TicketIcon className="mt-0.5 size-3.5 shrink-0" />
             <span>
               <span className="font-semibold">Create in Jira</span>
@@ -231,7 +231,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                     setDrafting(false);
                   }
                 }}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-[14px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)] disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-[10px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)] disabled:opacity-40"
               >
                 <Sparkles className="size-3" />
                 {drafting ? "Improving…" : "Improve with AI"}
@@ -300,7 +300,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   </optgroup>
                 ))}
               </select>
-              <span className="mt-1 block text-[14px] text-muted-foreground">
+              <span className="mt-1 block text-[11px] text-muted-foreground">
                 {assigneeScope === "category"
                   ? `Only people mapped to ${draft.category} can be picked.`
                   : "No team is mapped to this category yet — showing every assignable user."}
@@ -328,7 +328,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               className="w-full rounded-xl border border-[var(--border)] bg-background px-3 py-2 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--accent)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--accent-foreground)]"
             />
             {pendingFiles.length > 0 && (
-              <p className="mt-1.5 text-[14px] text-muted-foreground">
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
                 {pendingFiles.length} file{pendingFiles.length > 1 ? "s" : ""} ready — uploaded after the ticket exists.
               </p>
             )}

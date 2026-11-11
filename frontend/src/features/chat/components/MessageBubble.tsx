@@ -155,7 +155,7 @@ function MessageBubble({
                   <button
                     type="button"
                     onClick={() => { setEditing(false); setEditDraft(message.content); }}
-                    className="rounded-lg border border-white/40 px-2.5 py-1 text-xs font-medium text-white/80 transition hover:bg-white/10"
+                    className="rounded-lg border border-white/40 px-2.5 py-1 text-2xs font-medium text-white/80 transition hover:bg-white/10"
                   >
                     Cancel
                   </button>
@@ -168,7 +168,7 @@ function MessageBubble({
                       }
                       setEditing(false);
                     }}
-                    className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-[var(--primary)] transition hover:bg-blue-50 disabled:opacity-50"
+                    className="rounded-lg bg-white px-2.5 py-1 text-2xs font-semibold text-[var(--primary)] transition hover:bg-blue-50 disabled:opacity-50"
                   >
                     Save &amp; resend
                   </button>
@@ -182,7 +182,7 @@ function MessageBubble({
           </div>
 
           <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-2xs text-muted-foreground">
               <Clock3 className="size-3" />
               {message.timestamp}
             </span>
@@ -229,19 +229,19 @@ function MessageBubble({
           </div>
           <div className="min-w-0">
             <div className="text-xs font-semibold text-foreground">IT Assistant</div>
-            <div className="text-xs text-muted-foreground">{provenance}</div>
+            <div className="text-2xs text-muted-foreground">{provenance}</div>
           </div>
         </div>
 
         {/* ---- body ---- */}
-        <div className="px-4 py-3.5 text-[14px] leading-[1.7] text-foreground">
+        <div className="px-4 py-3.5 text-[13.5px] leading-[1.7] text-foreground">
           {message.guardrailType && (
             /* The refusal is a normal answer; this strip explains WHY it is one. It used
                to replace the answer entirely, which made a blocked request look like a
                rendering bug — and said "v1.1.4", a version the user cannot act on. */
             <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-2.5 py-2 text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300">
               <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <div className="text-xs leading-relaxed">
+              <div className="text-2xs leading-relaxed">
                 <span className="font-semibold">Blocked by content policy</span>
                 {" · "}{guardrailLabel(message.guardrailType)}
                 <div className="opacity-80">
@@ -267,7 +267,7 @@ function MessageBubble({
               <ShieldAlert className="mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col gap-1">
                 <div className="font-medium">Blocked by content security policy ({(message as any).guardrail}).</div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Your message triggered the input guardrail (v1.1.4). No data was sent to the AI
                   provider. Rephrase your question — if you believe this is an error, contact IT.
                 </p>
@@ -276,7 +276,7 @@ function MessageBubble({
           ) : (
             <div className="flex flex-col gap-2 text-muted-foreground">
               <div className="font-medium text-rose-600">No answer received from the AI provider.</div>
-              <p className="text-xs">
+              <p className="text-2xs">
                 The pipeline ran (retrieval + generation) but the upstream model returned no
                 content — this is usually a free-tier rate limit or invalid model name. Try
                 again, or change the model in <strong>Settings → Integrations → Models Provider</strong>.
@@ -299,7 +299,7 @@ function MessageBubble({
                 {/* The mockup's count line gives BOTH figures: the references that came
                     back and the distinct titles they collapse to. The list below is
                     grouped the same way, so the two numbers cannot disagree. */}
-                <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                <span className="shrink-0 text-2xs font-normal text-muted-foreground">
                   {referenceLabel(message.sources!.length)} · {sourceGroups.length} grouped{" "}
                   {sourceGroups.length === 1 ? "title" : "titles"}
                 </span>
@@ -313,14 +313,14 @@ function MessageBubble({
                   const match = matchLabel(g);
                   const content = (
                     <div className="flex h-full items-start gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 p-2.5 transition hover:border-[var(--primary)]/40 hover:bg-[var(--accent-soft)]">
-                      <div className="grid size-6 shrink-0 place-items-center rounded-md bg-[var(--accent)] text-xs font-bold text-[var(--accent-foreground)]">
+                      <div className="grid size-6 shrink-0 place-items-center rounded-md bg-[var(--accent)] text-2xs font-bold text-[var(--accent-foreground)]">
                         {idx + 1}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-medium text-foreground" title={s.title}>
                           {s.title}
                         </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-2xs text-muted-foreground">
                           <span>{referenceLabel(g.count)}</span>
                           {match && (
                             <>
@@ -377,7 +377,7 @@ function MessageBubble({
             below — which is where the eye already is at the end of a long answer. Share
             moved down to that row rather than being dropped. */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] px-4 py-2.5">
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1 text-2xs text-muted-foreground">
             <Clock3 className="size-3" />
             {message.timestamp}
           </span>
@@ -386,7 +386,7 @@ function MessageBubble({
           )}
           {showTokenUsage && (message.usage?.input_tokens != null || message.usage?.output_tokens != null) && (
             <span
-              className="flex items-center gap-1 rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-medium text-[var(--muted-foreground)]"
+              className="flex items-center gap-1 rounded-full bg-[var(--muted)] px-2 py-0.5 text-2xs font-medium text-[var(--muted-foreground)]"
               title={message.latencyMs ? `Generated in ${(message.latencyMs / 1000).toFixed(1)}s` : undefined}
             >
               <Zap className="size-3 text-amber-500" />
@@ -399,7 +399,7 @@ function MessageBubble({
             </span>
           )}
           {caution && (
-            <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+            <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
               <AlertTriangle className="size-3" />
               caution — verify before proceeding
             </span>

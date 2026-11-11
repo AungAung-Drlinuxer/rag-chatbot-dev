@@ -282,7 +282,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
                 <p className="mt-1 truncate font-mono text-xs text-foreground/80" title={storedModel}>
                   {storedModel || "no model selected"}
                 </p>
-                <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                   {models.length > 0
                     ? `${models.length} model${models.length === 1 ? "" : "s"} detected`
                     : tokenSet ? "detecting models…" : "add an API key to detect models"}
@@ -294,12 +294,12 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               href={preset.docs}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[14px] font-medium text-foreground transition hover:bg-muted"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
             >
               Provider docs
             </a>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[14px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[10px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><Layers className="size-3" /> {models.length || "—"} models</span>
             <span className="inline-flex items-center gap-1"><Gauge className="size-3" /> gate {Math.round((Number(threshold) || 0.75) * 100)}%</span>
             <span className="inline-flex items-center gap-1"><Search className="size-3" /> top-k {topK || "—"}</span>
@@ -344,7 +344,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
             >
               <ValueInput field="api_key" placeholder="your provider API key" secret />
             </Field>
-            <p className="mt-2 flex items-start gap-1.5 text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-3 shrink-0 text-[var(--ok)]" />
               Write-only: stored server-side and never returned. Leave blank to keep the current key.
             </p>
@@ -380,7 +380,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           {models.length > 0 && (
             <div className="max-h-60 overflow-y-auto rounded-xl border border-[var(--border)] bg-background">
               {filteredModels.length === 0 ? (
-                <p className="px-3 py-3 text-[14px] text-muted-foreground">No model matches “{modelQuery}”.</p>
+                <p className="px-3 py-3 text-[11px] text-muted-foreground">No model matches “{modelQuery}”.</p>
               ) : filteredModels.map((m) => {
                 const on = selectedModel === m.id;
                 return (
@@ -390,7 +390,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
                     onClick={() => setForm({ ...form, model: m.id })}
                     aria-pressed={on}
                     className={[
-                      "flex w-full items-center gap-2 border-b border-[var(--border)] px-3 py-2 text-left font-mono text-[14px] last:border-b-0 transition",
+                      "flex w-full items-center gap-2 border-b border-[var(--border)] px-3 py-2 text-left font-mono text-[11px] last:border-b-0 transition",
                       on
                         ? "bg-[var(--accent-soft)] text-[var(--accent-foreground)]"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -418,13 +418,13 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           </Field>
 
           {modelsError && (
-            <p className="flex items-start gap-1 text-[14px] text-[var(--danger)]">
+            <p className="flex items-start gap-1 text-[11px] text-[var(--danger)]">
               <AlertCircle className="mt-0.5 size-3 shrink-0" /> {modelsError}
               <button type="button" onClick={() => void loadModels()} className="ml-1 underline hover:no-underline">retry</button>
             </p>
           )}
           {!modelsError && models.length > 0 && (
-            <p className="flex items-center gap-1 text-[14px] text-muted-foreground">
+            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <CheckCircle2 className="size-3 text-[var(--ok)]" />
               {models.length} model{models.length === 1 ? "" : "s"} auto-detected
               {modelsSource === "clinepass" ? " from the ClinePass catalogue" : " from the provider"}
@@ -446,7 +446,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
                 {Math.round((Number(threshold) || 0.75) * 100)}%
               </span>
             </div>
-            <p className="mt-0.5 text-[14px] text-muted-foreground">Below this the assistant escalates instead of guessing.</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Below this the assistant escalates instead of guessing.</p>
             <input
               type="range"
               min="50"
@@ -457,7 +457,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               aria-label="Confidence threshold"
               className="mt-3 h-1.5 w-full accent-[var(--primary)]"
             />
-            <div className="mt-1 flex justify-between text-[14px] text-muted-foreground/70">
+            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground/70">
               <span>50%</span><span>75%</span><span>100%</span>
             </div>
           </div>
@@ -465,7 +465,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold">Top K results</p>
-              <p className="mt-0.5 text-[14px] text-muted-foreground">Knowledge chunks retrieved per question.</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Knowledge chunks retrieved per question.</p>
             </div>
             <input
               type="number"
@@ -484,7 +484,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
       <aside className="space-y-5 xl:sticky xl:top-6">
         <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Effective configuration</h2>
-          <p className="mt-0.5 text-[14px] text-muted-foreground">What the assistant uses right now.</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">What the assistant uses right now.</p>
           <dl className="mt-3 space-y-2.5">
             {[
               ["Provider", providerLabel(form.provider || provider)],
@@ -493,7 +493,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               ["API key", tokenSet ? "Stored" : "Not set"],
               ["Retrieval", `top ${topK || "—"} · ${Math.round((Number(threshold) || 0.75) * 100)}%`],
             ].map(([k, v]) => (
-              <div key={k} className="flex items-baseline justify-between gap-3 text-[14px]">
+              <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
                 <dt className="shrink-0 text-muted-foreground">{k}</dt>
                 <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
               </div>
@@ -503,7 +503,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
 
         <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Save</h2>
-          <p className="mt-0.5 text-[14px] leading-relaxed text-muted-foreground">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
             One save commits the provider fields and the retrieval knobs together.
           </p>
 
@@ -517,18 +517,18 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           </button>
 
           {dirty && !msg && (
-            <p className="mt-3 flex items-center gap-1.5 text-[14px] text-[var(--warn)]">
+            <p className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--warn)]">
               <Info className="size-3" /> Unsaved changes
             </p>
           )}
           {msg && (
-            <p className={`mt-3 flex items-start gap-1.5 text-[14px] leading-relaxed ${msg.ok ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
+            <p className={`mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed ${msg.ok ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
               {msg.ok ? <CheckCircle2 className="mt-0.5 size-3 shrink-0" /> : <XCircle className="mt-0.5 size-3 shrink-0" />}
               {msg.text}
             </p>
           )}
           {updatedAt && !msg && (
-            <p className="mt-3 text-[14px] text-muted-foreground">Last saved {new Date(updatedAt).toLocaleString()}</p>
+            <p className="mt-3 text-[10px] text-muted-foreground">Last saved {new Date(updatedAt).toLocaleString()}</p>
           )}
 
           {(tokenSet || fieldsSet.length > 0) && (
@@ -574,7 +574,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
             )}
             <div className="min-w-0">
               <h2 className="text-sm font-semibold leading-tight">{title}</h2>
-              {description && <p className="mt-0.5 text-[14px] leading-relaxed text-muted-foreground">{description}</p>}
+              {description && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
             </div>
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -598,7 +598,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3">
             <Lock className="size-3 shrink-0 text-muted-foreground" />
             <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
-            <span className="ml-auto text-xs text-muted-foreground">write-only</span>
+            <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
           </div>
           <button
             type="button"
@@ -647,7 +647,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               setReplacing({ ...replacing, [field]: false });
               const n = { ...form }; delete n[field]; setForm(n);
             }}
-            className="mt-1 text-xs text-muted-foreground underline hover:text-foreground"
+            className="mt-1 text-2xs text-muted-foreground underline hover:text-foreground"
           >
             Keep the stored value
           </button>

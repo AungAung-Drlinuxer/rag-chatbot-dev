@@ -65,14 +65,14 @@ function CodeBlock({
   return (
     <div className="group/code relative my-2.5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/70">
       <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-100/70 px-2.5 py-1 dark:border-slate-800 dark:bg-slate-800/50">
-        <span className="font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <span className="font-mono text-3xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {lang || "code"}
         </span>
         <button
           type="button"
           onClick={copy}
           aria-label="Copy code"
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
         >
           {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
           {copied ? "Copied" : "Copy"}
@@ -80,7 +80,7 @@ function CodeBlock({
       </div>
       <pre
         ref={ref}
-        className={`overflow-x-auto px-3 py-2.5 font-mono ${compact ? "text-xs" : "text-xs"} leading-relaxed text-slate-800 dark:text-slate-100`}
+        className={`overflow-x-auto px-3 py-2.5 font-mono ${compact ? "text-2xs" : "text-xs"} leading-relaxed text-slate-800 dark:text-slate-100`}
         {...rest}
       >
         {children}
@@ -141,10 +141,10 @@ export default function MarkdownMessage({
      read as one grey block no matter how much Markdown it carried. */
   const heading = compact
     ? "[&_h1]:mt-2.5 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:mt-2.5 [&_h2]:text-xs [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-semibold"
-    : "[&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:leading-snug [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mt-3 [&_h3]:text-[14px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-slate-500 dark:[&_h3]:text-slate-400";
+    : "[&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:leading-snug [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mt-3 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-slate-500 dark:[&_h3]:text-slate-400";
 
   return (
-    <div className={`${BASE} ${heading} ${compact ? "text-xs" : "text-[14px]"} ${className}`}>
+    <div className={`${BASE} ${heading} ${compact ? "text-xs" : "text-[13.5px]"} ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

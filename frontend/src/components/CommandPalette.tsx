@@ -118,7 +118,7 @@ export default function CommandPalette({
             placeholder="Search pages, conversations, KB articles…"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
            aria-label="Search commands"/>
-          <kbd className="shrink-0 rounded border bg-slate-50 px-1.5 py-0.5 text-xs text-muted-foreground dark:border-slate-600 dark:bg-slate-800">
+          <kbd className="shrink-0 rounded border bg-slate-50 px-1.5 py-0.5 text-2xs text-muted-foreground dark:border-slate-600 dark:bg-slate-800">
             Esc
           </kbd>
         </div>
@@ -148,7 +148,7 @@ export default function CommandPalette({
                     <BookOpen className="size-4 shrink-0 text-teal-600 dark:text-teal-400" />
                   )}
                   <span className="min-w-0 flex-1 truncate text-xs font-medium">{r.label}</span>
-                  <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+                  <span className="shrink-0 text-2xs uppercase tracking-wide text-muted-foreground">
                     {r.kind === "page" ? "Page" : r.kind === "conv" ? "Conversation" : "KB"}
                     {r.kind === "conv" && r.when ? ` · ${String(r.when).slice(0, 10)}` : ""}
                   </span>

@@ -160,7 +160,7 @@ export default function NotificationSettings({ isAdmin }: { isAdmin: boolean }) 
           >
             <span
               className={[
-                "grid size-5 place-items-center rounded-full bg-white text-[14px] shadow transition",
+                "grid size-5 place-items-center rounded-full bg-white text-[10px] shadow transition",
                 values[s.key] ? "translate-x-[22px]" : "translate-x-[2px]",
               ].join(" ")}
             >

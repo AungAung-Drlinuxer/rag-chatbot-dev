@@ -133,7 +133,7 @@ export default function Login({
         />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1680px] lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(430px,560px)]">
+      <div className="relative mx-auto grid w-full max-w-[1680px] lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(400px,520px)]">
         {/* ============================ BRAND COLUMN ============================ */}
         <section className="relative hidden min-h-0 flex-col p-4 lg:flex xl:p-6">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-gradient-to-b from-card via-card to-muted/40 shadow-xs">
@@ -143,74 +143,68 @@ export default function Login({
                 <Logo branding={branding} size="md" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold tracking-tight">{appName}</p>
-                  <p className="truncate text-xs font-medium text-muted-foreground">
+                  <p className="truncate text-2xs font-medium text-muted-foreground">
                     AI-powered IT support
                   </p>
                 </div>
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-background/70 px-2.5 py-1 text-2xs font-medium text-muted-foreground backdrop-blur">
                 <span className="size-1.5 rounded-full bg-[var(--ok)]" />
                 Internal IT platform
               </span>
             </header>
 
             {/* flexible content area */}
-            <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 overflow-y-auto px-6 py-5 xl:px-8 xl:py-6">
-              <div>
-                <h1 className="max-w-[18ch] text-[clamp(1.55rem,1.9vw,2.1rem)] font-semibold leading-[1.1] tracking-tight">
-                  Find the right{" "}
-                  <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent-foreground)] bg-clip-text text-transparent">
-                    IT answer faster.
-                  </span>
-                </h1>
-                <p className="mt-3 max-w-[52ch] text-sm leading-6 text-muted-foreground">
-                  Search your internal knowledge base, get grounded answers, verify the source,
-                  and escalate to IT support when you need a human.
-                </p>
-              </div>
-
-              {/* illustration inside a structured "app window" frame */}
-              <figure className="overflow-hidden rounded-2xl border border-[var(--border)] bg-background shadow-sm">
-                <div className="flex items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
-                  <span className="flex gap-1" aria-hidden>
-                    <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
-                    <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
-                    <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
-                  </span>
-                  <span className="truncate text-xs font-medium text-muted-foreground">
-                    {appName} · assistant workspace
-                  </span>
+            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-6 xl:px-8 xl:py-8">
+              <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4.5">
+                <div>
+                  <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[32px]">
+                    Find the right{" "}
+                    <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent-foreground)] bg-clip-text text-transparent">
+                      IT answer faster.
+                    </span>
+                  </h1>
+                  <p className="mt-2 max-w-[54ch] text-sm leading-relaxed text-muted-foreground">
+                    Search your internal knowledge base, get grounded answers, verify the source,
+                    and escalate to IT support when you need a human.
+                  </p>
                 </div>
-                {/* The asset is 1280x548 (2.34:1), artwork to the edges — no white margin
-                    to letterbox.
 
-                    The rule: the width drives the size, the height follows from the
-                    image's own ratio. No `object-cover`, no `vh` height, and a pixel
-                    max-height instead of a viewport one — so a browser zoom changes how
-                    big everything looks, but never re-crops the drawing or makes it jump.
-                    Nothing is cut, nothing stretches. */}
-                <img
-                  src="/login-illustration.jpg"
-                  width={1280}
-                  height={548}
-                  alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                  className="pointer-events-none mx-auto block h-auto w-full max-w-full select-none object-contain"
-                  style={{ aspectRatio: "1280 / 548", maxHeight: 320, maxWidth: 680 }}
-                  fetchPriority="high"
-                  decoding="async"
-                  draggable={false}
-                />
-              </figure>
+                {/* illustration inside a structured "app window" frame — fills frame edge-to-edge */}
+                <figure className="w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-background shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
+                    <span className="flex gap-1" aria-hidden>
+                      <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
+                      <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
+                      <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
+                    </span>
+                    <span className="truncate text-2xs font-medium text-muted-foreground">
+                      {appName} · assistant workspace
+                    </span>
+                  </div>
+                  <img
+                    src="/login-illustration.jpg"
+                    width={1280}
+                    height={548}
+                    alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
+                    className="pointer-events-none block h-auto w-full select-none object-cover"
+                    style={{ aspectRatio: "1280 / 548" }}
+                    fetchPriority="high"
+                    decoding="async"
+                    draggable={false}
+                  />
+                </figure>
 
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                <FeatureCard icon={<BookOpenCheck className="size-4" />} title="Grounded" description="Answers use internal knowledge." />
-                <FeatureCard icon={<Link2 className="size-4" />} title="Traceable" description="Sources stay visible." />
-                <FeatureCard icon={<TicketCheck className="size-4" />} title="Actionable" description="Escalate when needed." />
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  <FeatureCard icon={<BookOpenCheck className="size-4" />} title="Grounded" description="Answers use internal knowledge." />
+                  <FeatureCard icon={<Link2 className="size-4" />} title="Traceable" description="Sources stay visible." />
+                  <FeatureCard icon={<TicketCheck className="size-4" />} title="Actionable" description="Escalate when needed." />
+                </div>
               </div>
             </div>
 
             {/* framed footer */}
-            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3.5 text-xs text-muted-foreground xl:px-8">
+            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3.5 text-2xs text-muted-foreground xl:px-8">
               <span>Internal IT Service</span>
               <Dot />
               <span>RBAC protected</span>
@@ -230,9 +224,9 @@ export default function Login({
                 <Logo branding={branding} size="sm" onDark />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold tracking-tight">{appName}</p>
-                  <p className="truncate text-xs text-white/70">AI-powered IT support</p>
+                  <p className="truncate text-2xs text-white/70">AI-powered IT support</p>
                 </div>
-                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium sm:inline-flex">
+                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-2xs font-medium sm:inline-flex">
                   <span className="size-1.5 rounded-full bg-emerald-300" /> Internal
                 </span>
               </div>
@@ -352,7 +346,7 @@ export default function Login({
                     <>
                       <div className="flex items-center gap-3 py-1" aria-hidden="true">
                         <span className="h-px flex-1 bg-[var(--border)]" />
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+                        <span className="text-2xs uppercase tracking-wide text-muted-foreground">or</span>
                         <span className="h-px flex-1 bg-[var(--border)]" />
                       </div>
                       <button
@@ -363,7 +357,7 @@ export default function Login({
                         <KeycloakMark className="size-4 shrink-0 text-[var(--primary)]" />
                         <span>Sign in with {ssoLabel}</span>
                       </button>
-                      <p className="text-center text-xs text-muted-foreground">
+                      <p className="text-center text-2xs text-muted-foreground">
                         {ssoRealm
                           ? `via ${ssoLabel} single sign-on · realm ${ssoRealm}. Ask IT if you are not enrolled.`
                           : `via ${ssoLabel} single sign-on. Ask IT if you are not enrolled.`}
@@ -372,7 +366,7 @@ export default function Login({
                   )}
                 </form>
 
-                <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
+                <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-2xs">
                   {backendUp === null ? (
                     <><span className="size-2 animate-pulse rounded-full bg-muted-foreground/50" /><span className="text-muted-foreground">Checking service status…</span></>
                   ) : backendUp ? (
@@ -383,7 +377,7 @@ export default function Login({
                 </div>
               </div>
 
-              <p className="mt-4 flex items-center justify-center gap-1.5 px-2 text-center text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-4 flex items-center justify-center gap-1.5 px-2 text-center text-2xs leading-relaxed text-muted-foreground">
                 <ShieldCheck className="size-3.5 shrink-0 text-[var(--ok)]" />
                 Authorized corporate users only · SSO &amp; RBAC protected
               </p>
@@ -433,8 +427,8 @@ function FeatureCard({ icon, title, description }: { icon: ReactNode; title: str
         {icon}
       </div>
       <div className="min-w-0">
-        <span className="text-xs font-semibold leading-4">{title}</span>
-        <p className="mt-0.5 text-xs leading-4 text-muted-foreground">{description}</p>
+        <span className="text-2xs font-semibold leading-4">{title}</span>
+        <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">{description}</p>
       </div>
     </div>
   );

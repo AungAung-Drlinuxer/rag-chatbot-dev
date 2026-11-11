@@ -31,7 +31,7 @@ export function BarRow({
 }) {
   const width = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="flex items-center gap-3 text-xs" title={title}>
+    <div className="flex items-center gap-3 text-2xs" title={title}>
       <span className="w-24 shrink-0 truncate text-muted-foreground" title={label}>{label}</span>
       <span className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--muted)]">
         <span className="block h-full rounded-full bg-[var(--primary)]" style={{ width: `${width}%` }} />

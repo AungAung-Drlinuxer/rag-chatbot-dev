@@ -58,7 +58,7 @@ export function StatCard({
         {value}
       </div>
 
-      <div className="mt-1 text-xs text-muted-foreground">
+      <div className="mt-1 text-2xs text-muted-foreground">
         {description}
       </div>
     </Card>
@@ -76,7 +76,7 @@ export function MetaRow({
 }) {
   return (
     <div>
-      <div className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="mb-1 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
         {icon}
         {label}
       </div>
@@ -96,7 +96,7 @@ export function StatusBadge({
   return (
     <Badge
       variant="outline"
-      className={["rounded-lg text-xs", meta.className].join(" ")}
+      className={["rounded-lg text-2xs", meta.className].join(" ")}
     >
       {meta.label}
     </Badge>
@@ -147,7 +147,7 @@ export function ActivityItem({
             {title}
           </span>
 
-          <span className="text-xs text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {time}
           </span>
         </div>

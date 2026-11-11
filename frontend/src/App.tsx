@@ -12,7 +12,6 @@ import CommandPalette from "@/components/CommandPalette";
 import { NeedHelpCard } from "@/components/NeedHelpCard";
 import { FloatingChatProvider, FloatingChatPopup } from "@/components/FloatingChat";
 import { hashToNav, useHashNav } from "@/app/router";
-import { useDisplayFit } from "@/app/useDisplayFit";
 import { denied } from "@/app/acl";
 import AccessRestricted from "@/components/AccessRestricted";
 import { useSidebarCollapsed } from "@/app/useSidebar";
@@ -61,8 +60,6 @@ export default function App() {
     document.title = displayAppName(brand.appName);
   }, [brand.appName]);
   const [nav, setNav] = useHashNav();
-  /* The interface follows the screen it is on: px-based css, so the scale is a zoom. */
-  useDisplayFit();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const toast = useToast();

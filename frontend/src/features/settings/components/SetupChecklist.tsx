@@ -63,7 +63,7 @@ export default function SetupChecklist() {
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-4 py-3">
         <AlertCircle className="size-4 text-[var(--warn)]" />
         <h3 className="text-sm font-semibold text-foreground">Finish setting up</h3>
-        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-medium text-[var(--accent-foreground)]">
+        <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-2xs font-medium text-[var(--accent-foreground)]">
           {pending.length} left
         </span>
       </div>
@@ -77,13 +77,13 @@ export default function SetupChecklist() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <span className="text-xs font-medium text-foreground">{step.label}</span>
-                  <span className="text-xs text-muted-foreground">{step.detail}</span>
+                  <span className="text-2xs text-muted-foreground">{step.detail}</span>
                 </div>
                 {step.hint && step.status !== "done" && (
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.hint}</p>
+                  <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">{step.hint}</p>
                 )}
               </div>
-              <span className="shrink-0 text-xs text-muted-foreground">{style.label}</span>
+              <span className="shrink-0 text-2xs text-muted-foreground">{style.label}</span>
             </li>
           );
         })}

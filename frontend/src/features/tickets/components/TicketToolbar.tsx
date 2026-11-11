@@ -93,7 +93,7 @@ export function TicketToolbar({
                   aria-pressed={active}
                   onClick={() => onChange({ status: tab.key })}
                   className={[
-                    "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition",
+                    "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-2xs font-medium transition",
                     active
                       ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -103,7 +103,7 @@ export function TicketToolbar({
                   {typeof n === "number" && (
                     <span
                       className={[
-                        "rounded px-1 text-[14px] font-semibold tabular-nums",
+                        "rounded px-1 text-[10px] font-semibold tabular-nums",
                         active ? "bg-black/15" : "bg-[var(--muted)] text-muted-foreground",
                       ].join(" ")}
                     >
@@ -144,14 +144,14 @@ export function TicketToolbar({
 
       {hasFilters && (
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">Filtered by</span>
+          <span className="text-2xs text-muted-foreground">Filtered by</span>
           {chips.map((chip) => (
             <button
               key={chip.key}
               type="button"
               onClick={() => onChange(chip.clear)}
               aria-label={`Remove filter ${chip.label}`}
-              className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-card py-0.5 pl-2 pr-1 text-xs font-medium transition hover:border-[var(--primary)]/40 hover:bg-muted"
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-card py-0.5 pl-2 pr-1 text-2xs font-medium transition hover:border-[var(--primary)]/40 hover:bg-muted"
             >
               {chip.label}
               <X className="size-3 text-muted-foreground" aria-hidden />

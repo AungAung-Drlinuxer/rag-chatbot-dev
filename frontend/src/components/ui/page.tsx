@@ -90,7 +90,7 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="Breadcrumb" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <nav aria-label="Breadcrumb" className="mb-1.5 flex flex-wrap items-center gap-1.5 text-2xs text-muted-foreground">
             {breadcrumbs.map((crumb, i) => (
               <span key={`${crumb}-${i}`} className="flex items-center gap-1.5">
                 {i > 0 && <ChevronRight className="size-3 shrink-0" aria-hidden="true" />}
@@ -100,7 +100,7 @@ export function PageHeader({
           </nav>
         )}
         {eyebrow && (
-          <div className="mb-1.5 text-xs font-semibold tracking-[0.14em] text-[var(--accent-foreground)]">
+          <div className="mb-1.5 text-2xs font-semibold tracking-[0.14em] text-[var(--accent-foreground)]">
             {eyebrow.toUpperCase()}
           </div>
         )}
@@ -118,13 +118,13 @@ export function PageHeader({
           <div className="flex items-center gap-2">
             <h1 className={["font-semibold tracking-tight", dense ? "text-lg" : "text-xl"].join(" ")}>{title}</h1>
             {badge && (
-              <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-foreground)]">
+              <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-2xs font-semibold text-[var(--accent-foreground)]">
                 {badge}
               </span>
             )}
           </div>
           {description && (
-            <p className={["text-muted-foreground", dense ? "text-xs" : "mt-1 text-xs"].join(" ")}>
+            <p className={["text-muted-foreground", dense ? "text-2xs" : "mt-1 text-xs"].join(" ")}>
               {description}
             </p>
           )}
@@ -223,7 +223,7 @@ export function ErrorState({
         <AlertTriangle className="size-4 shrink-0" />
         <div className="min-w-0 flex-1">
           <span className="font-semibold">{title}.</span>{" "}
-          {detail && <span className="font-mono text-xs opacity-80">{detail}</span>}
+          {detail && <span className="font-mono text-2xs opacity-80">{detail}</span>}
         </div>
         {onRetry && (
           <button
@@ -252,7 +252,7 @@ export function ErrorState({
       </div>
       <h3 className={`font-semibold text-foreground ${compact ? "text-xs" : "text-sm"}`}>{title}</h3>
       {detail && (
-        <p className={`mx-auto mt-1 max-w-md break-words font-mono text-xs text-muted-foreground ${compact ? "" : "mt-1.5"}`}>
+        <p className={`mx-auto mt-1 max-w-md break-words font-mono text-2xs text-muted-foreground ${compact ? "" : "mt-1.5"}`}>
           {detail}
         </p>
       )}
@@ -260,7 +260,7 @@ export function ErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className={`inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background font-medium text-foreground shadow-xs transition hover:bg-muted/50 active:scale-[.98] ${compact ? "mt-2 px-3 py-1.5 text-xs" : "mt-4 px-3.5 py-2 text-xs"}`}
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background font-medium text-foreground shadow-xs transition hover:bg-muted/50 active:scale-[.98] ${compact ? "mt-2 px-3 py-1.5 text-2xs" : "mt-4 px-3.5 py-2 text-xs"}`}
         >
           <RefreshCw className="size-3.5" />
           {retryLabel}

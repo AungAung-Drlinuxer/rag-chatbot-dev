@@ -196,7 +196,7 @@ export function ConversationChart({
                 <text
                   x="5"
                   y={y + 3}
-                  fontSize="14"
+                  fontSize="10"
                   className="fill-slate-400"
                 >
                   {value}
@@ -287,7 +287,7 @@ export function ConversationChart({
                 x={xAt(index)}
                 y={height - 10}
                 textAnchor="middle"
-                fontSize="14"
+                fontSize="10"
                 className={hover === index ? "fill-[var(--foreground)] font-semibold" : "fill-slate-400"}
               >
                 {item.day}
@@ -308,7 +308,7 @@ export function ConversationChart({
         const left = Math.max(6, Math.min(boxW - TIP - 6, px - TIP / 2));
         return (
         <div
-          className="pointer-events-none absolute top-2 z-10 rounded-lg border border-[var(--border)] bg-[var(--popover)] p-2 text-xs shadow-lg"
+          className="pointer-events-none absolute top-2 z-10 rounded-lg border border-[var(--border)] bg-[var(--popover)] p-2 text-2xs shadow-lg"
           style={{ left, width: TIP }}
           role="status"
         >
@@ -354,7 +354,7 @@ export function DonutChart({ stats }: { stats: Record<string, number> | null }) 
     return (
       <div className="flex size-44 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-800">
         <span className="text-2xl font-semibold text-muted-foreground">—</span>
-        <span className="text-xs text-muted-foreground">No data yet</span>
+        <span className="text-2xs text-muted-foreground">No data yet</span>
       </div>
     );
   }
@@ -398,7 +398,7 @@ export function DonutChart({ stats }: { stats: Record<string, number> | null }) 
             {percentage}%
           </div>
 
-          <div className="text-xs text-muted-foreground">
+          <div className="text-2xs text-muted-foreground">
             Escalation rate
           </div>
         </div>
@@ -460,7 +460,7 @@ export function GateTrendChart({
             x={left - 6}
             y={top + chartHeight - f * chartHeight + 3}
             textAnchor="end"
-            className="fill-slate-400 text-xs"
+            className="fill-slate-400 text-2xs"
           >
             {Math.round(f * max)}
           </text>
@@ -483,7 +483,7 @@ export function GateTrendChart({
             key={d.day}
             x={x} y={height - 8}
             textAnchor="middle"
-            className="fill-slate-400 text-xs"
+            className="fill-slate-400 text-2xs"
           >
             {d.day}
           </text>
