@@ -84,7 +84,7 @@ describe("CreateTicketDialog", () => {
   it("carries every field the Tickets page form has", async () => {
     const el = await mount();
     const text = el.textContent!;
-    expect(text).toContain("Create support ticket");
+    expect(text).toContain("Create ticket");
     expect(text).toContain("Improve with AI");
     for (const label of ["Subject", "Description", "Category", "Priority", "Assignee", "Due date", "Attachments"]) {
       expect(text).toContain(label);

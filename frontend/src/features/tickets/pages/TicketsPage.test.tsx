@@ -353,8 +353,8 @@ describe("TicketsPage — detail panel and create dialog", () => {
   it("opens the create dialog and refuses to create a ticket with no subject", async () => {
     const el = await mount("admin");
     await click(button(el, "Create ticket"));
-    expect(document.body.textContent).toContain("Create support ticket");
-    expect(document.body.textContent).toContain("Create in");
+    expect(document.body.textContent).toContain("Submit a request to your support team");
+    expect(document.body.textContent).toContain("Connected to Jira");
 
     // Footer "Create ticket" with an empty subject must toast, not call the API.
     const dialog = document.querySelector('[data-slot="dialog-content"]') as HTMLElement;

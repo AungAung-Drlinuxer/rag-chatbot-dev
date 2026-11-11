@@ -12,15 +12,14 @@
  * user directory, and whether Jira is configured from the destinations endpoint — so neither
  * caller has to fetch or pass them.
  *
- * The shape of the screen: a header that says what this is, the one thing a reporter has to
- * know (it lands in Jira), four templates that fill the boring half of the form, then the two
- * fields they actually have to write. Everything below that — category, priority, assignee,
- * due date, files — is optional context, so it reads as one row instead of five equal asks.
+ * The shape of the screen follows one column, top to bottom: what this is and where it lands
+ * (header + Jira pill), the three templates that fill the boring half of the form, the two
+ * fields the reporter actually has to write, then the optional context as two tidy rows.
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  AlertCircle, Bug, CalendarDays, Cloud, Headset, HelpCircle, KeyRound, Paperclip,
-  Send, Sparkles, UploadCloud, X, Zap,
+  AlertCircle, Bug, CalendarDays, Cloud, KeyRound, Paperclip,
+  Send, Sparkles, Ticket as TicketIcon, X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -97,11 +96,13 @@ const TEMPLATES = [
     match: /bug|incident|problem/i, priority: "high", prefix: "Bug: " },
   { key: "access", label: "Request access", hint: "Permissions, accounts", icon: KeyRound,
     match: /access|identity|account/i, priority: "medium", prefix: "Access request: " },
-  { key: "service", label: "IT service request", hint: "Hardware, software, setup", icon: Cloud,
+  { key: "service", label: "Service request", hint: "Hardware, software, setup", icon: Cloud,
     match: /service|request|hardware|software/i, priority: "medium", prefix: "" },
-  { key: "question", label: "Ask a question", hint: "How does this work?", icon: HelpCircle,
-    match: /general|question|other/i, priority: "low", prefix: "" },
 ];
+
+/** The shared input shell: one border, one focus ring, the same height everywhere. */
+const FIELD =
+  "h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -254,74 +255,70 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 overflow-hidden rounded-2xl p-0">
-        {/* ---- header ---- */}
-        <div className="flex items-start gap-3.5 border-b border-[var(--border)] px-6 py-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
-            <Headset className="size-5" aria-hidden />
+      <DialogContent className="max-w-2xl gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl">
+        {/* ---- header: what this is, and where it lands ---- */}
+        <div className="flex items-start gap-3 px-6 pb-4 pt-5">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
+            <TicketIcon className="size-5" aria-hidden />
           </span>
+
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-lg font-semibold leading-tight tracking-tight">
-              Create support ticket
+            <DialogTitle className="text-lg font-bold leading-tight tracking-tight text-foreground">
+              Create ticket
             </DialogTitle>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Describe your issue and we&rsquo;ll help you as soon as possible.
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Submit a request to your support team
             </p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                  jiraReady === false
+                    ? "border-[var(--warn)]/30 bg-[var(--warn)]/10 text-[var(--warn)]"
+                    : "border-[var(--border)] bg-[var(--muted)]/40 text-muted-foreground",
+                ].join(" ")}
+              >
+                <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3" />
+                {jiraReady === false ? "Jira not connected" : "Connected to Jira"}
+              </span>
+            </div>
+
+            {jiraReady === false && (
+              <p className="mt-1.5 flex items-start gap-1.5 text-[11px] font-medium text-[var(--danger)]">
+                <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                Jira is not configured yet — set it up in Settings → Integrations first.
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="max-h-[calc(100dvh-16rem)] space-y-5 overflow-y-auto px-6 py-5">
-          {/* ---- where this goes ---- */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--accent-foreground)]">
-            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded bg-white/[0.04] p-0.5 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
-              <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3.5" />
-            </span>
-            <span>
-              <span className="font-semibold">Create in Jira</span>
-              <span className="text-[var(--accent-foreground)]/80">
-                {" "}— there is no other destination; the issue is mirrored into this queue.
-              </span>
-              {jiraReady === false && (
-                <span className="mt-1 flex items-start gap-1.5 font-medium text-[var(--danger)]">
-                  <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-                  Jira is not configured yet — set it up in Settings → Integrations first.
-                </span>
-              )}
-            </span>
-          </div>
-
-          {/* ---- templates ---- */}
+        <div className="max-h-[calc(100dvh-13rem)] space-y-4 overflow-y-auto px-6 pb-5">
+          {/* ---- quick templates ---- */}
           <div>
-            <div className="mb-2 flex items-center gap-1.5">
-              <Zap className="size-3.5 text-[var(--primary)]" aria-hidden />
-              <span className="text-2xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                Quick templates
-              </span>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {TEMPLATES.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    data-template={t.key}
-                    onClick={() => applyTemplate(t)}
-                    className="group flex flex-col items-start gap-1 rounded-xl border border-[var(--border)] bg-[var(--muted)]/25 p-2.5 text-left transition hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/50"
-                  >
-                    <Icon className="size-4 text-[var(--primary)]" aria-hidden />
-                    <span className="text-xs font-semibold leading-tight">{t.label}</span>
-                    <span className="text-[10px] leading-tight text-muted-foreground">{t.hint}</span>
-                  </button>
-                );
-              })}
+            <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Quick templates
+            </span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  data-template={t.key}
+                  onClick={() => applyTemplate(t)}
+                  title={t.hint}
+                  className="rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-xs font-medium text-foreground transition hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/10 hover:text-foreground"
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* ---- subject ---- */}
           <div>
             <div className="mb-1.5 flex items-baseline justify-between gap-2">
-              <label htmlFor="ticket-subject" className="text-xs font-medium">
+              <label htmlFor="ticket-subject" className="text-xs font-medium text-foreground">
                 Subject <span className="text-[var(--danger)]">*</span>
               </label>
               <span className="text-[10px] tabular-nums text-muted-foreground">
@@ -338,10 +335,10 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               aria-label="Subject"
               aria-invalid={missingSubject || undefined}
               className={[
-                "h-10 w-full rounded-xl border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground/70 focus:ring-4",
+                FIELD,
                 missingSubject
-                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/10"
-                  : "border-[var(--border)] focus:border-[var(--primary)] focus:ring-[var(--primary)]/10",
+                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15"
+                  : "",
               ].join(" ")}
             />
             {missingSubject && (
@@ -354,7 +351,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
           {/* ---- description ---- */}
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <label htmlFor="ticket-description" className="text-xs font-medium">
+              <label htmlFor="ticket-description" className="text-xs font-medium text-foreground">
                 Description <span className="text-[var(--danger)]">*</span>
               </label>
               <div className="flex items-center gap-2">
@@ -383,7 +380,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                       setDrafting(false);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-2 py-1 text-[10px] font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/20 disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/20 disabled:opacity-40"
                 >
                   <Sparkles className="size-3" />
                   {drafting ? "Improving…" : "Improve with AI"}
@@ -392,7 +389,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             </div>
             <textarea
               id="ticket-description"
-              rows={5}
+              rows={4}
               value={draft.description}
               maxLength={MAX_DESCRIPTION}
               onChange={(e) => setDraft({ ...draft, description: e.target.value })}
@@ -400,10 +397,10 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               aria-label="Ticket description"
               aria-invalid={missingDescription || undefined}
               className={[
-                "w-full resize-none rounded-xl border bg-background px-3 py-2.5 text-sm leading-6 outline-none transition placeholder:text-muted-foreground/70 focus:ring-4",
+                "w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15",
                 missingDescription
-                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/10"
-                  : "border-[var(--border)] focus:border-[var(--primary)] focus:ring-[var(--primary)]/10",
+                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15"
+                  : "",
               ].join(" ")}
             />
             {missingDescription && (
@@ -413,15 +410,17 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             )}
           </div>
 
-          {/* ---- context row ---- */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          {/* ---- category + priority ---- */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium">Category</span>
+              <span className="mb-1.5 block text-xs font-medium text-foreground">
+                Category <span className="text-[var(--danger)]">*</span>
+              </span>
               <select
                 value={draft.category}
                 onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                 aria-label="Category"
-                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                className={FIELD}
               >
                 {categories.map((c) => (
                   <option key={c.key} value={c.label}>{c.label}</option>
@@ -430,7 +429,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             </label>
 
             <div>
-              <div className="mb-1.5 flex items-center justify-between text-xs font-medium">
+              <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground">
                 <span>Priority</span>
                 <span className="flex items-center gap-1.5 text-[10px] font-normal capitalize text-muted-foreground">
                   <span className={["size-1.5 rounded-full", PRIORITY_DOT[draft.priority] ?? PRIORITY_DOT.medium].join(" ")} />
@@ -441,25 +440,28 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 value={draft.priority}
                 onChange={(e) => setDraft({ ...draft, priority: e.target.value })}
                 aria-label="Priority"
-                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                className={FIELD}
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
-              <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+              <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">
                 {PRIORITY_GUIDE[draft.priority] ?? PRIORITY_GUIDE.medium}
-              </p>
+              </span>
             </div>
+          </div>
 
+          {/* ---- assignee + due date ---- */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium">Assignee</span>
+              <span className="mb-1.5 block text-xs font-medium text-foreground">Assignee</span>
               <select
                 value={draft.assignee}
                 onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
                 aria-label="Assignee"
-                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-sm outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                className={FIELD}
               >
                 <option value="">Unassigned</option>
                 {Object.entries(
@@ -483,27 +485,42 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               </span>
             </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium">Due date</span>
+            <div>
+              <label htmlFor="ticket-due-date" className="mb-1.5 block text-xs font-medium text-foreground">
+                Due date
+              </label>
               <div className="relative">
-                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <input
+                  id="ticket-due-date"
                   type="date"
                   value={draft.due_date}
                   onChange={(e) => setDraft({ ...draft, due_date: e.target.value })}
                   aria-label="Due date"
-                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background pr-3 pl-9 text-sm outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
+                  className={[
+                    FIELD,
+                    "pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0",
+                    draft.due_date ? "" : "[&::-webkit-datetime-edit]:text-transparent",
+                  ].join(" ")}
+                />
+                {!draft.due_date && (
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/60">
+                    Select date
+                  </span>
+                )}
+                <CalendarDays
+                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
                 />
               </div>
-            </label>
+            </div>
           </div>
 
           {/* ---- attachments ---- */}
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-xs font-medium">
-                <Paperclip className="size-3.5 text-muted-foreground" aria-hidden /> Attachments
-                <span className="font-normal text-muted-foreground">(optional)</span>
+              <span className="text-xs font-medium text-foreground">
+                Attachments
+                <span className="ml-1.5 font-normal text-muted-foreground">(optional · max 10 MB each)</span>
               </span>
               {pendingFiles.length > 0 && (
                 <button
@@ -522,19 +539,16 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
               onClick={() => fileRef.current?.click()}
               className={[
-                "flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed px-4 py-4 text-center transition",
+                "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-5 text-center transition",
                 dragging
                   ? "border-[var(--primary)] bg-[var(--primary)]/10"
-                  : "border-[var(--border)] bg-[var(--muted)]/20 hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/35",
+                  : "border-[var(--border)] bg-transparent hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/25",
               ].join(" ")}
             >
-              <UploadCloud className="size-5 text-[var(--primary)]" aria-hidden />
+              <Paperclip className="size-4 text-muted-foreground" aria-hidden />
               <p className="text-xs text-muted-foreground">
-                Drag and drop files here, or{" "}
-                <span className="font-semibold text-[var(--primary)]">choose files</span>
-              </p>
-              <p className="text-[10px] text-muted-foreground/80">
-                PNG, JPG, PDF, DOCX · max 10 MB each
+                Drop files here or{" "}
+                <span className="font-semibold text-foreground underline underline-offset-2">browse</span>
               </p>
               <input
                 ref={fileRef}
@@ -551,7 +565,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 {pendingFiles.map((f) => (
                   <li
                     key={`${f.name}:${f.size}`}
-                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-background px-2.5 py-1.5"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5"
                   >
                     <Paperclip className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                     <span className="min-w-0 flex-1 truncate text-xs">{f.name}</span>
@@ -576,18 +590,20 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
           </div>
         </div>
 
-        <DialogFooter className="gap-2 border-t border-[var(--border)] px-6 py-4">
-          <span className="mr-auto hidden text-[10px] text-muted-foreground sm:block">
-            Files are attached after the ticket exists in Jira.
-          </span>
-          <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex flex-row items-center justify-end gap-2 border-t border-[var(--border)] px-6 py-4">
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded-lg"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <button
             type="button"
             onClick={submit}
             disabled={creating}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-800 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-950/30 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.99] disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-violet-800 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-950/25 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.99] disabled:opacity-60"
           >
             <Send className="size-3.5" aria-hidden />
             {creating ? "Creating…" : "Create ticket"}
