@@ -192,7 +192,7 @@ describe("DashboardPage — data rendering", () => {
    * content. Both halves matter — the rows are positioned on lg, and there is no arrange
    * mode to drift away from the documented layout.
    */
-  it("lays the board out as fixed bands and offers no customize mode", async () => {
+  it("lays the board out as fixed bands and offers resize grips, not an arrange mode", async () => {
     const rootEl = await mount("admin");
     const board = rootEl.querySelector("[data-board='fill']") as HTMLElement;
     expect(board).toBeTruthy();
@@ -201,8 +201,23 @@ describe("DashboardPage — data rendering", () => {
     const bands = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--row"));
     expect(new Set(bands)).toEqual(new Set(["1", "2", "3", "4"]));
 
+    // Every panel is placed from column 1..12 by the packer, so a resize has a boundary to move.
+    const starts = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--start"));
+    expect(starts.every((start) => Number(start) >= 1)).toBe(true);
+
+    // Every panel carries the configured grips; the set is the page's one-line choice.
+    const edges = [...board.querySelectorAll<HTMLElement>("[data-resize-edge]")].map((el) => el.dataset.resizeEdge!);
+    expect(edges.length).toBeGreaterThan(0);
+    expect(edges).toContain("w");
+    expect(edges).toContain("e");
+    expect(edges.every((e) => ["n", "s", "e", "w", "ne", "nw", "se", "sw"].includes(e))).toBe(true);
+    // Eight edges per panel means the full ring is on, so height grips exist too.
+    expect(edges).toContain("s");
+
     const text = rootEl.textContent!;
     expect(text).not.toContain("Customize");
+    // Nothing to reset until the board has actually been rearranged.
+    expect(text).not.toContain("Reset layout");
     // One report pair across the console: Print, then Export CSV.
     expect(text).toContain("Export CSV");
     expect(text).toContain("Print");

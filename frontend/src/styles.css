@@ -1000,10 +1000,23 @@ code, pre, .mono { font-family: var(--mono); }
     grid-template-rows: var(--board-rows);
   }
   [data-board="fill"] > [data-panel] {
-    grid-column: span var(--span) / span var(--span);
+    /* `--start` comes from packBands(): a band is always full, so every panel has a known
+       left edge and a resize is a boundary move rather than free placement. */
+    grid-column: var(--start, auto) / span var(--span);
     grid-row: var(--row);
+    position: relative;
   }
 }
+/* While a handle is being dragged, dialogs and tooltips must not steal the pointer, and
+   the board should not reflow its text mid-gesture. */
+[data-board="fill"][data-resizing="1"] {
+  cursor: ew-resize;
+}
+[data-board="fill"][data-resizing="1"] * {
+  cursor: inherit !important;
+  transition: none !important;
+}
+
 /* A short laptop window (or a browser with a lot of chrome) is not a reason to crush a
    chart to 60px: the bands keep their minimums and the board scrolls inside its own frame,
    leaving the header and the footer where they are. */

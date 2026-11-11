@@ -34,12 +34,25 @@ import {
 } from "@/features/dashboard/panels/data";
 import { renderPanelBody } from "@/features/dashboard/panels/PanelBodies";
 import {
-  BOARD_ROWS_ADMIN,
-  BOARD_ROWS_USER,
   layoutFor,
   panelTitle,
   type PanelSpec,
 } from "@/features/dashboard/panels/types";
+import { PanelResizeHandles } from "@/features/dashboard/components/PanelResizeHandles";
+import { usePanelResize } from "@/features/dashboard/lib/usePanelResize";
+import { RotateCcw } from "lucide-react";
+import type { ResizeEdge } from "@/features/dashboard/lib/boardLayout";
+
+/**
+ * Which edges of a panel can be dragged.
+ *
+ * `["w", "e"]` trades width between neighbours inside a band — the common case, and the one
+ * that keeps every band full. The full ring `["n", "s", "e", "w", "ne", "nw", "se", "sw"]`
+ * also trades height, which is a band property: dragging one panel's south edge grows its
+ * band and shrinks the band below, so the panels sharing that band move together. Both are
+ * one-line changes; nothing else in the board needs to know which is in use.
+ */
+const RESIZE_HANDLES: readonly ResizeEdge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
 /**
  * Overview — the board the rest of the app hangs off.
@@ -113,6 +126,9 @@ export default function Dashboard({ role, perms }: Props) {
   // The board is fixed. It is curated per role and positioned by the product, not the user:
   // the admin board adds the usage panels, everyone else gets the operational ones.
   const panels: PanelSpec[] = useMemo(() => layoutFor(role), [role]);
+  // Placement + band heights. Persisted per role, so an admin and an agent can each keep
+  // their own arrangement in the same browser.
+  const board = usePanelResize(panels, role);
 
   // Poll every 60s so a dashboard left open does not show stale figures.
   const [nowTick, setNowTick] = useState(0);
@@ -461,6 +477,19 @@ export default function Dashboard({ role, perms }: Props) {
             Refresh
           </Button>
 
+          {board.dirty && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-lg"
+              onClick={board.reset}
+              title="Put the panels back where they started"
+            >
+              <RotateCcw className="mr-2 size-3.5" />
+              Reset layout
+            </Button>
+          )}
+
           <DashboardReportButtons
             stats={stats}
             conversations={liveConversations ?? []}
@@ -499,10 +528,11 @@ export default function Dashboard({ role, perms }: Props) {
             <div
               data-board="fill"
               className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden max-lg:flex-none max-lg:overflow-visible lg:grid-cols-12"
-              style={{ ["--board-rows" as string]: role === "admin" ? BOARD_ROWS_ADMIN : BOARD_ROWS_USER }}
+              style={{ ["--board-rows" as string]: board.rows }}
             >
               {panels.map((panel) => {
                 const tall = panel.type !== "attention" && panel.type !== "kpis";
+                const box = board.boxes.find((b) => b.id === panel.id);
                 return (
                   <div
                     key={panel.id}
@@ -516,8 +546,9 @@ export default function Dashboard({ role, perms }: Props) {
                       tall ? "max-lg:h-[340px]" : "",
                     ].join(" ")}
                     style={{
-                      ["--span" as string]: panel.span,
-                      ["--row" as string]: panel.row,
+                      ["--span" as string]: box?.span ?? panel.span,
+                      ["--start" as string]: box?.start ?? "",
+                      ["--row" as string]: box?.row ?? panel.row,
                     }}
                   >
                     <div
@@ -526,6 +557,11 @@ export default function Dashboard({ role, perms }: Props) {
                     >
                       {renderPanelBody(panel, panelTitle(panel))}
                     </div>
+                    <PanelResizeHandles
+                      handles={RESIZE_HANDLES}
+                      label={panelTitle(panel)}
+                      onResize={(edge, event) => board.beginResize(panel.id, box?.row ?? panel.row ?? 1, edge, event)}
+                    />
                   </div>
                 );
               })}
