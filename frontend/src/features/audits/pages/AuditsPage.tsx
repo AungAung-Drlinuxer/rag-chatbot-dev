@@ -371,7 +371,7 @@ export default function AuditsPage() {
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0">
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+        <section data-slot="card" className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Activity stream</h2>
@@ -598,7 +598,7 @@ export default function AuditsPage() {
 
         {/* Rail: what the stream is made of, so a spike is readable without scanning rows. */}
         <aside className="space-y-4 xl:sticky xl:top-6">
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By action</h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Across the {rows.length.toLocaleString()} loaded events.</p>
             <div className="mt-3 space-y-2.5">
@@ -620,7 +620,7 @@ export default function AuditsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By result</h2>
             <dl className="mt-3 space-y-2">
               {(["answer", "caution", "none"] as const).map((key) => (
@@ -634,7 +634,7 @@ export default function AuditsPage() {
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">What is recorded</h2>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
               Sign-ins, domain and user changes, knowledge edits, tickets and assistant answers —
@@ -660,7 +660,7 @@ function SummaryCard({
   caption: string;
 }) {
   return (
-    <div className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
+    <div data-slot="card" className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>{icon}</span>

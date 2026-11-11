@@ -280,7 +280,7 @@ function StatCard({
   caption: string;
 }) {
   return (
-    <div className="flex flex-col rounded-xl border border-[var(--border)] bg-card p-5 shadow-xs">
+    <div data-slot="card" className="flex flex-col rounded-xl border border-[var(--border)] bg-card p-5 shadow-xs">
       <div className="flex items-start justify-between gap-3">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <span className="text-[var(--primary)]">{icon}</span>
@@ -785,7 +785,7 @@ export default function Knowledge({ role, onToast }: Props) {
 
         {/* THE PANEL — heading, toolbar, domain chips, bulk bar, table and footer all live
             in one surface so the whole article library reads as a single unit. */}
-        <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-card shadow-xs">
+        <section data-slot="card" className="overflow-hidden rounded-xl border border-[var(--border)] bg-card shadow-xs">
           {/* 1. heading row: h2 + count badge, right-aligned muted note */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
             <h2 className="text-sm font-semibold text-foreground">
@@ -1216,7 +1216,7 @@ export default function Knowledge({ role, onToast }: Props) {
           aria-label={`Article details: ${detail.title}`}
           onClick={(e) => { if (e.target === e.currentTarget) setDetail(null); }}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-card p-6 shadow-xl">
+          <div data-slot="card" className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-card p-6 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-base font-semibold">{detail.title}</h2>
               <button

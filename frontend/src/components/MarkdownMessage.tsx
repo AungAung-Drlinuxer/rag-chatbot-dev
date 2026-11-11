@@ -98,7 +98,7 @@ function CodeBlock({
  */
 function Table({ children, ...rest }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="md-table-wrap my-3 max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 dark:border-slate-800">
+    <div className="md-table-wrap table-scroll my-3 max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 dark:border-slate-800">
       <table {...rest}>{children as ReactNode}</table>
     </div>
   );

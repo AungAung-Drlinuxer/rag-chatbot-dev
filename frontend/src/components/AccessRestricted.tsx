@@ -19,7 +19,7 @@ export default function AccessRestricted({
 }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-card p-8 text-center shadow-xs">
+      <div data-slot="card" className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-card p-8 text-center shadow-xs">
         <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--danger)]/10 text-[var(--danger)]">
           <ShieldAlert className="size-6" />
         </div>

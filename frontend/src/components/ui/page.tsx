@@ -155,7 +155,7 @@ export function SectionCard({
   bodyClassName?: string;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-card text-card-foreground shadow-xs">
+    <section data-slot="section-card" className="overflow-hidden rounded-xl bg-card text-card-foreground">
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-muted/20 px-6 py-4.5">
           <div className="flex min-w-0 items-center gap-3.5">

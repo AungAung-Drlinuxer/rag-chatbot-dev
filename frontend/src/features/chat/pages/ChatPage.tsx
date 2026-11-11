@@ -404,7 +404,7 @@ export default function Chat({ onNavigate, userName }: Props) {
 
   const rail = (
     <div className="space-y-3">
-      <section className="rounded-xl border border-[var(--border)] bg-card p-3">
+      <section data-slot="card" className="rounded-xl border border-[var(--border)] bg-card p-3">
         <h2 className="text-xs font-semibold">This conversation</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
           <div className="flex items-baseline justify-between gap-2">
@@ -432,7 +432,7 @@ export default function Chat({ onNavigate, userName }: Props) {
       </section>
 
       {lastAnswer?.retrieval && ((lastAnswer.retrieval.chunks ?? 0) > 0 || (lastAnswer.retrieval.cited ?? 0) > 0) && (
-        <section className="rounded-xl border border-[var(--border)] bg-card p-3">
+        <section data-slot="card" className="rounded-xl border border-[var(--border)] bg-card p-3">
           <h2 className="text-xs font-semibold">Last retrieval</h2>
           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
             {[
@@ -463,6 +463,7 @@ export default function Chat({ onNavigate, userName }: Props) {
   // keyboard shortcut, the auto-grow and the tests all keep working across the switch.
   const composerForm = (hero: boolean) => (
     <form
+      data-slot="card"
       onSubmit={(e) => { e.preventDefault(); void send(); }}
       className={[
         "mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-card transition",

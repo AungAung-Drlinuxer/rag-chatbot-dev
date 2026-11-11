@@ -85,7 +85,7 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
   }
 
   return (
-    <div className="mb-4 w-full rounded-xl border border-[var(--border)] bg-card p-4">
+    <div data-slot="card" className="mb-4 w-full rounded-xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-semibold">
@@ -154,7 +154,7 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
       {msg && <div className="mt-2 text-xs text-muted-foreground">{msg}</div>}
 
       {st && st.changes.length > 0 && (
-        <div className="mt-3 max-h-72 overflow-auto rounded-xl border border-[var(--border)]">
+        <div className="table-scroll mt-3 max-h-72 overflow-auto rounded-xl border border-[var(--border)]">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-muted/60 text-left">
               <tr>

@@ -385,7 +385,7 @@ export default function ConversationHistoryPage() {
 
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           {/* List table — USER · CONVERSATION · MSGS · LAST ACTIVITY, as in the mockup. */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+          <section data-slot="card" className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
             <div className="flex items-center justify-between gap-3 px-5 py-4">
               <h2 className="text-sm font-semibold">
                 Conversations
@@ -565,7 +565,7 @@ export default function ConversationHistoryPage() {
           {/* Detail side panel — header (user · "Conversation transcript" · close), then the
               conversation title, its meta line and the two exports, then the transcript. */}
           <div className="hidden lg:block">
-            <div className="sticky top-6 flex h-[calc(100vh-9rem)] max-h-[640px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+            <div data-slot="card" className="sticky top-6 flex h-[calc(100vh-9rem)] max-h-[640px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
               {detail ? (
                 <>
                   <div className="border-b border-[var(--border)] px-5 py-4">

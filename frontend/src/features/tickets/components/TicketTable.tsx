@@ -164,7 +164,7 @@ export function TicketTable({
   return (
     <div>
       {/* ---------- desktop table ---------- */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="table-scroll hidden overflow-x-auto md:block">
         <table className="w-full table-fixed border-collapse text-xs">
           <colgroup>
             <col className="w-[15%]" />

@@ -483,7 +483,7 @@ export default function Settings({ role }: { role?: string }) {
               {/* Rail: the settings in force right now, so the form below reads as a diff
                   against something visible rather than a wall of toggles. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
-                <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Your setup</h2>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">What the interface uses right now.</p>
                   <dl className="mt-3 space-y-2.5">
@@ -504,7 +504,7 @@ export default function Settings({ role }: { role?: string }) {
                   </dl>
                 </section>
 
-                <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Save</h2>
                   <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
                     Theme, density and motion apply as you change them, but they are stored for this
@@ -571,7 +571,7 @@ export default function Settings({ role }: { role?: string }) {
               {/* Live health used to sit below the whole page, under the fold, where it was
                   read only after something had already failed. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
-                <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+                <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
                   <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
                     <span className="size-1.5 rounded-full bg-[var(--ok)]" />
                     <h2 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Service status</h2>
@@ -581,7 +581,7 @@ export default function Settings({ role }: { role?: string }) {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">How this works</h2>
                   <ul className="mt-2 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
                     <li className="flex gap-1.5">

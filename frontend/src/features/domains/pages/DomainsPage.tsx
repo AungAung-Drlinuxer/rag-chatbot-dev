@@ -132,7 +132,7 @@ export default function DomainsPage({
           description="Classifier keywords, domain icons, colours, and Jira escalation routing"
         />
         <main className="mx-auto max-w-3xl">
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-[var(--border)] bg-card p-10 text-center shadow-xs">
+          <div data-slot="card" className="flex flex-col items-center justify-center rounded-2xl border border-[var(--border)] bg-card p-10 text-center shadow-xs">
             <div className="mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--danger)]/10 text-[var(--danger)]">
               <ShieldAlert className="size-6" />
             </div>
@@ -187,7 +187,7 @@ export default function DomainsPage({
         <DomainStats totals={totals} loading={loading} />
         <RoutingFlow />
 
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-3 pt-4 sm:px-5">
             <h2 className="text-sm font-semibold">
               Routing domains
@@ -339,7 +339,7 @@ export default function DomainsPage({
           aria-label="Test keyword matching"
           onClick={(e) => { if (e.target === e.currentTarget) setTesterOpen(false); }}
         >
-          <div className="my-auto w-full max-w-lg rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl sm:p-6">
+          <div data-slot="card" className="my-auto w-full max-w-lg rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl sm:p-6">
             <h2 className="text-base font-semibold">Test keyword matching</h2>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
               A case-insensitive match against the keywords of active domains. This previews the

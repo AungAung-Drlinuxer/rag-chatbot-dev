@@ -450,7 +450,7 @@ function ProviderEditor({ provider, onConfigured }: {
   const dirty = Object.values(form).some((v) => typeof v === "string" && v.trim().length > 0);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card text-card-foreground shadow-xs">
+    <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card text-card-foreground shadow-xs">
       {/* header */}
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
         <div className="flex min-w-0 items-start gap-3">
@@ -807,7 +807,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
           {/* Keep the count and the way out visible while browsing — the catalogue used to
               replace the whole header, so "3 of 4 enabled" vanished exactly when you were
               deciding what to add. */}
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-card px-5 py-3">
+          <section data-slot="card" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-card px-5 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold leading-tight">
                 {enabledList.length} of {PROVIDERS.length} integrations enabled
@@ -831,7 +831,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       ) : (
         <>
           {/* ---- enabled services: one row per connection, not a row of pills ---- */}
-          <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+          <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="grid size-6 place-items-center rounded-md bg-[var(--accent-soft)] text-[var(--accent-foreground)]">

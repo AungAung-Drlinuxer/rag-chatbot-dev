@@ -243,7 +243,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-card p-6 text-xs text-muted-foreground">
+      <div data-slot="card" className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-card p-6 text-xs text-muted-foreground">
         <Loader2 className="size-4 animate-spin" /> Loading the AI service configuration…
       </div>
     );
@@ -264,7 +264,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-5">
         {/* ---- status ------------------------------------------------------------- */}
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-4">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
@@ -482,7 +482,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
 
       {/* ---- rail: what this save will commit, and the actions --------------------- */}
       <aside className="space-y-5 xl:sticky xl:top-6">
-        <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Effective configuration</h2>
           <p className="mt-0.5 text-[11px] text-muted-foreground">What the assistant uses right now.</p>
           <dl className="mt-3 space-y-2.5">
@@ -501,7 +501,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           </dl>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Save</h2>
           <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
             One save commits the provider fields and the retrieval knobs together.
@@ -564,7 +564,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
     children: React.ReactNode;
   }) {
     return (
-      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+      <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
           <div className="flex min-w-0 items-start gap-2.5">
             {icon && (

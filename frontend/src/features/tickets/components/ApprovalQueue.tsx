@@ -73,7 +73,7 @@ export function ApprovalQueue({
   if (pending.length === 0) return null;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--warn)]/40 bg-card">
+    <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--warn)]/40 bg-card">
       <header className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--warn)]/8 px-4 py-2.5">
         <ShieldQuestion className="size-3.5 text-[var(--warn)]" />
         <h2 className="text-xs font-semibold">

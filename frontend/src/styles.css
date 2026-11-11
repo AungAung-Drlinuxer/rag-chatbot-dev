@@ -1083,6 +1083,17 @@ code, pre, .mono { font-family: var(--mono); }
   box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-1);
 }
 
+/* SectionCard is the same raised surface as a card: it had its own border + shadow-xs, so
+   the pages that use it read a step flatter than the ones that use [data-slot="card"]. */
+[data-slot="section-card"] {
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-1);
+  transition: box-shadow 160ms ease;
+}
+[data-slot="section-card"]:hover {
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-2);
+}
+
 /* Overlays sit above the ramp, not beside it. */
 [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"] {
   box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-3);

@@ -171,7 +171,7 @@ export function EmailServerSettings() {
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-4">
         {/* status hero */}
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-start justify-between gap-4 px-5 pb-4 pt-4">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
@@ -303,7 +303,7 @@ export function EmailServerSettings() {
 
       {/* rail: what this server resolves to, and the two actions that prove it works */}
       <aside className="space-y-4 xl:sticky xl:top-6">
-        <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Delivery</h2>
           <p className="mt-0.5 text-[11px] text-muted-foreground">How mail leaves this deployment.</p>
           <dl className="mt-3 space-y-2.5">
@@ -322,7 +322,7 @@ export function EmailServerSettings() {
           </dl>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Send &amp; save</h2>
           <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
             Save stores the write-only fields; the test proves the saved server actually delivers.

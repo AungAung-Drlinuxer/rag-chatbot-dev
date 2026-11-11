@@ -130,7 +130,7 @@ export function DomainClassifierManager({
           aria-label={`Delete ${deleting.display_name}`}
           onClick={(e) => { if (e.target === e.currentTarget && !busy) setDeleting(null); }}
         >
-          <div className="my-auto w-full max-w-sm rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl">
+          <div data-slot="card" className="my-auto w-full max-w-sm rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl">
             <div className="flex items-start gap-3">
               <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--danger)]/10 text-[var(--danger)]">
                 <AlertCircle className="size-4.5" aria-hidden />

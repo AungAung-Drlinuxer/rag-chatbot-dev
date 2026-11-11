@@ -388,7 +388,7 @@ export default function Users() {
             value={inactiveUsers} caption="Disabled, locked or pending" />
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Workspace members</h2>
@@ -551,7 +551,7 @@ export default function Users() {
             department, and what the directory says about them. Same 380px sticky column as
             Overview and the ticket board. */}
         <div className="space-y-4 xl:sticky xl:top-6">
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">Directory</h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Counted from the {totalUsers} members returned by the API.</p>
             <dl className="mt-3 space-y-2.5">
@@ -576,7 +576,7 @@ export default function Users() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By role</h2>
             <div className="mt-3 space-y-2.5">
               {["Administrator", "Knowledge Manager", "User"].map((role) => {
@@ -597,7 +597,7 @@ export default function Users() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">By department</h2>
             <dl className="mt-3 space-y-2">
               {Object.entries(
@@ -618,7 +618,7 @@ export default function Users() {
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
+          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">Accounts</h2>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
               Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.
@@ -1331,7 +1331,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-2xl">
+      <div data-slot="card" className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold">Add user</h2>

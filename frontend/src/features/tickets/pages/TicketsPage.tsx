@@ -481,7 +481,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
         />
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+          <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-4">
               <div className="min-w-0">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
