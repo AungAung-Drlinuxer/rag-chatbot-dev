@@ -19,6 +19,7 @@ import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { listUsers } from "@/features/users/api";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 /**
  * ConversationHistory — v0.21.75/79, restyled to the workspace mockup.
@@ -645,15 +646,29 @@ export default function ConversationHistoryPage() {
                         </div>
                         {g.items.map((m, i) => {
                           const isUser = m.role === "user";
+                          const isJira = !isUser && /jira|ithd-|ticket/i.test(m.content);
+                          const isConfluence = !isUser && /confluence|atlassian|kb\b/i.test(m.content);
                           return (
                             /* The mockup draws every turn as a full-width block: the sender
                                sits top-left of the row and the clock top-right, above the
                                bubble. Only the user's block is inset (92%), matching it. */
                             <div key={i} className={isUser ? "ml-auto w-[92%]" : "w-full"}>
                               <div className="mb-1 flex items-center justify-between gap-2 text-3xs text-muted-foreground">
-                                <span className="flex min-w-0 items-center gap-1">
+                                <span className="flex min-w-0 items-center gap-1.5">
                                   {!isUser && <Bot className="size-3 shrink-0" />}
                                   <span className="truncate font-medium">{isUser ? openUser : "IT Assistant"}</span>
+                                  {isJira && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-foreground)]">
+                                      <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
+                                      Jira
+                                    </span>
+                                  )}
+                                  {isConfluence && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-500">
+                                      <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-2.5" />
+                                      Confluence
+                                    </span>
+                                  )}
                                 </span>
                                 <span className="shrink-0">{fmtTime(m.created_at)}</span>
                               </div>

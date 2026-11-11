@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -543,7 +544,10 @@ export default function Users() {
               </span>
             )}
           </span>
-          <span>Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.</span>
+          <span className="inline-flex items-center gap-1.5">
+            <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-3 inline" />
+            Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.
+          </span>
         </p>
         </div>
 
@@ -552,7 +556,12 @@ export default function Users() {
             Overview and the ticket board. */}
         <div className="space-y-4 xl:sticky xl:top-6">
           <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">Directory</h2>
+            <div className="flex items-center gap-2">
+              <span className="grid size-6 shrink-0 place-items-center rounded bg-white/[0.04] p-0.5 ring-1 ring-[var(--border)]">
+                <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-3.5" />
+              </span>
+              <h2 className="text-sm font-semibold">Directory (AD / LDAP)</h2>
+            </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Counted from the {totalUsers} members returned by the API.</p>
             <dl className="mt-3 space-y-2.5">
               {[

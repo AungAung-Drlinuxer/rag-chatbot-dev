@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import type { ClassifierDomainItem } from "@/features/domains/api";
 import { domainColor, domainIcon } from "@/features/domains/components/domainMeta";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 const VISIBLE_KEYWORDS = 6;
 
@@ -63,10 +64,11 @@ export function DomainRoutingItem({
 
             {domain.jira_project ? (
               <span
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-foreground)]/25 bg-[var(--accent-soft)] px-2 py-0.5 text-2xs font-medium text-[var(--accent-foreground)]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-foreground)]/25 bg-[var(--accent-soft)] px-2 py-0.5 text-2xs font-medium text-[var(--accent-foreground)]"
                 title="Jira escalation project"
               >
-                <Route className="size-3" aria-hidden /> {domain.jira_project}
+                <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3" />
+                {domain.jira_project}
               </span>
             ) : (
               <span

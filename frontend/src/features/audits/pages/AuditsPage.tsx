@@ -15,6 +15,7 @@ import { listAudits } from "@/features/audits/api";
 import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 /**
  * Audits — v1.0.1 (administrator only)
@@ -480,9 +481,18 @@ export default function AuditsPage() {
                         <span className="ml-2 text-muted-foreground">{fmtTime(r.created_at)}</span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-md px-2 py-0.5 text-2xs font-semibold capitalize ${toneFor(r.action)}`}>
-                          {r.action}
-                        </span>
+                        {(() => {
+                          const brand = /jira/i.test(r.action) ? "jira" :
+                                        /confluence|kb|sync/i.test(r.action) ? "confluence" :
+                                        /keycloak|sso|login|auth/i.test(r.action) ? "keycloak" :
+                                        /ldap|active.?directory/i.test(r.action) ? "ldap" : null;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs font-semibold capitalize ${toneFor(r.action)}`}>
+                              {brand && <IntegrationLogo providerKey={brand} name={brand} size="sm" className="size-2.5 shrink-0" />}
+                              {r.action}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-5 py-3.5">
                         {r.username ? (

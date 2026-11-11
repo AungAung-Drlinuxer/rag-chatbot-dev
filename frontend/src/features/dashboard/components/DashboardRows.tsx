@@ -5,6 +5,7 @@
  */
 
 import { healthGlyph } from "@/shared/healthGlyph";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -213,11 +214,17 @@ export function HealthRow({ item }: { item: HealthItem }) {
     <div className="flex items-center gap-2.5 px-3.5 py-1.5 transition-colors hover:bg-muted/40">
       <div
         className={[
-          "grid size-6 shrink-0 place-items-center rounded-md",
+          "grid size-6 shrink-0 place-items-center rounded-md p-0.5",
           healthy ? glyph.tint : "bg-[var(--danger)]/12 text-[var(--danger)]",
         ].join(" ")}
       >
-        {healthy ? <Glyph className="size-3.5" aria-hidden /> : item.icon}
+        {healthy && glyph.brand ? (
+          <IntegrationLogo providerKey={glyph.brand} name={item.name} size="sm" className="size-3.5" />
+        ) : healthy ? (
+          <Glyph className="size-3.5" aria-hidden />
+        ) : (
+          item.icon
+        )}
       </div>
 
       <div className="min-w-0 flex-1">

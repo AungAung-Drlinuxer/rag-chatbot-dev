@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { AlertOctagon, CheckCircle2, Clock3, Inbox } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 export type TicketTotals = {
   total: number;
@@ -58,7 +59,7 @@ function Tile({
 }: {
   label: string;
   value: number;
-  caption: string;
+  caption: ReactNode;
   icon: ReactNode;
   tone: Tone;
   active: boolean;
@@ -170,7 +171,12 @@ export function TicketStats({
       <Tile
         label="Done"
         value={totals.done}
-        caption="Closed in Jira"
+        caption={
+          <span className="inline-flex items-center gap-1">
+            <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5 shrink-0" />
+            Closed in Jira
+          </span>
+        }
         icon={<CheckCircle2 className="size-3.5" />}
         tone="emerald"
         active={activeStatus === "done"}

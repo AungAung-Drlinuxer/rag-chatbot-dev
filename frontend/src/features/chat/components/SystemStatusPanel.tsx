@@ -17,6 +17,7 @@
 import { useEffect, useState } from "react";
 import { Activity, KeyRound, ShieldCheck, Ticket, Wifi } from "lucide-react";
 import { healthGlyph } from "@/shared/healthGlyph";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 import { dashHealth } from "@/features/dashboard/api";
 
@@ -107,8 +108,12 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
               const g = healthGlyph(s.key, s.name);
               return (
                 <li key={s.key} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-2xs">
-                  <span className={`grid size-5 shrink-0 place-items-center rounded-md ${g.tint}`}>
-                    <g.Icon className="size-3" aria-hidden />
+                  <span className={`grid size-5 shrink-0 place-items-center rounded-md p-0.5 ${g.tint}`}>
+                    {g.brand ? (
+                      <IntegrationLogo providerKey={g.brand} name={s.name} size="sm" className="size-3" />
+                    ) : (
+                      <g.Icon className="size-3" aria-hidden />
+                    )}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-muted-foreground" title={s.name}>{s.name}</span>
                   <span className="flex shrink-0 items-center gap-1 font-medium text-foreground">
