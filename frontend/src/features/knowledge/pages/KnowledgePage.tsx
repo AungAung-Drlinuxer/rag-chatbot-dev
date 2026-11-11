@@ -41,6 +41,7 @@ import ReclassifyPanel from "../components/ReclassifyPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 /**
  * Numbers for a pager: first, last, current ±1, and a gap marker where pages are skipped.
@@ -1081,13 +1082,19 @@ export default function Knowledge({ role, onToast }: Props) {
                               title={`Open source: ${article.source_url}`}
                               className="inline-flex items-center gap-1 rounded-md transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
                             >
-                              <Badge variant="outline" className={`text-2xs ${providerOf(article).className}`}>
+                              <Badge variant="outline" className={`inline-flex items-center gap-1.5 text-2xs ${providerOf(article).className}`}>
+                                {providerOf(article).key === "confluence" && (
+                                  <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-3" />
+                                )}
                                 {providerOf(article).key === "unknown" ? "Internal" : providerOf(article).label}
                               </Badge>
                               <ExternalLink className="size-2.5 text-muted-foreground" />
                             </a>
                           ) : (
-                            <Badge variant="outline" className={`text-2xs ${providerOf(article).className}`}>
+                            <Badge variant="outline" className={`inline-flex items-center gap-1.5 text-2xs ${providerOf(article).className}`}>
+                              {providerOf(article).key === "confluence" && (
+                                <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-3" />
+                              )}
                               {providerOf(article).label}
                             </Badge>
                           )}
@@ -1241,7 +1248,10 @@ export default function Knowledge({ role, onToast }: Props) {
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted-foreground">Source</dt>
                 <dd>
-                  <Badge variant="outline" className={`text-2xs ${providerOf(detail).className}`}>
+                  <Badge variant="outline" className={`inline-flex items-center gap-1.5 text-2xs ${providerOf(detail).className}`}>
+                    {providerOf(detail).key === "confluence" && (
+                      <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-3" />
+                    )}
                     {providerOf(detail).label}
                   </Badge>
                 </dd>

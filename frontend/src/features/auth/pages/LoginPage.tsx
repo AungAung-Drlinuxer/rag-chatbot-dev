@@ -15,6 +15,7 @@ import {
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
 import { healthPing } from "@/features/auth/api";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 /**
  * Sign-in screen.
@@ -49,20 +50,6 @@ type Props = {
   sso?: { enabled: boolean; provider: string; label: string; realm: string };
   onSso?: () => void;
 };
-
-/** Keycloak's mark, drawn small: a key head with a shaft and two teeth. Uses currentColor
- *  so it inherits the theme's primary colour instead of hard-coding Keycloak blue. */
-function KeycloakMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor"
-      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="8" cy="8" r="4.2" />
-      <path d="M11 11l9 9" />
-      <path d="M16.5 15.5l2.5-2.5" />
-      <path d="M19 18l2-2" />
-    </svg>
-  );
-}
 
 export default function Login({
   loginUser,
@@ -354,7 +341,7 @@ export default function Login({
                         onClick={onSso}
                         className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-[var(--border)] bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted/50 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 active:scale-[0.99]"
                       >
-                        <KeycloakMark className="size-4 shrink-0 text-[var(--primary)]" />
+                        <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-4 shrink-0" />
                         <span>Sign in with {ssoLabel}</span>
                       </button>
                       <p className="text-center text-2xs text-muted-foreground">

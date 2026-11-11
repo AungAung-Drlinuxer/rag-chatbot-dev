@@ -4,6 +4,8 @@ import confluenceSvg from "@/assets/logos/confluence.svg";
 import jiraSvg from "@/assets/logos/jira.svg";
 import ldapSvg from "@/assets/logos/active-directory.svg";
 import keycloakSvg from "@/assets/logos/keycloak.svg";
+import postgresqlSvg from "@/assets/logos/postgresql.svg";
+import redisSvg from "@/assets/logos/redis.svg";
 
 /**
  * Map of integration provider keys to their authentic, official vector logo assets.
@@ -14,6 +16,9 @@ export const INTEGRATION_LOGOS: Record<string, string> = {
   jira: jiraSvg,
   ldap: ldapSvg,
   keycloak: keycloakSvg,
+  postgres: postgresqlSvg,
+  postgresql: postgresqlSvg,
+  redis: redisSvg,
 };
 
 type Props = {

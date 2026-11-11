@@ -20,10 +20,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle, Bug, CalendarDays, Cloud, Headset, HelpCircle, KeyRound, Paperclip,
-  Send, Sparkles, Ticket as TicketIcon, UploadCloud, X, Zap,
+  Send, Sparkles, UploadCloud, X, Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
   Dialog,
   DialogContent,
@@ -272,7 +273,9 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
         <div className="max-h-[calc(100dvh-16rem)] space-y-5 overflow-y-auto px-6 py-5">
           {/* ---- where this goes ---- */}
           <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--accent-foreground)]">
-            <TicketIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded bg-white/[0.04] p-0.5 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
+              <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3.5" />
+            </span>
             <span>
               <span className="font-semibold">Create in Jira</span>
               <span className="text-[var(--accent-foreground)]/80">

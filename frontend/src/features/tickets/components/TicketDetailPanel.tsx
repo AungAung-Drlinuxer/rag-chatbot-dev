@@ -13,7 +13,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   CalendarClock,
   CheckCircle2,
-  ExternalLink,
   Lock,
   MessageSquare,
   Paperclip,
@@ -29,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { MetaRow, PriorityBadge, StatusBadge } from "@/features/tickets/components/presentational";
 import { attachmentUrl } from "@/features/tickets/api";
 import {
@@ -179,8 +179,8 @@ export function TicketDetailPanel({
               <span className="font-mono text-[11px] font-semibold tracking-wide text-[var(--accent-foreground)]">
                 {ticket.id}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
-                <ExternalLink className="size-2.5" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
+                <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3" />
                 Jira
               </span>
             </div>

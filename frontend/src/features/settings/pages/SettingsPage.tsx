@@ -3,7 +3,6 @@ import {
   BookOpen,
   Bot,
   Check,
-  Globe,
   Monitor,
   Plug,
   RotateCcw,
@@ -11,6 +10,7 @@ import {
   Settings as SettingsIcon,
   XCircle,
 } from "lucide-react";
+import { IntegrationLogo } from "../components/IntegrationLogo";
 import { useEffect, useState } from "react";
 import { PageShell, PageHeader } from "@/components/ui/page";
 import { Panel, Row, Segmented } from "../components/SettingsKit";
@@ -697,8 +697,8 @@ function IntegrationStatusCards() {
           key={c.key}
           className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-background/60 p-2.5 transition hover:border-[var(--primary)]/30"
         >
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--muted)] text-muted-foreground">
-            <Globe className="size-4" aria-hidden />
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.04] p-1 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
+            <IntegrationLogo providerKey={c.key} name={c.name} size="sm" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
