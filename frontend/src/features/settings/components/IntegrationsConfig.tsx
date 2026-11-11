@@ -4,6 +4,7 @@ import {
   Pencil, Plug, Save, Search, ShieldCheck, Ticket, Trash2, Users, XCircle,
   Eye, EyeOff, ChevronRight,
 } from "lucide-react";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
   deleteIntegrationSettings, getIntegrationSettings, getMySettings, putIntegrationSettings, testIntegration, updateMySettings,
 } from "@/features/settings/api";
@@ -519,8 +520,8 @@ function ProviderEditor({ provider, onConfigured }: {
       {/* header */}
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-            <provider.icon className="size-4" aria-hidden />
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/[0.04] p-1.5 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
+            <IntegrationLogo providerKey={provider.key} name={provider.name} size="sm" />
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -683,7 +684,6 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
         {shown.map((p) => {
           const on = !!enabled[p.key];
-          const Icon = p.icon;
           return (
             <div
               key={p.key}
@@ -698,13 +698,13 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
               <div className="flex items-start gap-3.5 px-4 pt-4">
                 <div
                   className={[
-                    "grid size-10 shrink-0 place-items-center rounded-xl transition",
+                    "grid size-11 shrink-0 place-items-center rounded-xl p-1.5 transition",
                     on
-                      ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
-                      : "bg-[var(--muted)] text-muted-foreground group-hover:text-foreground",
+                      ? "bg-white/[0.06] shadow-xs ring-1 ring-[var(--primary)]/30"
+                      : "bg-white/[0.03] ring-1 ring-[var(--border)] group-hover:bg-white/[0.05]",
                   ].join(" ")}
                 >
-                  <Icon className="size-5" aria-hidden />
+                  <IntegrationLogo providerKey={p.key} name={p.name} size="md" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
