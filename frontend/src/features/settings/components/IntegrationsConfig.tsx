@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen, CheckCircle2, ExternalLink, Info, KeyRound, Loader2, Loader as LoaderIcon, Lock,
   Pencil, Plug, Plus, Save, Search, Settings2, ShieldCheck, Ticket, Trash2, Users, XCircle,
-  Eye, EyeOff, ChevronRight,
+  Eye, EyeOff, ChevronRight, Check,
 } from "lucide-react";
 import {
   deleteIntegrationSettings, getIntegrationSettings, getMySettings, putIntegrationSettings, testIntegration, updateMySettings,
@@ -212,26 +212,91 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (next: boolean
   );
 }
 
-function StatusPill({ configured }: { configured?: boolean }) {
+function StatusChip({ configured, enabled }: { configured?: boolean; enabled?: boolean }) {
+  if (enabled) {
+    return (
+      <span
+        title="This tool is on: its panel is available to you."
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)]/12 px-2 py-1 text-2xs font-semibold text-[var(--primary)]"
+      >
+        <CheckCircle2 className="size-3" aria-hidden /> In use
+      </span>
+    );
+  }
   if (configured === undefined) {
-    // Unknown, not "unconfigured": the status probe is still in flight (or failed),
-    // and claiming "Needs setup" for a live integration would be a lie.
-    return <span className="text-2xs text-muted-foreground/60">Status unavailable</span>;
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-2xs font-medium text-muted-foreground">
+        <Loader2 className="size-3 animate-spin" aria-hidden /> Checking
+      </span>
+    );
   }
   return configured ? (
-    <span className="inline-flex items-center gap-1 text-2xs font-medium text-[var(--ok)]">
-      <CheckCircle2 className="h-3 w-3" /> Configured
+    <span
+      title="Credentials are stored on the server. Switch this on to add its panel."
+      className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ok)]/12 px-2 py-1 text-2xs font-semibold text-[var(--ok)]"
+    >
+      <CheckCircle2 className="size-3" aria-hidden /> Configured
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-[var(--warn)]" /> Needs setup
+    <span
+      title="No credentials stored yet — open the panel to add them."
+      className="inline-flex items-center gap-1.5 rounded-full bg-[var(--warn)]/12 px-2 py-1 text-2xs font-semibold text-[var(--warn)]"
+    >
+      <span className="size-1.5 rounded-full bg-[var(--warn)]" aria-hidden /> Not set up
     </span>
   );
 }
 
-/* ============================================================
-   PROVIDER EDITOR — only mounted for an enabled provider
-============================================================ */
+/** The count strip above the catalogue: one number, one bar, one way out. */
+function IntegrationSummary({ onCount, total, connected, personal, action }: {
+  onCount: number;
+  total: number;
+  connected: number;
+  personal: boolean;
+  action?: React.ReactNode;
+}) {
+  const pct = total === 0 ? 0 : Math.round((onCount / total) * 100);
+  return (
+    <section data-slot="card" className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
+          <Plug className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+        <p className="text-sm font-semibold leading-tight">
+          {onCount} of {total} integrations enabled
+        </p>
+        <div className="mt-2 flex items-center gap-2.5">
+          <div
+            className="h-1.5 w-36 overflow-hidden rounded-full bg-[var(--muted)]"
+            role="progressbar"
+            aria-valuenow={onCount}
+            aria-valuemin={0}
+            aria-valuemax={total}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span
+            className="text-2xs text-muted-foreground"
+            title="Configured = credentials stored on the server. In use = you have this tool switched on."
+          >
+            {connected} configured · {onCount} in use
+          </span>
+        </div>
+        <p className="mt-1.5 text-2xs text-muted-foreground">
+          {personal
+            ? "Your choice is saved to your own account."
+            : "A provider you switch on gets a configuration panel below."}
+        </p>
+        </div>
+      </div>
+      {action}
+    </section>
+  );
+}
 
 function ProviderEditor({ provider, onConfigured }: {
   provider: Provider;
@@ -460,7 +525,7 @@ function ProviderEditor({ provider, onConfigured }: {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold leading-tight">{provider.name}</h3>
-              <StatusPill configured={loading ? undefined : fieldsSet.length > 0} />
+              <StatusChip configured={loading ? undefined : fieldsSet.length > 0} />
             </div>
             <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">{provider.desc}</p>
           </div>
@@ -615,55 +680,62 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
       </div>
 
       {/* cards */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map((p) => {
           const on = !!enabled[p.key];
           const Icon = p.icon;
           return (
             <div
               key={p.key}
+              data-integration={p.key}
               className={[
-                "group relative flex flex-col rounded-2xl border bg-card p-4 transition",
+                "group flex min-h-[168px] flex-col overflow-hidden rounded-xl border bg-card transition duration-150",
                 on
-                  ? "border-[var(--primary)]/45 ring-1 ring-[var(--primary)]/15"
-                  : "border-[var(--border)] hover:border-[var(--primary)]/30 hover:shadow-sm",
+                  ? "border-[var(--primary)]/55 shadow-[inset_0_0_0_1px_var(--primary)]/10"
+                  : "border-[var(--border)] hover:-translate-y-0.5 hover:border-[var(--primary)]/35 hover:shadow-[var(--elev-2)]",
               ].join(" ")}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <div
-                    className={[
-                      "grid size-9 shrink-0 place-items-center rounded-xl transition",
-                      on
-                        ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
-                        : "bg-muted text-muted-foreground",
-                    ].join(" ")}
-                  >
-                    <Icon className="size-4.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-foreground">{p.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{p.tagline}</p>
-                  </div>
+              <div className="flex items-start gap-3 px-4 pt-4">
+                <div
+                  className={[
+                    "grid size-10 shrink-0 place-items-center rounded-xl transition",
+                    on
+                      ? "bg-[var(--accent)] text-[var(--accent-foreground)]"
+                      : "bg-[var(--muted)] text-muted-foreground group-hover:text-foreground",
+                  ].join(" ")}
+                >
+                  <Icon className="size-5" aria-hidden />
                 </div>
-                <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold leading-snug text-foreground">{p.name}</p>
+                    <div className="flex shrink-0 flex-col items-center gap-0.5">
+                      <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
+                      <span className={["text-[10px] font-medium uppercase tracking-wide", on ? "text-[var(--primary)]" : "text-muted-foreground/70"].join(" ")}>
+                        {on ? "On" : "Off"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.tagline}</p>
+                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+                    {p.category}
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2.5">
-                <StatusPill configured={status[p.key]} />
+              <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] bg-[var(--muted)]/25 px-4 py-2.5">
+                <StatusChip configured={status[p.key]} enabled={on} />
                 {on && !personal ? (
                   <button
                     type="button"
                     onClick={() => onConfigure(p.key)}
-                    className="inline-flex items-center gap-1 text-2xs font-medium text-[var(--primary)] hover:underline"
+                    className="inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 text-2xs font-semibold text-[var(--primary)] transition hover:gap-1.5 hover:underline"
                   >
-                    Configure <ChevronRight className="size-3" />
+                    Configure <ChevronRight className="size-3.5" />
                   </button>
                 ) : on ? (
-                  <span className="text-2xs text-muted-foreground">Set up by your admin</span>
-                ) : (
-                  <span className="text-2xs text-muted-foreground/70">{p.category}</span>
-                )}
+                  <span className="shrink-0 text-2xs text-muted-foreground">Set up by admin</span>
+                ) : null}
               </div>
             </div>
           );
@@ -804,52 +876,45 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
 
       {browsing || personal ? (
         <>
-          {/* Keep the count and the way out visible while browsing — the catalogue used to
-              replace the whole header, so "3 of 4 enabled" vanished exactly when you were
-              deciding what to add. */}
-          <section data-slot="card" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-card px-5 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight">
-                {enabledList.length} of {PROVIDERS.length} integrations enabled
-              </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {personal ? "Your choice is saved to your own account." : "Pick only the tools your workspace actually uses."}
-              </p>
-            </div>
-            {!personal && (
+          {/* The count and the way out stay visible while browsing, and the bar makes
+              "how much of this am I actually using" readable at a glance. */}
+          <IntegrationSummary
+            onCount={enabledList.length}
+            total={PROVIDERS.length}
+            connected={Object.values(status).filter(Boolean).length}
+            personal={personal}
+            action={!personal ? (
               <button
                 type="button"
                 onClick={() => setBrowsing(false)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
               >
-                <XCircle className="size-3" /> Close catalogue
+                <Check className="size-3.5" /> Close catalogue
               </button>
-            )}
-          </section>
+            ) : undefined}
+          />
           <Catalog enabled={enabled} status={status} onToggle={toggle} personal={personal} onConfigure={(k) => { setSelected(k); setBrowsing(false); }} />
         </>
       ) : (
         <>
-          {/* ---- enabled services: one row per connection, not a row of pills ---- */}
-          <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="grid size-6 place-items-center rounded-md bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-                  <Plug className="size-3.5" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold leading-tight">
-                    {enabledList.length} of {PROVIDERS.length} integrations enabled
-                  </h2>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                    {personal
-                      ? "Your choice is saved to your own account."
-                      : "Only enabled providers show a configuration panel — keep the list short."}
-                  </p>
-                </div>
-              </div>
-            </header>
+          {/* ---- enabled services: the same summary strip, plus the way back in ---- */}
+          <IntegrationSummary
+            onCount={enabledList.length}
+            total={PROVIDERS.length}
+            connected={Object.values(status).filter(Boolean).length}
+            personal={personal}
+            action={!personal ? (
+              <button
+                type="button"
+                onClick={() => setBrowsing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.99]"
+              >
+                <Plus className="size-3.5" /> Browse integrations
+              </button>
+            ) : undefined}
+          />
 
+          <section data-slot="card" className="overflow-hidden">
             {enabledList.length === 0 ? (
               <div className="px-6 py-10 text-center">
                 <div className="mx-auto grid size-11 place-items-center rounded-xl bg-[var(--muted)] text-muted-foreground">
@@ -892,22 +957,12 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-semibold">{p.name}</span>
-                          <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                          <span className="mt-0.5 block truncate text-2xs text-muted-foreground">
                             {p.category}
                           </span>
                         </span>
                         <span className="shrink-0">
-                          {configured === undefined ? (
-                            <span className="text-[10px] text-muted-foreground">Checking…</span>
-                          ) : configured ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--ok)]">
-                              <CheckCircle2 className="size-3" /> Configured
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-[var(--muted-foreground)]">
-                              <span className="size-1.5 rounded-full bg-[var(--warn)]" /> Needs setup
-                            </span>
-                          )}
+                          <StatusChip configured={configured} />
                         </span>
                         <ChevronRight className={["size-3.5 shrink-0 transition", on ? "text-[var(--primary)]" : "text-muted-foreground/50"].join(" ")} aria-hidden />
                       </button>
