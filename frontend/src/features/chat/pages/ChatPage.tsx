@@ -23,6 +23,7 @@ import { conversationFromHash, setConversationHash } from "@/app/router";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
 } from "@/components/ui/dialog";
 
@@ -69,21 +70,22 @@ function Greeting({ name, composer, onPickPrompt }: { name: string; composer: Re
           once there is a transcript to put above it. */}
       <div className="mx-auto mt-7 w-full max-w-2xl text-left">{composer}</div>
 
-      {/* Quick starter chips */}
+      {/* Quick starter chips with official logos */}
       <div className="mx-auto mt-5 flex max-w-2xl flex-wrap items-center justify-center gap-2">
         {[
-          "How do I request VPN access?",
-          "Reset corporate Wi-Fi password",
-          "Kubernetes cluster deployment steps",
-          "Report an urgent IT incident",
-        ].map((prompt) => (
+          { label: "How do I request VPN access?", logo: "active-directory" },
+          { label: "Reset corporate Wi-Fi password", logo: "microsoft" },
+          { label: "Kubernetes cluster deployment steps", logo: "kubernetes" },
+          { label: "Report an urgent IT incident", logo: "jira" },
+        ].map((item) => (
           <button
-            key={prompt}
+            key={item.label}
             type="button"
-            onClick={() => onPickPrompt?.(prompt)}
-            className="rounded-xl border border-[var(--border)] bg-card px-3 py-1.5 text-2xs font-medium text-muted-foreground transition hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:bg-muted hover:text-foreground"
+            onClick={() => onPickPrompt?.(item.label)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-card px-3 py-1.5 text-2xs font-medium text-muted-foreground transition hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:bg-muted hover:text-foreground"
           >
-            {prompt}
+            <IntegrationLogo providerKey={item.logo} name={item.label} size="sm" className="size-3 shrink-0" />
+            {item.label}
           </button>
         ))}
       </div>

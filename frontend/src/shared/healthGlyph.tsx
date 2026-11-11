@@ -33,10 +33,16 @@ const TABLE: { match: RegExp; glyph: HealthGlyph }[] = [
     glyph: { Icon: Users, tint: "text-violet-600 bg-violet-500/10 dark:text-violet-400", dot: "bg-violet-500", brand: "ldap" } },
   { match: /keycloak|\bsso\b|auth|identity/i,
     glyph: { Icon: ShieldCheck, tint: "text-rose-600 bg-rose-500/10 dark:text-rose-400", dot: "bg-rose-500", brand: "keycloak" } },
-  { match: /ollama|llm|embed|model|openrouter|provider/i,
+  { match: /ollama/i,
+    glyph: { Icon: Cpu, tint: "text-fuchsia-600 bg-fuchsia-500/10 dark:text-fuchsia-400", dot: "bg-fuchsia-500", brand: "ollama" } },
+  { match: /openrouter/i,
+    glyph: { Icon: Cpu, tint: "text-fuchsia-600 bg-fuchsia-500/10 dark:text-fuchsia-400", dot: "bg-fuchsia-500", brand: "openrouter" } },
+  { match: /openai/i,
+    glyph: { Icon: Cpu, tint: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", brand: "openai" } },
+  { match: /llm|embed|model|provider/i,
     glyph: { Icon: Cpu, tint: "text-fuchsia-600 bg-fuchsia-500/10 dark:text-fuchsia-400", dot: "bg-fuchsia-500" } },
-  { match: /vector|index|store/i,
-    glyph: { Icon: Boxes, tint: "text-teal-600 bg-teal-500/10 dark:text-teal-400", dot: "bg-teal-500" } },
+  { match: /vector|index|store|qdrant/i,
+    glyph: { Icon: Boxes, tint: "text-teal-600 bg-teal-500/10 dark:text-teal-400", dot: "bg-teal-500", brand: "qdrant" } },
 ];
 
 const FALLBACK: HealthGlyph = {

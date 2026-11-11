@@ -20,11 +20,20 @@ describe("IntegrationLogo", () => {
     return container;
   }
 
-  it("has authentic local assets mapped for all 4 providers", () => {
+  it("has authentic local assets mapped for all providers and infrastructure", () => {
     expect(INTEGRATION_LOGOS.confluence).toBeTruthy();
     expect(INTEGRATION_LOGOS.jira).toBeTruthy();
     expect(INTEGRATION_LOGOS.ldap).toBeTruthy();
     expect(INTEGRATION_LOGOS.keycloak).toBeTruthy();
+    expect(INTEGRATION_LOGOS.postgres).toBeTruthy();
+    expect(INTEGRATION_LOGOS.redis).toBeTruthy();
+    expect(INTEGRATION_LOGOS.qdrant).toBeTruthy();
+    expect(INTEGRATION_LOGOS.openai).toBeTruthy();
+    expect(INTEGRATION_LOGOS.anthropic).toBeTruthy();
+    expect(INTEGRATION_LOGOS.ollama).toBeTruthy();
+    expect(INTEGRATION_LOGOS.kubernetes).toBeTruthy();
+    expect(INTEGRATION_LOGOS.docker).toBeTruthy();
+    expect(INTEGRATION_LOGOS.slack).toBeTruthy();
   });
 
   it("renders the official logo image with accessible alt text and object-contain", async () => {

@@ -24,6 +24,7 @@ import {
   putIntegrationSettings, putRuntime, testIntegration,
 } from "@/features/settings/api";
 import { LLM_PRESETS, presetFor, providerLabel } from "../llmProviders";
+import { IntegrationLogo } from "./IntegrationLogo";
 import {
   BTN_DANGER, BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, INPUT_MONO, Panel, Pill, Row,
 } from "./SettingsKit";
@@ -232,7 +233,10 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
         description="How the assistant answers your questions. Managed by your IT administrators."
       >
         <Row title="AI provider" hint="Configured centrally — you do not need a key.">
-          <span className="text-xs font-medium text-foreground">{providerLabel(provider)}</span>
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-foreground">
+            <IntegrationLogo providerKey={preset.id} name={providerLabel(provider)} size="sm" className="size-4" />
+            {providerLabel(provider)}
+          </span>
         </Row>
         <Row title="Model" hint="The model currently answering.">
           <span className="font-mono text-xs text-muted-foreground">{storedModel || "—"}</span>
@@ -267,8 +271,8 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
         <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-4">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-                <Sparkles className="size-5" aria-hidden />
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.04] p-1.5 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
+                <IntegrationLogo providerKey={preset.id} name={providerLabel(provider)} size="md" />
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

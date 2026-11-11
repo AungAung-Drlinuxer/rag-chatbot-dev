@@ -6,6 +6,18 @@ import ldapSvg from "@/assets/logos/active-directory.svg";
 import keycloakSvg from "@/assets/logos/keycloak.svg";
 import postgresqlSvg from "@/assets/logos/postgresql.svg";
 import redisSvg from "@/assets/logos/redis.svg";
+import qdrantSvg from "@/assets/logos/qdrant.svg";
+import openaiSvg from "@/assets/logos/openai.svg";
+import anthropicSvg from "@/assets/logos/anthropic.svg";
+import openrouterSvg from "@/assets/logos/openrouter.svg";
+import deepseekSvg from "@/assets/logos/deepseek.svg";
+import ollamaSvg from "@/assets/logos/ollama.svg";
+import kubernetesSvg from "@/assets/logos/kubernetes.svg";
+import dockerSvg from "@/assets/logos/docker.svg";
+import slackSvg from "@/assets/logos/slack.svg";
+import microsoftSvg from "@/assets/logos/microsoft.svg";
+import googleSvg from "@/assets/logos/google.svg";
+import githubSvg from "@/assets/logos/github.svg";
 
 /**
  * Map of integration provider keys to their authentic, official vector logo assets.
@@ -15,10 +27,29 @@ export const INTEGRATION_LOGOS: Record<string, string> = {
   confluence: confluenceSvg,
   jira: jiraSvg,
   ldap: ldapSvg,
+  "active-directory": ldapSvg,
+  activedirectory: ldapSvg,
   keycloak: keycloakSvg,
   postgres: postgresqlSvg,
   postgresql: postgresqlSvg,
   redis: redisSvg,
+  qdrant: qdrantSvg,
+  vector: qdrantSvg,
+  openai: openaiSvg,
+  anthropic: anthropicSvg,
+  claude: anthropicSvg,
+  openrouter: openrouterSvg,
+  deepseek: deepseekSvg,
+  ollama: ollamaSvg,
+  kubernetes: kubernetesSvg,
+  k8s: kubernetesSvg,
+  docker: dockerSvg,
+  slack: slackSvg,
+  microsoft: microsoftSvg,
+  entra: microsoftSvg,
+  azure: ldapSvg,
+  google: googleSvg,
+  github: githubSvg,
 };
 
 type Props = {
