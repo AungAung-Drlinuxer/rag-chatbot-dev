@@ -70,6 +70,7 @@ export function TicketDetailPanel({
   onDeleteAttachment,
   onAddComment,
   onAddAttachment,
+  onOpenEdit,
 }: {
   ticket: Ticket | null;
   canManage: boolean;
@@ -86,6 +87,7 @@ export function TicketDetailPanel({
   onDeleteAttachment: (id: number) => void;
   onAddComment: (body: string) => void;
   onAddAttachment: (file: File) => void;
+  onOpenEdit?: () => void;
 }) {
   const [comment, setComment] = useState("");
   // Two halves of one action: which step to move to, and what to tell the people in Jira.
@@ -245,6 +247,16 @@ export function TicketDetailPanel({
                 <Pencil className="mr-1 size-3" /> Edit
               </Button>
             )}
+            <Button
+              size="sm"
+              className="btn-primary-gradient h-7 rounded-lg px-2 text-[11px] text-white shadow-xs"
+              onClick={() => onOpenEdit?.()}
+              disabled={!canManage}
+              aria-label="Interactive Jira workflow"
+              title="Open full interactive Jira workflow popup modal"
+            >
+              <Workflow className="mr-1 size-3" /> Interactive Workflow
+            </Button>
             <button
               type="button"
               onClick={onClose}

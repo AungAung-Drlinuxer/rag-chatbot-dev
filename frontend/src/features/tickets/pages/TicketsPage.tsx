@@ -40,6 +40,7 @@ import { TicketToolbar } from "@/features/tickets/components/TicketToolbar";
 import { assignableUsers } from "@/features/users/api";
 import { ApprovalQueue } from "@/features/tickets/components/ApprovalQueue";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
+import { EditTicketDialog } from "@/features/tickets/components/EditTicketDialog";
 
 /**
  * Tickets — the support queue, bound to Jira.
@@ -85,6 +86,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [editBusy, setEditBusy] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const [syncBusy, setSyncBusy] = useState(false);
   const [reconcileBusy, setReconcileBusy] = useState(false);
@@ -614,6 +616,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
           onDeleteAttachment={handleDeleteAttachment}
           onAddComment={handleAddComment}
           onAddAttachment={handleAddAttachment}
+          onOpenEdit={() => setEditOpen(true)}
           />
 
         </div>
@@ -646,6 +649,21 @@ export default function Tickets({ role, userName, onToast }: Props) {
             setPage(1);
           });
         }}
+      />
+
+      <EditTicketDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        ticket={selected}
+        comments={comments}
+        attachments={attachments}
+        assignable={assignable}
+        jiraReady={jiraReady !== false}
+        onSave={handleSaveTicket}
+        onStatus={handleStatus}
+        onAddAttachment={handleAddAttachment}
+        onDeleteAttachment={handleDeleteAttachment}
+        onToast={onToast}
       />
 
     </PageShell>
