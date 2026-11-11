@@ -211,7 +211,7 @@ export default function DomainsPage({
                 onChange={(e) => setQ(e.target.value)}
                 aria-label="Search domains"
                 placeholder="Search domains, keywords, or Jira project…"
-                className="h-9 w-full rounded-lg border border-[var(--border)] bg-background pl-9 pr-8 text-xs outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background pl-9 pr-8 text-xs outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
               />
               {q && (
                 <button

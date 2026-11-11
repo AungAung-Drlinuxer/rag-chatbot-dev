@@ -412,7 +412,7 @@ export default function Users() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by name, username or email…"
                 aria-label="Search users"
-                className="h-9 w-full min-w-[220px] rounded-lg border border-[var(--border)] bg-background pl-9 pr-9 text-xs outline-none transition placeholder:text-muted-foreground focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                className="h-10 w-full min-w-[220px] rounded-xl border border-[var(--border)] bg-background pl-9 pr-9 text-xs outline-none transition placeholder:text-muted-foreground focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
               />
               {search && (
                 <button type="button" onClick={() => setSearch("")} aria-label="Clear search"

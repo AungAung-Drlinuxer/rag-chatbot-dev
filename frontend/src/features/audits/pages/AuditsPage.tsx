@@ -392,7 +392,7 @@ export default function AuditsPage() {
                 value={q}
                 onChange={(e) => { setQ(e.target.value); setPage(1); }}
                 placeholder="Search user, domain, or detail..."
-                className="h-9 w-full rounded-lg border border-[var(--border)] bg-background pl-9 pr-3 text-xs outline-none transition placeholder:text-muted-foreground focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                className="h-10 w-full rounded-xl border border-[var(--border)] bg-background pl-9 pr-3 text-xs outline-none transition placeholder:text-muted-foreground focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
                 aria-label="Search audit events"
               />
             </div>

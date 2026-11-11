@@ -488,20 +488,32 @@ body {
 [data-theme="dark"] [data-slot="alert-dialog-overlay"], [data-theme="dark"] [data-slot="dialog-overlay"] { background: rgb(2 6 23 / .7) !important; }
 
 /* ---- Dropdowns / Menus ---- */
-[data-slot="dropdown-menu-content"], [data-slot="select-content"] {
-  border: none; border-radius: 10px; box-shadow: var(--shadow-lg); background: var(--popover);
+[data-slot="dropdown-menu-content"], [data-slot="select-content"], [role="menu"], [role="listbox"] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  background: var(--popover);
 }
 [data-theme="dark"] [data-slot="dropdown-menu-content"], [data-theme="dark"] [data-slot="select-content"] {
-  background: #1f2937;
+  background: var(--popover);
+  border-color: var(--border);
 }
 
-/* ---- Inputs ---- */
-[data-slot="select-trigger"] { background: transparent !important; border-color: var(--border) !important; box-shadow: none !important; }
-input, select, textarea { background: transparent; border: 1px solid var(--border); border-radius: 8px; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent-soft); }
-[data-slot="card"] input:not([type="range"]):not(:focus):not(:hover),
-.kb-page input:not([type="range"]):not(:focus),
-.set-card input:not(:focus):not(:hover) { border-left-color: transparent; border-right-color: transparent; border-top-color: transparent; }
+/* ---- Inputs & Controls ---- */
+[data-slot="select-trigger"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+input, select, textarea {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 
 /* ---- Buttons ---- */
 .btn, .send { transition: filter .12s, transform .12s; }
@@ -1163,4 +1175,36 @@ code, pre, .mono { font-family: var(--mono); }
 [data-sidebar] p[data-section] {
   font-size: 11px;
   letter-spacing: 0.12em;
+}
+
+/* ---- Enterprise SaaS Table & Interaction System ---- */
+table th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+[data-theme="dark"] table tbody tr:hover {
+  background-color: rgba(139, 92, 246, 0.05);
+}
+
+/* Primary Gradient Action Buttons */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+.btn-primary-gradient:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+}
+.btn-primary-gradient:active {
+  transform: scale(0.98);
 }

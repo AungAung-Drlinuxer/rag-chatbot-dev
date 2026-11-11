@@ -825,7 +825,7 @@ export default function Knowledge({ role, onToast }: Props) {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search solutions, errors, procedures…"
                   aria-label="Search the knowledge base"
-                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-background pl-9 pr-3 text-xs outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-background pl-9 pr-3 text-xs outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10"
                 />
               </div>
 
@@ -834,14 +834,14 @@ export default function Knowledge({ role, onToast }: Props) {
                 onChange={(e) => setQField(e.target.value as "all" | "title" | "body")}
                 title="Where to look for the search text"
                 aria-label="Search field"
-                className="hidden h-9 shrink-0 rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none transition focus:border-[var(--primary)] sm:block"
+                className="hidden h-10 shrink-0 rounded-xl border border-[var(--border)] bg-background px-3 text-xs outline-none transition focus:border-[var(--primary)] sm:block"
               >
                 <option value="all">Title + body</option>
                 <option value="title">Title only</option>
                 <option value="body">Body only</option>
               </select>
 
-              <Button type="submit" size="sm" disabled={busy || !query.trim()} className="h-9 w-full rounded-lg px-4 text-xs sm:w-auto">
+              <Button type="submit" size="default" disabled={busy || !query.trim()} className="h-10 w-full rounded-xl px-5 text-xs font-semibold sm:w-auto">
                 Search
               </Button>
             </form>

@@ -51,26 +51,45 @@ function displayName(raw?: string): string {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
-function Greeting({ name, composer }: { name: string; composer: React.ReactNode }) {
+function Greeting({ name, composer, onPickPrompt }: { name: string; composer: React.ReactNode; onPickPrompt?: (prompt: string) => void }) {
   return (
     <section className="w-full text-center">
-      <span className="mx-auto mb-6 grid size-11 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent-foreground)] ring-1 ring-[var(--border)]">
-        <Sparkles className="size-[18px]" aria-hidden />
+      <span className="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
+        <Sparkles className="size-5" aria-hidden />
       </span>
 
-      <h1 className="text-[30px] font-semibold leading-tight tracking-tight sm:text-[38px]">
-        {greetingFor()}, {name}
+      <h1 className="text-[28px] font-bold leading-tight tracking-tight sm:text-[34px] text-foreground">
+        {greetingFor()}, <span className="bg-gradient-to-r from-violet-400 via-indigo-300 to-purple-200 bg-clip-text text-transparent">{name}</span>
       </h1>
-      <p className="mx-auto mt-2.5 max-w-lg text-sm leading-relaxed text-muted-foreground">
+      <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground sm:text-sm">
         Ask an IT question. Get a clear answer grounded in your organization&rsquo;s knowledge base.
       </p>
 
       {/* One composer, placed where the first question is typed; it docks to the bottom
           once there is a transcript to put above it. */}
-      <div className="mx-auto mt-8 w-full max-w-2xl text-left">{composer}</div>
+      <div className="mx-auto mt-7 w-full max-w-2xl text-left">{composer}</div>
 
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-        <ShieldCheck className="size-3" aria-hidden />
+      {/* Quick starter chips */}
+      <div className="mx-auto mt-5 flex max-w-2xl flex-wrap items-center justify-center gap-2">
+        {[
+          "How do I request VPN access?",
+          "Reset corporate Wi-Fi password",
+          "Kubernetes cluster deployment steps",
+          "Report an urgent IT incident",
+        ].map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => onPickPrompt?.(prompt)}
+            className="rounded-xl border border-[var(--border)] bg-card px-3 py-1.5 text-2xs font-medium text-muted-foreground transition hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:bg-muted hover:text-foreground"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-2xs text-muted-foreground">
+        <ShieldCheck className="size-3 text-[var(--ok)]" aria-hidden />
         Answers cite the pages they used — check anything destructive before acting on it.
       </p>
     </section>
@@ -514,7 +533,7 @@ export default function Chat({ onNavigate, userName }: Props) {
               disabled={!input.trim()}
               aria-label="Send message"
               className={[
-                "inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40",
+                "inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-800 text-white font-semibold shadow-md shadow-violet-950/25 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40",
                 hero ? "size-9 justify-center" : "h-9 px-3.5 text-xs",
               ].join(" ")}
             >
@@ -544,6 +563,10 @@ export default function Chat({ onNavigate, userName }: Props) {
                 <Greeting
                   name={displayName(userName)}
                   composer={composerForm(true)}
+                  onPickPrompt={(prompt) => {
+                    setInput(prompt);
+                    requestAnimationFrame(() => composerRef.current?.focus());
+                  }}
                 />
               </div>
             </div>
