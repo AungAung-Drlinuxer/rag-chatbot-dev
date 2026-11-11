@@ -16,7 +16,6 @@ import {
   Lock,
   MessageSquare,
   Paperclip,
-  Pencil,
   Send,
   Tag,
   Ticket as TicketIcon,
@@ -237,26 +236,18 @@ export function TicketDetailPanel({
             ) : (
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 rounded-lg px-2 text-[11px]"
-                onClick={() => setEditing(true)}
+                className="btn-primary-gradient h-7 rounded-lg px-2.5 text-[11px] font-semibold text-white shadow-xs"
+                onClick={() => {
+                  setEditing(true);
+                  onOpenEdit?.();
+                }}
                 disabled={!canManage}
                 aria-label="Edit ticket"
-                title={canManage ? "Unlock the fields, workflow, comments and attachments" : "Your role cannot change tickets"}
+                title={canManage ? "Open interactive Jira workflow modal" : "Your role cannot change tickets"}
               >
-                <Pencil className="mr-1 size-3" /> Edit
+                <Workflow className="mr-1.5 size-3" /> Interactive Workflow
               </Button>
             )}
-            <Button
-              size="sm"
-              className="btn-primary-gradient h-7 rounded-lg px-2 text-[11px] text-white shadow-xs"
-              onClick={() => onOpenEdit?.()}
-              disabled={!canManage}
-              aria-label="Interactive Jira workflow"
-              title="Open full interactive Jira workflow popup modal"
-            >
-              <Workflow className="mr-1 size-3" /> Interactive Workflow
-            </Button>
             <button
               type="button"
               onClick={onClose}

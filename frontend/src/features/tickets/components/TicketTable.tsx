@@ -139,6 +139,7 @@ export function TicketTable({
   pageCount,
   pageSize,
   onPage,
+  onOpenEdit,
 }: {
   rows: Ticket[];
   total: number;
@@ -151,6 +152,7 @@ export function TicketTable({
   pageCount: number;
   pageSize: number;
   onPage: (p: number) => void;
+  onOpenEdit?: (t: Ticket) => void;
 }) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -200,8 +202,13 @@ export function TicketTable({
                     {selected && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-[var(--primary)]" />}
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); onSelect(t); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(t);
+                        onOpenEdit?.(t);
+                      }}
                       className="font-mono text-2xs font-semibold text-[var(--accent-foreground)] hover:underline"
+                      title="Open interactive Jira workflow"
                     >
                       {t.id}
                     </button>

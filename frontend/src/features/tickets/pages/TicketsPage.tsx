@@ -588,6 +588,10 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 pageCount={pageCount}
                 pageSize={PAGE_SIZE}
                 onPage={setPage}
+                onOpenEdit={(t) => {
+                  setSelected(t);
+                  setEditOpen(true);
+                }}
               />
             )}
           </section>
