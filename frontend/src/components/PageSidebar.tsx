@@ -6,6 +6,7 @@
  * still answers a deep link or a bookmarked URL with the reason. */
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
+import { conversationFromHash } from "@/app/router";
 import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
 import { BookOpen, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { useNotifications, NotificationBell } from "@/components/NotificationBell";
@@ -84,7 +85,8 @@ export default function PageSidebar({
   const [historyOpen, setHistoryOpen] = useState(true);
   const [conversations, setConversations] = useState<any[]>([]);
 
-  const [activeSessionId, setActiveSessionId] = useState<string>("");
+  /* A refresh that restores a conversation from the URL must also mark it in the list. */
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => conversationFromHash() ?? "");
 
   // #18 — title → occurrence count, so repeats can be badged in the list.
   const _dupes = duplicateCounts(conversations);

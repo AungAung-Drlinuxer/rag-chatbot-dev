@@ -19,6 +19,7 @@ import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
+import { conversationFromHash, setConversationHash } from "@/app/router";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
@@ -79,7 +80,9 @@ function Greeting({ name, composer }: { name: string; composer: React.ReactNode 
 /* ---------------------------------------------------------------- page */
 
 export default function Chat({ onNavigate, userName }: Props) {
-  const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
+  /* The URL owns which conversation is open, not React state: otherwise a refresh minted a
+     new session id and the reader lost the conversation they were reading. */
+  const [sessionId, setSessionId] = useState<string>(() => conversationFromHash() ?? crypto.randomUUID());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streamingId, setStreamingId] = useState<string | null>(null);
@@ -179,6 +182,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         guardrailType: m.meta?.guardrail,
       }));
       setMessages(loaded);
+      setConversationHash(id);
       history.current = loaded.map((m) => ({ role: m.role, content: m.content }));
       window.setTimeout(() => scrollToEnd(false), 80);
     } catch {
@@ -190,6 +194,7 @@ export default function Chat({ onNavigate, userName }: Props) {
 
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
+    setConversationHash(null);
     setSessionId(crypto.randomUUID());
     setMessages([]);
     setStreamingId(null);
@@ -197,6 +202,17 @@ export default function Chat({ onNavigate, userName }: Props) {
     setInput("");
     history.current = [];
     window.setTimeout(() => composerRef.current?.focus(), 30);
+  }, []);
+
+  /* A refresh, a bookmarked link or a reopened tab: the URL names the conversation, so load
+     it instead of starting a new chat. Runs once — later opens come through the event. */
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const id = conversationFromHash();
+    if (id) void openConversation(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -287,6 +303,8 @@ export default function Chat({ onNavigate, userName }: Props) {
     abortRef.current = ctrl;
 
     try {
+      // From here the session exists server-side, so the URL may point at it.
+      setConversationHash(sessionId);
       await runChatStream(
         question,
         sessionId,
