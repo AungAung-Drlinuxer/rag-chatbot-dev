@@ -201,7 +201,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[94vw] overflow-hidden rounded-2xl border border-[var(--border)] bg-[#191927] p-0 shadow-2xl">
+      <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1350px] xl:max-w-[1450px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[#191927] p-0 shadow-2xl">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* Header */}
           <div className="border-b border-[var(--border)] bg-[#11111B] px-6 py-3.5">
