@@ -15,7 +15,7 @@
  * different task from asking a question.
  */
 import { useEffect, useState } from "react";
-import { Activity, KeyRound, Plus, ShieldCheck, Ticket, Wifi } from "lucide-react";
+import { Activity, KeyRound, ShieldCheck, Ticket, Wifi } from "lucide-react";
 import { healthGlyph } from "@/shared/healthGlyph";
 
 import { dashHealth } from "@/features/dashboard/api";
@@ -34,26 +34,25 @@ function toneOf(s: Service | undefined): keyof typeof TONE {
 }
 
 /** The actions a person actually needs from a support assistant, in that order. */
+/* Every action puts an editable question in the composer. Raising a ticket is not here:
+   the ticket icon under an answer is the one door into that form, and it starts from the
+   answer the reporter is looking at rather than from an empty rail button. */
 const ACTIONS: {
   label: string;
   hint: string;
   icon: typeof KeyRound;
   tint: string;
-  /** "ask" puts an editable question in the composer; "ticket" opens the JSM form. */
-  kind: "ask" | "ticket";
-  prompt?: string;
+  prompt: string;
 }[] = [
   { label: "Reset my password", hint: "Self-service steps before you call IT", icon: KeyRound,
-    tint: "text-violet-600 bg-violet-500/10 dark:text-violet-400", kind: "ask",
+    tint: "text-violet-600 bg-violet-500/10 dark:text-violet-400",
     prompt: "How do I reset my password?" },
   { label: "VPN won't connect", hint: "Check the usual causes first", icon: Wifi,
-    tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400", kind: "ask",
+    tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400",
     prompt: "My VPN will not connect — what should I check?" },
   { label: "My open tickets", hint: "Status of what you already raised", icon: Ticket,
-    tint: "text-amber-600 bg-amber-500/10 dark:text-amber-400", kind: "ask",
+    tint: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
     prompt: "Show my open tickets" },
-  { label: "Create IT ticket", hint: "Raise a request with the right team", icon: Plus,
-    tint: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400", kind: "ticket" },
 ];
 
 export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string) => void }) {
@@ -130,9 +129,7 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
             <button
               key={a.label}
               type="button"
-              onClick={() => (a.kind === "ticket"
-                ? window.dispatchEvent(new CustomEvent("ith:open-ticket"))
-                : ask(a.prompt ?? a.label))}
+              onClick={() => ask(a.prompt)}
               title={a.hint}
               className="group flex items-center gap-2 rounded-lg border border-[var(--border)] bg-card px-2 py-1.5 text-left transition hover:border-[var(--primary)]/40 hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >

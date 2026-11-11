@@ -12,7 +12,7 @@
  * with the evidence rail only from `xl`, because on a phone the transcript is the product.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, CornerDownLeft, Loader2, Send, ShieldCheck, Sparkles, Square, Ticket, X, ArrowDown } from "lucide-react";
+import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, ShieldCheck, Sparkles, Square, X } from "lucide-react";
 
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import SystemStatus from "@/features/chat/components/SystemStatusPanel";
@@ -92,14 +92,10 @@ export default function Chat({ onNavigate, userName }: Props) {
   const [feedback, setFeedback] = useState<Record<string, 1 | -1>>({});
   const [toast, setToast] = useState("");
   const [railOpen, setRailOpen] = useState(false);
-  // The chat does not own a ticket form: it opens the same dialog the Tickets page uses,
-  // with the question and the answer as its starting text.
-  /* "Escalate to IT" and a message's "Create Jira ticket" used to open two different forms —
-     a thin draft/submit escalation, and the real Jira Service Management form with a
-     category, an assignee pool and a request type. One conversation, one form: both entry
-     points now open the same dialog, and the escalating one arrives pre-filled with the
-     conversation it came from. */
-  const [escalatePreset, setEscalatePreset] = useState<{ subject: string; description: string; domain?: string } | null>(null);
+  /* The chat does not own a ticket form: the icon under an answer opens the same dialog the
+     Tickets page uses. It is the only door: the header button and the rail action that used
+     to open it are gone, so there is one way to raise a ticket and it starts from the answer
+     it belongs to. */
   const [ticketFor, setTicketFor] = useState<Message | null>(null);
   const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string; domain?: string }>({ subject: "", description: "" });
 
@@ -224,27 +220,13 @@ export default function Chat({ onNavigate, userName }: Props) {
         window.setTimeout(() => composerRef.current?.focus(), 30);
       }
     };
-    /* Quick actions: "Create IT ticket" is an action, not a question — it opens the same
-       Jira Service Management form the Escalate button opens, pre-filled from this
-       conversation, rather than making the user type "I want a ticket" first. */
-    const onOpenTicket = () => {
-      const firstUser = messagesRef.current.find((m) => m.role === "user")?.content ?? "";
-      const lastAnswer = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
-      setEscalatePreset({
-        subject: (firstUser || lastAnswer?.content || "Support request").slice(0, 160),
-        description: lastAnswer?.content ?? firstUser,
-        domain: lastAnswer?.domain,
-      });
-    };
     window.addEventListener("ith:open-conversation", onOpen);
     window.addEventListener("ith:new-chat", onNew);
     window.addEventListener("ith:ask", onAsk);
-    window.addEventListener("ith:open-ticket", onOpenTicket);
     return () => {
       window.removeEventListener("ith:open-conversation", onOpen);
       window.removeEventListener("ith:new-chat", onNew);
       window.removeEventListener("ith:ask", onAsk);
-      window.removeEventListener("ith:open-ticket", onOpenTicket);
     };
   }, [openConversation, startNewChat]);
 
@@ -408,14 +390,12 @@ export default function Chat({ onNavigate, userName }: Props) {
   const latest = useMemo<Source[]>(() => latestSources(messages), [messages]);
   const lastAnswer = useMemo(() => [...messages].reverse().find((m) => m.role === "assistant" && m.content), [messages]);
 
+  /* The answer's ticket icon is the only way into the form, and it opens it EMPTY: the
+     reporter writes what happened in their own words (then may improve it with AI). Only
+     the routing domain is carried over — it decides the category, the request type and the
+     team, and a reporter cannot know it. */
   function openTicket(m: Message) {
-    const question = [...messages].slice(0, messages.indexOf(m)).reverse().find((x) => x.role === "user");
-    setTicketPreset({
-      subject: question?.content.slice(0, 90) || "Incident from the IT assistant",
-      description: m.content,
-      // The answer knows which domain it was routed to; the ticket starts there.
-      domain: m.domain,
-    });
+    setTicketPreset({ subject: "", description: "", domain: m.domain });
     setTicketFor(m);
   }
 
@@ -577,23 +557,6 @@ export default function Chat({ onNavigate, userName }: Props) {
                   )}
                   <button
                     type="button"
-                    onClick={() => {
-                      const firstUser = messages.find((m) => m.role === "user")?.content ?? "";
-                      const lastAnswer = [...messages].reverse().find((m) => m.role === "assistant");
-                      setEscalatePreset({
-                        subject: (firstUser || lastAnswer?.content || "Support request").slice(0, 160),
-                        description: lastAnswer?.content ?? firstUser,
-                        domain: lastAnswer?.domain,
-                      });
-                    }}
-                    title="Escalate to IT — draft a ticket from this conversation"
-                    aria-label="Escalate to IT"
-                    className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 active:scale-[0.98]"
-                  >
-                    <Ticket className="size-3.5" aria-hidden /> Escalate to IT
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setRailOpen(true)}
                     title="Conversation details"
                     aria-label="Conversation details"
@@ -699,13 +662,11 @@ export default function Chat({ onNavigate, userName }: Props) {
         </div>
       )}
 
-      {/* ---------------- one ticket form, two doors ---------------- */}
+      {/* ---------------- one ticket form, one door: the icon under an answer ---------------- */}
       <CreateTicketDialog
-        open={!!ticketFor || !!escalatePreset}
-        onOpenChange={(o) => { if (!o) { setTicketFor(null); setEscalatePreset(null); } }}
-        preset={escalatePreset
-          ? { ...escalatePreset, sessionId }
-          : { subject: ticketPreset.subject, description: ticketPreset.description, domain: ticketPreset.domain, sessionId }}
+        open={!!ticketFor}
+        onOpenChange={(o) => { if (!o) setTicketFor(null); }}
+        preset={{ subject: ticketPreset.subject, description: ticketPreset.description, domain: ticketPreset.domain, sessionId }}
         onToast={notify}
       />
 

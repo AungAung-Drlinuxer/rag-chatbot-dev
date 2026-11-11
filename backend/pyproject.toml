@@ -1,6 +1,6 @@
 [project]
 name = "it-help-chatbot-backend"
-version = "0.19.16"
+version = "0.19.19"
 description = "IT Help Chatbot — LangChain RAG (Phase 1 MVP) — FastAPI + PGVector + Ollama embeddings"
 readme = "README.md"
 requires-python = ">=3.11"

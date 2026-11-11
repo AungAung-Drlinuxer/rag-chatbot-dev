@@ -20,9 +20,9 @@ vi.mock("@/features/tickets/api", () => ({
   ticketAssignees: vi.fn(),
   listActiveDomains: vi.fn(),
   listTicketDestinations: vi.fn(),
+  improveTicketDescription: vi.fn(),
 }));
 vi.mock("@/features/users/api", () => ({ assignableUsers: vi.fn() }));
-vi.mock("@/features/knowledge/api", () => ({ articleDraft: vi.fn() }));
 
 import * as ticketsApi from "@/features/tickets/api";
 import * as usersApi from "@/features/users/api";
@@ -85,7 +85,7 @@ describe("CreateTicketDialog", () => {
     const el = await mount();
     const text = el.textContent!;
     expect(text).toContain("Create support ticket");
-    expect(text).toContain("AI assist");
+    expect(text).toContain("Improve with AI");
     for (const label of ["Subject", "Description", "Category", "Priority", "Assignee", "Due date", "Attachments"]) {
       expect(text).toContain(label);
     }
@@ -127,7 +127,41 @@ describe("CreateTicketDialog", () => {
     // The old inline dialog titled the form "Create Jira ticket" with only two fields.
     expect(chat).not.toContain("Create Jira ticket</DialogTitle>");
     expect(chat).not.toContain("createTicketApi");
+    // One door: the header button and the rail action are gone.
+    expect(chat).not.toContain("Escalate to IT");
   });
+
+  it("opens empty — the reporter writes the subject and description", async () => {
+    const el = await mount();
+    expect((el.querySelector('input[aria-label="Subject"]') as HTMLInputElement).value).toBe("");
+    expect((el.querySelector('textarea[aria-label="Ticket description"]') as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("improves what the reporter typed instead of generating a description", async () => {
+    m.improveTicketDescription.mockResolvedValue("VPN drops every few minutes on the 3rd floor; reconnecting restores it briefly.");
+    const el = await mount();
+
+    const improve = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Improve with AI",
+    ) as HTMLButtonElement;
+    expect(improve.disabled).toBe(true); // nothing to improve yet
+
+    setValue(el.querySelector('textarea[aria-label="Ticket description"]') as HTMLTextAreaElement,
+      "vpn keeps dropping on 3rd floor, reconnect fixes it for a bit");
+    await settle();
+    expect(improve.disabled).toBe(false);
+
+    await act(async () => { improve.click(); });
+    await settle();
+
+    expect(m.improveTicketDescription).toHaveBeenCalledWith(
+      "vpn keeps dropping on 3rd floor, reconnect fixes it for a bit",
+      "",
+    );
+    expect((el.querySelector('textarea[aria-label="Ticket description"]') as HTMLTextAreaElement).value)
+      .toContain("VPN drops every few minutes");
+  });
+
 
   it("narrows the assignee list to the chosen category", async () => {
     m.ticketAssignees.mockImplementation((domain: string) =>

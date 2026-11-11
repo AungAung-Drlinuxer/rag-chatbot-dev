@@ -23,10 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { articleDraft } from "@/features/knowledge/api";
 import {
   createTicketApi,
   listActiveDomains,
+  improveTicketDescription,
   listTicketDestinations,
   ticketAssignees,
   ticketAttachmentAdd,
@@ -211,19 +211,22 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               <span className="text-xs font-medium">Description</span>
               <button
                 type="button"
-                disabled={drafting || !draft.subject.trim()}
+                /* Improve, not generate: the reporter's own words go in and a clearer version
+                   of them comes back. It only needs their description — a subject can come later. */
+                disabled={drafting || !draft.description.trim()}
+                title="Rewrite what you typed as a clearer ticket description"
                 onClick={async () => {
                   setDrafting(true);
                   try {
-                    const data = await articleDraft(draft.subject, draft.category.toLowerCase());
-                    if (data.draft) {
-                      setDraft((d) => ({ ...d, description: data.draft }));
-                      onToast?.("AI draft generated");
+                    const improved = await improveTicketDescription(draft.description, draft.subject);
+                    if (improved) {
+                      setDraft((d) => ({ ...d, description: improved }));
+                      onToast?.("Description improved");
                     } else {
-                      onToast?.(data.detail || "Draft failed", "err");
+                      onToast?.("Nothing came back — try again", "err");
                     }
-                  } catch {
-                    onToast?.("Draft failed", "err");
+                  } catch (e: any) {
+                    onToast?.(e?.message || "Could not improve the description", "err");
                   } finally {
                     setDrafting(false);
                   }
@@ -231,7 +234,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 className="flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-[10px] font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)] disabled:opacity-40"
               >
                 <Sparkles className="size-3" />
-                {drafting ? "Drafting…" : "AI assist"}
+                {drafting ? "Improving…" : "Improve with AI"}
               </button>
             </div>
             <textarea

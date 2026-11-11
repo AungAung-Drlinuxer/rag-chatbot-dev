@@ -291,6 +291,74 @@ def list_tickets(
 _require_create_tickets = require_cap("create_tickets")
 
 
+class ImproveDescriptionRequest(BaseModel):
+    text: str
+    subject: str | None = None
+    domain: str | None = None
+
+
+@router.post("/tickets/improve-description")
+def improve_description(
+    req: ImproveDescriptionRequest,
+    user: str = Depends(get_current_user),
+    _cap: str = Depends(_require_create_tickets),
+) -> dict:
+    """Rewrite a ticket description the reporter typed, without inventing facts.
+
+    The reporter knows what broke; the model is only here to say it clearly (and in the
+    language they used). Every detail in the reply must come from their text — a support
+    ticket that "adds" a system or an error message sends the wrong team to the wrong place.
+    """
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Nothing to improve — write a description first.")
+    if len(text) > 4000:
+        text = text[:4000]
+
+    from app.orchestration.orchestrator import answer_chain
+
+    prompt = (
+        "You rewrite IT support ticket descriptions for Jira Service Management.\n"
+        "Return the description as exactly three short lines, each starting with '- ':\n"
+        "  1. What is happening (the symptom and where).\n"
+        "  2. The impact (who or what is affected) — only if the reporter said it.\n"
+        "  3. What they already tried — only if they said it.\n"
+        "Rules: keep every fact the reporter gave; never invent a system, error code, time, "
+        "step, person or impact; keep their language (Burmese stays Burmese, English stays "
+        "English); no greeting, no signature, no headings, no extra commentary. Always "
+        "restructure the text — never return it unchanged.\n"
+        f"Subject: {req.subject or '(not given)'}\n"
+        f"Reporter's description:\n{text}\n\n"
+        "Return only those lines."
+    )
+    try:
+        chain = answer_chain()
+        if chain is None:
+            raise HTTPException(
+                status_code=503, detail="AI assist is not configured — no model key is set."
+            )
+        payload = {"context": "(rewriting the reporter's own words — do not add facts)", "question": prompt}
+        improved = ""
+        # Providers do occasionally answer with an empty completion (safety filter, transport
+        # hiccup). One retry costs a second; a bare "" in the textarea costs the reporter their
+        # description, because it is replaced in place.
+        for _ in range(2):
+            improved = str(chain.invoke(payload) or "").strip()
+            if improved:
+                break
+        if not improved:
+            logger.warning("description improve returned an empty completion")
+            raise HTTPException(
+                status_code=503, detail="The model returned nothing — try again in a moment."
+            )
+        return {"description": improved}
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 — the reporter can still type it themselves
+        logger.warning("description improve failed: %s", exc)
+        raise HTTPException(status_code=503, detail=f"improve failed: {type(exc).__name__}")
+
+
 @router.post("/tickets", status_code=http_status.HTTP_201_CREATED)
 def create_ticket(
     req: TicketCreate,

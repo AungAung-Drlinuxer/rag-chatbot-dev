@@ -11,7 +11,7 @@ import PageSidebar from "@/components/PageSidebar";
 import CommandPalette from "@/components/CommandPalette";
 import { NeedHelpCard } from "@/components/NeedHelpCard";
 import { FloatingChatProvider, FloatingChatPopup } from "@/components/FloatingChat";
-import { useHashNav } from "@/app/router";
+import { hashToNav, useHashNav } from "@/app/router";
 import { denied } from "@/app/acl";
 import AccessRestricted from "@/components/AccessRestricted";
 import { useSidebarCollapsed } from "@/app/useSidebar";
@@ -183,7 +183,7 @@ export default function App() {
     if (!booted || authed) return;
     const hash = window.location.hash;
     if (hash.startsWith("#/sso")) return;
-    if (hash && hash !== "#/") window.history.replaceState(null, "", "/");
+    if (hash && hash !== "#/" && hashToNav(hash) !== "chat") window.history.replaceState(null, "", "/");
   }, [booted, authed]);
 
   async function onLogin(e: React.FormEvent) {

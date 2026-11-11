@@ -41,8 +41,13 @@ export function useHashNav(): [NavId, (n: string) => void] {
   const [nav, setNavState] = useState<NavId>(hashToNav);
 
   const setNav = (n: string) => {
-    setNavState(hashToNav(pathForNav(n)));
-    window.history.replaceState(null, "", pathForNav(n));
+    const next = hashToNav(pathForNav(n));
+    setNavState(next);
+    /* Going to the chat page keeps the conversation already in the URL: clicking "Chat" in
+       the rail should return you to the chat you were reading, and only "New conversation"
+       (which clears the parameter itself) starts a fresh one. */
+    const target = next === "chat" && conversationFromHash() ? window.location.hash : pathForNav(n);
+    window.history.replaceState(null, "", target);
   };
 
   // back/forward + manual hash edits keep the shell in sync

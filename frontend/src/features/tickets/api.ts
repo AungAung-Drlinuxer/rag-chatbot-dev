@@ -9,6 +9,18 @@ export async function listActiveDomains(): Promise<{ key: string; label: string;
   return d?.domains ?? [];
 }
 
+/** Rewrite what the reporter typed into a clear ticket description (no new facts). */
+export async function improveTicketDescription(text: string, subject = ""): Promise<string> {
+  const r = await apiFetch(`${BASE}/api/tickets/improve-description`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ text, subject }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d?.detail || `HTTP ${r.status}`);
+  return String(d?.description ?? "");
+}
+
 export async function listTickets(limit = 50) {
   const r = await apiFetch(`${BASE}/api/tickets?limit=${limit}`, { headers: authHeaders() });
   return r.json();
