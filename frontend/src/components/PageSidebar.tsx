@@ -247,7 +247,7 @@ export default function PageSidebar({
 
       <nav className={"min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3 " + (collapsed ? "px-2" : "px-3")}>
         {!collapsed && (
-          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55 dark:text-[var(--sidebar-text-muted)]">
+          <p data-section className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white/55 dark:text-[var(--sidebar-text-muted)]">
             Workspace
           </p>
         )}
@@ -285,7 +285,7 @@ export default function PageSidebar({
         {/* Recent Chat History in Sidebar */}
         {!collapsed && (
           <div className="mt-4 pt-3 border-t border-white/15 dark:border-[var(--sidebar-border)]">
-            <div className="flex items-center justify-between px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60 dark:text-[var(--sidebar-text-muted)]">
+            <div data-section className="flex items-center justify-between px-2 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/60 dark:text-[var(--sidebar-text-muted)]">
               <button
                 type="button"
                 onClick={() => setHistoryOpen(!historyOpen)}

@@ -436,7 +436,7 @@ export default function Users() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="table-scroll overflow-x-auto">
             {/* Fixed layout: the table obeys the panel instead of the panel obeying the
                 longest email it happens to hold (that is what forced a sideways scroll). */}
             <table className="w-full table-fixed text-xs">

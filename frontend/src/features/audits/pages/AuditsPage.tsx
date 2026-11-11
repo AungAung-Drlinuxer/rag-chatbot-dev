@@ -444,7 +444,7 @@ export default function AuditsPage() {
             </button>
           </div>
 
-          <div className="overflow-auto">
+          <div className="table-scroll overflow-auto">
             <table className="w-full table-fixed text-xs">
               <colgroup>
                 <col className="w-[15%]" /><col className="w-[13%]" /><col className="w-[15%]" />

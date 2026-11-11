@@ -454,7 +454,7 @@ export default function ConversationHistoryPage() {
           </button>
             </div>
 
-            <div className="overflow-auto">
+            <div className="table-scroll overflow-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">

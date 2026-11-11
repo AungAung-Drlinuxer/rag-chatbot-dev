@@ -959,7 +959,7 @@ export default function Knowledge({ role, onToast }: Props) {
           )}
 
           {/* 5. the table — scrolls horizontally on narrow screens. */}
-          <div className="overflow-x-auto">
+          <div className="table-scroll overflow-x-auto">
             <table className="w-full min-w-0 text-xs md:min-w-[720px]">
               {/* Sticky: the list is long and paging scrolls the header out of view, so the
                   column names — and the sort control inside them — have to stay reachable. */}

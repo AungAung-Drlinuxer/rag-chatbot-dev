@@ -1042,3 +1042,103 @@ code, pre, .mono { font-family: var(--mono); }
   min-height: 0;
   max-height: none;
 }
+
+
+/* ==== v1.4.0 — SURFACE & INTERACTION SYSTEM ================================
+   One elevation ramp and one hairline for every raised thing: cards, panels,
+   popovers, table frames. The border is drawn inside the shadow instead of as a
+   border box, so a nested card never changes the width of its parent's content,
+   and a hover only lifts the thing you pointed at.
+   Focus is an outline (not a box-shadow ring): it survives `zoom`, radii and
+   overflow clipping, and it is the one accent every browser paints crisply. */
+:root {
+  --stroke: color-mix(in srgb, var(--border) 80%, transparent);
+  --elev-1: 0 1px 2px rgb(15 23 42 / .04), 0 1px 3px rgb(15 23 42 / .05);
+  --elev-2: 0 2px 6px rgb(15 23 42 / .07), 0 8px 20px rgb(15 23 42 / .07);
+  --elev-3: 0 12px 32px rgb(15 23 42 / .12), 0 2px 8px rgb(15 23 42 / .06);
+}
+[data-theme="dark"] {
+  --stroke: color-mix(in srgb, var(--border) 90%, transparent);
+  --elev-1: 0 1px 2px rgb(0 0 0 / .40), 0 1px 3px rgb(0 0 0 / .30);
+  --elev-2: 0 2px 8px rgb(0 0 0 / .45), 0 10px 24px rgb(0 0 0 / .35);
+  --elev-3: 0 14px 36px rgb(0 0 0 / .55), 0 2px 8px rgb(0 0 0 / .40);
+}
+
+.card,
+[data-slot="card"],
+.panel-surface {
+  border: 0;
+  border-radius: var(--radius-xl);
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-1);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+.card:hover,
+[data-slot="card"]:hover,
+.panel-surface:hover {
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-2);
+}
+[data-theme="dark"] .card,
+[data-theme="dark"] [data-slot="card"],
+[data-theme="dark"] .panel-surface {
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-1);
+}
+
+/* Overlays sit above the ramp, not beside it. */
+[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"] {
+  box-shadow: inset 0 0 0 1px var(--stroke), var(--elev-3);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: none;
+  border-radius: inherit;
+}
+[data-theme="dark"] :focus-visible { outline-color: var(--accent-foreground); }
+
+/* A vertical rhythm for the list surfaces: the same 8px grid the pages use. */
+[data-slot="page-actions"] { row-gap: 0.5rem; }
+
+/* ---- Touch: a pointer without a cursor needs a target, not a dot ----------
+   Scoped to coarse pointers so a 24-inch desk monitor keeps its density. */
+@media (pointer: coarse) {
+  /* Every control becomes a thumb target. A 32px icon button is a miss waiting to
+     happen on a phone; the same button on a desk monitor keeps its size. */
+  button,
+  [role="button"],
+  a[role="button"] {
+    min-height: 40px;
+  }
+  button:has(svg),
+  button[aria-label] {
+    min-width: 40px;
+  }
+  nav button { min-height: 44px; }
+  input, select, textarea { min-height: 40px; }
+}
+
+/* ---- Horizontal table scroll: say so ------------------------------------
+   A wide table on a narrow window is fine; a wide table with no hint that it
+   scrolls is a trap. These gradients only appear while there is more to the
+   left or right, using the classic local/scroll background pair. */
+.table-scroll {
+  background:
+    linear-gradient(to right, var(--card) 40%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--card) 40%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(15 23 42 / .14), transparent) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(15 23 42 / .14), transparent) right center / 14px 100% no-repeat scroll;
+}
+[data-theme="dark"] .table-scroll {
+  background:
+    linear-gradient(to right, var(--card) 40%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--card) 40%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / .55), transparent) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / .55), transparent) right center / 14px 100% no-repeat scroll;
+}
+
+/* Sidebar section label: 10px uppercase at 0.16em is decoration; 11px at 0.12em is a
+   label you can read without leaning in. */
+[data-sidebar] p[data-section] {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
