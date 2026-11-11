@@ -1,30 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  Clock,
+  ChevronDown,
   FileText,
   MessageSquare,
+  Paperclip,
   RefreshCw,
-  Tag,
-  Trash2,
-  UploadCloud,
-  UserRound,
+  Ticket as TicketIcon,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { attachmentUrl } from "@/features/tickets/api";
 import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
 import {
   PRIORITY_META,
+  STATUS_META,
   relTime,
   type Assignable,
   type Attachment,
@@ -33,36 +27,9 @@ import {
 } from "@/features/tickets/model";
 
 /* ------------------------------------------------------------------
-   Interactive Workflow Step Definitions
+   The workflow states this dialog can move a ticket to, in Jira order.
 ------------------------------------------------------------------ */
-const STEPS = [
-  {
-    key: "open",
-    step: "Step 1/4",
-    title: "Open",
-    desc: "Backup item created",
-  },
-  {
-    key: "pending",
-    step: "Step 2/4",
-    title: "Pending",
-    desc: "Awaiting triage / info",
-  },
-  {
-    key: "in_progress",
-    step: "Step 3/4",
-    title: "In progress",
-    desc: "Actively being worked on",
-  },
-  {
-    key: "done",
-    step: "Final Step",
-    title: "Done",
-    desc: "Resolved & verified",
-  },
-] as const;
-
-type StepKey = (typeof STEPS)[number]["key"];
+const STATUS_KEYS: Ticket["status"][] = ["open", "pending", "in_progress", "done", "reopened"];
 
 const QUICK_TAGS = [
   "Investigation under way",
@@ -71,12 +38,18 @@ const QUICK_TAGS = [
   "Verified in production",
 ];
 
-const PRIORITY_GUIDE: Record<string, string> = {
-  critical: "Service is down or blocking all users",
-  high: "Significant business impact with no workaround",
-  medium: "Normal operational issue or feature request",
-  low: "Minor question, cosmetic bug or non-urgent change",
-};
+const FIELD =
+  "h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
+
+const SELECT =
+  "h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--background)] pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
+
+function formatDate(value: string) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 type Props = {
   open: boolean;
@@ -107,45 +80,53 @@ export function EditTicketDialog({
   onDeleteAttachment,
   onToast,
 }: Props) {
-  // Form fields
+  // Details
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Ticket["priority"]>("medium");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [category, setCategory] = useState("General");
+  const [status, setStatus] = useState<Ticket["status"]>("open");
 
-  // Workflow state
-  const [selectedStep, setSelectedStep] = useState<StepKey>("open");
-  const [noteTab, setNoteTab] = useState<"transition" | "internal" | "sync">("transition");
+  // Activity
   const [note, setNote] = useState("");
+  const [tab, setTab] = useState<"details" | "activity">("details");
   const [saving, setSaving] = useState(false);
+  const [tried, setTried] = useState(false);
 
-  // Attachment upload
+  // Attachments
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // Sync state whenever the opened ticket changes
+  // Load the opened ticket into the form.
   useEffect(() => {
-    if (ticket) {
-      setSubject(ticket.subject || "");
-      setDescription(ticket.description || "");
-      setPriority(ticket.priority || "medium");
-      setAssignee(ticket.assignee || "");
-      setDueDate(ticket.due_date ? ticket.due_date.slice(0, 10) : "");
-      setCategory(ticket.category || "General");
+    if (!ticket) return;
+    setSubject(ticket.subject || "");
+    setDescription(ticket.description || "");
+    setPriority(ticket.priority || "medium");
+    setAssignee(ticket.assignee || "");
+    setDueDate(ticket.due_date ? ticket.due_date.slice(0, 10) : "");
+    setStatus(ticket.status || "open");
+    setNote("");
+    setTried(false);
+    setTab("details");
+  }, [ticket]);
 
-      const initialStatus =
-        ticket.status === "reopened" ? "open" : (ticket.status as StepKey);
-      setSelectedStep(initialStatus);
-      setNote("");
-    }
-  }, [ticket, open]);
+  // Every opening starts on Details; stale state is why a save reported the wrong tab.
+  useEffect(() => {
+    if (!open) return;
+    setTab("details");
+    setTried(false);
+    setNote("");
+  }, [open]);
 
   if (!ticket) return null;
 
-  const currentStepIdx = STEPS.findIndex((s) => s.key === selectedStep);
-  const progressPercent = Math.max(15, Math.round(((currentStepIdx + 1) / STEPS.length) * 100));
+  const statusMetaOf = (s: Ticket["status"]) => STATUS_META[s] ?? STATUS_META.open;
+  const priorityMetaOf = (p: Ticket["priority"]) => PRIORITY_META[p] ?? PRIORITY_META.medium;
+
+  const missingSubject = tried && !subject.trim();
+  const missingDescription = tried && !description.trim();
 
   function handleQuickTag(tag: string) {
     setNote((prev) => (prev ? `${prev.trim()} · ${tag}` : tag).slice(0, 280));
@@ -163,33 +144,33 @@ export function EditTicketDialog({
     e.preventDefault();
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      onAddAttachment(file);
-    }
+    if (file) onAddAttachment(file);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTried(true);
+    if (!subject.trim()) {
+      setTab("details");
+      onToast?.("A subject is required", "err");
+      return;
+    }
     setSaving(true);
     try {
-      // 1. Save document details
-      const payload: TicketEditPayload = {
-        subject: subject.trim() || ticket!.subject,
+      const ok = await onSave({
+        subject: subject.trim(),
         description: description.trim(),
         priority,
         assignee,
         due_date: dueDate,
-      };
+      });
 
-      const docOk = await onSave(payload);
-
-      // 2. If status was changed or a transition note was provided, apply status change
-      if (selectedStep !== ticket!.status || note.trim().length > 0) {
-        await onStatus(selectedStep, note.trim());
+      if (status !== ticket!.status || note.trim().length > 0) {
+        await onStatus(status, note.trim());
       }
 
-      if (docOk) {
-        onToast?.("Interactive Jira workflow synced successfully");
+      if (ok) {
+        onToast?.("Ticket saved and synced to Jira");
         onOpenChange(false);
       }
     } catch (err: any) {
@@ -201,226 +182,121 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1350px] xl:max-w-[1450px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[#191927] p-0 shadow-2xl">
+      <DialogContent className="w-[95vw] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[95vw] lg:max-w-[1350px] xl:max-w-[1450px]">
         <form onSubmit={handleSubmit} className="flex flex-col">
-          {/* Header */}
-          <div className="border-b border-[var(--border)] bg-[#11111B] px-6 py-3.5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--primary)]/15 text-[var(--primary)]">
-                  <RefreshCw className="size-4 animate-spin-slow" />
-                </span>
-                <div>
-                  <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-white">
-                    EDIT TICKET
-                    <span className="rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-2 py-0.5 font-mono text-xs font-semibold text-[var(--lavender)]">
-                      #{ticket.id}
-                    </span>
-                    <span className="text-2xs font-normal text-muted-foreground">
-                      · Jira Workflow
-                    </span>
-                  </DialogTitle>
-                  <p className="text-2xs text-muted-foreground">
-                    Select pipeline state to auto-sync status across boards
-                  </p>
-                </div>
-              </div>
+          {/* ---- header ---- */}
+          <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4 pr-14">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
+              <TicketIcon className="size-4" aria-hidden />
+            </span>
 
-              <div className="flex items-center gap-2">
-                <span
+            <DialogTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base font-bold tracking-tight text-foreground">
+              Edit ticket
+              <span className="text-muted-foreground">·</span>
+              <span className="font-mono text-sm font-semibold">{ticket.id}</span>
+              <span
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                  jiraReady
+                    ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-[var(--ok)]"
+                    : "border-[var(--warn)]/30 bg-[var(--warn)]/10 text-[var(--warn)]",
+                ].join(" ")}
+              >
+                <span className={["size-1.5 rounded-full", jiraReady ? "bg-[var(--ok)]" : "bg-[var(--warn)]"].join(" ")} />
+                {jiraReady ? "Jira synced" : "Jira offline"}
+              </span>
+            </DialogTitle>
+          </div>
+
+          {/* ---- tabs ---- */}
+          <div className="flex items-center gap-6 border-b border-[var(--border)] px-6">
+            {([
+              { key: "details", label: "Details", icon: FileText },
+              { key: "activity", label: "Activity", icon: MessageSquare },
+            ] as const).map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(t.key)}
                   className={[
-                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-semibold",
-                    jiraReady
-                      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
-                      : "border-amber-500/25 bg-amber-500/10 text-amber-400",
+                    "relative -mb-px inline-flex items-center gap-1.5 border-b-2 py-2.5 text-xs font-semibold transition",
+                    active
+                      ? "border-[var(--primary)] text-[var(--primary)]"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
                   ].join(" ")}
                 >
-                  <span
-                    className={[
-                      "size-1.5 rounded-full",
-                      jiraReady ? "bg-emerald-400 animate-pulse" : "bg-amber-400",
-                    ].join(" ")}
-                  />
-                  {jiraReady ? "Jira Sync Active" : "Jira Offline"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onOpenChange(false)}
-                  className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Close dialog"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-600 via-indigo-500 to-purple-400 transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Stepper Cards: 4-Column Horizontal Pipeline */}
-          <div className="border-b border-[var(--border)] bg-[#11111B]/60 px-6 py-3">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {STEPS.map((s, idx) => {
-                const isDone = idx < currentStepIdx;
-                const isSelected = s.key === selectedStep;
-                return (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => setSelectedStep(s.key)}
-                    className={[
-                      "flex flex-col justify-between rounded-xl border p-2.5 text-left transition duration-150",
-                      isSelected
-                        ? "border-[var(--primary)] bg-[var(--primary)]/10 shadow-[0_0_15px_rgba(139,92,246,0.15)] ring-1 ring-[var(--primary)]/40"
-                        : isDone
-                          ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50"
-                          : "border-[var(--border)] bg-[#222236]/60 hover:border-white/20 hover:bg-[#222236]",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {s.step}
-                      </span>
-                      {isDone ? (
-                        <CheckCircle2 className="size-3.5 text-emerald-400" />
-                      ) : isSelected ? (
-                        <span className="size-2 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary)]/25" />
-                      ) : (
-                        <span className="size-2 rounded-full border border-muted-foreground/40" />
-                      )}
-                    </div>
-                    <div className="mt-1.5">
-                      <div
-                        className={[
-                          "text-xs font-bold leading-tight",
-                          isSelected ? "text-white" : isDone ? "text-emerald-300" : "text-foreground",
-                        ].join(" ")}
-                      >
-                        {s.title}
-                      </div>
-                      <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground/80">
-                        {s.desc}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Balanced 2-Column Rectangular Body (Avoids vertical stacking) */}
-          <div className="max-h-[calc(100dvh-17rem)] overflow-y-auto px-6 py-4">
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-              {/* Left Column (7 cols): Workflow Notes & Description */}
-              <div className="space-y-4 lg:col-span-7">
-                {/* Transition Note & Quick Tags Card */}
-                <div className="rounded-xl border border-[var(--border)] bg-[#222236]/50 p-3.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)]/70 pb-2.5">
-                    <div className="flex items-center gap-1 rounded-lg bg-black/20 p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => setNoteTab("transition")}
-                        className={[
-                          "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-2xs font-semibold transition",
-                          noteTab === "transition"
-                            ? "bg-[var(--primary)] text-white shadow-xs"
-                            : "text-muted-foreground hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        <MessageSquare className="size-3" />
-                        Transition Note
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNoteTab("internal")}
-                        className={[
-                          "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-2xs font-semibold transition",
-                          noteTab === "internal"
-                            ? "bg-[var(--primary)] text-white shadow-xs"
-                            : "text-muted-foreground hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        Internal Note
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNoteTab("sync")}
-                        className={[
-                          "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-2xs font-semibold transition",
-                          noteTab === "sync"
-                            ? "bg-[var(--primary)] text-white shadow-xs"
-                            : "text-muted-foreground hover:text-foreground",
-                        ].join(" ")}
-                      >
-                        <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
-                        Sync to Jira
-                      </button>
-                    </div>
-                    <span className="font-mono text-2xs text-muted-foreground">
-                      {note.length}/280 chars
+                  <Icon className="size-3.5" aria-hidden />
+                  {t.label}
+                  {t.key === "activity" && comments.length > 0 && (
+                    <span className="rounded-full bg-[var(--muted)] px-1.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                      {comments.length}
                     </span>
-                  </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-                  {/* Quick Tags / Templates */}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    {QUICK_TAGS.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleQuickTag(tag)}
-                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-white"
-                      >
-                        + {tag}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Note Textarea */}
-                  <div className="mt-2">
-                    <textarea
-                      rows={2}
-                      value={note}
-                      maxLength={280}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Add transition note (e.g. Investigation under way, waiting on reporter, etc.)…"
-                      className="w-full resize-none rounded-xl border border-[var(--border)] bg-[#11111B] px-3 py-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+          {/* ---- body ---- */}
+          <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto px-6 py-5">
+            {tab === "details" ? (
+              <div className="space-y-4">
+                {/* status */}
+                <div>
+                  <label htmlFor="ticket-status" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Status
+                  </label>
+                  <div className="relative">
+                    <span
+                      className={["pointer-events-none absolute left-3 top-1/2 size-2 -translate-y-1/2 rounded-full", statusMetaOf(status).dot].join(" ")}
+                      aria-hidden
                     />
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      Will be appended to ticket audit trail &amp; Jira issue history.
-                    </p>
+                    <select
+                      id="ticket-status"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as Ticket["status"])}
+                      aria-label="Status"
+                      className={SELECT}
+                    >
+                      {STATUS_KEYS.map((s) => (
+                        <option key={s} value={s}>{statusMetaOf(s).label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   </div>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Pushed to the Jira issue when you save.
+                  </p>
                 </div>
 
-                {/* Subject Field */}
+                {/* subject */}
                 <div>
-                  <label
-                    htmlFor="ticket-subject"
-                    className="mb-1 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
-                  >
-                    SUBJECT
+                  <label htmlFor="ticket-subject" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Subject <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     id="ticket-subject"
                     value={subject}
+                    maxLength={200}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="Brief summary of the issue"
-                    className="h-9 w-full rounded-xl border border-[var(--border)] bg-[#11111B] px-3 text-xs font-semibold text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                    aria-invalid={missingSubject || undefined}
+                    className={[FIELD, missingSubject ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15" : ""].join(" ")}
                   />
+                  {missingSubject && (
+                    <p className="mt-1 text-2xs text-[var(--danger)]">A subject is required.</p>
+                  )}
                 </div>
 
-                {/* Description Field */}
+                {/* description */}
                 <div>
-                  <label
-                    htmlFor="ticket-description"
-                    className="mb-1 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
-                  >
-                    DESCRIPTION
+                  <label htmlFor="ticket-description" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Description <span className="text-[var(--danger)]">*</span>
                   </label>
                   <textarea
                     id="ticket-description"
@@ -428,228 +304,273 @@ export function EditTicketDialog({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="What happened, error messages, and what was already tried…"
-                    className="w-full resize-none rounded-xl border border-[var(--border)] bg-[#11111B] px-3 py-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                    aria-invalid={missingDescription || undefined}
+                    className={[
+                      "w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15",
+                      missingDescription ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15" : "",
+                    ].join(" ")}
                   />
                 </div>
-              </div>
 
-              {/* Right Column (5 cols): Metadata Grid & Activity/Attachments */}
-              <div className="space-y-4 lg:col-span-5">
-                {/* Metadata Card */}
-                <div className="rounded-xl border border-[var(--border)] bg-[#222236]/40 p-3.5">
-                  <span className="mb-2.5 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    TICKET DETAILS
-                  </span>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Requester */}
-                    <div>
-                      <span className="mb-1 block text-[10px] text-muted-foreground">Requester</span>
-                      <div className="flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[#11111B]/80 px-2.5 text-2xs text-foreground">
-                        <UserRound className="size-3 text-muted-foreground" />
-                        <span className="truncate font-medium">{ticket.requester || "System"}</span>
-                      </div>
-                    </div>
-
-                    {/* Category */}
-                    <div>
-                      <span className="mb-1 block text-[10px] text-muted-foreground">Category</span>
-                      <div className="flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[#11111B] px-2.5 text-2xs text-foreground">
-                        <Tag className="size-3 text-muted-foreground" />
-                        <span className="truncate font-medium">{category}</span>
-                      </div>
-                    </div>
-
-                    {/* Created Date */}
-                    <div>
-                      <span className="mb-1 block text-[10px] text-muted-foreground">Created</span>
-                      <div className="flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[#11111B]/80 px-2.5 text-2xs text-foreground">
-                        <Clock className="size-3 text-muted-foreground" />
-                        <span className="truncate font-mono text-[10px]">
-                          {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Due Date */}
-                    <div>
-                      <label htmlFor="ticket-due-date" className="mb-1 block text-[10px] text-muted-foreground">
-                        Due Date
-                      </label>
-                      <div className="flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[#11111B] px-2.5">
-                        <CalendarDays className="size-3 text-muted-foreground" />
-                        <input
-                          id="ticket-due-date"
-                          type="date"
-                          value={dueDate}
-                          onChange={(e) => setDueDate(e.target.value)}
-                          className="w-full bg-transparent text-2xs text-foreground outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Priority */}
-                    <div>
-                      <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>Priority</span>
-                        <span className="flex items-center gap-1 text-3xs font-normal capitalize">
-                          <span
-                            className={[
-                              "size-1.5 rounded-full",
-                              PRIORITY_META[priority]?.dot || "bg-amber-500",
-                            ].join(" ")}
-                          />
-                          {priority}
-                        </span>
-                      </div>
+                {/* category + priority */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="ticket-category" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Category
+                    </label>
+                    <div className="relative">
                       <select
+                        id="ticket-category"
+                        value={ticket.category || "General"}
+                        disabled
+                        aria-label="Category"
+                        className={[SELECT, "cursor-default pl-3 opacity-80"].join(" ")}
+                      >
+                        <option value={ticket.category || "General"}>{ticket.category || "General"}</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="ticket-priority" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Priority
+                    </label>
+                    <div className="relative">
+                      <AlertTriangle
+                        className={["pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2", priorityMetaOf(priority).className].join(" ")}
+                        aria-hidden
+                      />
+                      <select
+                        id="ticket-priority"
                         value={priority}
                         onChange={(e) => setPriority(e.target.value as Ticket["priority"])}
-                        className="h-8 w-full rounded-lg border border-[var(--border)] bg-[#11111B] px-2 text-2xs text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                        aria-label="Priority"
+                        className={SELECT}
                       >
                         <option value="critical">Critical</option>
                         <option value="high">High</option>
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
                       </select>
-                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground" title={PRIORITY_GUIDE[priority]}>
-                        {PRIORITY_GUIDE[priority]}
-                      </p>
-                    </div>
-
-                    {/* Assignee */}
-                    <div>
-                      <label htmlFor="ticket-assignee" className="mb-1 block text-[10px] text-muted-foreground">
-                        Assignee
-                      </label>
-                      <select
-                        id="ticket-assignee"
-                        value={assignee}
-                        onChange={(e) => setAssignee(e.target.value)}
-                        className="h-8 w-full rounded-lg border border-[var(--border)] bg-[#11111B] px-2 text-2xs text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
-                      >
-                        <option value="">Unassigned</option>
-                        {assignable.map((a) => (
-                          <option key={a.username} value={a.username}>
-                            {a.username} ({a.role})
-                          </option>
-                        ))}
-                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     </div>
                   </div>
                 </div>
 
-                {/* Activity & Attachments Card */}
-                <div className="rounded-xl border border-[var(--border)] bg-[#222236]/40 p-3.5 space-y-3">
-                  <span className="block text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    ACTIVITY &amp; ATTACHMENTS
+                {/* assignee + due date */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="ticket-assignee" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Assignee
+                    </label>
+                    <div className="relative">
+                      <span
+                        className="pointer-events-none absolute left-2.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full bg-[var(--muted)] text-[10px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]"
+                        aria-hidden
+                      >
+                        {(assignee || "?").slice(0, 1)}
+                      </span>
+                      <select
+                        id="ticket-assignee"
+                        value={assignee}
+                        onChange={(e) => setAssignee(e.target.value)}
+                        aria-label="Assignee"
+                        className={SELECT}
+                      >
+                        <option value="">Unassigned</option>
+                        {assignable.map((a) => (
+                          <option key={a.username} value={a.username}>
+                            {a.username}{a.group ? ` · ${a.group}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="ticket-due-date" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Due date
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="ticket-due-date"
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        aria-label="Due date"
+                        className={[
+                          FIELD,
+                          "pl-9 pr-9 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-9 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0",
+                          dueDate ? "[&::-webkit-datetime-edit]:text-transparent" : "",
+                        ].join(" ")}
+                      />
+                      {dueDate ? (
+                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-foreground">
+                          {formatDate(dueDate)}
+                        </span>
+                      ) : (
+                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/60">
+                          Select date
+                        </span>
+                      )}
+                      <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                    </div>
+                  </div>
+                </div>
+
+                {/* attachments */}
+                <div>
+                  <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Attachments
+                    <span className="ml-1.5 font-normal">(optional · max 10 MB each)</span>
                   </span>
 
-                  {/* Recent Activity Log */}
-                  {comments.length > 0 && (
-                    <div className="space-y-1.5 rounded-lg border border-[var(--border)] bg-[#11111B]/60 p-2.5">
-                      {comments.slice(-2).map((c) => (
-                        <div key={c.id} className="flex items-start gap-1.5 text-2xs">
-                          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[var(--primary)]" />
-                          <div className="min-w-0 flex-1">
-                            <span className="font-semibold text-foreground">{c.author || "System"}</span>
-                            {" · "}
-                            <span className="text-muted-foreground">{c.body}</span>
-                          </div>
-                          <span className="shrink-0 text-3xs text-muted-foreground">
-                            {c.created_at ? relTime(c.created_at) : "recently"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Existing Attachments */}
                   {attachments.length > 0 && (
-                    <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[#11111B]/60">
+                    <ul className="mb-2 flex flex-wrap gap-2">
                       {attachments.map((a) => (
-                        <li key={a.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-2xs">
+                        <li
+                          key={a.id}
+                          className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 py-1 pl-2 pr-1"
+                        >
+                          <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                           <a
                             href={attachmentUrl(ticket.id, a.id)}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex min-w-0 items-center gap-1.5 text-foreground hover:underline"
+                            className="truncate text-xs text-foreground hover:underline"
                           >
-                            <FileText className="size-3 shrink-0 text-muted-foreground" />
-                            <span className="truncate">{a.filename}</span>
+                            {a.filename}
                           </a>
                           <button
                             type="button"
                             onClick={() => onDeleteAttachment(a.id)}
-                            className="rounded p-1 text-muted-foreground hover:text-[var(--danger)]"
-                            title="Remove attachment"
+                            aria-label={`Remove ${a.filename}`}
+                            className="shrink-0 rounded p-0.5 text-muted-foreground transition hover:bg-[var(--muted)] hover:text-[var(--danger)]"
                           >
-                            <Trash2 className="size-2.5" />
+                            <X className="size-3" />
                           </button>
                         </li>
                       ))}
                     </ul>
                   )}
 
-                  {/* Attachments Dropzone */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                     className={[
-                      "flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed p-3 text-center transition",
+                      "flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-4 py-4 transition",
                       dragActive
                         ? "border-[var(--primary)] bg-[var(--primary)]/10"
-                        : "border-[var(--border)] bg-[#11111B]/40 hover:border-[var(--primary)]/40 hover:bg-muted/20",
+                        : "border-[var(--border)] bg-transparent hover:border-[var(--primary)]/40 hover:bg-[var(--muted)]/25",
                     ].join(" ")}
                   >
-                    <UploadCloud className="size-4.5 text-muted-foreground" />
-                    <p className="mt-1 text-2xs font-medium text-foreground">
-                      Click or drag files to attach
-                    </p>
-                    <p className="text-3xs text-muted-foreground">
-                      Up to 10 MB per file · Synced to Jira
+                    <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <p className="text-xs text-muted-foreground">
+                      Drop files here or{" "}
+                      <span className="font-semibold text-foreground underline underline-offset-2">browse</span>
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                {/* note composer */}
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-foreground">Add a note</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{note.length}/280</span>
+                  </div>
+
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {QUICK_TAGS.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleQuickTag(tag)}
+                        className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[11px] text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-foreground"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    value={note}
+                    maxLength={280}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Why is this moving? The note lands in the Jira issue history."
+                    aria-label="Activity note"
+                    className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Posted to Jira with the status change when you save.
+                  </p>
+                </div>
+
+                {/* timeline */}
+                <div>
+                  <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    History
+                  </span>
+
+                  {comments.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-[var(--border)] px-4 py-6 text-center text-xs text-muted-foreground">
+                      Nothing yet — notes and status changes are recorded here.
+                    </p>
+                  ) : (
+                    <ul>
+                      {[...comments].reverse().map((c, i) => (
+                        <li key={c.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
+                            {i < comments.length - 1 && <span className="w-px flex-1 bg-[var(--border)]" aria-hidden />}
+                          </div>
+                          <div className="min-w-0 flex-1 pb-4">
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span className="text-xs font-semibold text-foreground">{c.author || "System"}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {c.created_at ? relTime(c.created_at) : "recently"}
+                              </span>
+                              {c.kind && c.kind !== "comment" && (
+                                <span className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground">
+                                  {c.kind}
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{c.body}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Footer Actions */}
-          <DialogFooter className="flex items-center justify-between border-t border-[var(--border)] bg-[#11111B] px-6 py-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="rounded-xl h-8 px-3 text-xs"
-            >
+          {/* ---- footer ---- */}
+          <DialogFooter className="flex flex-row items-center justify-end gap-2 border-t border-[var(--border)] px-6 py-4">
+            <Button type="button" variant="ghost" className="rounded-lg" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-
-            <Button
+            <button
               type="submit"
               disabled={saving}
-              className="btn-primary-gradient rounded-xl shadow-md text-white h-8 px-3.5 text-xs font-semibold"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-violet-800 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-950/25 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.99] disabled:opacity-60"
             >
               {saving ? (
-                <>
-                  <RefreshCw className="mr-1.5 size-3 animate-spin" />
-                  Saving &amp; Syncing…
-                </>
+                <RefreshCw className="size-3.5 animate-spin" aria-hidden />
               ) : (
-                <>
-                  <CheckCircle2 className="mr-1.5 size-3" />
-                  Save &amp; Sync to Jira
-                </>
+                <CheckCircle2 className="size-3.5" aria-hidden />
               )}
-            </Button>
+              {saving ? "Saving…" : "Save changes"}
+            </button>
           </DialogFooter>
         </form>
       </DialogContent>
