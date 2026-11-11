@@ -289,7 +289,7 @@ function StatCard({
         {value}
         {suffix && <span className="text-sm font-medium text-muted-foreground">{suffix}</span>}
       </div>
-      <p className="mt-1.5 text-2xs leading-tight text-muted-foreground">{caption}</p>
+      <p className="mt-1.5 text-xs leading-tight text-muted-foreground">{caption}</p>
     </div>
   );
 }
@@ -664,7 +664,7 @@ export default function Knowledge({ role, onToast }: Props) {
               <span className="font-semibold text-foreground">
                 {status?.healthy ? "KB Synced" : "Sync Pending"}
               </span>
-              <span className="text-2xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {status?.last_run ? `(${relTime(status.last_run.at)})` : ""}
               </span>
             </div>
@@ -736,7 +736,7 @@ export default function Knowledge({ role, onToast }: Props) {
             <div className="flex flex-wrap items-start gap-x-3 gap-y-2 rounded-2xl border border-[var(--warn)]/35 bg-[var(--warn)]/10 px-4 py-3 text-xs text-foreground">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--warn)]" />
               <div className="min-w-0 flex-1">
-                <div className="text-2xs font-semibold uppercase tracking-wide text-[var(--warn)]">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--warn)]">
                   Needs review
                 </div>
                 <p className="mt-0.5 font-semibold">
@@ -790,11 +790,11 @@ export default function Knowledge({ role, onToast }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
             <h2 className="text-sm font-semibold text-foreground">
               Article library
-              <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-2xs font-normal text-muted-foreground">
+              <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
                 {total}
               </span>
             </h2>
-            <span className="flex shrink-0 items-center gap-1 text-2xs text-muted-foreground">
+            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
               Sorted by {SORT_LABELS[sortKey]}
               {sortDir === "desc" ? <ChevronDown className="size-3" /> : <ChevronUp className="size-3" />}
             </span>
@@ -964,7 +964,7 @@ export default function Knowledge({ role, onToast }: Props) {
               {/* Sticky: the list is long and paging scrolls the header out of view, so the
                   column names — and the sort control inside them — have to stay reachable. */}
               <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-muted/60 backdrop-blur-sm">
-                <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                   {([
                     { k: "title", l: "Article title", cls: "px-5 py-3.5 font-semibold" },
                     { k: null, l: "Source", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
@@ -1081,19 +1081,19 @@ export default function Knowledge({ role, onToast }: Props) {
                               title={`Open source: ${article.source_url}`}
                               className="inline-flex items-center gap-1 rounded-md transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
                             >
-                              <Badge variant="outline" className={`text-2xs ${providerOf(article).className}`}>
+                              <Badge variant="outline" className={`text-xs ${providerOf(article).className}`}>
                                 {providerOf(article).key === "unknown" ? "Internal" : providerOf(article).label}
                               </Badge>
                               <ExternalLink className="size-2.5 text-muted-foreground" />
                             </a>
                           ) : (
-                            <Badge variant="outline" className={`text-2xs ${providerOf(article).className}`}>
+                            <Badge variant="outline" className={`text-xs ${providerOf(article).className}`}>
                               {providerOf(article).label}
                             </Badge>
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="outline" className={`text-2xs ${meta.bgClass} ${meta.iconClass}`}>
+                          <Badge variant="outline" className={`text-xs ${meta.bgClass} ${meta.iconClass}`}>
                             {meta.label}
                           </Badge>
                         </td>
@@ -1143,7 +1143,7 @@ export default function Knowledge({ role, onToast }: Props) {
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
+                <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-xs text-muted-foreground">
                   {pageSize} / page
                 </span>
 
@@ -1198,7 +1198,7 @@ export default function Knowledge({ role, onToast }: Props) {
 
         {/* Where the numbers above come from. Stated plainly so a count is never read as a
             guess: the total is the API's COUNT(*), not the rows on this page. */}
-        <p className="text-2xs leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Counts are read from the Knowledge Base Articles index — the total is a COUNT(*)
           over the whole filtered set, not just the rows on this page. Domain counts come
           from each domain's article list, and the source options come from the connected
@@ -1233,7 +1233,7 @@ export default function Knowledge({ role, onToast }: Props) {
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted-foreground">Domain</dt>
                 <dd>
-                  <Badge variant="outline" className={`text-2xs ${metaFor(detail.domain).bgClass} ${metaFor(detail.domain).iconClass}`}>
+                  <Badge variant="outline" className={`text-xs ${metaFor(detail.domain).bgClass} ${metaFor(detail.domain).iconClass}`}>
                     {metaFor(detail.domain).label}
                   </Badge>
                 </dd>
@@ -1241,7 +1241,7 @@ export default function Knowledge({ role, onToast }: Props) {
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted-foreground">Source</dt>
                 <dd>
-                  <Badge variant="outline" className={`text-2xs ${providerOf(detail).className}`}>
+                  <Badge variant="outline" className={`text-xs ${providerOf(detail).className}`}>
                     {providerOf(detail).label}
                   </Badge>
                 </dd>
@@ -1262,7 +1262,7 @@ export default function Knowledge({ role, onToast }: Props) {
               )}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted-foreground">Page ID</dt>
-                <dd className="font-mono text-2xs text-foreground">{detail.page_id}</dd>
+                <dd className="font-mono text-xs text-foreground">{detail.page_id}</dd>
               </div>
             </dl>
 

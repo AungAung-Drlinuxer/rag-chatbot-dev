@@ -154,7 +154,7 @@ export default function StatusChips({ className = "" }: { className?: string }) 
           key={c.id}
           title={c.title}
           data-tone={c.tone}
-          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-2xs font-medium ${TONE[c.tone]}`}
+          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${TONE[c.tone]}`}
         >
           {/* Was a 6px coloured dot, which said only "this chip has a colour". The
               reference header gives each chip its own glyph, so the icon now carries the

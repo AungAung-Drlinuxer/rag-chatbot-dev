@@ -69,7 +69,7 @@ function Greeting({ name, composer }: { name: string; composer: React.ReactNode 
           once there is a transcript to put above it. */}
       <div className="mx-auto mt-8 w-full max-w-2xl text-left">{composer}</div>
 
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-[14px] text-muted-foreground">
         <ShieldCheck className="size-3" aria-hidden />
         Answers cite the pages they used — check anything destructive before acting on it.
       </p>
@@ -406,7 +406,7 @@ export default function Chat({ onNavigate, userName }: Props) {
     <div className="space-y-3">
       <section className="rounded-xl border border-[var(--border)] bg-card p-3">
         <h2 className="text-xs font-semibold">This conversation</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
+        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
           <div className="flex items-baseline justify-between gap-2">
             <dt className="text-muted-foreground">Answers</dt>
             <dd className="font-medium tabular-nums">{answered}</dd>
@@ -426,7 +426,7 @@ export default function Chat({ onNavigate, userName }: Props) {
             </dd>
           </div>
         </dl>
-        <p className="mt-2 text-2xs leading-4 text-muted-foreground">
+        <p className="mt-2 text-xs leading-4 text-muted-foreground">
           Every answer lists the pages it used underneath it.
         </p>
       </section>
@@ -434,7 +434,7 @@ export default function Chat({ onNavigate, userName }: Props) {
       {lastAnswer?.retrieval && ((lastAnswer.retrieval.chunks ?? 0) > 0 || (lastAnswer.retrieval.cited ?? 0) > 0) && (
         <section className="rounded-xl border border-[var(--border)] bg-card p-3">
           <h2 className="text-xs font-semibold">Last retrieval</h2>
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-2xs">
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
             {[
               ["Chunks", lastAnswer.retrieval.chunks],
               ["Cited", lastAnswer.retrieval.cited],
@@ -488,16 +488,16 @@ export default function Chat({ onNavigate, userName }: Props) {
       />
 
       <div className="flex items-center justify-between gap-2 px-1 pt-1">
-        <span className="hidden items-center gap-1.5 text-2xs text-muted-foreground sm:inline-flex">
+        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
           <CornerDownLeft className="size-3" aria-hidden /> Enter to send · Shift+Enter for a new line
         </span>
-        <span className="text-2xs text-muted-foreground sm:hidden">
+        <span className="text-xs text-muted-foreground sm:hidden">
           {input.length > 0 ? `${input.length} characters` : "Grounded in your KB"}
         </span>
 
         <div className="flex items-center gap-1.5">
           {input.length > 3200 && (
-            <span className="text-2xs tabular-nums text-[var(--warn)]">{input.length}/4000</span>
+            <span className="text-xs tabular-nums text-[var(--warn)]">{input.length}/4000</span>
           )}
           {isStreaming ? (
             <button
@@ -551,7 +551,7 @@ export default function Chat({ onNavigate, userName }: Props) {
               <div className="relative min-h-0 flex-1">
                 <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-1.5 xl:right-4">
                   {isStreaming && (
-                    <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-2 py-1 text-2xs font-medium text-muted-foreground shadow-sm">
+                    <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-card px-2 py-1 text-xs font-medium text-muted-foreground shadow-sm">
                       <Loader2 className="size-3 animate-spin" aria-hidden /> Answering
                     </span>
                   )}
@@ -572,7 +572,7 @@ export default function Chat({ onNavigate, userName }: Props) {
                     onClick={() => scrollToEnd(true)}
                     aria-label="Scroll to end"
                     title="Jump to the newest message"
-                    className="absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-2xs font-semibold text-foreground shadow-lg transition hover:bg-[var(--accent-soft)] active:scale-[0.98]"
+                    className="absolute bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-xs font-semibold text-foreground shadow-lg transition hover:bg-[var(--accent-soft)] active:scale-[0.98]"
                   >
                     <ArrowDown className="size-3.5" aria-hidden /> Scroll to end
                   </button>
@@ -628,7 +628,7 @@ export default function Chat({ onNavigate, userName }: Props) {
               {/* ---------------- docked composer ---------------- */}
               <div className="shrink-0 bg-gradient-to-t from-background via-background to-background/0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
                 {composerForm(false)}
-                <p className="mx-auto mt-1.5 max-w-3xl text-center text-[10px] text-muted-foreground">
+                <p className="mx-auto mt-1.5 max-w-3xl text-center text-[14px] text-muted-foreground">
                   Answers cite the pages they used. Check anything destructive before acting on it.
                 </p>
               </div>
@@ -671,7 +671,7 @@ export default function Chat({ onNavigate, userName }: Props) {
       />
 
       {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-foreground px-3.5 py-2 text-2xs font-medium text-background shadow-lg">
+        <div role="status" aria-live="polite" className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-xl bg-foreground px-3.5 py-2 text-xs font-medium text-background shadow-lg">
           {toast}
         </div>
       )}

@@ -191,11 +191,11 @@ export default function DomainsPage({
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-3 pt-4 sm:px-5">
             <h2 className="text-sm font-semibold">
               Routing domains
-              <span className="ml-2 rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
+              <span className="ml-2 rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                 {domains.length}
               </span>
             </h2>
-            <p className="text-2xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {filtered ? `${visible.length} shown` : "Sorted active first"}
             </p>
           </div>
@@ -240,14 +240,14 @@ export default function DomainsPage({
                       aria-pressed={activeTab}
                       onClick={() => setStatus(tab.key)}
                       className={[
-                        "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-2xs font-medium transition",
+                        "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition",
                         activeTab
                           ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       ].join(" ")}
                     >
                       {tab.label}
-                      <span className={["rounded px-1 text-[10px] font-semibold tabular-nums", activeTab ? "bg-black/15" : "bg-[var(--muted)] text-muted-foreground"].join(" ")}>{statusCounts[tab.key]}</span>
+                      <span className={["rounded px-1 text-[14px] font-semibold tabular-nums", activeTab ? "bg-black/15" : "bg-[var(--muted)] text-muted-foreground"].join(" ")}>{statusCounts[tab.key]}</span>
                     </button>
                   );
                 })}
@@ -311,7 +311,7 @@ export default function DomainsPage({
           )}
 
           {!loading && !error && domains.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-4 py-3 text-2xs text-muted-foreground sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-4 py-3 text-xs text-muted-foreground sm:px-5">
               <span>
                 Showing {visible.length} of {domains.length} domain{domains.length === 1 ? "" : "s"}
                 {filtered ? " (filtered)" : ""}
@@ -324,7 +324,7 @@ export default function DomainsPage({
           )}
         </section>
 
-        <p className="text-2xs leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Edits and keyword tests run against the live classifier configuration. Renaming a
           domain key cascades to its knowledge base articles and vectors.
         </p>
@@ -380,7 +380,7 @@ export default function DomainsPage({
                       Matched: {hits.join(", ")}
                     </div>
                   ))}
-                  <span className="text-2xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     Multiple matches are shown without assigning production confidence scores.
                   </span>
                 </>

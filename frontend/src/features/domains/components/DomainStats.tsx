@@ -51,14 +51,14 @@ function StatTile({
         <span className={["grid size-9 shrink-0 place-items-center rounded-xl", TONES[tone]].join(" ")} aria-hidden>
           {icon}
         </span>
-        <span className="pt-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="pt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       </div>
 
       <div className="mt-3 text-[26px] font-semibold leading-none tracking-tight tabular-nums">
         {loading ? <span className="inline-block h-6 w-12 animate-pulse rounded bg-muted" /> : value}
       </div>
 
-      <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{caption}</p>
     </div>
   );
 }

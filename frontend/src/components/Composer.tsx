@@ -138,7 +138,7 @@ export default function Composer({
             autoFocus={autoFocus}
             placeholder={placeholder}
             aria-label={ariaLabel}
-            className="max-h-40 min-h-[30px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[13.5px] leading-6 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="max-h-40 min-h-[30px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] leading-6 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         ) : (
           <input
@@ -155,7 +155,7 @@ export default function Composer({
 
         {/* The hint belongs INSIDE the field, beside the button it describes. */}
         {hint && (
-          <kbd className="hidden shrink-0 rounded-md border border-slate-200 bg-white/70 px-1.5 py-0.5 font-mono text-2xs text-slate-500 md:inline-block dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400">
+          <kbd className="hidden shrink-0 rounded-md border border-slate-200 bg-white/70 px-1.5 py-0.5 font-mono text-xs text-slate-500 md:inline-block dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400">
             Ctrl+Enter
           </kbd>
         )}

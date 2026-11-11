@@ -31,12 +31,12 @@ export function SectionHeader({
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         {description && (
-          <p className="mt-0.5 truncate text-2xs text-muted-foreground">{description}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {pill && (
-          <span className="rounded-md bg-[var(--muted)] px-2 py-0.5 text-2xs font-medium text-muted-foreground">
+          <span className="rounded-md bg-[var(--muted)] px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {pill}
           </span>
         )}
@@ -45,7 +45,7 @@ export function SectionHeader({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-2xs font-medium text-[var(--accent-foreground)] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent-foreground)] hover:underline"
           >
             {action}
             <ArrowUpRight className="size-3" />
@@ -71,11 +71,11 @@ export function ResultBadge({
     // Semantic tokens, not palette literals: the same badge has to hold in the light and
     // the charcoal-navy theme without a dark: twin for every tone.
     Resolved:
-      "rounded-md border-[var(--ok)]/30 bg-[var(--ok)]/10 text-2xs text-[var(--ok)]",
+      "rounded-md border-[var(--ok)]/30 bg-[var(--ok)]/10 text-xs text-[var(--ok)]",
     Cautioned:
-      "rounded-md border-[var(--warn)]/30 bg-[var(--warn)]/10 text-2xs text-[var(--warn)]",
+      "rounded-md border-[var(--warn)]/30 bg-[var(--warn)]/10 text-xs text-[var(--warn)]",
     Escalated:
-      "rounded-md border-[var(--danger)]/30 bg-[var(--danger)]/10 text-2xs text-[var(--danger)]",
+      "rounded-md border-[var(--danger)]/30 bg-[var(--danger)]/10 text-xs text-[var(--danger)]",
   };
   return (
     <Badge
@@ -105,7 +105,7 @@ export function StatusBadge({
   return (
     <Badge
       variant="outline"
-      className={`rounded-md text-2xs ${styles[status]}`}
+      className={`rounded-md text-xs ${styles[status]}`}
     >
       {status}
     </Badge>
@@ -129,7 +129,7 @@ export function PriorityBadge({
   };
 
   return (
-    <span className="flex w-16 shrink-0 items-center gap-1.5 text-2xs">
+    <span className="flex w-16 shrink-0 items-center gap-1.5 text-xs">
 
       <span
         className={`size-1.5 rounded-full ${styles[priority]}`}

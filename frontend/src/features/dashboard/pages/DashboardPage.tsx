@@ -376,7 +376,7 @@ export default function Dashboard({ role, perms }: Props) {
               onClick={() => setRangeOpen((v) => !v)}
               title="Reporting window"
               className={[
-                "flex h-8 items-center gap-2 rounded-lg border border-[var(--border)] bg-card px-2.5 text-2xs font-medium shadow-sm transition hover:bg-muted",
+                "flex h-8 items-center gap-2 rounded-lg border border-[var(--border)] bg-card px-2.5 text-xs font-medium shadow-sm transition hover:bg-muted",
                 win.kind === "custom" ? "border-[var(--primary)]/50 text-[var(--accent-foreground)]" : "",
               ].join(" ")}
             >
@@ -406,12 +406,12 @@ export default function Dashboard({ role, perms }: Props) {
                 ))}
 
                 <div className="mt-1 border-t pt-1.5">
-                  <p className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Custom range
                   </p>
                   <div className="space-y-2 px-3 pb-1 pt-1">
                     <label className="block">
-                      <span className="text-2xs font-medium text-muted-foreground">From</span>
+                      <span className="text-xs font-medium text-muted-foreground">From</span>
                       <input
                         type="date"
                         value={customFrom}
@@ -421,7 +421,7 @@ export default function Dashboard({ role, perms }: Props) {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-2xs font-medium text-muted-foreground">To</span>
+                      <span className="text-xs font-medium text-muted-foreground">To</span>
                       <input
                         type="date"
                         value={customTo}
@@ -432,7 +432,7 @@ export default function Dashboard({ role, perms }: Props) {
                     </label>
 
                     {customInvalid && (
-                      <p className="text-2xs leading-tight text-destructive">
+                      <p className="text-xs leading-tight text-destructive">
                         {customFrom > todayIso
                           ? "Start date is in the future."
                           : "Start date must be on or before the end date."}
@@ -535,7 +535,7 @@ export default function Dashboard({ role, perms }: Props) {
       </main>
 
       {/* ---------------- FOOTER ---------------- */}
-      <div className="flex shrink-0 flex-col items-center justify-center gap-2 text-3xs text-muted-foreground sm:flex-row">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-2 text-xs text-muted-foreground sm:flex-row">
         <span title={windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}>
           {windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}
         </span>

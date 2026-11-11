@@ -97,7 +97,7 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
           {allOk && <ShieldCheck className="ml-auto size-3.5 text-emerald-500" aria-label="All services healthy" />}
         </div>
         {rows.length === 0 ? (
-          <p className="text-2xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {services === null ? "Checking…" : "Health check reported no services."}
           </p>
         ) : (
@@ -106,7 +106,7 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
               const tone = toneOf(s);
               const g = healthGlyph(s.key, s.name);
               return (
-                <li key={s.key} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-2xs">
+                <li key={s.key} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-xs">
                   <span className={`grid size-5 shrink-0 place-items-center rounded-md ${g.tint}`}>
                     <g.Icon className="size-3" aria-hidden />
                   </span>
@@ -137,8 +137,8 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
                 <a.icon className="size-3.5" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-2xs font-semibold text-foreground">{a.label}</span>
-                <span className="block truncate text-3xs text-muted-foreground">{a.hint}</span>
+                <span className="block truncate text-xs font-semibold text-foreground">{a.label}</span>
+                <span className="block truncate text-xs text-muted-foreground">{a.hint}</span>
               </span>
             </button>
           ))}
@@ -146,7 +146,7 @@ export default function SystemStatus({ onNavigate }: { onNavigate?: (nav: string
         <button
           type="button"
           onClick={() => onNavigate?.("tickets")}
-          className="mt-1.5 w-full rounded-lg px-2 py-1 text-left text-3xs font-medium text-muted-foreground underline-offset-2 hover:text-[var(--primary)] hover:underline"
+          className="mt-1.5 w-full rounded-lg px-2 py-1 text-left text-xs font-medium text-muted-foreground underline-offset-2 hover:text-[var(--primary)] hover:underline"
         >
           Open the ticket queue →
         </button>

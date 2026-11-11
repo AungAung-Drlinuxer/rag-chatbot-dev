@@ -65,7 +65,7 @@ export function DomainClassifierManager({
         <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-4 sm:px-5">
           <div>
             <h2 className="text-sm font-semibold">Routing domains</h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {domains.length} domain{domains.length === 1 ? "" : "s"} configured
             </p>
           </div>
@@ -98,7 +98,7 @@ export function DomainClassifierManager({
         <p
           role="status"
           className={[
-            "px-4 pb-2 text-2xs sm:px-5",
+            "px-4 pb-2 text-xs sm:px-5",
             notice.tone === "err" ? "text-[var(--danger)]" : "text-muted-foreground",
           ].join(" ")}
         >
@@ -146,7 +146,7 @@ export function DomainClassifierManager({
             </div>
 
             {deleteError && (
-              <p className="mt-3 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-2.5 py-2 text-2xs text-[var(--danger)]" role="alert">
+              <p className="mt-3 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-2.5 py-2 text-xs text-[var(--danger)]" role="alert">
                 {deleteError}
               </p>
             )}

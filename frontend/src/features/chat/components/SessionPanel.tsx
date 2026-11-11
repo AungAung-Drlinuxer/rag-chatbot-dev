@@ -24,10 +24,10 @@ export default function SessionPanel({ summary }: { summary: SessionSummary }) {
     <div className="rounded-xl bg-[var(--muted)] p-3">
       <div className="flex items-center gap-2">
         <History className="size-3.5 text-blue-500" />
-        <span className="text-2xs font-semibold">Retrieval information</span>
+        <span className="text-xs font-semibold">Retrieval information</span>
       </div>
 
-      <div className="mt-3 space-y-2 text-2xs text-muted-foreground">
+      <div className="mt-3 space-y-2 text-xs text-muted-foreground">
           <>
             <Row
               label="Chunks retrieved"

@@ -273,7 +273,7 @@ export default function RagPipelineStatus({
             {active ? "RAG Pipeline" : "Retrieval pipeline completed"}
           </span>
           <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-medium ${
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
               active
                 ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
                 : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
@@ -347,7 +347,7 @@ export default function RagPipelineStatus({
                   <step.icon aria-hidden className="size-4" />
                 </span>
                 <span
-                  className={`text-center text-2xs font-medium leading-tight ${
+                  className={`text-center text-xs font-medium leading-tight ${
                     isActive
                       ? "text-[var(--accent-foreground)]"
                       : isDone
@@ -358,7 +358,7 @@ export default function RagPipelineStatus({
                   {idx + 1}. {step.label}
                 </span>
                 <span
-                  className={`flex items-center gap-1 font-mono text-2xs tabular-nums ${
+                  className={`flex items-center gap-1 font-mono text-xs tabular-nums ${
                     isActive
                       ? "text-[var(--accent-foreground)]"
                       : ms != null
@@ -405,7 +405,7 @@ export default function RagPipelineStatus({
         <span className="text-xs font-semibold text-foreground">
           Execution Details
         </span>
-        <span className="flex items-center gap-2 text-2xs text-muted-foreground">
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {doneCount}/{steps.length} completed
           {open ? (
             <ChevronUp aria-hidden className="size-3.5" />
@@ -439,14 +439,14 @@ export default function RagPipelineStatus({
                   <span className="w-24 shrink-0 font-medium text-foreground">
                     {step.label}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-2xs text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                     {step.description}
                   </span>
-                  <span className="w-14 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
+                  <span className="w-14 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">
                     {ms != null ? `${ms}ms` : "\u2014"}
                   </span>
                   <span
-                    className={`inline-flex w-20 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-3xs font-medium ${
+                    className={`inline-flex w-20 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                       isActive
                         ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
                         : isDone
@@ -470,7 +470,7 @@ export default function RagPipelineStatus({
 
           {/* live stage detail line */}
           {stage && !simulate && active && (
-            <div className="my-2 flex items-center gap-2 rounded-lg bg-blue-50/60 px-3 py-1.5 text-2xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <div className="my-2 flex items-center gap-2 rounded-lg bg-blue-50/60 px-3 py-1.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
               <span className="size-1.5 animate-ping rounded-full bg-blue-600" />
               <span className="truncate">{stage}</span>
             </div>

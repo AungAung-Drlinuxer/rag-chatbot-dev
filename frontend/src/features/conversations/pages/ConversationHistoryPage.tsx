@@ -146,13 +146,13 @@ function StatCard({
   return (
     <div data-slot="summary-tile" className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>{icon}</span>
       </div>
       <div className="mt-2 text-3xl font-semibold leading-none tracking-tight tabular-nums">
         {loading ? <div className="h-8 w-14 animate-pulse rounded bg-muted" /> : value}
       </div>
-      <p className="mt-1.5 text-2xs leading-tight text-muted-foreground">{caption}</p>
+      <p className="mt-1.5 text-xs leading-tight text-muted-foreground">{caption}</p>
     </div>
   );
 }
@@ -389,11 +389,11 @@ export default function ConversationHistoryPage() {
             <div className="flex items-center justify-between gap-3 px-5 py-4">
               <h2 className="text-sm font-semibold">
                 Conversations
-                <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-2xs font-normal text-muted-foreground">
+                <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
                   {shown.length}
                 </span>
               </h2>
-              <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 Latest activity
                 <ArrowDown className="size-3" />
               </span>
@@ -457,7 +457,7 @@ export default function ConversationHistoryPage() {
             <div className="overflow-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">
+                  <tr className="bg-[var(--muted)]/50 text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-5 py-3 font-medium">User</th>
                     <th className="px-5 py-3 font-medium">Conversation</th>
                     <th className="px-5 py-3 font-medium">Msgs</th>
@@ -487,7 +487,7 @@ export default function ConversationHistoryPage() {
                     >
                       <td className="px-5 py-3.5 align-middle">
                         <div className="flex items-center gap-2.5">
-                          <span className={`grid size-7 shrink-0 place-items-center rounded-full text-2xs font-bold ${toneFor(c.username)}`}>
+                          <span className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${toneFor(c.username)}`}>
                             {c.username.slice(0, 1).toUpperCase()}
                           </span>
                           <span className="truncate text-xs font-medium text-foreground">{c.username}</span>
@@ -550,12 +550,12 @@ export default function ConversationHistoryPage() {
                   ))}
                   {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
                   <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((n) => Math.min(pageCount, n + 1))} />
-                  <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
+                  <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-xs text-muted-foreground">10 / page</span>
                 </div>
               </div>
             )}
 
-            <div className="border-t border-[var(--border)] px-5 py-3 text-2xs text-muted-foreground">
+            <div className="border-t border-[var(--border)] px-5 py-3 text-xs text-muted-foreground">
               Showing {shown.length} of {convs.length} conversation{convs.length === 1 ? "" : "s"}
               {filtered ? " (filtered)" : ""} · {totalMsgs} message{totalMsgs === 1 ? "" : "s"} in
               this result
@@ -576,7 +576,7 @@ export default function ConversationHistoryPage() {
                         </span>
                         <div className="min-w-0">
                           <h3 className="truncate text-sm font-semibold">{openUser}</h3>
-                          <div className="truncate text-2xs text-muted-foreground">Conversation transcript</div>
+                          <div className="truncate text-xs text-muted-foreground">Conversation transcript</div>
                         </div>
                       </div>
                       <button
@@ -591,20 +591,20 @@ export default function ConversationHistoryPage() {
                     <div className="mt-3 text-sm font-semibold leading-snug">
                       {maskProfanity(detail.title) || "(untitled conversation)"}
                     </div>
-                    <div className="mt-0.5 text-2xs text-muted-foreground">
+                    <div className="mt-0.5 text-xs text-muted-foreground">
                       {detail.messages} message{detail.messages === 1 ? "" : "s"} · {fmtDay(detail.last_at)}
                     </div>
 
                     <div className="mt-3 flex items-center gap-1.5">
                       <button
                         onClick={() => download(detail, "txt")}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2 py-1.5 text-2xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2 py-1.5 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
                       >
                         <FileText className="size-3" /> Export .txt
                       </button>
                       <button
                         onClick={() => download(detail, "json")}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-1.5 text-2xs font-semibold transition hover:bg-muted"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-1.5 text-xs font-semibold transition hover:bg-muted"
                       >
                         <FileJson className="size-3" /> Export .json
                       </button>
@@ -632,13 +632,13 @@ export default function ConversationHistoryPage() {
                       />
                     )}
                     {!detailLoading && !detailError && msgs.length === 0 && (
-                      <div className="grid h-full place-items-center p-6 text-center text-2xs text-muted-foreground">
+                      <div className="grid h-full place-items-center p-6 text-center text-xs text-muted-foreground">
                         This conversation has no stored messages.
                       </div>
                     )}
                     {!detailLoading && !detailError && grouped.map((g) => (
                       <div key={g.day} className="space-y-3">
-                        <div className="flex items-center gap-2 text-3xs uppercase tracking-wider text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
                           <span className="h-px flex-1 bg-[var(--border)]" />
                           {g.day}
                           <span className="h-px flex-1 bg-[var(--border)]" />
@@ -650,7 +650,7 @@ export default function ConversationHistoryPage() {
                                sits top-left of the row and the clock top-right, above the
                                bubble. Only the user's block is inset (92%), matching it. */
                             <div key={i} className={isUser ? "ml-auto w-[92%]" : "w-full"}>
-                              <div className="mb-1 flex items-center justify-between gap-2 text-3xs text-muted-foreground">
+                              <div className="mb-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                                 <span className="flex min-w-0 items-center gap-1">
                                   {!isUser && <Bot className="size-3 shrink-0" />}
                                   <span className="truncate font-medium">{isUser ? openUser : "IT Assistant"}</span>
@@ -674,7 +674,7 @@ export default function ConversationHistoryPage() {
 
                   {/* Honest footer: the panel shows what the API returned, nothing more. */}
                   {!detailLoading && !detailError && msgs.length > 0 && (
-                    <div className="border-t border-[var(--border)] px-5 py-2.5 text-3xs text-muted-foreground">
+                    <div className="border-t border-[var(--border)] px-5 py-2.5 text-xs text-muted-foreground">
                       {msgs.length} message{msgs.length === 1 ? "" : "s"} in this transcript
                       {detail.messages > msgs.length
                         ? ` · ${detail.messages - msgs.length} more recorded than returned`
@@ -688,7 +688,7 @@ export default function ConversationHistoryPage() {
                     <MessagesSquare className="size-6" />
                   </span>
                   <div className="text-xs font-semibold">Select a conversation</div>
-                  <p className="max-w-[240px] text-2xs leading-relaxed text-muted-foreground">
+                  <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
                     Click any row in the list to read the full transcript here.
                   </p>
                 </div>
@@ -697,7 +697,7 @@ export default function ConversationHistoryPage() {
           </div>
         </div>
 
-        <p className="text-2xs leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           Transcripts are read-only. Exports contain exactly the messages stored for the
           session; nothing is redacted beyond the profanity mask applied to titles.
         </p>

@@ -61,19 +61,19 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={htmlFor} className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor={htmlFor} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
           {optional && <span className="ml-1 font-normal normal-case tracking-normal text-muted-foreground/70">optional</span>}
         </label>
       </div>
       {children}
       {error ? (
-        <p className="flex items-start gap-1 text-2xs text-[var(--danger)]" role="alert">
+        <p className="flex items-start gap-1 text-xs text-[var(--danger)]" role="alert">
           <AlertTriangle className="mt-px size-3 shrink-0" aria-hidden />
           {error}
         </p>
       ) : hint ? (
-        <p className="text-2xs leading-relaxed text-muted-foreground">{hint}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -333,7 +333,7 @@ export function DomainFormSheet({
         <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
           {/* ---------- header ---------- */}
           <header className="border-b border-[var(--border)] px-5 pb-4 pt-5 pr-12 sm:px-6">
-            <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {editing ? "Edit" : "Create"}
             </p>
             <div className="mt-1 flex items-center gap-2.5">
@@ -344,7 +344,7 @@ export function DomainFormSheet({
                 <h2 className="truncate text-base font-semibold leading-tight">
                   {editing ? displayName || domain?.display_name : "New routing domain"}
                 </h2>
-                <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {editing ? `Key: ${domain?.domain_key}` : "Keywords decide which knowledge answers a question."}
                 </p>
               </div>
@@ -418,7 +418,7 @@ export function DomainFormSheet({
                       className={[INPUT, "font-mono", errors.domain_key ? BAD_BORDER : OK_BORDER].join(" ")}
                     />
                     {editing && renameOpen && (
-                      <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-[var(--warn)]/35 bg-[var(--warn)]/10 px-2 py-1.5 text-2xs text-foreground">
+                      <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-[var(--warn)]/35 bg-[var(--warn)]/10 px-2 py-1.5 text-xs text-foreground">
                         <AlertTriangle className="mt-0.5 size-3 shrink-0 text-[var(--warn)]" aria-hidden />
                         <span>
                           Renaming rewrites every article's domain and vector metadata. You will be asked to confirm.
@@ -434,7 +434,7 @@ export function DomainFormSheet({
 
               {domain && (
                 <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
-                  <p className="text-2xs leading-4 text-muted-foreground">
+                  <p className="text-xs leading-4 text-muted-foreground">
                     Draft the description and the keyword fallback from the articles already in
                     this domain.
                   </p>
@@ -455,7 +455,7 @@ export function DomainFormSheet({
                         setSuggesting(false);
                       }
                     }}
-                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background px-2.5 text-2xs font-medium transition hover:bg-muted disabled:opacity-50"
+                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-background px-2.5 text-xs font-medium transition hover:bg-muted disabled:opacity-50"
                   >
                     <Sparkles className="size-3" aria-hidden />
                     {suggesting ? "Thinking…" : "Suggest with AI"}
@@ -463,7 +463,7 @@ export function DomainFormSheet({
                 </div>
               )}
               {suggestError && (
-                <p role="alert" className="text-2xs text-[var(--danger)]">{suggestError}</p>
+                <p role="alert" className="text-xs text-[var(--danger)]">{suggestError}</p>
               )}
 
               <Field
@@ -493,7 +493,7 @@ export function DomainFormSheet({
             <section className="space-y-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-xs font-semibold">Classifier keywords</h3>
-                <span className="text-2xs text-muted-foreground">{keywords.length} added</span>
+                <span className="text-xs text-muted-foreground">{keywords.length} added</span>
               </div>
 
               <Field
@@ -516,7 +516,7 @@ export function DomainFormSheet({
                   {keywords.map((kw) => (
                     <span
                       key={kw}
-                      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--muted)] py-0.5 pl-1.5 pr-1 text-2xs text-foreground"
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--muted)] py-0.5 pl-1.5 pr-1 text-xs text-foreground"
                     >
                       <Tag className="size-2.5 text-muted-foreground" aria-hidden />
                       {kw}
@@ -549,7 +549,7 @@ export function DomainFormSheet({
               </Field>
 
               {keywordNote && (
-                <p className="flex items-center gap-1 text-2xs text-[var(--warn)]" role="status">
+                <p className="flex items-center gap-1 text-xs text-[var(--warn)]" role="status">
                   <AlertTriangle className="size-3" aria-hidden /> {keywordNote}
                 </p>
               )}
@@ -585,7 +585,7 @@ export function DomainFormSheet({
               <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-[var(--border)] bg-muted/20 px-3 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-xs font-medium">Active</span>
-                  <span className="mt-0.5 block text-2xs text-muted-foreground">
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
                     Inactive domains keep their articles but are skipped by the classifier.
                   </span>
                 </span>
@@ -675,7 +675,7 @@ export function DomainFormSheet({
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 text-2xs font-medium transition hover:bg-muted"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 text-xs font-medium transition hover:bg-muted"
                 >
                   <Upload className="size-3.5" aria-hidden />
                   {customIcon ? "Replace custom icon" : "Upload custom icon"}
@@ -684,27 +684,27 @@ export function DomainFormSheet({
                   <button
                     type="button"
                     onClick={() => { setCustomIcon(null); if (fileRef.current) fileRef.current.value = ""; }}
-                    className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-2xs font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10"
+                    className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10"
                   >
                     <X className="size-3" aria-hidden /> Remove
                   </button>
                 )}
-                <span className="text-2xs text-muted-foreground">PNG/JPG · 1 MB</span>
+                <span className="text-xs text-muted-foreground">PNG/JPG · 1 MB</span>
               </div>
 
               <div className="rounded-xl border border-[var(--border)] bg-muted/20 p-3">
-                <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Preview</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview</p>
                 <div className="mt-2 flex items-center gap-3">
                   <span className={["grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl", previewColor.bgClass].join(" ")} aria-hidden>
                     {customIcon ? <img src={customIcon} alt="" className="size-full object-contain p-1" /> : <PreviewIcon className={["size-4.5", previewColor.textClass].join(" ")} />}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold">{displayName || "Domain name"}</p>
-                    <p className="mt-0.5 line-clamp-1 text-2xs text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                       {description || "Short description appears here"}
                     </p>
                   </div>
-                  {!active && <span className="ml-auto rounded-full bg-[var(--muted)] px-2 py-0.5 text-2xs text-muted-foreground">Inactive</span>}
+                  {!active && <span className="ml-auto rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs text-muted-foreground">Inactive</span>}
                 </div>
               </div>
             </section>
@@ -712,7 +712,7 @@ export function DomainFormSheet({
 
           {/* ---------- footer ---------- */}
           <footer className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-card px-5 py-3.5 sm:px-6">
-            <span className="hidden text-2xs text-muted-foreground sm:block">
+            <span className="hidden text-xs text-muted-foreground sm:block">
               {editing ? (dirty ? "Unsaved changes" : "No changes yet") : "The key cannot be changed later without a migration."}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">

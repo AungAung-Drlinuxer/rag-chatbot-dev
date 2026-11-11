@@ -47,30 +47,30 @@ export function DomainRoutingItem({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="text-sm font-semibold leading-tight">{domain.display_name}</h3>
-            <code className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 font-mono text-2xs text-muted-foreground">
+            <code className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
               {domain.domain_key}
             </code>
 
             {domain.is_active ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ok)]/12 px-2 py-0.5 text-2xs font-medium text-[var(--ok)]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ok)]/12 px-2 py-0.5 text-xs font-medium text-[var(--ok)]">
                 <CheckCircle2 className="size-3" aria-hidden /> Active
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2 py-0.5 text-2xs font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-medium text-muted-foreground">
                 <XCircle className="size-3" aria-hidden /> Inactive
               </span>
             )}
 
             {domain.jira_project ? (
               <span
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-foreground)]/25 bg-[var(--accent-soft)] px-2 py-0.5 text-2xs font-medium text-[var(--accent-foreground)]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-foreground)]/25 bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-medium text-[var(--accent-foreground)]"
                 title="Jira escalation project"
               >
                 <Route className="size-3" aria-hidden /> {domain.jira_project}
               </span>
             ) : (
               <span
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--warn)]/35 px-2 py-0.5 text-2xs font-medium text-[var(--warn)]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--warn)]/35 px-2 py-0.5 text-xs font-medium text-[var(--warn)]"
                 title="Questions in this domain cannot be escalated to Jira"
               >
                 <Route className="size-3" aria-hidden /> No Jira route
@@ -83,14 +83,14 @@ export function DomainRoutingItem({
               {domain.description}
             </p>
           ) : (
-            <p className="mt-1.5 text-2xs italic text-[var(--warn)]">
+            <p className="mt-1.5 text-xs italic text-[var(--warn)]">
               No description — the LLM router only sees the name and the keywords.
             </p>
           )}
 
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {keywords.length > 0 && (
-              <span className="mr-0.5 inline-flex items-center gap-1 text-2xs font-medium text-muted-foreground">
+              <span className="mr-0.5 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                 <Tag className="size-3" aria-hidden />
                 {keywords.length} keyword{keywords.length === 1 ? "" : "s"}
               </span>
@@ -99,7 +99,7 @@ export function DomainRoutingItem({
             {shown.map((kw) => (
               <span
                 key={kw}
-                className="rounded-md border border-[var(--border)] bg-background px-1.5 py-0.5 text-2xs text-muted-foreground"
+                className="rounded-md border border-[var(--border)] bg-background px-1.5 py-0.5 text-xs text-muted-foreground"
               >
                 {kw}
               </span>
@@ -110,7 +110,7 @@ export function DomainRoutingItem({
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
                 aria-expanded={expanded}
-                className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-2xs font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
+                className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
               >
                 {expanded ? <ChevronUp className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
                 {expanded ? "Show less" : `+${keywords.length - VISIBLE_KEYWORDS} more`}
@@ -118,7 +118,7 @@ export function DomainRoutingItem({
             )}
 
             {keywords.length === 0 && (
-              <span className="rounded-md border border-[var(--warn)]/35 px-1.5 py-0.5 text-2xs text-[var(--warn)]">
+              <span className="rounded-md border border-[var(--warn)]/35 px-1.5 py-0.5 text-xs text-[var(--warn)]">
                 No keyword fallback — routing still works through the LLM
               </span>
             )}

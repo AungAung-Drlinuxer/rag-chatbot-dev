@@ -216,14 +216,14 @@ function StatusPill({ configured }: { configured?: boolean }) {
   if (configured === undefined) {
     // Unknown, not "unconfigured": the status probe is still in flight (or failed),
     // and claiming "Needs setup" for a live integration would be a lie.
-    return <span className="text-2xs text-muted-foreground/60">Status unavailable</span>;
+    return <span className="text-xs text-muted-foreground/60">Status unavailable</span>;
   }
   return configured ? (
-    <span className="inline-flex items-center gap-1 text-2xs font-medium text-[var(--ok)]">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ok)]">
       <CheckCircle2 className="h-3 w-3" /> Configured
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       <span className="size-1.5 rounded-full bg-[var(--warn)]" /> Needs setup
     </span>
   );
@@ -354,20 +354,20 @@ function ProviderEditor({ provider, onConfigured }: {
         <label className="flex items-center gap-2 text-xs font-medium text-foreground">
           {f.label}
           {configured && (
-            <span className="inline-flex items-center gap-1 text-2xs text-[var(--ok)]">
+            <span className="inline-flex items-center gap-1 text-xs text-[var(--ok)]">
               {isSecret ? <Lock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
               {isSecret ? "Saved — not retrievable" : "Configured"}
             </span>
           )}
         </label>
-        {f.hint && <p className="text-2xs leading-relaxed text-muted-foreground">{f.hint}</p>}
+        {f.hint && <p className="text-xs leading-relaxed text-muted-foreground">{f.hint}</p>}
 
         {configured && !editable ? (
           <div className="flex items-center gap-2">
             <div className="flex flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3 py-2">
               <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
               <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
-              <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
+              <span className="ml-auto text-xs text-muted-foreground">write-only</span>
             </div>
             <button
               type="button"
@@ -433,7 +433,7 @@ function ProviderEditor({ provider, onConfigured }: {
                   delete next[f.key];
                   setForm(next);
                 }}
-                className="mt-1 text-2xs text-muted-foreground underline hover:text-foreground"
+                className="mt-1 text-xs text-muted-foreground underline hover:text-foreground"
               >
                 Keep the stored value
               </button>
@@ -462,21 +462,21 @@ function ProviderEditor({ provider, onConfigured }: {
               <h3 className="text-sm font-semibold leading-tight">{provider.name}</h3>
               <StatusPill configured={loading ? undefined : fieldsSet.length > 0} />
             </div>
-            <p className="mt-0.5 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">{provider.desc}</p>
+            <p className="mt-0.5 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">{provider.desc}</p>
           </div>
         </div>
         <a
           href={provider.docs}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[14px] font-medium text-foreground transition hover:bg-muted"
         >
           Provider docs <ExternalLink className="h-3 w-3" />
         </a>
       </header>
 
       {/* write-only note — one quiet line, not a second banner */}
-      <p className="flex items-start gap-1.5 border-b border-[var(--border)] bg-muted/20 px-5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+      <p className="flex items-start gap-1.5 border-b border-[var(--border)] bg-muted/20 px-5 py-2 text-[14px] leading-relaxed text-muted-foreground">
         <ShieldCheck className="mt-0.5 size-3 shrink-0 text-[var(--ok)]" aria-hidden />
         <span>
           <b className="font-semibold text-foreground">Write-only credentials.</b> Values are stored server-side and never returned —
@@ -495,10 +495,10 @@ function ProviderEditor({ provider, onConfigured }: {
           groups.map(({ group, fields }) => (
             <section key={group}>
               <div className="mb-2 flex flex-wrap items-baseline gap-2 border-b border-[var(--border)] pb-1.5">
-                <h4 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {GROUP_META[group].label}
                 </h4>
-                <span className="text-2xs text-muted-foreground/70">{GROUP_META[group].hint}</span>
+                <span className="text-xs text-muted-foreground/70">{GROUP_META[group].hint}</span>
                 {group === "credentials" && <Lock className="size-3 text-muted-foreground" />}
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -514,7 +514,7 @@ function ProviderEditor({ provider, onConfigured }: {
         <button
           onClick={save}
           disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[11px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[14px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           Save
@@ -522,7 +522,7 @@ function ProviderEditor({ provider, onConfigured }: {
         <button
           onClick={test}
           disabled={testing}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-[14px] font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
         >
           {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LoaderIcon className="h-3.5 w-3.5" />}
           Test connection
@@ -531,7 +531,7 @@ function ProviderEditor({ provider, onConfigured }: {
           <button
             onClick={clear}
             disabled={clearing}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-[var(--danger)]/40 px-3 py-1.5 text-[11px] font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10 disabled:opacity-50"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-[var(--danger)]/40 px-3 py-1.5 text-[14px] font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10 disabled:opacity-50"
             title="Revoke the stored credentials — the only way to remove a write-only value"
           >
             {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -543,7 +543,7 @@ function ProviderEditor({ provider, onConfigured }: {
       {(dirty || result) && (
         <div className="border-t border-[var(--border)] px-5 py-2.5">
           {dirty && !result && (
-            <p className="flex items-center gap-1 text-2xs text-[var(--warn)]">
+            <p className="flex items-center gap-1 text-xs text-[var(--warn)]">
               <Info className="h-3 w-3" /> Unsaved changes — press Save to store them.
             </p>
           )}
@@ -602,7 +602,7 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
               type="button"
               onClick={() => setCategory(c)}
               className={[
-                "shrink-0 rounded-lg px-2.5 py-1.5 text-2xs font-medium transition",
+                "shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition",
                 category === c
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground",
@@ -643,7 +643,7 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-foreground">{p.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{p.tagline}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.tagline}</p>
                   </div>
                 </div>
                 <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
@@ -655,14 +655,14 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
                   <button
                     type="button"
                     onClick={() => onConfigure(p.key)}
-                    className="inline-flex items-center gap-1 text-2xs font-medium text-[var(--primary)] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline"
                   >
                     Configure <ChevronRight className="size-3" />
                   </button>
                 ) : on ? (
-                  <span className="text-2xs text-muted-foreground">Set up by your admin</span>
+                  <span className="text-xs text-muted-foreground">Set up by your admin</span>
                 ) : (
-                  <span className="text-2xs text-muted-foreground/70">{p.category}</span>
+                  <span className="text-xs text-muted-foreground/70">{p.category}</span>
                 )}
               </div>
             </div>
@@ -676,7 +676,7 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
         </div>
       )}
 
-      <p className="flex items-start gap-1.5 text-2xs leading-relaxed text-muted-foreground">
+      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
         <Info className="mt-0.5 size-3 shrink-0" />
         {personal
           ? "Switching a tool on keeps it available in your workspace; the connection itself is configured once by an administrator. Your choices are personal and never affect other people."
@@ -797,7 +797,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
   return (
     <div className="space-y-4">
       {error && (
-        <p className="rounded-xl border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-2 text-[11px] text-[var(--danger)]">
+        <p className="rounded-xl border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-2 text-[14px] text-[var(--danger)]">
           {error}
         </p>
       )}
@@ -812,7 +812,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
               <p className="text-sm font-semibold leading-tight">
                 {enabledList.length} of {PROVIDERS.length} integrations enabled
               </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <p className="mt-0.5 text-[14px] text-muted-foreground">
                 {personal ? "Your choice is saved to your own account." : "Pick only the tools your workspace actually uses."}
               </p>
             </div>
@@ -820,7 +820,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
               <button
                 type="button"
                 onClick={() => setBrowsing(false)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[14px] font-medium text-foreground transition hover:bg-muted"
               >
                 <XCircle className="size-3" /> Close catalogue
               </button>
@@ -841,7 +841,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
                   <h2 className="text-sm font-semibold leading-tight">
                     {enabledList.length} of {PROVIDERS.length} integrations enabled
                   </h2>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="mt-0.5 text-[14px] leading-relaxed text-muted-foreground">
                     {personal
                       ? "Your choice is saved to your own account."
                       : "Only enabled providers show a configuration panel — keep the list short."}
@@ -856,13 +856,13 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
                   <Settings2 className="size-5" aria-hidden />
                 </div>
                 <p className="mt-3 text-sm font-semibold">No integrations enabled</p>
-                <p className="mx-auto mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
+                <p className="mx-auto mt-1 max-w-sm text-[14px] leading-relaxed text-muted-foreground">
                   Pick only the tools your workspace actually uses. Each one you enable gets its own configuration panel here.
                 </p>
                 <button
                   type="button"
                   onClick={() => setBrowsing(true)}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[11px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-[14px] font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
                 >
                   <Plus className="size-3.5" /> Browse integrations
                 </button>
@@ -892,19 +892,19 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-semibold">{p.name}</span>
-                          <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                          <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">
                             {p.category}
                           </span>
                         </span>
                         <span className="shrink-0">
                           {configured === undefined ? (
-                            <span className="text-[10px] text-muted-foreground">Checking…</span>
+                            <span className="text-[14px] text-muted-foreground">Checking…</span>
                           ) : configured ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--ok)]">
+                            <span className="inline-flex items-center gap-1 text-[14px] font-medium text-[var(--ok)]">
                               <CheckCircle2 className="size-3" /> Configured
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-[var(--muted-foreground)]">
+                            <span className="inline-flex items-center gap-1 text-[14px] text-[var(--muted-foreground)]">
                               <span className="size-1.5 rounded-full bg-[var(--warn)]" /> Needs setup
                             </span>
                           )}

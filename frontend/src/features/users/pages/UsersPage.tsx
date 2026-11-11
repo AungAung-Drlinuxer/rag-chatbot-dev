@@ -392,13 +392,13 @@ export default function Users() {
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Workspace members</h2>
-              <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
+              <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                 {filteredUsers.length === totalUsers
                   ? `${totalUsers} users`
                   : `${filteredUsers.length} of ${totalUsers} users`}
               </span>
             </div>
-            <p className="text-2xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {filteredUsers.length === totalUsers ? "Sorted by name" : `${filteredUsers.length} shown`}
             </p>
           </div>
@@ -450,7 +450,7 @@ export default function Users() {
                 <col className="w-[17%]" />
               </colgroup>
               <thead className="bg-[var(--muted)]/40">
-                <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <Th>User</Th>
                   <Th className="hidden lg:table-cell">Department</Th>
                   <Th>Role</Th>
@@ -527,13 +527,13 @@ export default function Users() {
                 ))}
                 {totalPages > 5 && <span className="px-1 text-xs text-muted-foreground">… {totalPages}</span>}
                 <PaginationButton label="›" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} />
-                <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
+                <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-xs text-muted-foreground">10 / page</span>
               </div>
             </div>
           )}
         </section>
 
-        <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 text-2xs text-muted-foreground">
+        <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
           <span>
             Counts are computed from the {totalUsers} member{totalUsers === 1 ? "" : "s"} returned by{" "}
             <code className="font-mono">/api/users</code> — no separate totals are fetched.
@@ -553,7 +553,7 @@ export default function Users() {
         <div className="space-y-4 xl:sticky xl:top-6">
           <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">Directory</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Counted from the {totalUsers} members returned by the API.</p>
+            <p className="mt-0.5 text-[14px] text-muted-foreground">Counted from the {totalUsers} members returned by the API.</p>
             <dl className="mt-3 space-y-2.5">
               {[
                 ["Members", String(totalUsers)],
@@ -562,14 +562,14 @@ export default function Users() {
                 ["Inactive", String(inactiveUsers)],
                 ["Locked", String(lockedUsers)],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
+                <div key={k} className="flex items-baseline justify-between gap-3 text-[14px]">
                   <dt className="text-muted-foreground">{k}</dt>
                   <dd className={`font-medium tabular-nums ${k === "Locked" && lockedUsers > 0 ? "text-[var(--warn)]" : ""}`}>{v}</dd>
                 </div>
               ))}
             </dl>
             {lockedUsers > 0 && (
-              <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-[var(--warn)]/10 px-2.5 py-2 text-[10px] leading-relaxed text-[var(--warn)]">
+              <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-[var(--warn)]/10 px-2.5 py-2 text-[14px] leading-relaxed text-[var(--warn)]">
                 <Shield className="mt-0.5 size-3 shrink-0" aria-hidden />
                 {lockedUsers} locked account{lockedUsers === 1 ? "" : "s"} — these need an administrator to unlock.
               </p>
@@ -584,7 +584,7 @@ export default function Users() {
                 const pct = totalUsers ? Math.round((n / totalUsers) * 100) : 0;
                 return (
                   <div key={role}>
-                    <div className="flex items-baseline justify-between gap-2 text-[11px]">
+                    <div className="flex items-baseline justify-between gap-2 text-[14px]">
                       <span className="truncate text-muted-foreground">{role}</span>
                       <span className="font-medium tabular-nums">{n}</span>
                     </div>
@@ -610,7 +610,7 @@ export default function Users() {
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 6)
                 .map(([name, n]) => (
-                  <div key={name} className="flex items-baseline justify-between gap-3 text-[11px]">
+                  <div key={name} className="flex items-baseline justify-between gap-3 text-[14px]">
                     <dt className="min-w-0 truncate text-muted-foreground" title={name}>{name}</dt>
                     <dd className="font-medium tabular-nums">{n}</dd>
                   </div>
@@ -620,7 +620,7 @@ export default function Users() {
 
           <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
             <h2 className="text-sm font-semibold">Accounts</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
               Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.
             </p>
           </section>
@@ -654,16 +654,16 @@ function SummaryCard({ icon, label, value, caption }: {
   return (
     <div data-slot="summary-card" className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>
           {icon}
         </span>
       </div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums">{value}</span>
-        <span className="text-2xs text-muted-foreground">{value === 1 ? "user" : "users"}</span>
+        <span className="text-xs text-muted-foreground">{value === 1 ? "user" : "users"}</span>
       </div>
-      <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
+      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{caption}</p>
     </div>
   );
 }
@@ -674,7 +674,7 @@ function SummaryCard({ icon, label, value, caption }: {
 
 function Th({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <th className={["border-y border-[var(--border)] px-5 py-3 text-left text-2xs font-semibold uppercase tracking-wide text-muted-foreground", className].join(" ")}>
+    <th className={["border-y border-[var(--border)] px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground", className].join(" ")}>
       {children}
     </th>
   );
@@ -703,13 +703,13 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
               {user.username.endsWith("-svc") && (
                 <span
                   title="Service account — used by system components, not a human user"
-                  className="shrink-0 rounded border border-[var(--border)] bg-[var(--muted)] px-1 py-px text-3xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  className="shrink-0 rounded border border-[var(--border)] bg-[var(--muted)] px-1 py-px text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                 >
                   system
                 </span>
               )}
             </span>
-            <span className="mt-0.5 block truncate text-2xs text-muted-foreground" title={user.email}>
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={user.email}>
               @{user.username} · {user.email}
             </span>
           </span>
@@ -717,33 +717,33 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
       </td>
       <td className="hidden px-4 py-3.5 lg:table-cell">
         {hasDepartment ? (
-          <span className="block max-w-[14ch] truncate text-2xs" title={user.department}>{user.department}</span>
+          <span className="block max-w-[14ch] truncate text-xs" title={user.department}>{user.department}</span>
         ) : (
-          <span className="text-2xs text-muted-foreground" title="No department assigned">—</span>
+          <span className="text-xs text-muted-foreground" title="No department assigned">—</span>
         )}
       </td>
       <td className="px-4 py-3.5"><RoleBadge role={user.role} /></td>
       <td className="px-4 py-3.5"><StatusBadge status={user.status} /></td>
       <td className="hidden px-4 py-3.5 2xl:table-cell">
         {hasLogin ? (
-          <span className="text-2xs text-muted-foreground" title={user.lastLogin}>{formatDateTime(user.lastLogin)}</span>
+          <span className="text-xs text-muted-foreground" title={user.lastLogin}>{formatDateTime(user.lastLogin)}</span>
         ) : (
-          <span className="text-2xs text-muted-foreground" title="This account has never signed in">Never logged in</span>
+          <span className="text-xs text-muted-foreground" title="This account has never signed in">Never logged in</span>
         )}
       </td>
       <td className="hidden px-4 py-3.5 min-[1800px]:table-cell">
         {/* Local accounts carry no join date at all (the endpoint returns "—"),
             so the column says so rather than guessing at a sync source. */}
         {hasJoined ? (
-          <span className="text-2xs text-muted-foreground" title={user.joined}>{formatDate(user.joined)}</span>
+          <span className="text-xs text-muted-foreground" title={user.joined}>{formatDate(user.joined)}</span>
         ) : (
-          <span className="text-2xs text-muted-foreground" title="No join date recorded by the directory">—</span>
+          <span className="text-xs text-muted-foreground" title="No join date recorded by the directory">—</span>
         )}
       </td>
       <td className="px-4 py-3.5">
         <div className="flex items-center justify-end gap-1">
           <button type="button" onClick={onSelect}
-            className="rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5 text-2xs font-semibold transition hover:bg-[var(--muted)]">
+            className="rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5 text-xs font-semibold transition hover:bg-[var(--muted)]">
             Edit
           </button>
           <button type="button" onClick={onToggle}
@@ -764,7 +764,7 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
 
 function Avatar({ name }: { name: string }) {
   return (
-    <span className={["grid size-9 shrink-0 place-items-center rounded-full text-2xs font-bold", avatarTone(name)].join(" ")}>
+    <span className={["grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold", avatarTone(name)].join(" ")}>
       {getInitials(name)}
     </span>
   );
@@ -777,7 +777,7 @@ function RoleBadge({ role }: { role: UserRole }) {
     "Knowledge Manager": "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
     User: "border-[var(--border)] bg-[var(--muted)] text-muted-foreground",
   };
-  return <span className={["inline-flex items-center rounded-md border px-2 py-0.5 text-3xs font-semibold", styles[role]].join(" ")}>{role}</span>;
+  return <span className={["inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold", styles[role]].join(" ")}>{role}</span>;
 }
 
 function StatusBadge({ status }: { status: UserStatus }) {
@@ -790,7 +790,7 @@ function StatusBadge({ status }: { status: UserStatus }) {
   };
   const item = config[status];
   return (
-    <span className={["inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-3xs font-semibold", item.className].join(" ")}>
+    <span className={["inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold", item.className].join(" ")}>
       <span className={["size-1.5 rounded-full", item.dot].join(" ")} />
       {status}
     </span>
@@ -819,7 +819,7 @@ function PaginationButton({ label, active, disabled, onClick }: {
 }) {
   return (
     <button type="button" disabled={disabled} onClick={onClick}
-      className={["grid size-8 place-items-center rounded-lg border border-[var(--border)] text-2xs font-medium transition",
+      className={["grid size-8 place-items-center rounded-lg border border-[var(--border)] text-xs font-medium transition",
         active ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
           : "bg-card hover:bg-[var(--muted)]",
         disabled ? "cursor-not-allowed opacity-40" : ""].join(" ")}>
@@ -1004,7 +1004,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
         {/* ---------- header: who this is, at a glance ---------- */}
         <header className="shrink-0 border-b border-[var(--border)] px-4 pb-4 pt-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
+            <p className="text-[14px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
             <button
               type="button"
               onClick={onClose}
@@ -1021,17 +1021,17 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
             </span>
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-base font-semibold leading-tight" title={user.name}>{user.name}</h2>
-              <p className="mt-0.5 truncate font-mono text-2xs text-muted-foreground" title={user.email}>@{user.username}</p>
+              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground" title={user.email}>@{user.username}</p>
             </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={user.status} />
-            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium">
+            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-xs font-medium">
               <Shield className="size-3 text-muted-foreground" aria-hidden />
               {roleLabel}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground">
               {isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
               {isAdUser ? "Directory account" : "Local account"}
             </span>
@@ -1071,15 +1071,15 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
 
               <div className="rounded-xl border border-[var(--border)] bg-background/40 p-3">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label htmlFor="user-role" className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <label htmlFor="user-role" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Role
                   </label>
                   {roleChanged ? (
-                    <span className="rounded-full border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                    <span className="rounded-full border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-0.5 text-[14px] font-semibold text-foreground">
                       Preview: {selectedRole}
                     </span>
                   ) : (
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--muted)] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--muted)] px-2 py-0.5 text-[14px] font-semibold text-muted-foreground">
                       Current: {user.role}
                     </span>
                   )}
@@ -1098,15 +1098,15 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 </div>
-                <p className="mt-1.5 text-2xs leading-4 text-muted-foreground">{ROLE_DESCRIPTIONS[selectedRole]}</p>
+                <p className="mt-1.5 text-xs leading-4 text-muted-foreground">{ROLE_DESCRIPTIONS[selectedRole]}</p>
 
                 {roleChanged && (
                   <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-[var(--warn)]/30 bg-[var(--warn)]/8 px-2 py-1.5">
-                    <span className="text-2xs text-muted-foreground">Changing from {user.role} to {selectedRole}</span>
+                    <span className="text-xs text-muted-foreground">Changing from {user.role} to {selectedRole}</span>
                     <button
                       type="button"
                       onClick={() => { setSelectedRole(user.role); setRoleSaved(false); }}
-                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-[var(--accent-foreground)] transition hover:bg-[var(--accent-soft)]"
                     >
                       <RotateCcw className="size-3" aria-hidden /> Undo
                     </button>
@@ -1116,13 +1116,13 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
 
               <div className="mt-3">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h4 className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Capabilities</h4>
-                  <span className="text-2xs text-muted-foreground">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Capabilities</h4>
+                  <span className="text-xs text-muted-foreground">
                     {roleChanged ? "Preview — nothing saved yet" : "Effective from the permissions API"}
                   </span>
                 </div>
                 <PermissionMatrix rows={permissionRows} loading={loadingPermissions} />
-                <p className="mt-2 text-2xs leading-4 text-muted-foreground">
+                <p className="mt-2 text-xs leading-4 text-muted-foreground">
                   {roleChanged
                     ? "Role defaults plus this account's explicit grants. Apply below to persist."
                     : "Reported by the permissions endpoint for this account."}
@@ -1143,7 +1143,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                   icon={<Building2 className="size-3.5" />}
                   title="Managed by Active Directory"
                   footer={
-                    <p className="rounded-lg bg-card/60 px-2 py-1.5 text-2xs leading-4 text-muted-foreground">
+                    <p className="rounded-lg bg-card/60 px-2 py-1.5 text-xs leading-4 text-muted-foreground">
                       Change the account in AD, then run a directory sync. Local edits here are overwritten on the
                       next sync.
                     </p>
@@ -1158,7 +1158,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
               )}
 
               <div className="mt-2">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <p className="mb-1.5 text-[14px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Groups ({user.groups.length})
                 </p>
                 {user.groups.length > 0 ? (
@@ -1166,14 +1166,14 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                     {user.groups.map((group) => (
                       <span
                         key={group}
-                        className="rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 font-mono text-2xs text-foreground"
+                        className="rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 font-mono text-xs text-foreground"
                       >
                         {group}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-lg border border-dashed border-[var(--border)] px-2.5 py-2 text-2xs text-muted-foreground">
+                  <p className="rounded-lg border border-dashed border-[var(--border)] px-2.5 py-2 text-xs text-muted-foreground">
                     No directory groups assigned.
                   </p>
                 )}
@@ -1193,7 +1193,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                       type="button"
                       disabled
                       title="Passwords are changed in Active Directory"
-                      className="inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 text-2xs font-semibold text-muted-foreground opacity-70"
+                      className="inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 text-xs font-semibold text-muted-foreground opacity-70"
                     >
                       <KeyRound className="size-3" aria-hidden /> Password changes happen in AD
                     </button>
@@ -1216,7 +1216,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
               <div
                 role="status"
                 className={[
-                  "flex items-start gap-2 rounded-xl border px-3 py-2 text-2xs",
+                  "flex items-start gap-2 rounded-xl border px-3 py-2 text-xs",
                   error
                     ? "border-[var(--danger)]/35 bg-[var(--danger)]/8 text-[var(--danger)]"
                     : "border-[var(--ok)]/35 bg-[var(--ok)]/8 text-[var(--ok)]",
@@ -1237,7 +1237,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
               disabled={busy}
               onClick={() => { if (deactivated) { void handleStatusChange(); } else { setConfirmKind("disable"); } }}
               className={[
-                "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-2xs font-semibold transition disabled:opacity-50",
+                "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition disabled:opacity-50",
                 deactivated
                   ? "border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)] hover:bg-[var(--ok)]/15"
                   : "border-[var(--danger)]/40 bg-[var(--danger)]/8 text-[var(--danger)] hover:bg-[var(--danger)]/15",
@@ -1252,7 +1252,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 type="button"
                 disabled={busy}
                 onClick={() => setConfirmKind("reset")}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-2xs font-semibold transition hover:bg-muted disabled:opacity-50"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-3 text-xs font-semibold transition hover:bg-muted disabled:opacity-50"
               >
                 <RefreshCw className="size-3.5" aria-hidden /> Reset access
               </button>
@@ -1260,7 +1260,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 type="button"
                 onClick={saveRole}
                 disabled={savingRole || !roleChanged}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-4 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Check className="size-3.5" aria-hidden />
                 {savingRole ? "Saving…" : "Save access changes"}
@@ -1268,7 +1268,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
             </div>
           </div>
 
-          <p className="mt-2 text-center text-[10px] text-muted-foreground sm:text-left">
+          <p className="mt-2 text-center text-[14px] text-muted-foreground sm:text-left">
             {roleChanged
               ? `Unsaved role change: ${user.role} → ${selectedRole}`
               : "Role changes take effect the next time this user signs in."}
@@ -1335,7 +1335,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold">Add user</h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">Create a local account or provision an account for directory access.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Create a local account or provision an account for directory access.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-2 hover:bg-[var(--muted)]">
             <X className="size-4" />
@@ -1348,7 +1348,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <InputField label="Department" value={department} onChange={setDepartment} placeholder="IT Operations" />
             <div>
-              <label className="mb-1.5 block text-2xs font-semibold">Role</label>
+              <label className="mb-1.5 block text-xs font-semibold">Role</label>
               <select value={role} onChange={(event) => setRole(event.target.value as UserRole)}
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-xs outline-none" aria-label="Role">
                 <option value="User">User</option>
@@ -1358,23 +1358,23 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
           <InputField label="Password" value={password} onChange={setPassword} placeholder="Minimum 8 characters" type="password" />
-          <div className="rounded-xl bg-[var(--accent)] p-3 text-2xs leading-4 text-[var(--accent-foreground)]">
+          <div className="rounded-xl bg-[var(--accent)] p-3 text-xs leading-4 text-[var(--accent-foreground)]">
             <div className="flex gap-2">
               <Shield className="mt-0.5 size-3.5 shrink-0" />
               <span>LDAP / AD users should normally be synchronized from Active Directory. Their passwords are managed by AD.</span>
             </div>
           </div>
           {error && (
-            <div className="flex gap-2 rounded-xl bg-red-50 p-3 text-2xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--border)] p-4">
-          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-2xs font-semibold hover:bg-[var(--muted)]">Cancel</button>
+          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-xs font-semibold hover:bg-[var(--muted)]">Cancel</button>
           <button type="button" onClick={createUser} disabled={saving}
-            className="rounded-lg bg-[var(--primary)] px-5 py-2.5 text-2xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-40">
+            className="rounded-lg bg-[var(--primary)] px-5 py-2.5 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-40">
             {saving ? "Creating..." : "Create user"}
           </button>
         </div>
@@ -1392,7 +1392,7 @@ function InputField({ label, value, onChange, placeholder, type = "text" }: {
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-2xs font-semibold">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold">{label}</span>
       <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder}
         className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]" />
     </label>

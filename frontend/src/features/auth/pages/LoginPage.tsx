@@ -143,12 +143,12 @@ export default function Login({
                 <Logo branding={branding} size="md" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold tracking-tight">{appName}</p>
-                  <p className="truncate text-2xs font-medium text-muted-foreground">
+                  <p className="truncate text-xs font-medium text-muted-foreground">
                     AI-powered IT support
                   </p>
                 </div>
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-background/70 px-2.5 py-1 text-2xs font-medium text-muted-foreground backdrop-blur">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
                 <span className="size-1.5 rounded-full bg-[var(--ok)]" />
                 Internal IT platform
               </span>
@@ -177,7 +177,7 @@ export default function Login({
                     <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
                     <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
                   </span>
-                  <span className="truncate text-2xs font-medium text-muted-foreground">
+                  <span className="truncate text-xs font-medium text-muted-foreground">
                     {appName} · assistant workspace
                   </span>
                 </div>
@@ -210,7 +210,7 @@ export default function Login({
             </div>
 
             {/* framed footer */}
-            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3.5 text-2xs text-muted-foreground xl:px-8">
+            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3.5 text-xs text-muted-foreground xl:px-8">
               <span>Internal IT Service</span>
               <Dot />
               <span>RBAC protected</span>
@@ -230,9 +230,9 @@ export default function Login({
                 <Logo branding={branding} size="sm" onDark />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold tracking-tight">{appName}</p>
-                  <p className="truncate text-2xs text-white/70">AI-powered IT support</p>
+                  <p className="truncate text-xs text-white/70">AI-powered IT support</p>
                 </div>
-                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-2xs font-medium sm:inline-flex">
+                <span className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium sm:inline-flex">
                   <span className="size-1.5 rounded-full bg-emerald-300" /> Internal
                 </span>
               </div>
@@ -352,7 +352,7 @@ export default function Login({
                     <>
                       <div className="flex items-center gap-3 py-1" aria-hidden="true">
                         <span className="h-px flex-1 bg-[var(--border)]" />
-                        <span className="text-2xs uppercase tracking-wide text-muted-foreground">or</span>
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
                         <span className="h-px flex-1 bg-[var(--border)]" />
                       </div>
                       <button
@@ -363,7 +363,7 @@ export default function Login({
                         <KeycloakMark className="size-4 shrink-0 text-[var(--primary)]" />
                         <span>Sign in with {ssoLabel}</span>
                       </button>
-                      <p className="text-center text-2xs text-muted-foreground">
+                      <p className="text-center text-xs text-muted-foreground">
                         {ssoRealm
                           ? `via ${ssoLabel} single sign-on · realm ${ssoRealm}. Ask IT if you are not enrolled.`
                           : `via ${ssoLabel} single sign-on. Ask IT if you are not enrolled.`}
@@ -372,7 +372,7 @@ export default function Login({
                   )}
                 </form>
 
-                <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-2xs">
+                <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
                   {backendUp === null ? (
                     <><span className="size-2 animate-pulse rounded-full bg-muted-foreground/50" /><span className="text-muted-foreground">Checking service status…</span></>
                   ) : backendUp ? (
@@ -383,7 +383,7 @@ export default function Login({
                 </div>
               </div>
 
-              <p className="mt-4 flex items-center justify-center gap-1.5 px-2 text-center text-2xs leading-relaxed text-muted-foreground">
+              <p className="mt-4 flex items-center justify-center gap-1.5 px-2 text-center text-xs leading-relaxed text-muted-foreground">
                 <ShieldCheck className="size-3.5 shrink-0 text-[var(--ok)]" />
                 Authorized corporate users only · SSO &amp; RBAC protected
               </p>
@@ -433,8 +433,8 @@ function FeatureCard({ icon, title, description }: { icon: ReactNode; title: str
         {icon}
       </div>
       <div className="min-w-0">
-        <span className="text-2xs font-semibold leading-4">{title}</span>
-        <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">{description}</p>
+        <span className="text-xs font-semibold leading-4">{title}</span>
+        <p className="mt-0.5 text-xs leading-4 text-muted-foreground">{description}</p>
       </div>
     </div>
   );

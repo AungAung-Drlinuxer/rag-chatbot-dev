@@ -92,7 +92,7 @@ function Tile({
       />
 
       <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
         <span className={["grid size-7 shrink-0 place-items-center rounded-lg", t.tile].join(" ")} aria-hidden>
           {icon}
         </span>
@@ -100,15 +100,15 @@ function Tile({
 
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-2xl font-semibold leading-none tracking-tight tabular-nums sm:text-3xl">{value}</span>
-        <span className="text-2xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {value === 1 ? "ticket" : "tickets"}
         </span>
       </div>
 
-      <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
+      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{caption}</p>
 
       {active && (
-        <span className="mt-2 inline-flex items-center gap-1 text-2xs font-medium text-[var(--accent-foreground)]">
+        <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--accent-foreground)]">
           <span className={["size-1.5 rounded-full", t.bar].join(" ")} aria-hidden /> Filtering by this
         </span>
       )}

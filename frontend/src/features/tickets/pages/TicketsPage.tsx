@@ -486,14 +486,14 @@ export default function Tickets({ role, userName, onToast }: Props) {
               <div className="min-w-0">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   Support requests
-                  <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
+                  <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {filteredTickets.length}
                   </span>
                 </h2>
                 <p
                   role="status"
                   aria-live="polite"
-                  className="mt-0.5 text-2xs text-muted-foreground"
+                  className="mt-0.5 text-xs text-muted-foreground"
                 >
                   {tickets === null
                     ? "Loading tickets…"

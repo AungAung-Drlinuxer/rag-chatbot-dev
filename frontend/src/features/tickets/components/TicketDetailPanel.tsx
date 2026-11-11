@@ -176,10 +176,10 @@ export function TicketDetailPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] font-semibold tracking-wide text-[var(--accent-foreground)]">
+              <span className="font-mono text-[14px] font-semibold tracking-wide text-[var(--accent-foreground)]">
                 {ticket.id}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[14px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
                 <ExternalLink className="size-2.5" />
                 Jira
               </span>
@@ -202,7 +202,7 @@ export function TicketDetailPanel({
             {editing && (
               <Button
                 size="sm"
-                className="h-7 rounded-lg px-2 text-[11px]"
+                className="h-7 rounded-lg px-2 text-[14px]"
                 disabled={!fieldsDirty || saveBusy}
                 onClick={() =>
                   void onSave({
@@ -224,7 +224,7 @@ export function TicketDetailPanel({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 rounded-lg px-2 text-[11px]"
+                className="h-7 rounded-lg px-2 text-[14px]"
                 onClick={() => {
                   setEditing(false);
                   syncForm();
@@ -236,7 +236,7 @@ export function TicketDetailPanel({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 rounded-lg px-2 text-[11px]"
+                className="h-7 rounded-lg px-2 text-[14px]"
                 onClick={() => setEditing(true)}
                 disabled={!canManage}
                 aria-label="Edit ticket"
@@ -259,12 +259,12 @@ export function TicketDetailPanel({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <StatusBadge status={status} />
           <PriorityBadge priority={priority} suffix=" priority" />
-          <span className="ml-auto text-[11px] text-muted-foreground">
+          <span className="ml-auto text-[14px] text-muted-foreground">
             updated {relTime(ticket.updated_at)}
           </span>
         </div>
 
-        <p className="mt-2.5 text-[11px] leading-4 text-muted-foreground">
+        <p className="mt-2.5 text-[14px] leading-4 text-muted-foreground">
           Status changes and edits are written to this Jira issue — Jira stays the source of
           truth.
         </p>
@@ -277,7 +277,7 @@ export function TicketDetailPanel({
         {canManage && (
           <div className="mb-5">
             <div className="mb-3 flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <Workflow className="size-3" />
                 Jira workflow
               </p>
@@ -331,7 +331,7 @@ export function TicketDetailPanel({
                         )}
                         <span
                           className={[
-                            "relative grid size-6 place-items-center rounded-full border text-[10px] font-bold transition-all duration-500",
+                            "relative grid size-6 place-items-center rounded-full border text-[14px] font-bold transition-all duration-500",
                             active
                               ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] ring-4 ring-[var(--primary)]/20"
                               : done
@@ -363,7 +363,7 @@ export function TicketDetailPanel({
             </div>
 
             {!jiraReady ? (
-              <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+              <p className="mt-3 text-[14px] leading-4 text-muted-foreground">
                 Jira is not connected, so this workflow is read-only — a local status change
                 would not reach the tracker. Add the base URL, email and API token in
                 Settings → Integrations.
@@ -371,7 +371,7 @@ export function TicketDetailPanel({
             ) : !editing ? (
               /* Locked: the rail still shows where the ticket sits, but there is nothing to
                  click and no note box to type into until Edit is pressed. */
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-2 text-[10.5px] leading-4 text-muted-foreground">
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-2 text-[14px] leading-4 text-muted-foreground">
                 <Lock className="mt-0.5 size-3.5 shrink-0 text-[var(--accent-foreground)]" />
                 <span>
                   Read-only. Press <strong className="font-semibold text-foreground">Edit</strong> to move
@@ -385,20 +385,20 @@ export function TicketDetailPanel({
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
                   {target ? (
                     <>
-                      <span className="text-[10px] text-muted-foreground">Move to</span>
-                      <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-foreground)]">
+                      <span className="text-[14px] text-muted-foreground">Move to</span>
+                      <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[14px] font-semibold text-[var(--accent-foreground)]">
                         {statusMeta(target).label}
                       </span>
                       <button
                         type="button"
                         onClick={() => setTarget(null)}
-                        className="text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+                        className="text-[14px] text-muted-foreground underline-offset-2 hover:underline"
                       >
                         clear
                       </button>
                     </>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[14px] text-muted-foreground">
                       Pick a step above to move the ticket, or just write a note.
                     </span>
                   )}
@@ -419,7 +419,7 @@ export function TicketDetailPanel({
                   </span>
                   <Button
                     size="sm"
-                    className="rounded-lg text-[11px]"
+                    className="rounded-lg text-[14px]"
                     disabled={(!target && !note.trim()) || !!statusBusy || applying}
                     onClick={async () => {
                       setApplying(true);
@@ -440,7 +440,7 @@ export function TicketDetailPanel({
           </div>
         )}
 
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
           Description
         </p>
         {editing ? (
@@ -449,10 +449,10 @@ export function TicketDetailPanel({
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             aria-label="Description"
-            className="mb-5 w-full resize-y rounded-xl border border-[var(--border)] bg-background px-3.5 py-3 text-[13px] leading-6 outline-none focus:border-[var(--primary)]"
+            className="mb-5 w-full resize-y rounded-xl border border-[var(--border)] bg-background px-3.5 py-3 text-[14px] leading-6 outline-none focus:border-[var(--primary)]"
           />
         ) : (
-          <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[13px] leading-6 text-foreground">
+          <div className="mb-5 whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-muted/20 px-3.5 py-3 text-[14px] leading-6 text-foreground">
             {ticket.description?.trim() || "No description provided."}
           </div>
         )}
@@ -465,14 +465,14 @@ export function TicketDetailPanel({
           {editing ? (
             <>
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[14px] font-medium uppercase tracking-wider text-muted-foreground">
                   <Users className="size-3" /> Assignee
                 </span>
                 <select
                   value={form.assignee}
                   onChange={(e) => setForm({ ...form, assignee: e.target.value })}
                   aria-label="Assignee"
-                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[14px] outline-none focus:border-[var(--primary)]"
                 >
                   <option value="">Unassigned</option>
                   {assignable.map((u) => (
@@ -485,14 +485,14 @@ export function TicketDetailPanel({
               </label>
 
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[14px] font-medium uppercase tracking-wider text-muted-foreground">
                   <CheckCircle2 className="size-3" /> Priority
                 </span>
                 <select
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
                   aria-label="Priority"
-                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[14px] outline-none focus:border-[var(--primary)]"
                 >
                   {Object.entries(PRIORITY_META).map(([value, m]) => (
                     <option key={value} value={value}>
@@ -503,7 +503,7 @@ export function TicketDetailPanel({
               </label>
 
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[14px] font-medium uppercase tracking-wider text-muted-foreground">
                   <CalendarClock className="size-3" /> Due date
                 </span>
                 <input
@@ -511,7 +511,7 @@ export function TicketDetailPanel({
                   value={form.due_date}
                   onChange={(e) => setForm({ ...form, due_date: e.target.value })}
                   aria-label="Due date"
-                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[12px] outline-none focus:border-[var(--primary)]"
+                  className="h-8 w-full rounded-lg border border-[var(--border)] bg-background px-2 text-[14px] outline-none focus:border-[var(--primary)]"
                 />
               </label>
             </>
@@ -530,14 +530,14 @@ export function TicketDetailPanel({
 
         {/* activity */}
         <div className="mb-5">
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-2.5 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
             Activity
           </p>
           <ol className="relative space-y-3 border-l border-[var(--border)] pl-4">
             <li className="relative">
               <span className="absolute -left-[21px] top-1 size-2 rounded-full bg-[var(--primary)]" aria-hidden />
               <p className="text-[11.5px] font-medium text-foreground">Ticket created</p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[14px] text-muted-foreground">
                 opened by {ticket.requester} · {relTime(ticket.created_at)}
               </p>
             </li>
@@ -548,7 +548,7 @@ export function TicketDetailPanel({
                   {c.kind === "comment" ? `${c.author ?? "user"} commented` : `Updated by ${c.author ?? "user"}`}
                 </p>
                 <p className="whitespace-pre-wrap text-[11.5px] leading-5 text-muted-foreground">{c.body}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
+                <p className="mt-0.5 text-[14px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
               </li>
             ))}
           </ol>
@@ -557,14 +557,14 @@ export function TicketDetailPanel({
         {/* attachments */}
         {attachments.length > 0 && (
           <div className="mb-5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-muted-foreground">
               Attachments
             </p>
             <div className="space-y-1.5">
               {attachments.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] pl-2.5 pr-1 text-[11px] transition hover:bg-muted"
+                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] pl-2.5 pr-1 text-[14px] transition hover:bg-muted"
                 >
                   <Paperclip className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                   <a
@@ -593,7 +593,7 @@ export function TicketDetailPanel({
         )}
 
         {editing ? (
-          <label className="mb-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[11px] font-medium text-muted-foreground transition hover:border-[var(--primary)]/40 hover:text-foreground">
+          <label className="mb-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] px-3 py-2 text-[14px] font-medium text-muted-foreground transition hover:border-[var(--primary)]/40 hover:text-foreground">
             <Paperclip className="size-3.5" />
             Attach a file
             <input
@@ -607,7 +607,7 @@ export function TicketDetailPanel({
             />
           </label>
         ) : (
-          <p className="mb-5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <p className="mb-5 flex items-center gap-1.5 text-[14px] text-muted-foreground">
             <Paperclip className="size-3" /> Attachments are read-only — Edit to add or remove files.
           </p>
         )}
@@ -633,10 +633,10 @@ export function TicketDetailPanel({
                 className="w-full resize-none bg-transparent px-3 pt-2.5 text-xs leading-5 outline-none placeholder:text-muted-foreground"
               />
               <div className="flex items-center justify-between px-2 pb-2">
-                <span className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
+                <span className="text-[14px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
                 <Button
                   size="sm"
-                  className="rounded-lg text-[11px]"
+                  className="rounded-lg text-[14px]"
                   disabled={!comment.trim()}
                   onClick={() => {
                     onAddComment(comment.trim());
@@ -648,7 +648,7 @@ export function TicketDetailPanel({
                 </Button>
               </div>
             </div>
-            <p className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+            <p className="mt-1.5 flex items-center gap-1 text-[14px] text-muted-foreground">
               <MessageSquare className="size-2.5" />
               Comments are mirrored to the Jira issue.
             </p>
@@ -656,7 +656,7 @@ export function TicketDetailPanel({
         ) : (
           // One Edit button on this panel, at the top. Two of them — one per end of the same
           // card — read like two different actions.
-          <p className="flex items-center gap-1.5 text-[10.5px] leading-4 text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-[14px] leading-4 text-muted-foreground">
             <Lock className="size-3 shrink-0" />
             Read-only. Press Edit at the top of this panel to change the details, move the
             workflow, comment or attach a file.

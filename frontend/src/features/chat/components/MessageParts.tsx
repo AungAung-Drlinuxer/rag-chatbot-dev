@@ -14,7 +14,7 @@ export function ConfidenceBadge({ confidence }: { confidence: number }) {
   return (
     <span
       className={[
-        "flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-2xs font-medium",
+        "flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
         high
           ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
           : medium
@@ -138,7 +138,7 @@ export function SourceCard({
             has not been dropped: it is the chip's tooltip. */}
         <span
           className={[
-            "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
+            "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums",
             top
               ? (source.page_id
                   ? "bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-xs"
@@ -189,7 +189,7 @@ export function SourceCard({
       {/* data-slot: the harness measures the type ramp through these three hooks. Reading
           "the first <p> in the card" silently measured THIS line once the reference count
           moved above the excerpt. */}
-      <p data-slot="source-meta" className="mt-1 text-2xs text-muted-foreground">
+      <p data-slot="source-meta" className="mt-1 text-xs text-muted-foreground">
         {groupedReferenceLabel(count)}
       </p>
 
@@ -220,7 +220,7 @@ export function SourceCard({
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
-              className="mt-1 rounded-sm text-2xs font-medium text-primary transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              className="mt-1 rounded-sm text-xs font-medium text-primary transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
               {open ? "Less" : "More"}
             </button>
@@ -262,7 +262,7 @@ export function SourceCard({
             type="button"
             onClick={() => onExplain(source)}
             title="Ask the assistant to explain this source in full detail, with steps and commands"
-            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-medium text-primary transition duration-150 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-primary transition duration-150 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             <Sparkles className="size-3" />
             View source details

@@ -190,12 +190,12 @@ export function BrandingSettings({
       </div>
 
       {err && (
-        <p className="flex items-center gap-1.5 text-2xs text-[var(--danger)]">
+        <p className="flex items-center gap-1.5 text-xs text-[var(--danger)]">
           <AlertCircle className="size-3.5" /> {err}
         </p>
       )}
       {saved && (
-        <p className="flex items-center gap-1.5 text-2xs text-[var(--ok)]">
+        <p className="flex items-center gap-1.5 text-xs text-[var(--ok)]">
           <Check className="size-3.5" /> Logo updated — visible on the login page immediately
         </p>
       )}

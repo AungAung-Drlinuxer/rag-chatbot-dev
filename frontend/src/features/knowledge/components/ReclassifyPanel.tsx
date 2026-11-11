@@ -179,10 +179,10 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
                       {c.title}
                     </td>
                     <td className="px-3 py-2">
-                      <Badge variant="outline" className="text-2xs">{c.current}</Badge>
+                      <Badge variant="outline" className="text-xs">{c.current}</Badge>
                     </td>
                     <td className="px-3 py-2">
-                      <Badge variant="outline" className="border-[var(--primary)]/30 bg-[var(--accent-soft)] text-2xs text-[var(--accent-foreground)]">
+                      <Badge variant="outline" className="border-[var(--primary)]/30 bg-[var(--accent-soft)] text-xs text-[var(--accent-foreground)]">
                         {c.suggested}
                       </Badge>
                     </td>
@@ -194,7 +194,7 @@ export default function ReclassifyPanel({ onApplied }: { onApplied?: () => void 
                             style={{ width: `${Math.round(c.confidence * 100)}%` }}
                           />
                         </div>
-                        <span className={`text-2xs font-semibold ${low ? "text-amber-600" : "text-emerald-600"}`}>
+                        <span className={`text-xs font-semibold ${low ? "text-amber-600" : "text-emerald-600"}`}>
                           {Math.round(c.confidence * 100)}%
                         </span>
                       </div>

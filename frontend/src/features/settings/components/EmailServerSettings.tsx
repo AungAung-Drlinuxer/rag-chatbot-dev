@@ -136,7 +136,7 @@ export function EmailServerSettings() {
             <div className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3">
               <Lock className="size-3 shrink-0 text-muted-foreground" />
               <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
-              <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
+              <span className="ml-auto text-xs text-muted-foreground">write-only</span>
             </div>
             <button
               type="button"
@@ -187,7 +187,7 @@ export function EmailServerSettings() {
                     ? <Pill tone="ok"><Lock className="size-3" /> Host stored</Pill>
                     : <Pill tone="warn"><AlertCircle className="size-3" /> Host missing</Pill>}
                 </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
                   Outgoing server for escalation and ticket notifications.
                   {tlsOn ? " STARTTLS on." : " TLS off — credentials travel in clear text."}
                 </p>
@@ -202,7 +202,7 @@ export function EmailServerSettings() {
               App password help <ExternalLink className="size-3" />
             </a>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[14px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <ServerIcon /> {form.host || (smtpConfigured("host") ? "stored host" : "no host")}:{form.port || "—"}
             </span>
@@ -292,7 +292,7 @@ export function EmailServerSettings() {
           </Row>
           <div className="border-t border-[var(--border)] px-5 py-3">
             <Eyebrow hint="Gmail: use a 16-character App Password, not the account password">Sender notes</Eyebrow>
-            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            <p className="flex items-start gap-1.5 text-[14px] leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 size-3 shrink-0" />
               Gmail requires 2-Step Verification and an App Password (Google Account → Security → App passwords).
               Host smtp.gmail.com, port 587, TLS on.
@@ -305,7 +305,7 @@ export function EmailServerSettings() {
       <aside className="space-y-4 xl:sticky xl:top-6">
         <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Delivery</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">How mail leaves this deployment.</p>
+          <p className="mt-0.5 text-[14px] text-muted-foreground">How mail leaves this deployment.</p>
           <dl className="mt-3 space-y-2.5">
             {[
               ["Server", `${form.host || (smtpConfigured("host") ? "stored" : "not set")}:${form.port || "—"}`],
@@ -314,7 +314,7 @@ export function EmailServerSettings() {
               ["Alerts", form.enabled ? "On" : "Off"],
               ["Alerts wired", `${Object.values(alerts).filter(Boolean).length} of 3 events`],
             ].map(([k, v]) => (
-              <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
+              <div key={k} className="flex items-baseline justify-between gap-3 text-[14px]">
                 <dt className="shrink-0 text-muted-foreground">{k}</dt>
                 <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
               </div>
@@ -324,7 +324,7 @@ export function EmailServerSettings() {
 
         <section className="rounded-2xl border border-[var(--border)] bg-card p-4">
           <h2 className="text-sm font-semibold">Send &amp; save</h2>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-0.5 text-[14px] leading-relaxed text-muted-foreground">
             Save stores the write-only fields; the test proves the saved server actually delivers.
           </p>
 
@@ -350,18 +350,18 @@ export function EmailServerSettings() {
 
           <div className="mt-3 space-y-1.5">
             {saved && (
-              <p className="flex items-center gap-1 text-[11px] font-medium text-[var(--ok)]">
+              <p className="flex items-center gap-1 text-[14px] font-medium text-[var(--ok)]">
                 <Check className="size-3.5" /> Mail settings saved
               </p>
             )}
-            {testMsg && <p className="text-[11px] font-medium text-[var(--ok)]">{testMsg}</p>}
+            {testMsg && <p className="text-[14px] font-medium text-[var(--ok)]">{testMsg}</p>}
             {error && (
-              <p className="flex items-start gap-1 text-[11px] font-medium text-[var(--danger)]">
+              <p className="flex items-start gap-1 text-[14px] font-medium text-[var(--danger)]">
                 <AlertCircle className="mt-0.5 size-3.5 shrink-0" /> {error}
               </p>
             )}
             {smtpSet.length > 0 && (
-              <p className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <p className="inline-flex items-center gap-1 text-[14px] text-muted-foreground">
                 <Lock className="size-3" /> {smtpSet.length} stored field{smtpSet.length === 1 ? "" : "s"} · write-only
               </p>
             )}
