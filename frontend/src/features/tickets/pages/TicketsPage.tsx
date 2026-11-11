@@ -596,31 +596,25 @@ export default function Tickets({ role, userName, onToast }: Props) {
             )}
           </section>
 
-          {/* Below xl the panel is a bottom sheet, so the overlay is what closes it. */}
-          {selected && (
-            <div
-              className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px] xl:hidden"
-              onClick={() => setSelected(null)}
-              aria-hidden
-            />
-          )}
+          {/* Below xl the panel was a bottom sheet; hidden now as edit modal popup is used */}
 
           <TicketDetailPanel
-          ticket={selected}
-          canManage={canManage}
-          comments={comments}
-          attachments={attachments}
-          statusBusy={statusBusy}
-          jiraReady={jiraReady !== false}
-          onClose={() => setSelected(null)}
-          onStatus={handleStatus}
-          onSave={handleSaveTicket}
-          saveBusy={editBusy}
-          assignable={assignable}
-          onDeleteAttachment={handleDeleteAttachment}
-          onAddComment={handleAddComment}
-          onAddAttachment={handleAddAttachment}
-          onOpenEdit={() => setEditOpen(true)}
+            ticket={selected}
+            canManage={canManage}
+            comments={comments}
+            attachments={attachments}
+            statusBusy={statusBusy}
+            jiraReady={jiraReady !== false}
+            onClose={() => setSelected(null)}
+            onStatus={handleStatus}
+            onSave={handleSaveTicket}
+            saveBusy={editBusy}
+            assignable={assignable}
+            onDeleteAttachment={handleDeleteAttachment}
+            onAddComment={handleAddComment}
+            onAddAttachment={handleAddAttachment}
+            onOpenEdit={() => setEditOpen(true)}
+            className="hidden"
           />
 
         </div>

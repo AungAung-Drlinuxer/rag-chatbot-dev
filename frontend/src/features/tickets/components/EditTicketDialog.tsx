@@ -201,7 +201,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[#191927] p-0 shadow-2xl">
+      <DialogContent className="max-w-6xl w-[94vw] overflow-hidden rounded-2xl border border-[var(--border)] bg-[#191927] p-0 shadow-2xl">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* Header */}
           <div className="border-b border-[var(--border)] bg-[#11111B] px-6 py-3.5">
@@ -212,9 +212,12 @@ export function EditTicketDialog({
                 </span>
                 <div>
                   <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-white">
-                    INTERACTIVE JIRA WORKFLOW
+                    EDIT TICKET
                     <span className="rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-2 py-0.5 font-mono text-xs font-semibold text-[var(--lavender)]">
                       #{ticket.id}
+                    </span>
+                    <span className="text-2xs font-normal text-muted-foreground">
+                      · Jira Workflow
                     </span>
                   </DialogTitle>
                   <p className="text-2xs text-muted-foreground">

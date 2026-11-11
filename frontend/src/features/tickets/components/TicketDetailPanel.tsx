@@ -70,6 +70,7 @@ export function TicketDetailPanel({
   onAddComment,
   onAddAttachment,
   onOpenEdit,
+  className = "",
 }: {
   ticket: Ticket | null;
   canManage: boolean;
@@ -87,6 +88,7 @@ export function TicketDetailPanel({
   onAddComment: (body: string) => void;
   onAddAttachment: (file: File) => void;
   onOpenEdit?: () => void;
+  className?: string;
 }) {
   const [comment, setComment] = useState("");
   // Two halves of one action: which step to move to, and what to tell the people in Jira.
@@ -168,7 +170,7 @@ export function TicketDetailPanel({
 
   return (
     <aside
-      className={`${shell} fixed inset-x-0 bottom-0 z-50 max-h-[88svh] rounded-b-none
+      className={`${shell} ${className} fixed inset-x-0 bottom-0 z-50 max-h-[88svh] rounded-b-none
         xl:sticky xl:inset-auto xl:top-6 xl:max-h-[calc(100vh-6rem)] xl:rounded-2xl`}
       aria-label="Ticket detail"
     >

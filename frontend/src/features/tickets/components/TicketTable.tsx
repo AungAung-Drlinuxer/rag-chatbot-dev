@@ -12,7 +12,7 @@
  *
  * The pager is shared by both views and counts from the real (already filtered) row set.
  */
-import { ChevronLeft, ChevronRight, Clock3, UserRound } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, Pencil, UserRound } from "lucide-react";
 
 import { priorityMeta, relTime, statusMeta, type Ticket } from "@/features/tickets/model";
 
@@ -169,11 +169,11 @@ export function TicketTable({
       <div className="table-scroll hidden overflow-x-auto md:block">
         <table className="w-full table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[15%]" />
-            <col className="w-[37%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[18%]" />
+            <col className="w-[13%]" />
+            <col className="w-[35%]" />
+            <col className="w-[14%]" />
+            <col className="w-[13%]" />
+            <col className="w-[25%]" />
           </colgroup>
           <thead className="border-b border-[var(--border)] bg-muted/40">
             <tr>
@@ -229,7 +229,27 @@ export function TicketTable({
 
                   <td className="px-4 py-3 align-top"><StatusPill status={t.status} /></td>
                   <td className="px-4 py-3 align-top"><Priority value={t.priority} /></td>
-                  <td className="truncate py-3 pl-4 pr-5 align-top text-muted-foreground" title={t.requester}>{t.requester}</td>
+                  <td className="py-3 pl-4 pr-5 align-top">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-muted-foreground" title={t.requester}>
+                        {t.requester}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(t);
+                          onOpenEdit?.(t);
+                        }}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-2.5 py-1 text-2xs font-semibold text-[var(--lavender)] transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/20 hover:text-white"
+                        title="Edit ticket & Jira workflow"
+                        aria-label={`Edit ticket ${t.id}`}
+                      >
+                        <Pencil className="size-3" />
+                        Edit
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -255,15 +275,30 @@ export function TicketTable({
 
                 <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground">{t.subject}</p>
 
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t.category}</span>
-                  <span className="inline-flex items-center gap-1">
-                    <UserRound className="size-3" aria-hidden />
-                    {t.requester}
-                  </span>
-                  <span className="text-muted-foreground/60">·</span>
-                  <span>{t.assignee ?? "Unassigned"}</span>
-                  {t.due_date && <DueChip iso={t.due_date} />}
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-2xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t.category}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <UserRound className="size-3" aria-hidden />
+                      {t.requester}
+                    </span>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span>{t.assignee ?? "Unassigned"}</span>
+                    {t.due_date && <DueChip iso={t.due_date} />}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(t);
+                      onOpenEdit?.(t);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary)]/10 px-2 py-0.5 text-2xs font-semibold text-[var(--lavender)] hover:bg-[var(--primary)]/20"
+                    aria-label={`Edit ticket ${t.id}`}
+                  >
+                    <Pencil className="size-3" />
+                    Edit
+                  </button>
                 </div>
 
                 <div className="flex items-center justify-between gap-2">

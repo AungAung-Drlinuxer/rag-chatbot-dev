@@ -56,7 +56,8 @@ describe("EditTicketDialog", () => {
       />
     );
 
-    expect(document.body.textContent).toContain("INTERACTIVE JIRA WORKFLOW");
+    expect(document.body.textContent).toContain("EDIT TICKET");
+    expect(document.body.textContent).toContain("Jira Workflow");
     expect(document.body.textContent).toContain("#IT-1");
     expect(document.body.textContent).toContain("Jira Sync Active");
 
