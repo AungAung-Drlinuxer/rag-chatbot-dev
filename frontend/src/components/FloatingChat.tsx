@@ -32,11 +32,11 @@ import {
   Share2,
   Shield,
   Sparkles,
+  X,
 } from "lucide-react";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
-import { uploadAttachment } from "@/features/chat/api";
 import { useUserPreferences } from "@/app/useUserPreferences";
 
 /* ---------------- Context ---------------- */
@@ -114,7 +114,7 @@ export function FloatingChatPopup() {
   const [stage, setStage] = useState<string | undefined>();
   // v1.6.38 — elapsed ms for the animated activity indicator
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [sessionRef] = useState(() => crypto.randomUUID());
+  const sessionRef = useRef<string>(crypto.randomUUID());
   const [editingId, setEditingId] = useState<string | null>(null);
   // v1.6.45 — brief confirmation for copy/share actions
   const [notice, setNotice] = useState<string | null>(null);
@@ -172,7 +172,7 @@ export function FloatingChatPopup() {
         .slice(-8)
         .map((m) => ({ role: m.role, content: m.content }));
 
-      runChatStream(question, sessionRef, history, {
+      runChatStream(question, sessionRef.current, history, {
         onMeta: (meta) =>
           setMessages((p) =>
             p.map((m) =>
@@ -227,6 +227,20 @@ export function FloatingChatPopup() {
     },
     [messages, sessionRef],
   );
+
+  /* Closing is a full stop, not a hide: on the next open the widget greets the user with a
+     brand-new session, so nothing from the previous question lingers in the thread. */
+  const closeAndReset = useCallback(() => {
+    setMessages([]);
+    setInput("");
+    setIsTyping(false);
+    setStage(undefined);
+    setElapsedMs(0);
+    setEditingId(null);
+    setEditText("");
+    sessionRef.current = crypto.randomUUID();
+    setOpen(false);
+  }, [setOpen]);
 
   const send = useCallback(() => {
     const q = input.trim();
@@ -334,11 +348,7 @@ export function FloatingChatPopup() {
           <Bot className="size-5 text-white" strokeWidth={1.8} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-white leading-tight">IT Assistant</div>
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-400" />
-            <span className="text-xs text-white/80">IT Knowledge Assistant - RBAC protected</span>
-          </div>
+          <div className="truncate text-sm font-bold leading-tight text-white">IT Assistant</div>
         </div>
         <button
           aria-label="Minimize chat"
@@ -347,6 +357,14 @@ export function FloatingChatPopup() {
           className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
         >
           <Minus className="size-4" />
+        </button>
+        <button
+          aria-label="Close chat"
+          title="Close — the next open starts a new conversation"
+          onClick={closeAndReset}
+          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
+        >
+          <X className="size-4" />
         </button>
       </div>
 
@@ -544,13 +562,10 @@ export function FloatingChatPopup() {
             onSubmit={send}
             busy={isTyping}
             hint={false}
-            multiline={false}
-            placeholder="Ask an IT question..."
+            multiline
+            placeholder="Ask about an incident, a procedure or a system…"
             aria-label="Ask a question"
             className="border-[var(--border)] bg-muted/40 focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/10"
-            onAttach={async (f: File) => {
-              try { await uploadAttachment(f, sessionRef); } catch { /* non-blocking */ }
-            }}
           />
         </form>
         <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
