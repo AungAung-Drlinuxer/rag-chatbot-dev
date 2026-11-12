@@ -217,6 +217,10 @@ export function FloatingChatPopup() {
           );
           setIsTyping(false);
           setStage(undefined);
+          /* The sidebar's History list loads once and only refreshes on this event. Without
+             it a question asked here created a server-side session nobody could see until a
+             full reload. */
+          window.dispatchEvent(new Event("ith:refresh-conversations"));
         },
       }).catch((err: any) => {
         // Auto-retry up to 2 attempts, then surface a manual Retry button
