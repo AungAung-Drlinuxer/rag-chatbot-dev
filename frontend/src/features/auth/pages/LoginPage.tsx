@@ -159,32 +159,37 @@ export default function Login({
                   </p>
                 </div>
 
-                {/* illustration inside a structured "app window" frame — fills frame edge-to-edge */}
-                {/* The frame hugs the picture: its height comes from the image's own 1280x548
-                    ratio (1146x454, trimmed to the artwork), so there is never an empty strip under it at
-                    any window size. Leftover height in the column is simply background. */}
-                <figure className="w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm">
-                  <div className="flex items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
-                    <span className="flex gap-1" aria-hidden>
-                      <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
-                      <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
-                      <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
-                    </span>
-                    <span className="truncate text-2xs font-medium text-muted-foreground">
-                      {appName} · assistant workspace
-                    </span>
-                  </div>
-                  <img
-                    src="/login-illustration-v3.jpg"
-                    width={1146}
-                    height={454}
-                    alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                    className="pointer-events-none block h-auto w-full select-none"
-                    fetchPriority="high"
-                    decoding="async"
-                    draggable={false}
-                  />
-                </figure>
+                {/* Width is derived from a height budget, not the other way round: the frame is
+                    min(available width, (viewport - chrome) x image ratio), so the picture and its
+                    border are always the same box. A 600px-tall window shrinks the artwork (220px
+                    floor) instead of letterboxing or clipping it. */}
+                <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+                  <figure
+                    className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm"
+                    style={{ width: "max(220px, min(100%, calc((100svh - 392px) * 2.34)))" }}
+                  >
+                    <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3">
+                      <span className="flex gap-1" aria-hidden>
+                        <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
+                        <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
+                        <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
+                      </span>
+                      <span className="truncate text-2xs font-medium text-muted-foreground">
+                        {appName} · assistant workspace
+                      </span>
+                    </div>
+                    <img
+                      src="/login-illustration-v3.jpg"
+                      width={1146}
+                      height={454}
+                      alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
+                      className="pointer-events-none block h-auto w-full select-none"
+                      fetchPriority="high"
+                      decoding="async"
+                      draggable={false}
+                    />
+                  </figure>
+                </div>
 
                 <div className="grid shrink-0 gap-2.5 sm:grid-cols-3">
                   <FeatureCard icon={<BookOpenCheck className="size-4" />} title="Grounded" description="Answers use internal knowledge." />
@@ -237,17 +242,17 @@ export default function Login({
           </div>
 
           <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
-            <div className="w-full max-w-[460px]">
+            <div className="w-full max-w-[404px]">
               {/* sign-in card */}
-              <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-6">
-                <div className="mb-5">
-                  <div className="mb-4 grid size-11 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--accent-foreground)]">
-                    <LockKeyhole className="size-5" />
+              <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-5">
+                <div className="mb-4">
+                  <div className="mb-3 grid size-10 place-items-center rounded-xl bg-[var(--accent)] text-[var(--accent-foreground)]">
+                    <LockKeyhole className="size-[18px]" />
                   </div>
-                  <h2 className="text-[clamp(1.375rem,4vw,1.625rem)] font-semibold tracking-tight">
+                  <h2 className="text-[clamp(1.25rem,3.4vw,1.375rem)] font-semibold tracking-tight">
                     Welcome back
                   </h2>
-                  <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
                     Sign in with your corporate account to access the IT knowledge assistant.
                   </p>
                 </div>
@@ -257,7 +262,7 @@ export default function Login({
                     <button
                       type="button"
                       onClick={onSso}
-                      className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99]"
+                      className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99]"
                     >
                       <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-4 shrink-0" />
                       <span>Continue with {ssoLabel}</span>
@@ -275,7 +280,7 @@ export default function Login({
                   </div>
                 )}
 
-                <form onSubmit={handleLocalSubmit} className="space-y-3.5" noValidate>
+                <form onSubmit={handleLocalSubmit} className="space-y-3" noValidate>
                   <div>
                     <label htmlFor="login-username" className="mb-1.5 block text-xs font-semibold text-foreground">
                       Username
@@ -292,7 +297,7 @@ export default function Login({
                         value={loginUser}
                         onChange={(e) => setLoginUser(e.target.value)}
                         aria-invalid={!!fieldErr && !loginUser.trim()}
-                        className="h-11 w-full rounded-xl border border-[var(--border)] bg-background pl-10 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-background pl-10 pr-3 text-[13px] text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
                       />
                     </div>
                   </div>
@@ -312,7 +317,7 @@ export default function Login({
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
                         aria-invalid={!!fieldErr && !loginPass}
-                        className="h-11 w-full rounded-xl border border-[var(--border)] bg-background pl-10 pr-12 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-background pl-10 pr-12 text-[13px] text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
                       />
                       <button
                         type="button"
@@ -344,7 +349,7 @@ export default function Login({
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? (
                       <>
