@@ -186,6 +186,7 @@ def init_db() -> None:
         ),
         # Directory lifecycle (Phase 1): a users row is a projection of a directory account.
         # `state` says what the directory last told us; `missing_scans` debounces removals.
+        ("users.display_name", "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(120)"),
         ("users.state", "ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(16) DEFAULT 'active'"),
         ("users.directory_seen_at",
          "ALTER TABLE users ADD COLUMN IF NOT EXISTS directory_seen_at TIMESTAMPTZ"),

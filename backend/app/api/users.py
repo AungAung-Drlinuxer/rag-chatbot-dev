@@ -112,8 +112,8 @@ def list_users(include_removed: bool = False,
         try:
             from sqlalchemy import text as _t
             rows = s.execute(_t(
-                "SELECT username, role_override, status, disabled_at, email, department, "
-                "last_login, ldap_dn, state, removed_at "
+                "SELECT username, display_name, role_override, status, disabled_at, email, "
+                "department, last_login, ldap_dn, state, removed_at "
                 "FROM users ORDER BY username"
             )).mappings().all()
             for r in rows:
@@ -126,7 +126,7 @@ def list_users(include_removed: bool = False,
                 role = "Knowledge Manager" if raw_r in ("knowledge", "domain_manager") else ("IT Support" if raw_r == "agent" else raw_r.capitalize())
                 out[u] = {
                     "id": f"local:{u}",
-                    "name": u,
+                    "name": r.get("display_name") or u,
                     "username": u,
                     "email": r.get("email") or _synthetic_email(u),
                     "department": r.get("department") or "Internal",
@@ -236,6 +236,99 @@ def list_users(include_removed: bool = False,
             logger.warning("LDAP user search failed: %s", exc)
     return {"users": sorted(out.values(), key=lambda x: x["username"].lower())}
 
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    name: str | None = None
+    email: str | None = None
+    department: str | None = None
+    role: str = "user"
+    password: str
+
+
+@router.post("/users", status_code=201)
+def create_user(payload: CreateUserRequest, user: str = Depends(get_current_user)) -> dict:
+    """Create a LOCAL account (admin only).
+
+    Local accounts exist only in this app: no directory entry, so this endpoint owns the
+    password and the lifecycle. A name that already exists in Active Directory is refused —
+    that person signs in with their AD password, and a local duplicate would shadow it.
+    """
+    import hashlib
+    import hmac
+    import re
+    import secrets
+
+    if get_role(user) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    username = (payload.username or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._@-]{1,63}", username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 2–64 characters: letters, digits, dot, underscore, dash or @",
+        )
+    password = payload.password or ""
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    email = (payload.email or "").strip()
+    if email and ("@" not in email or " " in email):
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
+
+    role = (payload.role or "user").strip().lower()
+    role = {"knowledge manager": "knowledge", "domain manager": "knowledge",
+            "domain_manager": "knowledge", "administrator": "admin", "admin": "admin",
+            "user": "user", "it support": "user", "agent": "user"}.get(role, role)
+    if role not in ("admin", "user", "knowledge"):
+        raise HTTPException(status_code=400, detail="role must be admin|user|knowledge")
+
+    # A directory account with this name would win at login — refuse before writing anything.
+    try:
+        from app.auth.directory_sync import _search
+
+        found = _search(
+            "(&(objectClass=user)(objectCategory=person)"
+            "(!(userAccountControl:1.2.840.113556.1.4.803:=2))"
+            f"(sAMAccountName={username}))",
+            limit=1,
+        )
+        if found:
+            raise HTTPException(
+                status_code=409,
+                detail="This username already exists in Active Directory — the person signs in with their directory account",
+            )
+    except HTTPException:
+        raise
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+
+    salt = secrets.token_hex(16)
+    stored = f"{salt}${hmac.new(salt.encode(), password.encode(), hashlib.sha256).hexdigest()}"
+
+    with SessionLocal() as s:
+        exists = s.execute(text("SELECT 1 FROM users WHERE lower(username) = lower(:u)"),
+                           {"u": username}).first()
+        if exists:
+            raise HTTPException(status_code=409, detail="A user with this username already exists")
+        s.execute(text(
+            "INSERT INTO users (username, display_name, email, department, role_override, "
+            "status, state) VALUES (:u, :n, :e, :d, :r, 'Active', 'active')"
+        ), {"u": username, "n": (payload.name or "").strip() or username,
+            "e": email or _synthetic_email(username),
+            "d": (payload.department or "").strip() or None, "r": role})
+        s.execute(text(
+            "INSERT INTO local_user_credentials (username, password_hash, source) "
+            "VALUES (:u, :p, 'local')"
+        ), {"u": username, "p": stored})
+        s.commit()
+
+    try:
+        audit("user.create", user, detail=f"target={username} role={role}")
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+    return {"ok": True, "username": username, "role_override": role,
+            "email": email or _synthetic_email(username), "source": "local"}
 
 
 @router.patch("/users/{username}/role")

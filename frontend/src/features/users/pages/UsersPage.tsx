@@ -1438,6 +1438,10 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
       setError("Username, display name and email are required.");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
     setSaving(true); setError(null);
     try {
       await createUserApi({ username: username.trim(), name: displayName.trim(), email: email.trim(), department: department.trim(), role, password });
