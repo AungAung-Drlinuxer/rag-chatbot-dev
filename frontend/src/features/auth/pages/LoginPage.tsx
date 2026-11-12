@@ -160,11 +160,11 @@ export default function Login({
                 </div>
 
                 {/* illustration inside a structured "app window" frame — fills frame edge-to-edge */}
-                <figure /* The illustration is 1280×548 with its own #DFE3FC backdrop. When the frame is taller
-                 than the image (short content, tall screen) the letterbox must be that same colour —
-                 with bg-background it read as a black band under the picture. */
-                className="flex min-h-0 w-full max-h-[520px] flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm">
-                  <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
+                {/* The frame hugs the picture: its height comes from the image's own 1280x548
+                    ratio (1146x454, trimmed to the artwork), so there is never an empty strip under it at
+                    any window size. Leftover height in the column is simply background. */}
+                <figure className="w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
                     <span className="flex gap-1" aria-hidden>
                       <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
                       <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
@@ -175,11 +175,11 @@ export default function Login({
                     </span>
                   </div>
                   <img
-                    src="/login-illustration.jpg"
-                    width={1280}
-                    height={548}
+                    src="/login-illustration-v3.jpg"
+                    width={1146}
+                    height={454}
                     alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                    className="pointer-events-none block min-h-0 w-full flex-1 select-none object-contain object-center"
+                    className="pointer-events-none block h-auto w-full select-none"
                     fetchPriority="high"
                     decoding="async"
                     draggable={false}
@@ -225,11 +225,11 @@ export default function Login({
                 Grounded IT answers, with the source attached.
               </p>
               <img
-                src="/login-illustration.jpg"
+                src="/login-illustration-v3.jpg"
                 alt=""
                 aria-hidden
                 className="relative mt-3 block h-auto w-full max-w-full rounded-xl shadow-sm ring-1 ring-white/15"
-                style={{ aspectRatio: "1280 / 548", maxHeight: 460 }}
+                style={{ aspectRatio: "1146 / 454", maxHeight: 460 }}
                 decoding="async"
                 draggable={false}
               />
