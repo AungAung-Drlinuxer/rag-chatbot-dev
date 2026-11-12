@@ -376,7 +376,7 @@ export default function Users() {
           }
         />
 
-        <main className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <main className="grid items-start gap-5">
         <div className="min-w-0 space-y-4">
         {/* summary cards — label left, icon right, big number, muted caption */}
         <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -387,7 +387,8 @@ export default function Users() {
           <SummaryCard icon={<Shield className="size-4" />} label="Administrators"
             value={adminUsers} caption="Full workspace control" />
           <SummaryCard icon={<UserX className="size-4" />} label="Inactive"
-            value={inactiveUsers} caption="Disabled, locked or pending" />
+            value={inactiveUsers}
+            caption={lockedUsers > 0 ? `Disabled or pending · ${lockedUsers} locked` : "Disabled, locked or pending"} />
         </div>
 
         <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
@@ -552,89 +553,6 @@ export default function Users() {
         </p>
         </div>
 
-        {/* Rail: the facts an admin checks before editing anyone — who has what, in which
-            department, and what the directory says about them. Same 380px sticky column as
-            Overview and the ticket board. */}
-        <div className="space-y-4 xl:sticky xl:top-6">
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <div className="flex items-center gap-2">
-              <span className="grid size-6 shrink-0 place-items-center rounded bg-white/[0.04] p-0.5 ring-1 ring-[var(--border)]">
-                <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-3.5" />
-              </span>
-              <h2 className="text-sm font-semibold">Directory (AD / LDAP)</h2>
-            </div>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Counted from the {totalUsers} members returned by the API.</p>
-            <dl className="mt-3 space-y-2.5">
-              {[
-                ["Members", String(totalUsers)],
-                ["Active", String(activeUsers)],
-                ["Administrators", String(adminUsers)],
-                ["Inactive", String(inactiveUsers)],
-                ["Locked", String(lockedUsers)],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
-                  <dt className="text-muted-foreground">{k}</dt>
-                  <dd className={`font-medium tabular-nums ${k === "Locked" && lockedUsers > 0 ? "text-[var(--warn)]" : ""}`}>{v}</dd>
-                </div>
-              ))}
-            </dl>
-            {lockedUsers > 0 && (
-              <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-[var(--warn)]/10 px-2.5 py-2 text-[10px] leading-relaxed text-[var(--warn)]">
-                <Shield className="mt-0.5 size-3 shrink-0" aria-hidden />
-                {lockedUsers} locked account{lockedUsers === 1 ? "" : "s"} — these need an administrator to unlock.
-              </p>
-            )}
-          </section>
-
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">By role</h2>
-            <div className="mt-3 space-y-2.5">
-              {["Administrator", "Knowledge Manager", "User"].map((role) => {
-                const n = users.filter((u) => u.role === role).length;
-                const pct = totalUsers ? Math.round((n / totalUsers) * 100) : 0;
-                return (
-                  <div key={role}>
-                    <div className="flex items-baseline justify-between gap-2 text-[11px]">
-                      <span className="truncate text-muted-foreground">{role}</span>
-                      <span className="font-medium tabular-nums">{n}</span>
-                    </div>
-                    <div className="mt-1 h-1 overflow-hidden rounded-full bg-[var(--muted)]">
-                      <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">By department</h2>
-            <dl className="mt-3 space-y-2">
-              {Object.entries(
-                users.reduce<Record<string, number>>((acc, u) => {
-                  const key = (u.department || "Unassigned").trim() || "Unassigned";
-                  acc[key] = (acc[key] ?? 0) + 1;
-                  return acc;
-                }, {}),
-              )
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 6)
-                .map(([name, n]) => (
-                  <div key={name} className="flex items-baseline justify-between gap-3 text-[11px]">
-                    <dt className="min-w-0 truncate text-muted-foreground" title={name}>{name}</dt>
-                    <dd className="font-medium tabular-nums">{n}</dd>
-                  </div>
-                ))}
-            </dl>
-          </section>
-
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">Accounts</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.
-            </p>
-          </section>
-        </div>
         </main>
 
         {selectedUser && (
