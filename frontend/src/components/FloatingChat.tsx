@@ -37,6 +37,11 @@ import {
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
+import {
+  clearAssistantSnapshot,
+  loadAssistantSnapshot,
+  saveAssistantSnapshot,
+} from "@/features/chat/floatingSession";
 import { useUserPreferences } from "@/app/useUserPreferences";
 
 /* ---------------- Context ---------------- */
@@ -108,13 +113,15 @@ type Msg = Message & { sources?: Source[]; confidence?: number; failed?: boolean
 export function FloatingChatPopup() {
   const preferences = useUserPreferences();
   const { open, setOpen, minimized, setMinimized } = useFloatingChat();
-  const [messages, setMessages] = useState<Msg[]>([]);
+  /* Restored from sessionStorage so a page change or a reload does not wipe the thread. */
+  const boot = useRef(loadAssistantSnapshot());
+  const [messages, setMessages] = useState<Msg[]>(boot.current?.messages ?? []);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [stage, setStage] = useState<string | undefined>();
   // v1.6.38 — elapsed ms for the animated activity indicator
   const [elapsedMs, setElapsedMs] = useState(0);
-  const sessionRef = useRef<string>(crypto.randomUUID());
+  const sessionRef = useRef<string>(boot.current?.sessionId ?? crypto.randomUUID());
   const [editingId, setEditingId] = useState<string | null>(null);
   // v1.6.45 — brief confirmation for copy/share actions
   const [notice, setNotice] = useState<string | null>(null);
@@ -131,6 +138,16 @@ export function FloatingChatPopup() {
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping, minimized]);
+
+  useEffect(() => {
+    /* An empty thread is not a snapshot: leaving one behind made "close" look like a saved
+       session that happened to be blank. */
+    if (messages.length === 0) {
+      clearAssistantSnapshot();
+      return;
+    }
+    saveAssistantSnapshot({ sessionId: sessionRef.current, messages });
+  }, [messages]);
 
   // tick a local clock while the agent is working
   useEffect(() => {
@@ -239,6 +256,7 @@ export function FloatingChatPopup() {
     setEditingId(null);
     setEditText("");
     sessionRef.current = crypto.randomUUID();
+    clearAssistantSnapshot();
     setOpen(false);
   }, [setOpen]);
 
