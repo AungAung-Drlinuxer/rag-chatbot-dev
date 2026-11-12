@@ -6,6 +6,7 @@
  * still answers a deep link or a bookmarked URL with the reason. */
 import { useEffect, useState } from "react";
 import { dateBucket, relativeAge } from "@/features/chat/model";
+import { setPendingConversation } from "@/features/chat/pendingConversation";
 import { conversationFromHash } from "@/app/router";
 import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
 import { BookOpen, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
@@ -341,6 +342,10 @@ export default function PageSidebar({
                       <button
                         type="button"
                         onClick={() => {
+                          /* Park the id first: navigating mounts the chat page, and an event
+                             fired before its listener exists is lost — which is why a row used
+                             to need a second click. */
+                          setPendingConversation(c.session_id);
                           onNavigate("chat");
                           setActiveSessionId(c.session_id);
                           window.dispatchEvent(new CustomEvent("ith:open-conversation", { detail: c.session_id }));

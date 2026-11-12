@@ -10,6 +10,7 @@ import { useToast, ToastHost } from "@/shared/useToast";
 import PageSidebar from "@/components/PageSidebar";
 import CommandPalette from "@/components/CommandPalette";
 import { NeedHelpCard } from "@/components/NeedHelpCard";
+import { setPendingConversation } from "@/features/chat/pendingConversation";
 import { FloatingChatProvider, FloatingChatPopup } from "@/components/FloatingChat";
 import { hashToNav, useHashNav } from "@/app/router";
 import { denied } from "@/app/acl";
@@ -256,7 +257,11 @@ export default function App() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           onNavigate={setNav}
-          onOpenConversation={(id) => { setNav("chat"); window.dispatchEvent(new CustomEvent("ith:open-conversation", { detail: id })); }}
+          onOpenConversation={(id) => {
+            setPendingConversation(id);
+            setNav("chat");
+            window.dispatchEvent(new CustomEvent("ith:open-conversation", { detail: id }));
+          }}
           enabled={perms}
         />
       )}

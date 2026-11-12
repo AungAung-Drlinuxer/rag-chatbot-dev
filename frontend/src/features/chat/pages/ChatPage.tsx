@@ -19,6 +19,7 @@ import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
+import { takePendingConversation } from "@/features/chat/pendingConversation";
 import { conversationFromHash, setConversationHash } from "@/app/router";
 import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
 import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
@@ -227,13 +228,25 @@ export default function Chat({ onNavigate, userName }: Props) {
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
+    /* A sidebar click that navigated here: the event fired before this page existed, so the
+       session id was parked for us. Consume it once. */
+    const queued = takePendingConversation();
+    if (queued) {
+      void openConversation(queued);
+      return;
+    }
     const id = conversationFromHash();
     if (id) void openConversation(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const onOpen = (e: any) => { if (e?.detail) void openConversation(e.detail); };
+    const onOpen = (e: any) => {
+      if (!e?.detail) return;
+      // Already handled by this listener, so the mount handoff must not fire again.
+      takePendingConversation();
+      void openConversation(e.detail);
+    };
     const onNew = () => startNewChat();
     const onAsk = (e: any) => {
       if (typeof e?.detail === "string" && e.detail) {
