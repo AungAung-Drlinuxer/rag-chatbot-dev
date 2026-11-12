@@ -47,9 +47,9 @@ def get_current_user(
         from app.persistence.database import SessionLocal
         with SessionLocal() as s:
             row = s.execute(_t(
-                "SELECT status FROM users WHERE username = :u"
+                "SELECT status, COALESCE(state, 'active') AS state FROM users WHERE username = :u"
             ), {"u": username}).first()
-        if row and row[0] == "Disabled":
+        if row and (row[0] == "Disabled" or row[1] in ("suspended", "removed")):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is disabled — please contact your administrator",

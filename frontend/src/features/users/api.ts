@@ -53,9 +53,48 @@ export async function assignableUsers() {
 }
 
 // --- admin user directory (Users page + conversation filter dropdown) ---
-export async function listUsers() {
-  const r = await apiFetch(`${BASE}/api/users`, { headers: authHeaders() });
+export async function listUsers(includeRemoved = false) {
+  const q = includeRemoved ? "?include_removed=1" : "";
+  const r = await apiFetch(`${BASE}/api/users${q}`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+/** Reconcile the user table with LDAP now. `force` overrides the mass-removal guard. */
+export async function syncDirectory(force = false) {
+  const r = await apiFetch(`${BASE}/api/users/sync-directory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ force }),
+  });
+  if (!r.ok) {
+    let msg = `sync failed (HTTP ${r.status})`;
+    try { const j = await r.json(); if (j?.detail) msg = String(j.detail); } catch { /* non-json */ }
+    throw new Error(msg);
+  }
+  return r.json() as Promise<{
+    ran: boolean; reason: string | null; directory_active: number; directory_disabled: number;
+    suspended: number; removed: number; restored: number; missing_once: number; skipped_removal: number;
+  }>;
+}
+
+export async function restoreUser(username: string) {
+  const r = await apiFetch(`${BASE}/api/users/${encodeURIComponent(username)}/restore`, {
+    method: "POST", headers: { ...authHeaders() },
+  });
+  if (!r.ok) throw new Error(`restore failed (HTTP ${r.status})`);
+  return r.json();
+}
+
+export async function purgeUser(username: string) {
+  const r = await apiFetch(`${BASE}/api/users/${encodeURIComponent(username)}`, {
+    method: "DELETE", headers: { ...authHeaders() },
+  });
+  if (!r.ok) {
+    let msg = `purge failed (HTTP ${r.status})`;
+    try { const j = await r.json(); if (j?.detail) msg = String(j.detail); } catch { /* non-json */ }
+    throw new Error(msg);
+  }
   return r.json();
 }
 

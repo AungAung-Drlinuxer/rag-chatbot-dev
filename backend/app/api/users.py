@@ -69,7 +69,8 @@ def _synthetic_email(username: str) -> str:
 
 
 @router.get("/users")
-def list_users(user: str = Depends(get_current_user)) -> dict:
+def list_users(include_removed: bool = False,
+               user: str = Depends(get_current_user)) -> dict:
     """All users visible to the chatbot — AD users (LDAP) merged with local users.
     Local users come from the users table (created on first login), AD users from the
     configured LDAP base. Admin/agent only (v0.21.9).
@@ -82,6 +83,14 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
     role = _gr(user)
     if role not in ("admin", "agent"):
         raise HTTPException(status_code=403, detail="Forbidden")
+    # Reconcile with the directory at most every ten minutes. Opening this screen is the
+    # reliable moment: it is the admin looking at the list that would otherwise show ghosts.
+    try:
+        from app.auth.directory_sync import maybe_auto_sync
+
+        maybe_auto_sync()
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     out: dict[str, dict] = {}
     # Admin-managed app groups; a user's DEPARTMENT comes from the directory (`users.department`),
     # not from a groups table — the departments feature was removed, and the old join meant a
@@ -103,11 +112,15 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
         try:
             from sqlalchemy import text as _t
             rows = s.execute(_t(
-                "SELECT username, role_override, status, disabled_at, email, department, last_login "
+                "SELECT username, role_override, status, disabled_at, email, department, "
+                "last_login, ldap_dn, state, removed_at "
                 "FROM users ORDER BY username"
             )).mappings().all()
             for r in rows:
                 u = r["username"]
+                state = (r.get("state") or "active").lower()
+                if state == "removed" and not include_removed:
+                    continue
                 raw_r = r.get("role_override") or "user"
                 # v1.1.1 — domain_manager merged into Knowledge Manager
                 role = "Knowledge Manager" if raw_r in ("knowledge", "domain_manager") else ("IT Support" if raw_r == "agent" else raw_r.capitalize())
@@ -124,6 +137,9 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                     "lastLogin": r["last_login"].isoformat() if r.get("last_login") else "—",
                     "joined": "—",
                     "source": "local",
+                    "state": state,
+                    "removedAt": r["removed_at"].isoformat() if r.get("removed_at") else None,
+                    "directoryLinked": bool(r.get("ldap_dn")),
                 }
         except Exception as _exc:
             logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
@@ -212,6 +228,9 @@ def list_users(user: str = Depends(get_current_user)) -> dict:
                     "lastLogin": last_login,
                     "joined": joined,
                     "source": "ad",
+                    "state": "active",
+                    "removedAt": None,
+                    "directoryLinked": True,
                 }
         except Exception as exc:
             logger.warning("LDAP user search failed: %s", exc)
@@ -281,6 +300,83 @@ def update_user_status(username: str, payload: dict, user: str = Depends(get_cur
     except Exception as _exc:
         logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     return {"ok": True, "username": username, "status": new_status}
+
+
+@router.post("/users/sync-directory")
+def sync_directory(payload: dict | None = None,
+                   user: str = Depends(get_current_user)) -> dict:
+    """Reconcile the user table with LDAP right now.
+
+    `force` skips the "too many accounts vanished at once" guard — only for an admin who has
+    checked the directory themselves (a mass deletion really did happen).
+    """
+    if get_role(user) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    from app.auth.directory_sync import reconcile
+
+    summary = reconcile(force=bool((payload or {}).get("force")), actor=user)
+    return summary
+
+
+@router.post("/users/{username}/restore")
+def restore_user(username: str, user: str = Depends(get_current_user)) -> dict:
+    """Bring a suspended/removed account back without waiting for the next sync."""
+    if get_role(user) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    with SessionLocal() as s:
+        row = s.execute(text(
+            "SELECT COALESCE(state, 'active') FROM users WHERE username = :u"
+        ), {"u": username}).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        s.execute(text(
+            "UPDATE users SET state = 'active', status = 'Active', disabled_at = NULL, "
+            "removed_at = NULL, missing_scans = 0 WHERE username = :u"
+        ), {"u": username})
+        s.commit()
+    try:
+        from app.observability.audit import audit
+
+        audit("user.directory.restore", user, detail=f"target={username}")
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+    return {"ok": True, "username": username, "state": "active"}
+
+
+@router.delete("/users/{username}")
+def purge_user(username: str, user: str = Depends(get_current_user)) -> dict:
+    """Permanently remove an account the directory no longer has.
+
+    Only `removed` accounts can be purged: deleting a live account by accident cannot be
+    undone, and the state is the guard that says "the directory already deleted this person".
+    Chat history keeps the username (attribution), so nothing else is rewritten.
+    """
+    if get_role(user) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    if username == user:
+        raise HTTPException(status_code=400, detail="You cannot purge your own account")
+    with SessionLocal() as s:
+        row = s.execute(text(
+            "SELECT COALESCE(state, 'active') FROM users WHERE username = :u"
+        ), {"u": username}).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        if row[0] != "removed":
+            raise HTTPException(
+                status_code=400,
+                detail="Only accounts removed from the directory can be purged",
+            )
+        s.execute(text("DELETE FROM local_user_credentials WHERE username = :u"), {"u": username})
+        s.execute(text("DELETE FROM app_group_members WHERE username = :u"), {"u": username})
+        s.execute(text("DELETE FROM users WHERE username = :u"), {"u": username})
+        s.commit()
+    try:
+        from app.observability.audit import audit
+
+        audit("user.directory.purge", user, detail=f"target={username}")
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+    return {"ok": True, "username": username, "purged": True}
 
 
 @router.post("/users/{username}/reset-access")

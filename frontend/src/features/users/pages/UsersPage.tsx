@@ -26,7 +26,7 @@ import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/p
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -41,6 +41,9 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 import {
+  syncDirectory,
+  restoreUser,
+  purgeUser,
   listUsers,
   getUserPermissions,
   createUser as createUserApi,
@@ -83,6 +86,10 @@ type User = {
   lastLogin: string;
   joined: string;
   source?: "ad" | "local";
+  /** Directory lifecycle: active | suspended (disabled in AD) | removed (gone from AD). */
+  state?: "active" | "suspended" | "removed";
+  directoryLinked?: boolean;
+  removedAt?: string | null;
 };
 
 type PermissionKey =
@@ -191,6 +198,17 @@ export default function Users() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [notice, setNotice] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
+  const [purgeTarget, setPurgeTarget] = useState<User | null>(null);
+  const [purging, setPurging] = useState(false);
+  const noticeTimer = useRef<number | null>(null);
+
+  function notify(msg: string, kind: "ok" | "err" = "ok") {
+    setNotice({ msg, kind });
+    if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 4000);
+  }
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -201,11 +219,11 @@ export default function Users() {
      selector made three lists that could not be compared page for page. */
   const perPage = 10;
 
-  async function loadUsers(showRefresh = false) {
+  async function loadUsers(showRefresh = false, includeRemoved = statusFilter === "Removed") {
     if (showRefresh) setRefreshing(true);
     setError(null);
     try {
-      const data = await listUsers();
+      const data = await listUsers(includeRemoved);
       setUsers(((data.users ?? data ?? []) as User[]).map((u) => ({ ...u, role: normalizeRole(u.role as string) })));
     } catch (err: any) {
       // A swallowed failure used to render the EMPTY state, which says "no users
@@ -223,7 +241,9 @@ export default function Users() {
     let mounted = true;
     async function load() {
       try {
-        const data = await listUsers();
+        // "Removed" is the only view that needs tombstoned rows; every other view keeps
+        // them out so the head count matches what people expect to see.
+        const data = await listUsers(statusFilter === "Removed");
         if (mounted) setUsers(((data.users ?? data ?? []) as User[]).map((u) => ({ ...u, role: normalizeRole(u.role as string) })));
       } catch (err: any) {
         console.warn("users fetch failed:", err);
@@ -234,7 +254,7 @@ export default function Users() {
     }
     load();
     return () => { mounted = false; };
-  }, []);
+  }, [statusFilter]);
 
   /* Every figure below is counted from the list this page already loaded —
      nothing is fetched twice and nothing is estimated. */
@@ -252,7 +272,9 @@ export default function Users() {
         user.name.toLowerCase().includes(query) ||
         user.username.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query);
-      const matchesStatus = statusFilter === "All" || user.status === statusFilter;
+      const matchesStatus = statusFilter === "Removed"
+        ? user.state === "removed"
+        : statusFilter === "All" || user.status === statusFilter;
       const matchesRole = roleFilter === "All" || user.role === roleFilter;
       const matchesDepartment = departmentFilter === "All" || user.department === departmentFilter;
       return matchesSearch && matchesStatus && matchesRole && matchesDepartment;
@@ -342,6 +364,62 @@ export default function Users() {
   const rangeStart = filteredUsers.length === 0 ? 0 : (page - 1) * perPage + 1;
   const rangeEnd = Math.min(page * perPage, filteredUsers.length);
 
+  async function restoreSelected() {
+    if (!selectedUser) return;
+    try {
+      await restoreUser(selectedUser.username);
+      notify(`${selectedUser.name} can sign in again`, "ok");
+      setSelectedUser(null);
+      await loadUsers(true);
+    } catch (err: any) {
+      notify(err?.message || "Restore failed", "err");
+    }
+  }
+
+  async function purgeSelected() {
+    if (!purgeTarget) return;
+    setPurging(true);
+    try {
+      await purgeUser(purgeTarget.username);
+      notify(`${purgeTarget.name} was removed from the workspace`, "ok");
+      setPurgeTarget(null);
+      setSelectedUser(null);
+      await loadUsers(true);
+    } catch (err: any) {
+      notify(err?.message || "Purge failed", "err");
+    } finally {
+      setPurging(false);
+    }
+  }
+
+  async function runDirectorySync() {
+    setSyncing(true);
+    try {
+      const out = await syncDirectory(false);
+      if (!out.ran) {
+        notify(out.reason || "Directory sync skipped", "err");
+      } else {
+        const bits = [
+          out.restored ? `${out.restored} restored` : "",
+          out.suspended ? `${out.suspended} suspended` : "",
+          out.removed ? `${out.removed} removed` : "",
+          out.missing_once ? `${out.missing_once} missing once` : "",
+        ].filter(Boolean);
+        notify(
+          bits.length
+            ? `Directory synced · ${bits.join(" · ")}`
+            : `Directory synced · ${out.directory_active} accounts in AD, nothing changed`,
+          out.skipped_removal ? "err" : "ok",
+        );
+      }
+      await loadUsers(true);
+    } catch (err: any) {
+      notify(err?.message || "Directory sync failed", "err");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <PageShell>
       <div>
@@ -361,6 +439,12 @@ export default function Users() {
                 className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card text-foreground transition hover:bg-[var(--muted)] disabled:opacity-50">
                 <RefreshCw className={["size-3.5", refreshing ? "animate-spin" : ""].join(" ")} />
               </button>
+              <button type="button" onClick={runDirectorySync} disabled={syncing}
+                title="Reconcile with Active Directory now"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-2.5 text-xs font-medium transition hover:bg-[var(--muted)] disabled:opacity-50">
+                <Shield className={["size-3.5", syncing ? "animate-pulse" : ""].join(" ")} />
+                {syncing ? "Syncing…" : "Sync directory"}
+              </button>
               <ReportActions
                 onPrint={printReport}
                 onExport={exportCsv}
@@ -375,6 +459,20 @@ export default function Users() {
             </div>
           }
         />
+
+        {notice && (
+          <div
+            role="status"
+            className={[
+              "mb-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs",
+              notice.kind === "err"
+                ? "border-[var(--danger)]/40 bg-[var(--danger)]/10 text-[var(--danger)]"
+                : "border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]",
+            ].join(" ")}
+          >
+            {notice.msg}
+          </div>
+        )}
 
         <main className="grid items-start gap-5">
         <div className="min-w-0 space-y-4">
@@ -428,7 +526,7 @@ export default function Users() {
                 backend really does return those states, and a filter that cannot
                 reach a state the table shows is worse than no filter. */}
             <FilterSelect label="Status" allLabel="All statuses" value={statusFilter} onChange={setStatusFilter}
-              options={["All", "Active", "Inactive", "Locked", "Disabled"]} />
+              options={["All", "Active", "Inactive", "Locked", "Disabled", "Removed"]} />
             <FilterSelect label="Role" allLabel="All roles" value={roleFilter} onChange={setRoleFilter}
               options={["All", "Administrator", "Knowledge Manager", "User"]} />
             <FilterSelect label="Department" allLabel="All departments" value={departmentFilter} onChange={setDepartmentFilter}
@@ -555,9 +653,24 @@ export default function Users() {
 
         </main>
 
+        {purgeTarget && (
+          <ConfirmDialog
+            open
+            destructive
+            busy={purging}
+            title={`Purge ${purgeTarget.name}?`}
+            description="The local record, its password entry and its group memberships are deleted. Chat history keeps the username, but this account cannot be restored from here."
+            confirmLabel="Purge account"
+            onCancel={() => setPurgeTarget(null)}
+            onConfirm={purgeSelected}
+          />
+        )}
+
         {selectedUser && (
           <UserDrawer
             user={selectedUser}
+            onRestore={restoreSelected}
+            onPurge={() => setPurgeTarget(selectedUser)}
             onClose={() => setSelectedUser(null)}
             onUserUpdated={(updatedUser) => {
               setUsers((current) => current.map((item) => item.id === updatedUser.id ? updatedUser : item));
@@ -637,8 +750,18 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
                 </span>
               )}
             </span>
-            <span className="mt-0.5 block truncate text-2xs text-muted-foreground" title={user.email}>
-              @{user.username} · {user.email}
+            <span className="mt-0.5 flex items-center gap-1.5 text-2xs text-muted-foreground" title={user.email}>
+              <span className="truncate">@{user.username} · {user.email}</span>
+              {user.state === "removed" && (
+                <span className="shrink-0 rounded border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-1 py-px text-3xs font-semibold uppercase tracking-wide text-[var(--danger)]">
+                  Removed
+                </span>
+              )}
+              {user.state === "suspended" && (
+                <span className="shrink-0 rounded border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-1 py-px text-3xs font-semibold uppercase tracking-wide text-[var(--warn)]">
+                  Suspended
+                </span>
+              )}
             </span>
           </span>
         </button>
@@ -801,8 +924,9 @@ function ConfirmDialog({ open, title, description, confirmLabel, destructive, bu
      backend refuses LDAP-sourced accounts, so the AD branch has no form at all.
 ============================================================ */
 
-function UserDrawer({ user, onClose, onUserUpdated }: {
+function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
   user: User; onClose: () => void; onUserUpdated?: (user: User) => void;
+  onRestore?: () => void; onPurge?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
@@ -1038,6 +1162,38 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
             </div>
 
             <div className="space-y-5 lg:col-span-5">
+              {(user.state === "removed" || user.state === "suspended") && (
+                <section
+                  role="alert"
+                  className={[
+                    "rounded-xl border px-3 py-2.5",
+                    user.state === "removed"
+                      ? "border-[var(--danger)]/40 bg-[var(--danger)]/8"
+                      : "border-[var(--warn)]/40 bg-[var(--warn)]/8",
+                  ].join(" ")}
+                >
+                  <p className="text-xs font-semibold text-foreground">
+                    {user.state === "removed" ? "Removed from the directory" : "Disabled in Active Directory"}
+                  </p>
+                  <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">
+                    {user.state === "removed"
+                      ? "Active Directory no longer has this account, so it cannot sign in. Restore re-enables it here; purge deletes the local record for good."
+                      : "The account still exists in Active Directory but is disabled, so sign-in is blocked."}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button type="button" onClick={onRestore}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-2.5 text-2xs font-semibold transition hover:bg-muted">
+                      Restore access
+                    </button>
+                    {user.state === "removed" && (
+                      <button type="button" onClick={onPurge}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/8 px-2.5 text-2xs font-semibold text-[var(--danger)] transition hover:bg-[var(--danger)]/15">
+                        Purge local record
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )}
               {/* ---------- account metadata ---------- */}
             <section aria-labelledby="account-heading">
               <SectionHeading

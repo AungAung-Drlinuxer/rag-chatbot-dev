@@ -184,6 +184,14 @@ def init_db() -> None:
             "user_settings.prefs",
             "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS prefs JSONB NOT NULL DEFAULT '{}'::jsonb",
         ),
+        # Directory lifecycle (Phase 1): a users row is a projection of a directory account.
+        # `state` says what the directory last told us; `missing_scans` debounces removals.
+        ("users.state", "ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(16) DEFAULT 'active'"),
+        ("users.directory_seen_at",
+         "ALTER TABLE users ADD COLUMN IF NOT EXISTS directory_seen_at TIMESTAMPTZ"),
+        ("users.missing_scans",
+         "ALTER TABLE users ADD COLUMN IF NOT EXISTS missing_scans INTEGER DEFAULT 0"),
+        ("users.removed_at", "ALTER TABLE users ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ"),
         # HNSW index for fast cosine search (needs pgvector >= 0.5).
         (
             "langchain_pg_embedding HNSW index",
