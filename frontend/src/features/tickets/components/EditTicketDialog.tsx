@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { attachmentUrl } from "@/features/tickets/api";
+import { attachmentUrl, downloadAttachment } from "@/features/tickets/api";
 import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
 import {
   PRIORITY_META,
@@ -107,9 +107,14 @@ export function EditTicketDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // Load the opened ticket into the form.
+  // Load the opened ticket into the form — once per ticket, not on every refresh of the same
+  // row: a save replaces `selected`, and reloading then would throw away what the operator
+  // had typed (including a status they had just picked).
+  const loadedId = useRef<string | null>(null);
   useEffect(() => {
     if (!ticket) return;
+    if (loadedId.current === ticket.id) return;
+    loadedId.current = ticket.id;
     setSubject(ticket.subject || "");
     setDescription(ticket.description || "");
     setPriority(ticket.priority || "medium");
@@ -120,6 +125,11 @@ export function EditTicketDialog({
     setTried(false);
     setTab("details");
   }, [ticket]);
+
+  // Closing forgets the ticket so the next open reads it again.
+  useEffect(() => {
+    if (!open) loadedId.current = null;
+  }, [open]);
 
   // Every opening starts on Details; stale state is why a save reported the wrong tab.
   useEffect(() => {
@@ -262,6 +272,12 @@ export function EditTicketDialog({
       return;
     }
     setSaving(true);
+    /* Capture the intent before the save: onSave refreshes the selected ticket, which
+       re-runs the loader effect and would otherwise reset `status` back to what Jira already
+       had — the transition then looked like "no change" and was silently skipped. */
+    const originalStatus = ticket!.status;
+    const targetStatus = status;
+    const transitionNote = note.trim();
     try {
       const ok = await onSave({
         subject: subject.trim(),
@@ -271,8 +287,8 @@ export function EditTicketDialog({
         due_date: dueDate,
       });
 
-      if (status !== ticket!.status || note.trim().length > 0) {
-        await onStatus(status, note.trim());
+      if (targetStatus !== originalStatus || transitionNote.length > 0) {
+        await onStatus(targetStatus, transitionNote);
       }
 
       if (ok) {
@@ -650,7 +666,7 @@ export function EditTicketDialog({
                     <ul className="mt-2">
                       {visibleEntries.map((e, i) => {
                         const prev = visibleEntries[i - 1];
-                        const showDay = !prev || dayLabel(prev.at) !== dayLabel(e.at);
+                        const showDay = !!e.at && (!prev || dayLabel(prev.at) !== dayLabel(e.at));
                         return (
                           <li key={e.key}>
                             {showDay && (
@@ -693,11 +709,15 @@ export function EditTicketDialog({
                                 ) : e.kind === "attachment" && e.file ? (
                                   <>
                                     <p className="mt-0.5 text-xs text-muted-foreground">{e.text}</p>
-                                    <a
-                                      href={e.file.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-1 flex max-w-sm items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 transition hover:border-[var(--primary)]/40"
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        ticket &&
+                                        downloadAttachment(ticket.id, Number(e.key.slice(1)), e.file!.name).catch(
+                                          () => onToast?.("Could not download the attachment", "err"),
+                                        )
+                                      }
+                                      className="mt-1 flex w-full max-w-sm items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 text-left transition hover:border-[var(--primary)]/40"
                                     >
                                       <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                                       <span className="min-w-0 flex-1">
@@ -707,7 +727,7 @@ export function EditTicketDialog({
                                         </span>
                                       </span>
                                       <Download className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                                    </a>
+                                    </button>
                                   </>
                                 ) : (
                                   <>

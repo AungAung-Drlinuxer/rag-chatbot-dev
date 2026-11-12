@@ -214,6 +214,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
     const previous = selected.status;
     setStatusBusy(status);
     setSelected({ ...selected, status });
+    // Keep the board row in step with the dialog: the refetch below can land before Jira has
+    // committed the transition, which left "Open" showing for a ticket that was in progress.
+    setTickets((prev) =>
+      prev ? prev.map((t) => (t.id === selected.id ? { ...t, status } : t)) : prev,
+    );
     try {
       // One request: the transition and the comment travel together, so an operator never has
       // to remember to add the explanation as a second step.
@@ -285,6 +290,21 @@ export default function Tickets({ role, userName, onToast }: Props) {
         assignee: p.assignee || null,
         due_date: p.due_date || null,
       });
+      setTickets((prev) =>
+        prev
+          ? prev.map((t) =>
+              t.id === target.id
+                ? {
+                    ...t,
+                    subject: p.subject,
+                    priority: p.priority as Ticket["priority"],
+                    assignee: p.assignee || null,
+                    due_date: p.due_date || null,
+                  }
+                : t,
+            )
+          : prev,
+      );
 
       if (problems.length) onToast(`Saved, with ${problems.length} caveat(s): ${problems.join("; ")}`, "err");
       else onToast("Saved to Jira");

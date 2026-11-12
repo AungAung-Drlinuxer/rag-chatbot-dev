@@ -193,3 +193,24 @@ export async function ticketAttachmentAdd(ref: string, file: File) {
 export function attachmentUrl(ref: string, id: number) {
   return `${BASE}/api/tickets/${ref}/attachments/${id}/download`;
 }
+
+/** Download through the authenticated client.
+ *
+ * The token lives in memory/sessionStorage, not a cookie, so a plain `<a href>` on the
+ * download URL goes out unauthenticated and the API answers 401. Fetch with the bearer
+ * header, then hand the bytes to the browser as a blob. */
+export async function downloadAttachment(ref: string, id: number, filename: string) {
+  const r = await apiFetch(`/api/tickets/${ref}/attachments/${id}/download`, {
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
