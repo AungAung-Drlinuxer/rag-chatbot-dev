@@ -32,7 +32,6 @@ import {
   Share2,
   Shield,
   Sparkles,
-  X,
 } from "lucide-react";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
 import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
@@ -302,12 +301,15 @@ export function FloatingChatPopup() {
     runQuestion(q);
   }, [editText, isTyping, messages, editingId, runQuestion]);
 
-  /* Minimized: round bubble bottom-right, conversation state preserved */
-  if (open && minimized) {
+  /* Minimized — or never opened — the widget is still there as a round bubble. There is no
+     close button by design: the assistant is a permanent part of the workspace, and a user
+     who dismissed it once should not have to hunt for it again. */
+  if (!open || minimized) {
     return (
       <button
-        aria-label="Reopen chat"
-        onClick={() => setMinimized(false)}
+        aria-label={open ? "Reopen chat" : "Open IT assistant"}
+        title={open ? "Reopen chat" : "Ask the IT assistant"}
+        onClick={() => { setOpen(true); setMinimized(false); }}
         className="fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-2xl shadow-black/30 transition hover:scale-105 hover:opacity-95"
       >
         <Bot className="size-6" />
@@ -320,13 +322,11 @@ export function FloatingChatPopup() {
     );
   }
 
-  if (!open) return null;
-
   return (
     <div
       role="dialog"
       aria-label="AI assistant chat"
-      className="fixed bottom-5 right-5 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
+      className="fixed bottom-5 right-5 z-50 flex h-[min(72vh,470px)] w-[min(92vw,340px)] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
     >
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-violet-800/40 bg-gradient-to-r from-violet-700 to-violet-800 px-4 py-3 text-white">
@@ -348,13 +348,6 @@ export function FloatingChatPopup() {
         >
           <Minus className="size-4" />
         </button>
-        <button
-          aria-label="Close chat"
-          onClick={() => setOpen(false)}
-          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/20 hover:text-white"
-        >
-          <X className="size-4" />
-        </button>
       </div>
 
       {/* Body */}
@@ -375,21 +368,23 @@ export function FloatingChatPopup() {
           <div key={m.id} className={m.role === "user" ? "group flex justify-end" : "group flex justify-start gap-2"}>
             {/* v1.6.38 — brand avatar on assistant turns, matching the Chat page */}
             {m.role !== "user" && (
-              <div className="grid size-7 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm">
+              <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--secondary)] text-[var(--secondary-foreground)]">
                 <Bot className="size-3.5" />
               </div>
             )}
             <div className={m.role === "user" ? "max-w-[85%]" : "min-w-0 max-w-[88%]"}>
               <div
                 className={[
-                  "min-w-0 max-w-full overflow-hidden rounded-2xl px-3.5 py-3 text-xs leading-relaxed",
+                  /* Same shapes and tokens as the chat page: a filled primary bubble for the
+                     question, a bordered card for the answer. */
+                  "min-w-0 max-w-full overflow-hidden px-3.5 py-2.5 text-[13px] leading-[1.65]",
                   m.role === "user"
                     ? editingId === m.id
-                      ? "rounded-br-md border-2 border-[var(--primary)] bg-[var(--accent-soft)]"
-                      : "rounded-br-md bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      ? "rounded-2xl rounded-br-md border-2 border-[var(--primary)] bg-[var(--accent-soft)]"
+                      : "rounded-2xl rounded-br-md bg-[var(--primary)] text-[var(--primary-foreground)]"
                     : m.failed
-                      ? "rounded-tl-none border border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
-                      : "rounded-tl-none border border-slate-200 bg-white text-slate-800 shadow-xs dark:border-slate-800 dark:bg-[#111827] dark:text-slate-100",
+                      ? "rounded-xl rounded-tl-md border border-red-300/70 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
+                      : "rounded-xl rounded-tl-md border border-[var(--border)] bg-card text-card-foreground shadow-xs",
                 ].join(" ")}
               >
                 {m.role === "user" ? (
@@ -452,15 +447,16 @@ export function FloatingChatPopup() {
                           <Sparkles className="size-3 text-[var(--primary)]" /> Sources
                         </div>
                         {m.sources!.slice(0, 3).map((s, i) => (
-                          <div key={i} className="mb-1 truncate rounded-lg bg-[var(--accent-soft)] px-2 py-1 text-2xs text-[var(--accent-foreground)]">
-                            📄 {s.title}
-                            {s.relevance != null && <span className="ml-1 text-emerald-600 dark:text-emerald-400">{s.relevance}%</span>}
+                          <div key={i} className="mb-1 flex items-start gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-2 py-1 text-2xs text-foreground">
+                            <span className="mt-px grid size-4 shrink-0 place-items-center rounded bg-[var(--accent)] text-[9px] font-bold text-[var(--accent-foreground)]">{i + 1}</span>
+                            <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                            {s.relevance != null && <span className="shrink-0 font-medium text-[var(--ok)]">{s.relevance}%</span>}
                           </div>
                         ))}
                       </div>
                     )}
                     {m.confidence != null && (
-                      <div className="mt-1.5 text-2xs text-muted-foreground">
+                      <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--muted)] px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                         Confidence:{" "}
                         <span className={m.confidence >= 85 ? "font-semibold text-emerald-600" : m.confidence >= 70 ? "font-semibold text-amber-600" : "font-semibold text-red-500"}>
                           {m.confidence >= 85 ? "High" : m.confidence >= 70 ? "Medium" : "Low"} ({m.confidence}%)
@@ -516,7 +512,7 @@ export function FloatingChatPopup() {
              stage icon that changes as the pipeline advances, and a shimmering
              label (Thinking -> Rewriting -> Searching -> Researching -> Writing). */
           <div className="flex justify-start">
-            <div className="min-w-0 max-w-[92%] rounded-2xl rounded-tl-none border border-slate-200 bg-white px-3.5 py-3 shadow-xs dark:border-slate-800 dark:bg-[#111827]">
+            <div className="min-w-0 max-w-[92%] rounded-xl rounded-tl-md border border-[var(--border)] bg-card px-3.5 py-3 text-card-foreground shadow-xs">
               <AgentActivity
                 stage={stageFromText(stage)}
                 detail={stage}
