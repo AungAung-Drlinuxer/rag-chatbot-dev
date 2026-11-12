@@ -29,12 +29,17 @@ export function readStoredTheme(): "light" | "dark" | null {
 /** Before the server answers (login screen, first paint) honour the last choice. */
 export function applyStoredTheme(): void {
   const root = document.documentElement;
-  const current = root.getAttribute("data-theme");
-  if (current === "dark" || current === "light") {
-    storeTheme(current); // keep the local copy honest after a server-applied theme
+  const stored = readStoredTheme();
+  if (stored) {
+    root.setAttribute("data-theme", stored);
     return;
   }
-  root.setAttribute("data-theme", readStoredTheme() ?? "light");
+  /* No stored choice (a first visit, or a private window): follow the operating system.
+     Forcing "light" here is what gave a dark-desktop user a bright login page and then a
+     dark app one click later. */
+  const prefersDark =
+    typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  root.setAttribute("data-theme", prefersDark ? "dark" : "light");
 }
 
 /** Server-prefs -> DOM. Accepts either `theme` ("light"|"dark"|"system") or `darkMode`.

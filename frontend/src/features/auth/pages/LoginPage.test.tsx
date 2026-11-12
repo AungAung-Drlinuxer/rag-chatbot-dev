@@ -66,8 +66,11 @@ describe("LoginPage — single sign-on", () => {
       onSso: () => {},
     });
     const text = el.textContent ?? "";
-    expect(text).toContain("Sign in with Keycloak");
-    expect(text).toContain("via Keycloak");
+    /* SSO now leads the card, so the button reads "Continue with …" and the realm lives in
+       the helper line underneath. The contract the test guards is unchanged: the provider
+       and the realm are named, never a generic "SSO". */
+    expect(text).toContain("Continue with Keycloak");
+    expect(text).toContain("single sign-on");
     expect(text).toContain("realm ihkp");
     // The old generic label must be gone.
     expect(text).not.toContain("Sign in with SSO");
@@ -78,7 +81,7 @@ describe("LoginPage — single sign-on", () => {
       sso: { enabled: true, provider: "keycloak", label: "Keycloak", realm: "" },
       onSso: () => {},
     });
-    expect(el.textContent).toContain("Sign in with Keycloak");
+    expect(el.textContent).toContain("Continue with Keycloak");
     expect(el.textContent).not.toContain("realm");
   });
 
@@ -90,7 +93,7 @@ describe("LoginPage — single sign-on", () => {
 
   it("keeps working with the legacy boolean prop", async () => {
     const el = await mount({ ssoEnabled: true, onSso: () => {} });
-    expect(el.textContent).toContain("Sign in with Keycloak");
+    expect(el.textContent).toContain("Continue with Keycloak");
   });
 
   it("calls onSso when the provider button is pressed", async () => {

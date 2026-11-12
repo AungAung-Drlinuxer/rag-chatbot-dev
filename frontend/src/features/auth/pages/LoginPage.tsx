@@ -103,7 +103,7 @@ export default function Login({
   const canSubmit = !!loginUser.trim() && !!loginPass && !submitting;
 
   return (
-    <div className="relative min-h-[100svh] bg-background text-foreground">
+    <div className="relative min-h-[100svh] bg-background text-foreground lg:h-[100svh] lg:min-h-0 lg:overflow-hidden">
       {/* ambient decoration — clipped, never scrollable */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-40 -top-24 size-[28rem] rounded-full bg-[var(--primary)]/10 blur-[100px]" />
@@ -120,9 +120,9 @@ export default function Login({
         />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1680px] lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(400px,520px)]">
+      <div className="relative mx-auto grid w-full max-w-[1560px] lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(440px,540px)]">
         {/* ============================ BRAND COLUMN ============================ */}
-        <section className="relative hidden min-h-0 flex-col p-4 lg:flex xl:p-6">
+        <section className="relative hidden min-h-0 flex-col p-4 lg:flex lg:min-h-0 xl:p-5">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-gradient-to-b from-card via-card to-muted/40 shadow-xs">
             {/* framed header */}
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-4 xl:px-8">
@@ -142,8 +142,8 @@ export default function Login({
             </header>
 
             {/* flexible content area */}
-            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-6 xl:px-8 xl:py-8">
-              <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4.5">
+            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-4 xl:px-8 xl:py-6">
+              <div className="mx-auto flex w-full max-w-[820px] flex-col gap-4">
                 <div>
                   <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[32px]">
                     Find the right{" "}
@@ -202,7 +202,7 @@ export default function Login({
         </section>
 
         {/* ============================ FORM COLUMN ============================ */}
-        <main className="flex min-h-[100svh] min-w-0 flex-col lg:min-h-0 lg:border-l lg:border-[var(--border)] lg:bg-muted/20">
+        <main className="flex min-h-[100svh] min-w-0 flex-col lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-[var(--border)] lg:bg-muted/20">
           {/* mobile / tablet brand band — takes over the desktop brand column */}
           <div className="lg:hidden">
             <div className="relative overflow-hidden rounded-b-[28px] border-b border-[var(--border)] bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] px-5 pb-6 pt-5 text-[var(--primary-foreground)]">
@@ -232,8 +232,8 @@ export default function Login({
             </div>
           </div>
 
-          <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-            <div className="w-full max-w-[420px]">
+          <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
+            <div className="w-full max-w-[460px]">
               {/* sign-in card */}
               <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-7">
                 <div className="mb-6">
@@ -248,7 +248,30 @@ export default function Login({
                   </p>
                 </div>
 
-                <form onSubmit={handleLocalSubmit} className="space-y-4" noValidate>
+                {showSso && onSso && (
+                  <div className="mb-4 space-y-2">
+                    <button
+                      type="button"
+                      onClick={onSso}
+                      className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99]"
+                    >
+                      <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-4 shrink-0" />
+                      <span>Continue with {ssoLabel}</span>
+                    </button>
+                    <p className="text-center text-2xs leading-relaxed text-muted-foreground">
+                      {ssoRealm
+                        ? `Corporate single sign-on · realm ${ssoRealm}. Ask IT if you are not enrolled.`
+                        : "Corporate single sign-on. Ask IT if you are not enrolled."}
+                    </p>
+                    <div className="flex items-center gap-3 pt-1" aria-hidden="true">
+                      <span className="h-px flex-1 bg-[var(--border)]" />
+                      <span className="text-2xs uppercase tracking-wide text-muted-foreground">or use your password</span>
+                      <span className="h-px flex-1 bg-[var(--border)]" />
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleLocalSubmit} className="space-y-3.5" noValidate>
                   <div>
                     <label htmlFor="login-username" className="mb-1.5 block text-xs font-semibold text-foreground">
                       Username
@@ -296,6 +319,9 @@ export default function Login({
                         {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
                     </div>
+                    <p className="mt-1.5 text-2xs text-muted-foreground">
+                      Forgot your password? Contact the IT service desk.
+                    </p>
                   </div>
 
                   {!loginErr && fieldErr && (
@@ -329,28 +355,6 @@ export default function Login({
                     )}
                   </button>
 
-                  {showSso && onSso && (
-                    <>
-                      <div className="flex items-center gap-3 py-1" aria-hidden="true">
-                        <span className="h-px flex-1 bg-[var(--border)]" />
-                        <span className="text-2xs uppercase tracking-wide text-muted-foreground">or</span>
-                        <span className="h-px flex-1 bg-[var(--border)]" />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={onSso}
-                        className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-[var(--border)] bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted/50 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/15 active:scale-[0.99]"
-                      >
-                        <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-4 shrink-0" />
-                        <span>Sign in with {ssoLabel}</span>
-                      </button>
-                      <p className="text-center text-2xs text-muted-foreground">
-                        {ssoRealm
-                          ? `via ${ssoLabel} single sign-on · realm ${ssoRealm}. Ask IT if you are not enrolled.`
-                          : `via ${ssoLabel} single sign-on. Ask IT if you are not enrolled.`}
-                      </p>
-                    </>
-                  )}
                 </form>
 
                 <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-2xs">

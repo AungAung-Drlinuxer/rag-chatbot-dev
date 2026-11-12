@@ -12,7 +12,12 @@
       (function () {
         try {
           var t = localStorage.getItem("ith-theme");
-          document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light");
+          if (t !== "dark" && t !== "light") {
+            /* First visit: follow the operating system instead of forcing light, so a
+               dark desktop does not get a white login screen. */
+            t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", t);
         } catch (e) {
           document.documentElement.setAttribute("data-theme", "light");
         }
