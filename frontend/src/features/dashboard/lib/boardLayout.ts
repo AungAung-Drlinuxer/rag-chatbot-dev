@@ -36,6 +36,8 @@ export type BandSpec = {
   auto?: boolean;
   /** Share of the leftover height. */
   fr: number;
+  /** Fixed height in px — set once the user has dragged a content-sized band. */
+  px?: number;
 };
 
 export const ADMIN_BANDS: readonly BandSpec[] = [
@@ -58,9 +60,11 @@ export function bandsFor(role: string | undefined): BandSpec[] {
 /** The `grid-template-rows` value for a band set. */
 export function boardRows(bands: readonly BandSpec[]): string {
   return bands
-    .map((b) => (b.auto || b.fr <= 0
-      ? `minmax(${b.min}px,auto)`
-      : `minmax(${b.min}px,${round2(b.fr)}fr)`))
+    .map((b) => (b.px != null
+      ? `minmax(${Math.round(b.px)}px,${Math.round(b.px)}px)`
+      : b.auto || b.fr <= 0
+        ? `minmax(${b.min}px,auto)`
+        : `minmax(${b.min}px,${round2(b.fr)}fr)`))
     .join(" ");
 }
 
@@ -149,11 +153,31 @@ export function resizeBand(
   deltaFr: number,
 ): BandSpec[] {
   const index = row - 1;
-  const toward = index + (edge === "s" ? 1 : -1);
-  if (index < 0 || index >= bands.length || toward < 0 || toward >= bands.length) {
-    return bands as BandSpec[];
-  }
+  if (index < 0 || index >= bands.length) return bands as BandSpec[];
   const from = bands[index];
+
+  /* The last band has no neighbour below it, which used to make its south edge dead: the
+     bottom panel (guardrail events) could never be made taller. Grow it by taking a share
+     from every weighted band above, in proportion to what each can give up. */
+  if (edge === "s" && index === bands.length - 1 && !from.auto && from.px == null) {
+    const donors = bands
+      .map((b, i) => ({ b, i }))
+      .filter(({ b, i }) => i !== index && !b.auto && b.px == null && b.fr > MIN_BAND_FR);
+    const capacity = donors.reduce((sum, { b }) => sum + (b.fr - MIN_BAND_FR), 0);
+    if (capacity <= 0) return bands as BandSpec[];
+    const applied = clamp(deltaFr, -(from.fr - MIN_BAND_FR), capacity);
+    if (Math.abs(applied) < 0.001) return bands as BandSpec[];
+    return bands.map((b, i) => {
+      if (i === index) return { ...b, fr: round2(b.fr + applied) };
+      const donor = donors.find((d) => d.i === i);
+      if (!donor) return b;
+      const share = (donor.b.fr - MIN_BAND_FR) / capacity;
+      return { ...b, fr: round2(b.fr - applied * share) };
+    });
+  }
+
+  const toward = index + (edge === "s" ? 1 : -1);
+  if (toward < 0 || toward >= bands.length) return bands as BandSpec[];
   const to = bands[toward];
   // The content-sized band has no share to trade.
   if (from.auto || to.auto) return bands as BandSpec[];

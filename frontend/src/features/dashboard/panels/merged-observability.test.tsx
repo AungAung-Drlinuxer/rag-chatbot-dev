@@ -22,6 +22,9 @@ vi.mock("@/features/dashboard/api", () => ({
   dashRecentTickets: vi.fn(),
   dashHealth: vi.fn(),
   dashGateTrend: vi.fn(),
+  getBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
+  saveBoardLayout: vi.fn(async () => ({ board: null, custom: true, updated_at: null })),
+  clearBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
 }));
 
 vi.mock("@/features/observability/api", () => ({

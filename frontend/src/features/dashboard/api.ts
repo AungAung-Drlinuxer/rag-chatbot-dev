@@ -56,3 +56,40 @@ export async function dashHealth() {
   const r = await apiFetch(`${BASE}/api/dashboard/health`, { headers: authHeaders() });
   return r.json();
 }
+
+/* ---------------------------------------------------------------- board geometry
+ * The Overview board's band heights and panel spans, saved per user on the server so a
+ * customised view follows the operator to another browser instead of dying with their
+ * localStorage. */
+
+export type BoardBand = { min: number; fr: number; auto?: boolean; px?: number };
+export type BoardLayout = { spans: Record<string, number>; bands: BoardBand[] };
+
+export async function getBoardLayout(): Promise<{
+  board: BoardLayout | null;
+  custom: boolean;
+  updated_at: string | null;
+}> {
+  const r = await apiFetch(`${BASE}/api/dashboard/board`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function saveBoardLayout(board: BoardLayout) {
+  const r = await apiFetch(`${BASE}/api/dashboard/board`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(board),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function clearBoardLayout() {
+  const r = await apiFetch(`${BASE}/api/dashboard/board`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}

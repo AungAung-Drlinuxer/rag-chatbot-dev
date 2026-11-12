@@ -111,10 +111,21 @@ describe("resizeBand", () => {
     expect(next[3].fr).toBeCloseTo(1.33, 5);
   });
 
-  it("refuses to shrink a band below its floor or the last band", () => {
+  it("grows the last band, taking the space from the bands above", () => {
+    // The bottom panel has no neighbour below it; its south edge used to be dead, which is
+    // why guardrail events could never be extended downward.
     const bands = ADMIN_BANDS.map((b) => ({ ...b }));
-    const next = resizeBand(bands, 4, "s", 1);
-    expect(next).toEqual(bands);
+    const next = resizeBand(bands, 4, "s", 0.4);
+
+    expect(next[3].fr).toBeCloseTo(1.58, 5);
+    const given = (bands[1].fr - next[1].fr) + (bands[2].fr - next[2].fr);
+    expect(given).toBeCloseTo(0.4, 3);
+    expect(next[0]).toEqual(bands[0]); // the content-sized strip never trades height
+  });
+
+  it("refuses to shrink a band below its floor, and leaves the auto band alone", () => {
+    const bands = ADMIN_BANDS.map((b) => ({ ...b }));
+    expect(resizeBand(bands, 1, "s", 1)).toEqual(bands);
     const floored = resizeBand(bands, 2, "s", 5);
     // the panel below can only give up what it has above the floor
     expect(floored[1].fr).toBeCloseTo(1.55, 5);

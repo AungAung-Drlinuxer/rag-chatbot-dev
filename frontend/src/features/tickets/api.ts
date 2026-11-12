@@ -92,6 +92,7 @@ export async function createTicketApi(body: {
 export async function ticketUpdate(ref: string, patch: {
   status?: string; assignee?: string | null; due_date?: string | null;
   subject?: string; description?: string; priority?: string; comment?: string;
+  comment_internal?: boolean;
 }) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}`, {
     method: "PUT",
@@ -125,11 +126,11 @@ export async function ticketComments(ref: string) {
   return r.json();
 }
 
-export async function ticketAddComment(ref: string, body: string) {
+export async function ticketAddComment(ref: string, body: string, internal = false) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, internal }),
   });
   return r.json();
 }

@@ -744,3 +744,98 @@ def reset_dashboard_layout(user: str = Depends(get_current_user)) -> dict:
         s.execute(text("DELETE FROM dashboard_layouts WHERE username = :u"), {"u": user})
         s.commit()
     return {"panels": [], "custom": False, "updated_at": None}
+
+
+# ------------------------------------------------------------------ board geometry
+#
+# `dashboard_layouts` stores panel *placement* (which panels, how wide, what order). The
+# board's band heights and per-panel spans are a different thing: they are geometry the user
+# nudges with the resize handles on the Overview page. They live in runtime_kv as one JSON
+# document per user, so saving a view is a single row write and never migrates the schema.
+
+
+class BoardIn(BaseModel):
+    #: Loose on purpose: a stale client (or a hand-edited row) is clamped by
+    #: `_normalise_board` into something drawable instead of being rejected with a 422.
+    spans: dict[str, Any] = {}
+    bands: list[Any] = []
+
+
+_BOARD_PREFIX = "board_layout:"
+
+
+def _board_key(user: str) -> str:
+    return (_BOARD_PREFIX + user)[:128]
+
+
+def _normalise_board(payload: BoardIn) -> dict:
+    """Clamp whatever the client sent into a board the renderer can always draw.
+
+    A saved board outlives the release that wrote it, so a span of 40 or a band with a
+    negative height must load as a usable board instead of a broken page.
+    """
+    spans = {}
+    for pid, span in (payload.spans or {}).items():
+        if not isinstance(pid, str):
+            continue
+        try:
+            value = int(span)
+        except (TypeError, ValueError):
+            continue
+        spans[pid[:64]] = max(1, min(12, value))
+
+    bands = []
+    for band in payload.bands or []:
+        if not isinstance(band, dict):
+            continue
+        try:
+            minimum = int(band.get("min", 112))
+            fr = float(band.get("fr", 0))
+        except (TypeError, ValueError):
+            continue
+        bands.append({
+            "min": max(60, min(1200, minimum)),
+            "fr": max(0.0, min(8.0, round(fr, 3))),
+            "auto": bool(band.get("auto", False)),
+        })
+    return {"spans": spans, "bands": bands[:12]}
+
+
+@router.get("/dashboard/board")
+def get_dashboard_board(user: str = Depends(get_current_user)) -> dict:
+    with _db() as s:
+        row = s.execute(
+            text("SELECT value, updated_at FROM runtime_kv WHERE key = :k"),
+            {"k": _board_key(user)},
+        ).first()
+    if not row:
+        return {"board": None, "custom": False, "updated_at": None}
+    try:
+        board = json.loads(row[0])
+    except (TypeError, ValueError):
+        board = None
+    return {"board": board, "custom": board is not None,
+            "updated_at": row[1].isoformat() if row[1] else None}
+
+
+@router.put("/dashboard/board")
+def put_dashboard_board(payload: BoardIn, user: str = Depends(get_current_user)) -> dict:
+    board = _normalise_board(payload)
+    with _db() as s:
+        s.execute(text(
+            "INSERT INTO runtime_kv (key, value) VALUES (:k, :v) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()"
+        ), {"k": _board_key(user), "v": json.dumps(board)})
+        s.commit()
+        row = s.execute(text("SELECT updated_at FROM runtime_kv WHERE key = :k"),
+                        {"k": _board_key(user)}).first()
+    return {"board": board, "custom": True,
+            "updated_at": row[0].isoformat() if row and row[0] else None}
+
+
+@router.delete("/dashboard/board")
+def reset_dashboard_board(user: str = Depends(get_current_user)) -> dict:
+    with _db() as s:
+        s.execute(text("DELETE FROM runtime_kv WHERE key = :k"), {"k": _board_key(user)})
+        s.commit()
+    return {"board": None, "custom": False, "updated_at": None}

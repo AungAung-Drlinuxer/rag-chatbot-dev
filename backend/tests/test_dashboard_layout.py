@@ -104,3 +104,33 @@ def test_a_legacy_layout_without_positions_still_saves():
 def test_non_numeric_geometry_falls_back_instead_of_erroring():
     out = normalise_panels([{"id": "a", "type": "kpis", "span": 6, "x": "left", "y": None, "h": "tall"}])
     assert out[0]["x"] == 0 and out[0]["y"] == 0 and out[0]["h"] == 4
+
+
+# ---------------------------------------------------------------- board geometry (spans/bands)
+
+def test_board_geometry_is_clamped_not_rejected():
+    """A saved board outlives the release that wrote it; insane numbers must still load."""
+    from app.api.dashboard import BoardIn, _normalise_board
+
+    out = _normalise_board(BoardIn(
+        spans={"kpis": 99, "trend": -4, "quality": 3, "junk": "x"},
+        bands=[
+            {"min": 112, "fr": 0, "auto": True},
+            {"min": 5, "fr": -2},
+            {"min": 99999, "fr": 40},
+            "not-a-band",
+        ],
+    ))
+
+    assert out["spans"] == {"kpis": 12, "trend": 1, "quality": 3}
+    assert out["bands"][0] == {"min": 112, "fr": 0.0, "auto": True}
+    assert out["bands"][1]["min"] == 60 and out["bands"][1]["fr"] == 0.0
+    assert out["bands"][2]["min"] == 1200 and out["bands"][2]["fr"] == 8.0
+    assert len(out["bands"]) == 3
+
+
+def test_board_key_is_per_user_and_fits_the_column():
+    from app.api.dashboard import _board_key
+
+    assert _board_key("ith@admin") == "board_layout:ith@admin"
+    assert len(_board_key("u" * 400)) <= 128

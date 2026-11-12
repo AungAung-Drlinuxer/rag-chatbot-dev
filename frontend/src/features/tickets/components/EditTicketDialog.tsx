@@ -63,11 +63,11 @@ type Props = {
   assignable: Assignable[];
   jiraReady: boolean;
   onSave: (payload: TicketEditPayload) => Promise<boolean>;
-  onStatus: (status: Ticket["status"], comment: string) => Promise<boolean>;
+  onStatus: (status: Ticket["status"], comment: string, internal?: boolean) => Promise<boolean>;
   onAddAttachment: (file: File) => void;
   onDeleteAttachment: (id: number) => void;
   /** Post a note to the issue from the Activity tab's composer. */
-  onAddComment?: (body: string) => void | Promise<void>;
+  onAddComment?: (body: string, internal: boolean) => void | Promise<void>;
   onToast?: (msg: string, tone?: "ok" | "err") => void;
 };
 
@@ -228,7 +228,7 @@ export function EditTicketDialog({
     if (!body || !onAddComment) return;
     setAddingNote(true);
     try {
-      await onAddComment(body);
+      await onAddComment(body, composer === "internal");
       setNote("");
       onToast?.("Note added to the issue");
     } catch (err: any) {
@@ -288,7 +288,7 @@ export function EditTicketDialog({
       });
 
       if (targetStatus !== originalStatus || transitionNote.length > 0) {
-        await onStatus(targetStatus, transitionNote);
+        await onStatus(targetStatus, transitionNote, composer === "internal");
       }
 
       if (ok) {
@@ -304,7 +304,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl">
+      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* ---- header ---- */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4 pr-14">
@@ -366,7 +366,7 @@ export function EditTicketDialog({
           </div>
 
           {/* ---- body ---- */}
-          <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto px-6 py-5">
+          <div className="max-h-[min(54vh,520px)] overflow-y-auto px-6 py-5">
             {tab === "details" ? (
               <div className="space-y-4">
                 {/* status */}
@@ -806,7 +806,9 @@ export function EditTicketDialog({
                       <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                         <Paperclip className="size-3" aria-hidden />
                         <Lock className="size-3" aria-hidden />
-                        Visible to the support team on the Jira issue
+                        {composer === "internal"
+                          ? "Internal note — agents only, never shown to the requester"
+                          : "Public reply — visible to the requester on the Jira issue"}
                       </span>
                       <button
                         type="button"

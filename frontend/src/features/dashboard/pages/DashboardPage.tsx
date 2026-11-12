@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, ChevronDown, Home, RefreshCw } from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, Home, RefreshCw, RotateCcw, Save } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -40,7 +40,6 @@ import {
 } from "@/features/dashboard/panels/types";
 import { PanelResizeHandles } from "@/features/dashboard/components/PanelResizeHandles";
 import { usePanelResize } from "@/features/dashboard/lib/usePanelResize";
-import { RotateCcw } from "lucide-react";
 import type { ResizeEdge } from "@/features/dashboard/lib/boardLayout";
 
 /**
@@ -129,6 +128,13 @@ export default function Dashboard({ role, perms }: Props) {
   // Placement + band heights. Persisted per role, so an admin and an agent can each keep
   // their own arrangement in the same browser.
   const board = usePanelResize(panels, role);
+  // Inline confirmation for the layout actions: the page has no toast host, and a button that
+  // simply disappears is easy to miss.
+  const [viewNote, setViewNote] = useState<string | null>(null);
+  const flash = (msg: string) => {
+    setViewNote(msg);
+    window.setTimeout(() => setViewNote((cur) => (cur === msg ? null : cur)), 3200);
+  };
 
   // Poll every 60s so a dashboard left open does not show stale figures.
   const [nowTick, setNowTick] = useState(0);
@@ -477,17 +483,43 @@ export default function Dashboard({ role, perms }: Props) {
             Refresh
           </Button>
 
+          {viewNote && (
+            <span role="status" className="text-2xs text-muted-foreground">{viewNote}</span>
+          )}
+
           {board.dirty && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-lg"
-              onClick={board.reset}
-              title="Put the panels back where they started"
-            >
-              <RotateCcw className="mr-2 size-3.5" />
-              Reset layout
-            </Button>
+            <>
+              <Button
+                size="sm"
+                className="rounded-lg"
+                disabled={board.saving}
+                onClick={() => {
+                  board
+                    .saveView()
+                    .then(() => flash("View saved — it will open this way next time"))
+                    .catch(() => flash("Could not save this view"));
+                }}
+                title="Keep this arrangement for your account"
+              >
+                <Save className="mr-2 size-3.5" />
+                {board.saving ? "Saving…" : "Save view"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-lg"
+                onClick={() => {
+                  board
+                    .reset()
+                    .then(() => flash("Layout reset to the default view"))
+                    .catch(() => flash("Could not reset the layout"));
+                }}
+                title="Put the panels back where they started"
+              >
+                <RotateCcw className="mr-2 size-3.5" />
+                Reset layout
+              </Button>
+            </>
           )}
 
           <DashboardReportButtons

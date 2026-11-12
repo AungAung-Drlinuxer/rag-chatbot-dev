@@ -585,23 +585,27 @@ def _issue_url(path: str) -> str:
     return cfg["base_url"].rstrip("/") + path
 
 
-def add_comment(issue_key: str, body: str) -> dict:
-    """Post a comment to the Jira issue. Jira Cloud v3 wants an ADF document, not a string."""
+def add_comment(issue_key: str, body: str, internal: bool = False) -> dict:
+    """Post a comment to the Jira issue. Jira Cloud v3 wants an ADF document, not a string.
+
+    `internal` restricts the comment to agents. On a Jira Service Management project that is
+    the native "internal note" (`public: false`); on a business/software project the same idea
+    is a visibility restriction. Posting an internal note as a plain comment would show the
+    support team's notes to the customer, so the flag is threaded all the way from the UI.
+    """
     cfg = _jira_cfg()
     if not (cfg.get("base_url") and cfg.get("api_token")):
         return {"ok": False, "detail": "Jira is not configured"}
     text = (body or "").strip()
     if not text:
         return {"ok": False, "detail": "empty comment"}
-    payload = {
-        "body": {
-            "type": "doc",
-            "version": 1,
-            "content": [{
-                "type": "paragraph",
-                "content": [{"type": "text", "text": text[:30000]}],
-            }],
-        }
+    adf = {
+        "type": "doc",
+        "version": 1,
+        "content": [{
+            "type": "paragraph",
+            "content": [{"type": "text", "text": text[:30000]}],
+        }],
     }
     try:
         import httpx
@@ -611,9 +615,33 @@ def add_comment(issue_key: str, body: str) -> dict:
             "Accept": "application/json",
             "Content-Type": "application/json",
         }) as client:
-            r = client.post(_issue_url(f"/rest/api/3/issue/{issue_key}/comment"), json=payload)
+            if internal:
+                # JSM has a dedicated endpoint whose `public` flag is the internal-note switch.
+                sd = client.post(
+                    _issue_url(f"/rest/servicedeskapi/request/{issue_key}/comment"),
+                    json={"body": text[:30000], "public": False},
+                )
+                if sd.status_code in (200, 201):
+                    return {"ok": True, "id": (sd.json() or {}).get("id"),
+                            "internal": True, "via": "servicedeskapi"}
+                logger.info("JSM internal comment failed for %s: HTTP %s %s",
+                            issue_key, sd.status_code, sd.text[:160])
+            else:
+                r = client.post(_issue_url(f"/rest/api/3/issue/{issue_key}/comment"), json={"body": adf})
+                if r.status_code in (200, 201):
+                    return {"ok": True, "id": (r.json() or {}).get("id"),
+                            "internal": False, "via": "rest/api/3"}
+                return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+            # Fallback for internal notes: the platform endpoint plus the sdPublic property,
+            # which is what the JSM UI itself writes for an internal note.
+            r = client.post(
+                _issue_url(f"/rest/api/3/issue/{issue_key}/comment"),
+                json={"body": adf, "properties": [{"key": "sdPublic", "value": False}]},
+            )
             if r.status_code in (200, 201):
-                return {"ok": True, "id": (r.json() or {}).get("id")}
+                return {"ok": True, "id": (r.json() or {}).get("id"),
+                        "internal": True, "via": "sdPublic-property"}
             return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
     except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}

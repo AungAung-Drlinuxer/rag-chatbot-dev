@@ -151,7 +151,8 @@ describe("EditTicketDialog", () => {
     await act(async () => { await Promise.resolve(); });
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onStatus).toHaveBeenCalledWith("in_progress", "On site replacing the gateway");
+    // The composer defaults to "Internal note", so the note must be flagged agent-only.
+    expect(onStatus).toHaveBeenCalledWith("in_progress", "On site replacing the gateway", true);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

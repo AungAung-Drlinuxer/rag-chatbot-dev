@@ -556,6 +556,8 @@ def ticket_comments(ticket_ref: str, user: str = Depends(get_current_user)) -> d
 
 class CommentRequest(BaseModel):
     body: str
+    #: Internal note — agent-only in Jira (JSM `public: false`), never the customer's view.
+    internal: bool = False
 
 
 @router.post("/tickets/{ticket_ref}/comments")
@@ -564,21 +566,22 @@ def ticket_comment_add(ticket_ref: str, req: CommentRequest,
     row = _resolve_ticket(ticket_ref, user)
     if row is None:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="ticket not found")
+    kind = "note" if req.internal else "comment"
     jira_synced = None
     if getattr(row, "jira_key", None):
         from app.integrations.jira import add_comment
 
-        posted = add_comment(row.jira_key, req.body)
+        posted = add_comment(row.jira_key, req.body, internal=req.internal)
         jira_synced = bool(posted.get("ok"))
         if not jira_synced:
             logger.warning("jira comment failed for %s: %s", row.jira_key, posted.get("detail"))
     with SessionLocal() as s:
         from app.persistence.models import TicketComment
 
-        c = TicketComment(ticket_id=row.id, author=user, body=req.body[:4000], kind="comment")
+        c = TicketComment(ticket_id=row.id, author=user, body=req.body[:4000], kind=kind)
         s.add(c)
         s.commit()
-        return {"id": c.id, "author": user, "body": c.body, "kind": "comment",
+        return {"id": c.id, "author": user, "body": c.body, "kind": c.kind,
                 "jira_synced": jira_synced,
                 "created_at": c.created_at.isoformat() if c.created_at else None}
 
@@ -592,6 +595,8 @@ class TicketUpdateRequest(BaseModel):
     description: str | None = None
     #: Posted to the Jira issue as part of the same save as the status change.
     comment: str | None = None
+    #: Treat that comment as an agent-only note (JSM internal comment).
+    comment_internal: bool = False
 
 
 @router.put("/tickets/{ticket_ref}")
@@ -642,7 +647,7 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
     if (req.comment or "").strip() and getattr(row, "jira_key", None):
         from app.integrations.jira import add_comment
 
-        posted = add_comment(row.jira_key, req.comment or "")
+        posted = add_comment(row.jira_key, req.comment or "", internal=req.comment_internal)
         comment_synced = bool(posted.get("ok"))
         if not comment_synced:
             logger.warning("jira comment failed for %s: %s", row.jira_key, posted.get("detail"))
@@ -703,7 +708,8 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
                                 body=body, kind="status"))
         if (req.comment or "").strip():
             s.add(TicketComment(ticket_id=row.id, author=user,
-                                body=req.comment.strip()[:4000], kind="comment"))
+                                body=req.comment.strip()[:4000],
+                                kind="note" if req.comment_internal else "comment"))
         s.commit()
     # `jira_synced` used to be inferred from the activity note's tail, so a save that pushed
     # only fields reported False and the UI warned about a failure that never happened.

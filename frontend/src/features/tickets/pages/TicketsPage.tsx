@@ -209,7 +209,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
   }
 
   /* --------------------------------------------------------------- writing */
-  async function handleStatus(status: Ticket["status"], comment = ""): Promise<boolean> {
+  async function handleStatus(status: Ticket["status"], comment = "", internal = false): Promise<boolean> {
     if (!selected || statusBusy) return false;
     const previous = selected.status;
     setStatusBusy(status);
@@ -222,7 +222,10 @@ export default function Tickets({ role, userName, onToast }: Props) {
     try {
       // One request: the transition and the comment travel together, so an operator never has
       // to remember to add the explanation as a second step.
-      const res = await ticketUpdate(selected.id, { status, ...(comment ? { comment } : {}) }) as {
+      const res = await ticketUpdate(selected.id, {
+        status,
+        ...(comment ? { comment, comment_internal: internal } : {}),
+      }) as {
         jira_synced?: boolean;
         comment_synced?: boolean | null;
       };
@@ -318,12 +321,12 @@ export default function Tickets({ role, userName, onToast }: Props) {
     }
   }
 
-  async function handleAddComment(body: string) {
+  async function handleAddComment(body: string, internal = false) {
     if (!selected || !body.trim()) return;
     try {
-      const c = await ticketAddComment(selected.id, body.trim());
+      const c = await ticketAddComment(selected.id, body.trim(), internal);
       setComments((prev) => [...prev, c as Comment]);
-      onToast("Comment added");
+      onToast(internal ? "Internal note added — hidden from the customer" : "Comment added");
     } catch {
       onToast("Comment failed", "err");
     }

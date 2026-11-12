@@ -103,10 +103,46 @@ def test_add_comment_sends_an_adf_document(configured):
     configured.setattr(httpx, "Client", _FakeClient)
 
     out = jira_mod.add_comment("ITHD-36", "Replaced the drum unit.")
-    assert out == {"ok": True, "id": "77"}
+    assert out["ok"] is True and out["id"] == "77"
+    assert out["internal"] is False
     body = _FakeClient.calls[0]["json"]["body"]
     assert body["type"] == "doc"
     assert body["content"][0]["content"][0]["text"] == "Replaced the drum unit."
+    # A public reply must not carry any agent-only marker.
+    assert "properties" not in _FakeClient.calls[0]["json"]
+
+
+def test_an_internal_note_goes_through_the_jsm_endpoint_as_non_public(configured):
+    import httpx
+
+    _FakeClient.response = _Resp(201, {"id": "88"})
+    configured.setattr(httpx, "Client", _FakeClient)
+
+    out = jira_mod.add_comment("ITHD-36", "Checking the gateway logs.", internal=True)
+
+    assert out["ok"] is True and out["internal"] is True
+    call = _FakeClient.calls[0]
+    assert call["url"].endswith("/rest/servicedeskapi/request/ITHD-36/comment")
+    assert call["json"] == {"body": "Checking the gateway logs.", "public": False}
+
+
+def test_an_internal_note_falls_back_to_the_sdpublic_property(configured):
+    """A business project has no servicedesk endpoint; the note must still stay internal."""
+    import httpx
+
+    class _SDRefuses(_FakeClient):
+        def post(self, url, **kw):
+            _FakeClient.calls.append({"url": url, "json": kw.get("json")})
+            if "servicedeskapi" in url:
+                return _Resp(404, {"errorMessages": ["no such request"]})
+            return _Resp(201, {"id": "99"})
+
+    configured.setattr(httpx, "Client", _SDRefuses)
+
+    out = jira_mod.add_comment("ITHD-36", "Internal only.", internal=True)
+
+    assert out["ok"] is True and out["via"] == "sdPublic-property"
+    assert _FakeClient.calls[-1]["json"]["properties"] == [{"key": "sdPublic", "value": False}]
 
 
 def test_an_empty_comment_is_not_sent(configured):

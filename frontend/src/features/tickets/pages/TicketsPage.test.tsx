@@ -427,6 +427,7 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(m.ticketUpdate).toHaveBeenCalledWith("IT-1", {
       status: "in_progress",
       comment: "Replaced the drum unit.",
+      comment_internal: false,
     });
   });
 });

@@ -46,6 +46,9 @@ vi.mock("@/features/dashboard/api", () => ({
   dashRecentConversations: vi.fn(),
   dashRecentTickets: vi.fn(),
   dashGateTrend: vi.fn(),
+  getBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
+  saveBoardLayout: vi.fn(async () => ({ board: null, custom: true, updated_at: null })),
+  clearBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
 }));
 
 vi.mock("../components/IntegrationsConfig", () => ({
