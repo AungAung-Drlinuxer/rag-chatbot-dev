@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Installable: Android/Chrome reads the manifest + service worker, iOS reads the
+         apple-* tags (it ignores the manifest for the home-screen icon and title). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="IT Help" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="application-name" content="IT Help" />
+    <meta name="theme-color" content="#7C3AED" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090F" media="(prefers-color-scheme: dark)" />
     <title>IT Help Chatbot</title>
     <!-- Pre-paint theme bootstrap. Preferences live in PostgreSQL and the app applies them
          after the settings fetch, but the *appearance* also keeps one local key so a
