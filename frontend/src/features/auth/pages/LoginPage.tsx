@@ -160,7 +160,10 @@ export default function Login({
                 </div>
 
                 {/* illustration inside a structured "app window" frame — fills frame edge-to-edge */}
-                <figure className="flex min-h-0 w-full max-h-[520px] flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-background shadow-sm">
+                <figure /* The illustration is 1280×548 with its own #DFE3FC backdrop. When the frame is taller
+                 than the image (short content, tall screen) the letterbox must be that same colour —
+                 with bg-background it read as a black band under the picture. */
+                className="flex min-h-0 w-full max-h-[520px] flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm">
                   <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
                     <span className="flex gap-1" aria-hidden>
                       <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
@@ -176,7 +179,7 @@ export default function Login({
                     width={1280}
                     height={548}
                     alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                    className="pointer-events-none block min-h-0 w-full flex-1 select-none object-contain object-top"
+                    className="pointer-events-none block min-h-0 w-full flex-1 select-none object-contain object-center"
                     fetchPriority="high"
                     decoding="async"
                     draggable={false}
