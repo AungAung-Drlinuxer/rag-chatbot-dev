@@ -444,7 +444,7 @@ export default function Settings({ role }: { role?: string }) {
                     </div>
                   </div>
                 </div>
-                <Row title="Compact mode" hint="Reduce space between elements.">
+                <Row title="Compact mode" hint="Smaller text and tighter spacing across every page — for wide monitors.">
                   <Toggle checked={compact} onChange={(v) => { setCompact(v); applyThemeNow(darkMode, v, animations, chatFontSize); }} label="Compact mode" />
                 </Row>
                 <Row title="Animations" hint="Interface transitions and motion.">

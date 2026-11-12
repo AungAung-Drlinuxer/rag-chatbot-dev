@@ -1261,3 +1261,32 @@ table tbody tr {
 .board-grid .react-resizable-handle-w::after,
 .board-grid .react-resizable-handle-n::after,
 .board-grid .react-resizable-handle-s::after { content: none; }
+
+/* ── Compact density (Settings → Compact mode) ───────────────────────────────────────────
+   The toggle has always set data-compact on <html>; until now nothing read it, so the
+   control did nothing. Compact is one step down the type ramp plus a tighter page frame —
+   the combination that fixes "the text feels large and the screen feels airy" on a wide
+   monitor. Tailwind v4 inlines theme sizes as literal px (`.text-xs{font-size:13px}`), so
+   the ramp has to be overridden per utility rather than through a variable. */
+[data-compact="1"] .text-2xs { font-size: 11px; }
+[data-compact="1"] .text-xs  { font-size: 12px; }
+[data-compact="1"] .text-sm  { font-size: 13px; }
+[data-compact="1"] .text-base { font-size: 14px; }
+[data-compact="1"] .text-lg  { font-size: 17px; }
+/* 11px stays 11px: below that the meta labels stop being readable at arm's length. */
+[data-compact="1"] .text-3xs { font-size: 11px; }
+
+/* Tighter frame: 1400 → 1280 keeps table lines from running the full width of a 1920
+   display, which is what made the layout read as stretched rather than dense. */
+[data-compact="1"] [data-slot="page-content"] { max-width: 1280px; padding: 16px; }
+@media (min-width: 1024px) {
+  [data-compact="1"] [data-slot="page-content"] { padding: 20px 24px; }
+}
+
+/* Rows: 44px → ~34px. Dense enough for a 20-row queue, still a comfortable hit target. */
+[data-compact="1"] tbody td,
+[data-compact="1"] tbody th { padding-top: 6px; padding-bottom: 6px; }
+[data-compact="1"] [data-slot="section-card"] > div:first-child { padding-top: 12px; padding-bottom: 12px; }
+
+/* Cards and panels breathe less, but never below 12px: text touching a border reads broken. */
+[data-compact="1"] [data-panel] { border-radius: 10px; }
