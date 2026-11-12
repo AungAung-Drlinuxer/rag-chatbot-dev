@@ -21,7 +21,7 @@ import {
   AlertTriangle, Check, ChevronDown, Loader2, Sparkles, Tag, Upload, X,
 } from "lucide-react";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   type ClassifierDomainItem,
   createClassifierDomain,
@@ -329,21 +329,23 @@ export function DomainFormSheet({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o && !saving) onClose(); }}>
-      <DialogContent side="right" className="gap-0 p-0 sm:max-w-[560px]">
+      <DialogContent
+        className="flex max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]"
+      >
         <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
           {/* ---------- header ---------- */}
-          <header className="border-b border-[var(--border)] px-5 pb-4 pt-5 pr-12 sm:px-6">
+          <header className="border-b border-[var(--border)] px-6 pb-4 pt-5 pr-14">
             <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {editing ? "Edit" : "Create"}
             </p>
-            <div className="mt-1 flex items-center gap-2.5">
-              <span className={["grid size-9 shrink-0 place-items-center rounded-xl", previewColor.bgClass].join(" ")} aria-hidden>
-                {customIcon ? <img src={customIcon} alt="" className="size-full rounded-xl object-contain p-1.5" /> : <PreviewIcon className={["size-4", previewColor.textClass].join(" ")} />}
+            <div className="mt-1 flex items-center gap-3">
+              <span className={["grid size-10 shrink-0 place-items-center rounded-xl", previewColor.bgClass].join(" ")} aria-hidden>
+                {customIcon ? <img src={customIcon} alt="" className="size-full rounded-xl object-contain p-1.5" /> : <PreviewIcon className={["size-4.5", previewColor.textClass].join(" ")} />}
               </span>
               <div className="min-w-0">
-                <h2 className="truncate text-base font-semibold leading-tight">
+                <DialogTitle className="truncate text-lg font-bold leading-tight tracking-tight">
                   {editing ? displayName || domain?.display_name : "New routing domain"}
-                </h2>
+                </DialogTitle>
                 <p className="mt-0.5 truncate text-2xs text-muted-foreground">
                   {editing ? `Key: ${domain?.domain_key}` : "Keywords decide which knowledge answers a question."}
                 </p>
@@ -351,14 +353,15 @@ export function DomainFormSheet({
             </div>
           </header>
 
-          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 lg:grid-cols-12">
             {serverError && (
-              <div className="flex items-start gap-2 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)]" role="alert">
+              <div className="flex items-start gap-2 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)] lg:col-span-12" role="alert">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                 <span>{serverError}</span>
               </div>
             )}
 
+            <div className="space-y-5 lg:col-span-7">
             {/* ---------- identity ---------- */}
             <section className="space-y-3">
               <h3 className="text-xs font-semibold">Identity</h3>
@@ -555,6 +558,9 @@ export function DomainFormSheet({
               )}
             </section>
 
+            </div>
+
+            <div className="space-y-5 lg:col-span-5">
             {/* ---------- routing ---------- */}
             <section className="space-y-3">
               <h3 className="text-xs font-semibold">Routing</h3>
@@ -708,10 +714,11 @@ export function DomainFormSheet({
                 </div>
               </div>
             </section>
+            </div>
           </div>
 
           {/* ---------- footer ---------- */}
-          <footer className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-card px-5 py-3.5 sm:px-6">
+          <footer className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-card px-6 py-3">
             <span className="hidden text-2xs text-muted-foreground sm:block">
               {editing ? (dirty ? "Unsaved changes" : "No changes yet") : "The key cannot be changed later without a migration."}
             </span>
