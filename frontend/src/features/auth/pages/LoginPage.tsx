@@ -211,7 +211,7 @@ export default function Login({
         </section>
 
         {/* ============================ FORM COLUMN ============================ */}
-        <main className="flex min-h-[100svh] min-w-0 flex-col lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-[var(--border)] lg:bg-muted/20">
+        <main className="flex min-h-[100svh] min-w-0 flex-col lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-[var(--border)]">
           {/* mobile / tablet brand band — takes over the desktop brand column */}
           <div className="lg:hidden">
             <div className="relative overflow-hidden rounded-b-[28px] border-b border-[var(--border)] bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] px-5 pb-6 pt-5 text-[var(--primary-foreground)]">
