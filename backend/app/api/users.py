@@ -345,27 +345,45 @@ def restore_user(username: str, user: str = Depends(get_current_user)) -> dict:
 
 @router.delete("/users/{username}")
 def purge_user(username: str, user: str = Depends(get_current_user)) -> dict:
-    """Permanently remove an account the directory no longer has.
+    """Delete an account.
 
-    Only `removed` accounts can be purged: deleting a live account by accident cannot be
-    undone, and the state is the guard that says "the directory already deleted this person".
+    Two cases, deliberately different:
+
+    * a local account (no directory DN) can be deleted outright — nothing will recreate it;
+    * a directory account may only be deleted once the sync has marked it `removed`, because
+      deleting a live AD account here would be silently undone by the next sync and would
+      drop the role/groups the person should keep on their next sign-in.
+
     Chat history keeps the username (attribution), so nothing else is rewritten.
     """
     if get_role(user) != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     if username == user:
-        raise HTTPException(status_code=400, detail="You cannot purge your own account")
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
     with SessionLocal() as s:
         row = s.execute(text(
-            "SELECT COALESCE(state, 'active') FROM users WHERE username = :u"
+            "SELECT COALESCE(state, 'active') AS state, COALESCE(ldap_dn, '') AS dn, "
+            "COALESCE(role_override, 'user') AS role FROM users WHERE username = :u"
         ), {"u": username}).first()
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
-        if row[0] != "removed":
+        state, dn, role = row[0], row[1], (row[2] or "").lower()
+        if state != "removed" and dn:
             raise HTTPException(
                 status_code=400,
-                detail="Only accounts removed from the directory can be purged",
+                detail=("This account comes from Active Directory — disable it there and let "
+                        "the sync mark it removed, or use the directory tools directly"),
             )
+        if role == "admin":
+            others = s.execute(text(
+                "SELECT count(*) FROM users WHERE lower(COALESCE(role_override,'user')) = 'admin' "
+                "AND COALESCE(state,'active') = 'active' AND username <> :u"
+            ), {"u": username}).scalar()
+            if not others:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This is the last administrator — promote another admin first",
+                )
         s.execute(text("DELETE FROM local_user_credentials WHERE username = :u"), {"u": username})
         s.execute(text("DELETE FROM app_group_members WHERE username = :u"), {"u": username})
         s.execute(text("DELETE FROM users WHERE username = :u"), {"u": username})
@@ -373,10 +391,11 @@ def purge_user(username: str, user: str = Depends(get_current_user)) -> dict:
     try:
         from app.observability.audit import audit
 
-        audit("user.directory.purge", user, detail=f"target={username}")
+        audit("user.delete" if not dn else "user.directory.purge", user,
+              detail=f"target={username} local={not bool(dn)}")
     except Exception as _exc:
         logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
-    return {"ok": True, "username": username, "purged": True}
+    return {"ok": True, "username": username, "deleted": True}
 
 
 @router.post("/users/{username}/reset-access")

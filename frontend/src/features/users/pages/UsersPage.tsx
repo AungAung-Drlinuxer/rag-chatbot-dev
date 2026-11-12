@@ -15,6 +15,7 @@ import {
   Search,
   SearchX,
   Shield,
+  Trash2,
   UserCheck,
   UserCog,
   Users as UsersIcon,
@@ -542,17 +543,19 @@ export default function Users() {
                 longest email it happens to hold (that is what forced a sideways scroll). */}
             <table className="w-full table-fixed text-xs">
               <colgroup>
-                <col className="w-[32%]" />
-                <col className="hidden w-[14%] lg:table-column" />
-                <col className="w-[15%]" />
-                <col className="w-[12%]" />
-                <col className="hidden w-[13%] 2xl:table-column" />
-                <col className="hidden w-[12%] min-[1800px]:table-column" />
-                <col className="w-[17%]" />
+                <col className="w-[24%]" />
+                <col className="w-[8%]" />
+                <col className="hidden w-[11%] lg:table-column" />
+                <col className="w-[13%]" />
+                <col className="w-[10%]" />
+                <col className="hidden w-[11%] 2xl:table-column" />
+                <col className="hidden w-[9%] min-[1800px]:table-column" />
+                <col className="w-[14%]" />
               </colgroup>
               <thead className="bg-[var(--muted)]/40">
                 <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
                   <Th>User</Th>
+                  <Th>Type</Th>
                   <Th className="hidden lg:table-cell">Department</Th>
                   <Th>Role</Th>
                   <Th>Status</Th>
@@ -565,18 +568,19 @@ export default function Users() {
                 {loading && (
                   Array.from({ length: 7 }).map((_, index) => (
                     <tr key={"sk" + index} className="border-b border-[var(--border)]">
-                      <td colSpan={7} className="px-5 py-4"><Skeleton className="h-9 w-full" /></td>
+                      <td colSpan={8} className="px-5 py-4"><Skeleton className="h-9 w-full" /></td>
                     </tr>
                   ))
                 )}
                 {!loading && pagedUsers.map((user) => (
                   <UserRow key={user.id} user={user}
                     onSelect={() => setSelectedUser(user)}
-                    onToggle={() => toggleUser(user.id)} />
+                    onToggle={() => toggleUser(user.id)}
+                    onDelete={() => setPurgeTarget(user)} />
                 ))}
                 {!loading && error && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <ErrorState
                         compact
                         title="Could not load workspace members"
@@ -588,7 +592,7 @@ export default function Users() {
                 )}
                 {!loading && !error && filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       {/* Two different situations, two different messages: an empty
                           directory is a normal state, "nothing matches your filters"
                           is something the user can undo. */}
@@ -658,9 +662,11 @@ export default function Users() {
             open
             destructive
             busy={purging}
-            title={`Purge ${purgeTarget.name}?`}
-            description="The local record, its password entry and its group memberships are deleted. Chat history keeps the username, but this account cannot be restored from here."
-            confirmLabel="Purge account"
+            title={purgeTarget.state === "removed" ? `Purge ${purgeTarget.name}?` : `Delete ${purgeTarget.name}?`}
+            description={purgeTarget.state === "removed"
+              ? "The local record, its password entry and its group memberships are deleted. Chat history keeps the username, but this account cannot be restored from here."
+              : "The local account, its password entry and its group memberships are deleted. Chat history keeps the username, and the person can be re-created later."}
+            confirmLabel={purgeTarget.state === "removed" ? "Purge account" : "Delete account"}
             onCancel={() => setPurgeTarget(null)}
             onConfirm={purgeSelected}
           />
@@ -725,7 +731,11 @@ function Th({ children, className = "" }: { children: ReactNode; className?: str
    USER ROW
 ============================================================ */
 
-function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => void; onToggle: () => void }) {
+function UserRow({ user, onSelect, onToggle, onDelete }: {
+  user: User; onSelect: () => void; onToggle: () => void; onDelete: () => void;
+}) {
+  const isDirectory = user.source === "ad" || Boolean(user.directoryLinked);
+  const canDelete = !isDirectory || user.state === "removed";
   const hasDepartment = Boolean(user.department) && user.department !== "—";
   const hasLogin = Boolean(user.lastLogin) && user.lastLogin !== "—";
   const hasJoined = Boolean(user.joined) && user.joined !== "—";
@@ -766,6 +776,23 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
           </span>
         </button>
       </td>
+      <td className="px-4 py-3.5">
+        {isDirectory ? (
+          <span
+            title="Managed in Active Directory / LDAP — sign-in and lifecycle follow the directory"
+            className="inline-flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--muted)] px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            <Shield className="size-2.5" /> Directory
+          </span>
+        ) : (
+          <span
+            title="Local account — lives only in this app, password and lifecycle managed here"
+            className="inline-flex items-center gap-1 rounded border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[var(--accent-foreground)]"
+          >
+            Local
+          </span>
+        )}
+      </td>
       <td className="hidden px-4 py-3.5 lg:table-cell">
         {hasDepartment ? (
           <span className="block max-w-[14ch] truncate text-2xs" title={user.department}>{user.department}</span>
@@ -802,6 +829,14 @@ function UserRow({ user, onSelect, onToggle }: { user: User; onSelect: () => voi
             aria-label={isActive ? "Disable user" : "Enable user"}
             className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--muted)] hover:text-foreground">
             {isActive ? <UserX className="size-3.5" /> : <UserCheck className="size-3.5" />}
+          </button>
+          <button type="button" onClick={onDelete} disabled={!canDelete}
+            title={canDelete
+              ? user.state === "removed" ? "Purge this removed account" : "Delete this local account"
+              : "Managed in Active Directory — disable the account there and the sync will remove it here"}
+            aria-label={`Delete ${user.name}`}
+            className="grid size-7 place-items-center rounded-lg text-muted-foreground transition enabled:hover:bg-[var(--danger)]/10 enabled:hover:text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-35">
+            <Trash2 className="size-3.5" />
           </button>
         </div>
       </td>
