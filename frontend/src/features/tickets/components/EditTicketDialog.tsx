@@ -4,22 +4,25 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  Download,
   FileText,
+  Lock,
   MessageSquare,
   Paperclip,
   RefreshCw,
   Ticket as TicketIcon,
+  UserRound,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { attachmentUrl } from "@/features/tickets/api";
 import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
 import {
   PRIORITY_META,
   STATUS_META,
-  relTime,
   type Assignable,
   type Attachment,
   type Comment,
@@ -63,6 +66,8 @@ type Props = {
   onStatus: (status: Ticket["status"], comment: string) => Promise<boolean>;
   onAddAttachment: (file: File) => void;
   onDeleteAttachment: (id: number) => void;
+  /** Post a note to the issue from the Activity tab's composer. */
+  onAddComment?: (body: string) => void | Promise<void>;
   onToast?: (msg: string, tone?: "ok" | "err") => void;
 };
 
@@ -78,6 +83,7 @@ export function EditTicketDialog({
   onStatus,
   onAddAttachment,
   onDeleteAttachment,
+  onAddComment,
   onToast,
 }: Props) {
   // Details
@@ -91,6 +97,9 @@ export function EditTicketDialog({
   // Activity
   const [note, setNote] = useState("");
   const [tab, setTab] = useState<"details" | "activity">("details");
+  const [composer, setComposer] = useState<"reply" | "internal">("internal");
+  const [filter, setFilter] = useState<"all" | "comments" | "changes" | "attachments">("all");
+  const [addingNote, setAddingNote] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tried, setTried] = useState(false);
 
@@ -127,6 +136,103 @@ export function EditTicketDialog({
 
   const missingSubject = tried && !subject.trim();
   const missingDescription = tried && !description.trim();
+
+/* ---------------------------------------------------------------- activity
+     One timeline out of three sources: the comment log (which carries status
+     changes too), the attachments, and the creation event. Newest first. */
+  type Entry = {
+    key: string;
+    kind: "comment" | "note" | "change" | "attachment" | "created";
+    author: string;
+    at: string | null;
+    text: string;
+    body?: string;
+    file?: { name: string; size: number; url: string };
+  };
+
+  const entries: Entry[] = [
+    ...comments.map((c): Entry => {
+      const k = (c.kind || "comment").toLowerCase();
+      if (k === "status" || k === "change" || k === "transition") {
+        return { key: `c${c.id}`, kind: "change", author: c.author || "System", at: c.created_at ?? null, text: c.body };
+      }
+      if (k === "note" || k === "internal") {
+        return { key: `c${c.id}`, kind: "note", author: c.author || "System", at: c.created_at ?? null, text: "Internal note", body: c.body };
+      }
+      return { key: `c${c.id}`, kind: "comment", author: c.author || "System", at: c.created_at ?? null, text: "Commented", body: c.body };
+    }),
+    ...attachments.map((a): Entry => ({
+      key: `a${a.id}`,
+      kind: "attachment",
+      author: a.created_by || "System",
+      at: null,
+      text: "Added an attachment",
+      file: { name: a.filename, size: a.size, url: attachmentUrl(ticket.id, a.id) },
+    })),
+    {
+      key: "created",
+      kind: "created" as const,
+      author: ticket.requester || "Requester",
+      at: ticket.created_at,
+      text: "Created this ticket",
+    },
+  ].sort((a, b) => {
+    const av = a.at ? new Date(a.at).getTime() : 0;
+    const bv = b.at ? new Date(b.at).getTime() : 0;
+    return bv - av;
+  });
+
+  const visibleEntries = entries.filter((e) =>
+    filter === "all"
+      ? true
+      : filter === "comments"
+        ? e.kind === "comment" || e.kind === "note"
+        : filter === "changes"
+          ? e.kind === "change" || e.kind === "created"
+          : e.kind === "attachment",
+  );
+
+  function dayLabel(iso: string | null) {
+    if (!iso) return "Earlier";
+    const d = new Date(iso);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) return "Today";
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  function timeLabel(iso: string | null) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+
+  function fileKind(name: string) {
+    const ext = name.includes(".") ? name.split(".").pop()! : "file";
+    return ext.toUpperCase();
+  }
+
+  async function postNote() {
+    const body = note.trim();
+    if (!body || !onAddComment) return;
+    setAddingNote(true);
+    try {
+      await onAddComment(body);
+      setNote("");
+      onToast?.("Note added to the issue");
+    } catch (err: any) {
+      onToast?.(err?.message || "Could not add the note", "err");
+    } finally {
+      setAddingNote(false);
+    }
+  }
+
+  function formatBytes(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   function handleQuickTag(tag: string) {
     setNote((prev) => (prev ? `${prev.trim()} · ${tag}` : tag).slice(0, 280));
@@ -182,7 +288,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[95vw] lg:max-w-[1350px] xl:max-w-[1450px]">
+      <DialogContent className="max-w-2xl gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* ---- header ---- */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4 pr-14">
@@ -202,6 +308,7 @@ export function EditTicketDialog({
                     : "border-[var(--warn)]/30 bg-[var(--warn)]/10 text-[var(--warn)]",
                 ].join(" ")}
               >
+                <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3" />
                 <span className={["size-1.5 rounded-full", jiraReady ? "bg-[var(--ok)]" : "bg-[var(--warn)]"].join(" ")} />
                 {jiraReady ? "Jira synced" : "Jira offline"}
               </span>
@@ -243,7 +350,7 @@ export function EditTicketDialog({
           </div>
 
           {/* ---- body ---- */}
-          <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto px-6 py-5">
+          <div className="max-h-[calc(100dvh-13rem)] overflow-y-auto px-6 py-5">
             {tab === "details" ? (
               <div className="space-y-4">
                 {/* status */}
@@ -269,7 +376,8 @@ export function EditTicketDialog({
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   </div>
-                  <p className="mt-1 text-[10px] text-muted-foreground">
+                  <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
                     Pushed to the Jira issue when you save.
                   </p>
                 </div>
@@ -478,81 +586,222 @@ export function EditTicketDialog({
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* note composer */}
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-foreground">Add a note</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">{note.length}/280</span>
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+                {/* --- timeline (left) --- */}
+                <div className="lg:col-span-8">
+                  {/* ticket brief */}
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3.5">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      Ticket brief
+                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className={["inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium", statusMetaOf(status).className].join(" ")}>
+                        <span className={["size-1.5 rounded-full", statusMetaOf(status).dot].join(" ")} aria-hidden />
+                        {statusMetaOf(status).label}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="grid size-5 place-items-center rounded-full bg-[var(--muted)] text-[10px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]" aria-hidden>
+                          {(assignee || "?")[0]}
+                        </span>
+                        {assignee || "Unassigned"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold leading-snug text-foreground">{ticket.subject}</p>
                   </div>
 
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {QUICK_TAGS.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleQuickTag(tag)}
-                        className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[11px] text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-foreground"
-                      >
-                        + {tag}
-                      </button>
-                    ))}
+                  {/* timeline header + filters */}
+                  <div className="mt-4 flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Activity timeline
+                      </span>
+                      <h3 className="text-sm font-semibold text-foreground">Activity</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {([
+                        { key: "all", label: "All" },
+                        { key: "comments", label: "Comments" },
+                        { key: "changes", label: "Changes" },
+                        { key: "attachments", label: "Attachments" },
+                      ] as const).map((f) => (
+                        <button
+                          key={f.key}
+                          type="button"
+                          onClick={() => setFilter(f.key)}
+                          aria-pressed={filter === f.key}
+                          className={[
+                            "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition",
+                            filter === f.key
+                              ? "border-transparent bg-[var(--primary)] text-white"
+                              : "border-[var(--border)] text-muted-foreground hover:border-[var(--primary)]/40 hover:text-foreground",
+                          ].join(" ")}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <textarea
-                    rows={2}
-                    value={note}
-                    maxLength={280}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Why is this moving? The note lands in the Jira issue history."
-                    aria-label="Activity note"
-                    className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
-                  />
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    Posted to Jira with the status change when you save.
-                  </p>
-                </div>
-
-                {/* timeline */}
-                <div>
-                  <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    History
-                  </span>
-
-                  {comments.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-[var(--border)] px-4 py-6 text-center text-xs text-muted-foreground">
-                      Nothing yet — notes and status changes are recorded here.
+                  {visibleEntries.length === 0 ? (
+                    <p className="mt-3 rounded-lg border border-dashed border-[var(--border)] px-4 py-6 text-center text-xs text-muted-foreground">
+                      Nothing in this filter yet.
                     </p>
                   ) : (
-                    <ul>
-                      {[...comments].reverse().map((c, i) => (
-                        <li key={c.id} className="flex gap-3">
-                          <div className="flex flex-col items-center">
-                            <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
-                            {i < comments.length - 1 && <span className="w-px flex-1 bg-[var(--border)]" aria-hidden />}
-                          </div>
-                          <div className="min-w-0 flex-1 pb-4">
-                            <div className="flex flex-wrap items-baseline gap-2">
-                              <span className="text-xs font-semibold text-foreground">{c.author || "System"}</span>
-                              <span className="text-[10px] text-muted-foreground">
-                                {c.created_at ? relTime(c.created_at) : "recently"}
-                              </span>
-                              {c.kind && c.kind !== "comment" && (
-                                <span className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground">
-                                  {c.kind}
-                                </span>
-                              )}
+                    <ul className="mt-2">
+                      {visibleEntries.map((e, i) => {
+                        const prev = visibleEntries[i - 1];
+                        const showDay = !prev || dayLabel(prev.at) !== dayLabel(e.at);
+                        return (
+                          <li key={e.key}>
+                            {showDay && (
+                              <p className="mb-1.5 mt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                {dayLabel(e.at)}
+                              </p>
+                            )}
+
+                            <div className="flex gap-3">
+                              <div className="flex flex-col items-center">
+                                {e.kind === "created" ? (
+                                  <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-[var(--muted)] text-muted-foreground ring-1 ring-[var(--border)]">
+                                    <UserRound className="size-3.5" aria-hidden />
+                                  </span>
+                                ) : (
+                                  <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-[var(--primary)]/15 text-[11px] font-semibold uppercase text-[var(--accent-foreground)] ring-1 ring-[var(--primary)]/25">
+                                    {(e.author || "?")[0]}
+                                  </span>
+                                )}
+                                {i < visibleEntries.length - 1 && (
+                                  <span className="mt-1 w-px flex-1 bg-[var(--border)]" aria-hidden />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1 pb-4">
+                                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                  <span className="text-xs font-semibold text-foreground">{e.author}</span>
+                                  <span className="text-[10px] text-muted-foreground">{timeLabel(e.at)}</span>
+                                </div>
+
+                                {e.kind === "note" ? (
+                                  <>
+                                    <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                                      <Lock className="size-3" aria-hidden /> Internal note
+                                    </span>
+                                    <div className="mt-1 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 text-xs leading-5 text-foreground">
+                                      {e.body}
+                                    </div>
+                                  </>
+                                ) : e.kind === "attachment" && e.file ? (
+                                  <>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">{e.text}</p>
+                                    <a
+                                      href={e.file.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-1 flex max-w-sm items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 transition hover:border-[var(--primary)]/40"
+                                    >
+                                      <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                                      <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-xs font-medium text-foreground">{e.file.name}</span>
+                                        <span className="block text-[10px] text-muted-foreground">
+                                          {fileKind(e.file.name)} · {formatBytes(e.file.size)}
+                                        </span>
+                                      </span>
+                                      <Download className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                                    </a>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">{e.text}</p>
+                                    {e.body && <p className="mt-0.5 text-xs leading-5 text-foreground">{e.body}</p>}
+                                    {e.kind === "created" && (
+                                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                        Category: {ticket.category || "General"} · Priority: {priorityMetaOf(ticket.priority).label}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{c.body}</p>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
+
+                {/* --- composer (right) --- */}
+                <div className="lg:col-span-4">
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      Note composer
+                    </span>
+
+                    <div className="mt-2 flex gap-4 border-b border-[var(--border)]">
+                      {([
+                        { key: "reply", label: "Reply" },
+                        { key: "internal", label: "Internal note" },
+                      ] as const).map((c) => (
+                        <button
+                          key={c.key}
+                          type="button"
+                          onClick={() => setComposer(c.key)}
+                          aria-selected={composer === c.key}
+                          role="tab"
+                          className={[
+                            "relative -mb-px border-b-2 pb-2 text-[11px] font-semibold transition",
+                            composer === c.key
+                              ? "border-[var(--primary)] text-[var(--primary)]"
+                              : "border-transparent text-muted-foreground hover:text-foreground",
+                          ].join(" ")}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {QUICK_TAGS.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleQuickTag(tag)}
+                          className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-foreground"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      rows={5}
+                      value={note}
+                      maxLength={280}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder={composer === "internal" ? "Add an internal note..." : "Write a reply to the requester..."}
+                      aria-label="Activity note"
+                      className="mt-2 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                    />
+
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Paperclip className="size-3" aria-hidden />
+                        <Lock className="size-3" aria-hidden />
+                        Visible to the support team on the Jira issue
+                      </span>
+                      <button
+                        type="button"
+                        onClick={postNote}
+                        disabled={addingNote || !note.trim() || !onAddComment}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-[11px] font-semibold text-white transition hover:bg-[var(--primary)]/90 disabled:opacity-50"
+                      >
+                        {addingNote ? "Adding…" : "Add note"}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-right font-mono text-[10px] text-muted-foreground">{note.length}/280</p>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            )}          </div>
 
           {/* ---- footer ---- */}
           <DialogFooter className="flex flex-row items-center justify-end gap-2 border-t border-[var(--border)] px-6 py-4">

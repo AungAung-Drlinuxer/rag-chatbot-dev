@@ -661,6 +661,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
         onStatus={handleStatus}
         onAddAttachment={handleAddAttachment}
         onDeleteAttachment={handleDeleteAttachment}
+        onAddComment={handleAddComment}
         onToast={onToast}
       />
 
