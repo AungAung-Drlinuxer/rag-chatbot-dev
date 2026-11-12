@@ -19,13 +19,19 @@ Browser ──▶ frontend (nginx, SPA) ──▶ backend (FastAPI)
 
 | I want to… | Read |
 | --- | --- |
+| stand it up on a cluster | [docs/guides/SETUP.md](docs/guides/SETUP.md) |
+| hand it to an end user | [docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md) |
+| administer roles, knowledge, integrations | [docs/guides/ADMIN-GUIDE.md](docs/guides/ADMIN-GUIDE.md) |
+| see the components and the request lifecycle | [docs/architecture/SYSTEM.md](docs/architecture/SYSTEM.md) |
+| follow a question through retrieval → answer | [docs/architecture/RAG-PIPELINE.md](docs/architecture/RAG-PIPELINE.md) |
+| understand chunking · embeddings · pgvector · rerank · Redis | [docs/architecture/](docs/architecture/) |
 | run it on my laptop | [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) |
-| stand it up on a **new cluster** | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
-| understand how it works | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | keep it alive (backup, upgrade, rollback, logs) | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
 | know what every directory is for | [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) |
 | test or change the safety filters | [docs/GUARDRAILS.md](docs/GUARDRAILS.md) |
 | learn the stack module by module | [docs/course/](docs/course/) |
+
+The full documentation index is [docs/README.md](docs/README.md).
 
 ## Repository layout
 
@@ -70,8 +76,8 @@ docs/               deployment, operations, architecture, course material
   created by `infra/scripts/create-secrets.sh`.
 - **No mock data.** Every panel on the dashboard is fed by a real query; when a number is not
   available the UI shows `—`, not a placeholder.
-- **Design tokens only** in the frontend (`var(--panel)`, `var(--accent)`, …), so light and dark
-  themes stay consistent.
+- **Design tokens only** in the frontend (`var(--border)`, `var(--card)`, `var(--primary)`, …,
+  defined in `src/styles.css`), so light and dark themes stay consistent.
 
 ## Development gates
 
