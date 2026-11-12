@@ -61,6 +61,9 @@ function print(rects: PanelRects): string {
 export type GridLayoutApi = {
   rects: PanelRects;
   editing: boolean;
+  beginEdit: () => void;
+  /** Leave the arrange mode without keeping anything moved since it started. */
+  cancelEdit: () => void;
   setEditing: (value: boolean) => void;
   onLayoutChange: (layout: Layout[]) => void;
   saveView: () => Promise<void>;
@@ -82,6 +85,9 @@ export function useGridLayout(
   const [savedPrint, setSavedPrint] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  /* The arrangement as it was when the mode opened: Cancel puts it back, which is the
+     difference between "try a layout" and "commit to a layout". */
+  const editStart = useRef<PanelRects | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const alive = useRef(true);
@@ -129,6 +135,22 @@ export function useGridLayout(
     setSaved(false);
   }, []);
 
+  const setEditingMode = useCallback((value: boolean) => {
+    if (value) editStart.current = Object.fromEntries(
+      Object.entries(rects).map(([id, r]) => [id, { ...r }]),
+    );
+    setEditing(value);
+  }, [rects]);
+
+  const beginEdit = useCallback(() => setEditingMode(true), [setEditingMode]);
+
+  const cancelEdit = useCallback(() => {
+    if (editStart.current) setRects(editStart.current);
+    editStart.current = null;
+    setEditing(false);
+    setSaved(false);
+  }, []);
+
   const current = useMemo(() => print(rects), [rects]);
   const defaultPrint = useMemo(() => print(defaults), [defaults]);
   const dirty = current !== (savedPrint ?? defaultPrint);
@@ -172,7 +194,9 @@ export function useGridLayout(
   return {
     rects,
     editing,
-    setEditing,
+    beginEdit,
+    cancelEdit,
+    setEditing: setEditingMode,
     onLayoutChange,
     saveView,
     reset,

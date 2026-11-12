@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, ChevronDown, GripHorizontal, Home, LayoutGrid, RefreshCw, RotateCcw, Save } from "lucide-react";
+import { Activity, CalendarDays, Check, ChevronDown, GripHorizontal, Home, LayoutGrid, RefreshCw, RotateCcw, Save, X } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -186,11 +186,16 @@ function BoardGrid({
 }
 
 export default function Dashboard({ role, perms }: Props) {
-  const canSeeUsage = role === "admin" || !!(perms && perms.manage_users);
+  /* Everyone gets the usage panels: the endpoint scopes the payload by permission, so a
+     plain user sees their own tokens and spend instead of a "locked" card. */
+  const canSeeGuardrails = role === "admin" || !!(perms && perms.manage_users);
+  const canSeeUsage = true;
   // The board means two different things depending on the caller: an administrator or a
   // Knowledge Manager reads the whole organization, everyone else reads their own trail.
   // The copy has to say which, or a plain user is told they are looking at "who it helped".
-  const orgWide = canSeeUsage || role === "knowledge" || role === "domain_manager";
+  /* Scope of the numbers, not of the usage panels: a plain user gets their own tokens and
+     spend, but still must not be told they are looking at the whole organization. */
+  const orgWide = canSeeGuardrails || role === "knowledge" || role === "domain_manager";
   const roleBadge = role === "admin" ? "Administrator"
     : role === "knowledge" || role === "domain_manager" ? "Knowledge Manager"
     : "User";
@@ -341,7 +346,7 @@ export default function Dashboard({ role, perms }: Props) {
             const range = win.kind === "custom" ? { start: win.start, end: win.end } : { days: win.days };
             const [ov, ev] = await Promise.all([
               getObservabilityOverview(range),
-              getGuardrailEvents(10).catch(() => null),
+              canSeeGuardrails ? getGuardrailEvents(10).catch(() => null) : Promise.resolve(null),
             ]);
             if (!mounted) return;
             setUsage(ov);
@@ -593,19 +598,31 @@ export default function Dashboard({ role, perms }: Props) {
             <span role="status" className="text-2xs text-muted-foreground">{viewNote}</span>
           )}
 
-          <Button
-            variant={board.editing ? "default" : "outline"}
-            size="sm"
-            className="rounded-lg"
-            onClick={() => board.setEditing(!board.editing)}
-            title={board.editing
-              ? "Stop moving panels around"
-              : "Drag panels by their grip and resize them from any edge"}
-            aria-pressed={board.editing}
-          >
-            <LayoutGrid className="mr-2 size-3.5" />
-            {board.editing ? "Done editing" : "Edit layout"}
-          </Button>
+          {board.editing ? (
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-lg"
+                onClick={() => board.cancelEdit()}
+                title="Discard the moves made since you started editing"
+              >
+                <X className="mr-2 size-3.5" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={board.beginEdit}
+              title="Drag panels by their grip and resize them from any edge"
+            >
+              <LayoutGrid className="mr-2 size-3.5" />
+              Edit layout
+            </Button>
+          )}
 
           {board.dirty && (
             <>
@@ -640,6 +657,19 @@ export default function Dashboard({ role, perms }: Props) {
                 Reset layout
               </Button>
             </>
+          )}
+
+          {board.editing && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={() => board.setEditing(false)}
+              title="Keep the arrangement on screen"
+            >
+              <Check className="mr-2 size-3.5" />
+              Done editing
+            </Button>
           )}
 
           <DashboardReportButtons

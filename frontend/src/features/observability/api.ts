@@ -22,6 +22,8 @@ export type ObservabilityDay = {
 };
 
 export type ObservabilityOverview = {
+  /** "org" = platform-wide (administrators); "self" = the caller's own traffic. */
+  scope?: "org" | "self";
   range: { start: string; end: string; label: string };
   totals: ObservabilityTotals;
   series: ObservabilityDay[];

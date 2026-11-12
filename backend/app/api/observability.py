@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, require_cap
+from app.auth.rbac import get_role, permissions_for, require_cap
 from app.persistence.database import SessionLocal
 
 router = APIRouter(prefix="/api")
@@ -55,15 +55,20 @@ def observability_overview(
     days: int = Query(7, ge=1, le=90),
     start: str | None = None,
     end: str | None = None,
-    user: str = Depends(require_cap("manage_users")),
+    user: str = Depends(get_current_user),
 ) -> dict:
     """Everything the usage panels render, in one round trip.
 
-    Gated by the same capability as the Audit log: the payload is platform-wide spend and
-    answer mix, not the caller's own activity.
+    Scope follows permission, not the request: with `manage_users` the caller sees
+    organization-wide spend (the same data as the Audit log); without it they see **their
+    own** tokens and cost. A plain user asking "what did I cost?" is a fair question, and
+    answering it with a 403 only taught them to stop asking.
     """
     start_ts, end_ts, label = _window(days, start, end)
-    params = {"s": start_ts, "e": end_ts}
+    perms = permissions_for(user)
+    org = bool(perms.get("manage_users"))
+    mine = "" if org else " AND username = :user"
+    params = {"s": start_ts, "e": end_ts, **({} if org else {"user": user})}
 
     with SessionLocal() as s:
         usage = s.execute(text(
@@ -75,7 +80,7 @@ def observability_overview(
             "       percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_ms) AS p50, "
             "       percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95, "
             "       COALESCE(max(latency_ms), 0) AS max_ms "
-            "FROM llm_usage WHERE created_at >= :s AND created_at < :e"
+            f"FROM llm_usage WHERE created_at >= :s AND created_at < :e{mine}"
         ), params).mappings().first() or {"requests": 0, "tokens_in": 0, "tokens_out": 0,
                                           "cost": 0, "avg_ms": 0, "p50": 0, "p95": 0, "max_ms": 0}
 
@@ -96,7 +101,7 @@ def observability_overview(
             "         sum(input_tokens) AS tokens_in, sum(output_tokens) AS tokens_out, "
             "         sum(cost_usd)::float AS cost, "
             "         percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95 "
-            "  FROM llm_usage WHERE created_at >= :s AND created_at < :e "
+            f"  FROM llm_usage WHERE created_at >= :s AND created_at < :e{mine} "
             "  GROUP BY 1"
             ") u ON u.day = d.day ORDER BY d.day"
         ), params).mappings()]
@@ -106,18 +111,18 @@ def observability_overview(
             "       COALESCE(sum(input_tokens), 0) AS tokens_in, "
             "       COALESCE(sum(output_tokens), 0) AS tokens_out, "
             "       COALESCE(sum(cost_usd), 0)::float AS cost "
-            "FROM llm_usage WHERE created_at >= :s AND created_at < :e "
+            f"FROM llm_usage WHERE created_at >= :s AND created_at < :e{mine} "
             "GROUP BY 1 ORDER BY 4 DESC, 2 DESC"
         ), params).mappings()]
 
         decisions = [dict(r) for r in s.execute(text(
             "SELECT COALESCE(decision, 'unknown') AS decision, count(*) AS n "
-            "FROM llm_usage WHERE created_at >= :s AND created_at < :e GROUP BY 1 ORDER BY 2 DESC"
+            f"FROM llm_usage WHERE created_at >= :s AND created_at < :e{mine} GROUP BY 1 ORDER BY 2 DESC"
         ), params).mappings()]
 
         domains = [dict(r) for r in s.execute(text(
             "SELECT COALESCE(domain, 'general') AS domain, count(*) AS n "
-            "FROM llm_usage WHERE created_at >= :s AND created_at < :e GROUP BY 1 ORDER BY 2 DESC LIMIT 8"
+            f"FROM llm_usage WHERE created_at >= :s AND created_at < :e{mine} GROUP BY 1 ORDER BY 2 DESC LIMIT 8"
         ), params).mappings()]
 
         # Guardrail events are durable in audit_log (the Prometheus gauge already reads it),
@@ -139,6 +144,8 @@ def observability_overview(
         return float(v) if v is not None else 0.0
 
     return {
+        # `self` means these numbers are the caller's own traffic, and the UI says so.
+        "scope": "org" if org else "self",
         "range": {"start": start_ts.isoformat(), "end": end_ts.isoformat(), "label": label},
         "totals": {
             "requests": int(usage["requests"] or 0),

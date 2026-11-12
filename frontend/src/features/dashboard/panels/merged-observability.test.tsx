@@ -104,12 +104,14 @@ afterEach(async () => {
 });
 
 describe("merged Overview + Observability", () => {
-  it("keeps usage panels in the admin default and out of the user default", () => {
+  it("gives both defaults their usage panels, and guardrails to administrators only", () => {
     const adminTypes = DEFAULT_LAYOUT_ADMIN.map((p) => p.type);
     const userTypes = DEFAULT_LAYOUT.map((p) => p.type);
     expect(adminTypes).toContain("usage-kpis");
     expect(adminTypes).toContain("guardrail-events");
-    expect(userTypes).not.toContain("usage-kpis");
+    // Tokens and spend are the caller's own for a plain user, but they are still shown.
+    expect(userTypes).toContain("usage-kpis");
+    expect(userTypes).toContain("token-breakdown");
     expect(userTypes).not.toContain("guardrail-events");
     // Both boards still open with the thing an operator acts on first.
     // The board leads with the numbers; there is no "attention" strip any more.
@@ -135,11 +137,14 @@ describe("merged Overview + Observability", () => {
     expect(text).toContain("ignore previous instructions");
   });
 
-  it("does not call the usage endpoint for a plain user, and shows no cost", async () => {
+  it("shows a plain user their own tokens and cost", async () => {
+    o.getObservabilityOverview.mockResolvedValue({ ...overview(), scope: "self" });
     const text = (await mount({ role: "user" })).textContent!;
-    expect(o.getObservabilityOverview).not.toHaveBeenCalled();
-    expect(text).not.toContain("Estimated cost");
-    expect(text).not.toContain("Tokens in / out");
+    expect(o.getObservabilityOverview).toHaveBeenCalledTimes(1);
+    expect(text).toContain("Estimated cost");
+    expect(text).toContain("Tokens in / out");
+    // The payload says "self", so the panel says whose numbers these are.
+    expect(text).toContain("your usage");
   });
 
   it("treats a manage_users capability as sufficient even without the admin role", async () => {
@@ -150,7 +155,7 @@ describe("merged Overview + Observability", () => {
   it("says permission is required rather than showing a zero spend on a 403", async () => {
     o.getObservabilityOverview.mockRejectedValue(new Error("overview failed: HTTP 403"));
     const text = (await mount({ role: "admin" })).textContent!;
-    expect(text).toContain("Administrator permission required to see token and cost data.");
+    expect(text).toContain("Token and cost data are not available for this account.");
     expect(text).not.toContain("$0.00 total");
   });
 
@@ -158,6 +163,6 @@ describe("merged Overview + Observability", () => {
     o.getObservabilityOverview.mockRejectedValue(new Error("overview failed: HTTP 500"));
     const text = (await mount({ role: "admin" })).textContent!;
     expect(text).toContain("overview failed: HTTP 500");
-    expect(text).not.toContain("Administrator permission required to see spend.");
+    expect(text).not.toContain("Spend is not available for this account.");
   });
 });

@@ -242,7 +242,7 @@ function Quality({ title }: PanelBodyProps) {
  */
 function TokenBreakdown({ title }: PanelBodyProps) {
   const { usage, usageDenied } = useDashboardData();
-  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token usage." />;
+  if (usageDenied) return <LockedUsage title={title} reason="Token usage is not available for this account." />;
   if (!usage) return <LoadingUsage title={title} />;
 
   const rows = (usage.by_model ?? []).slice(0, 6);
@@ -465,7 +465,8 @@ function LockedUsage({ title, reason }: { title: string; reason: string }) {
 
 function UsageKpis({ title }: PanelBodyProps) {
   const { usage, usageError, usageDenied, role, totals } = useDashboardData();
-  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see token and cost data." />;
+  if (usageDenied) return <LockedUsage title={title} reason="Token and cost data are not available for this account." />;
+  const scopedToSelf = usage?.scope === "self";
   const t = usage?.totals;
   const perAnswer = t && t.requests > 0 ? t.cost_usd / t.requests : 0;
   // Each tile keeps the reference's colour-coded role: violet for volume, sky for the raw
@@ -481,7 +482,9 @@ function UsageKpis({ title }: PanelBodyProps) {
     <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
-        <span className="text-2xs text-muted-foreground">{usage?.range.label ?? ""}</span>
+        <span className="text-2xs text-muted-foreground">
+          {scopedToSelf ? "your usage · " : ""}{usage?.range.label ?? ""}
+        </span>
       </div>
       {usageError && (
         <p className="mt-2 flex items-center gap-1.5 text-2xs text-[var(--danger)]">
@@ -537,7 +540,7 @@ function UsageKpis({ title }: PanelBodyProps) {
 
 function CostTrend({ title }: PanelBodyProps) {
   const { usage, usageDenied } = useDashboardData();
-  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see spend." />;
+  if (usageDenied) return <LockedUsage title={title} reason="Spend is not available for this account." />;
   if (!usage) return <LoadingUsage title={title} />;
   const series = usage.series;
   const tokens = series.reduce((a, d) => a + d.tokens_in + d.tokens_out, 0);
@@ -567,7 +570,7 @@ function CostTrend({ title }: PanelBodyProps) {
 
 function ModelCost({ title }: PanelBodyProps) {
   const { usage, usageDenied } = useDashboardData();
-  if (usageDenied) return <LockedUsage title={title} reason="Administrator permission required to see spend." />;
+  if (usageDenied) return <LockedUsage title={title} reason="Spend is not available for this account." />;
   if (!usage) return <LoadingUsage title={title} />;
   const models = (usage.by_model ?? []).slice(0, 6);
   const max = Math.max(...models.map((m) => Number(m.cost)), 0);

@@ -111,11 +111,13 @@ const p = (
 
 export const DEFAULT_LAYOUT: PanelSpec[] = [
   p("kpis", "kpis", 12, 1),
-  p("trend", "trend", 8, 2),
-  p("quality", "quality", 4, 2),
+  p("usage", "usage-kpis", 6, 2),
+  p("trend", "trend", 6, 2),
+  p("quality", "quality", 4, 3),
   p("domains", "domains", 4, 3),
   p("knowledge", "knowledge", 4, 3),
-  p("health", "health", 4, 3),
+  p("tokens", "token-breakdown", 6, 4),
+  p("health", "health", 6, 4),
 ];
 
 export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [

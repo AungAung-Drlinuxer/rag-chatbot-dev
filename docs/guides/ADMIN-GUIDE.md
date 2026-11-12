@@ -140,7 +140,9 @@ errors.
 - Changing the model changes answers immediately; no redeploy.
 - Retrieval is independent of this choice — embeddings always come from Ollama, so switching
   the chat model never invalidates the index.
-- Cost, tokens and p95 latency for the selected window are on the **Overview** board.
+- Cost, tokens and p95 latency for the selected window are on the **Overview** board. The same
+  panels appear for every role: administrators see platform-wide spend, everyone else sees
+  their own (`scope: "self"`), so no one is told they are looking at the organization's bill.
 
 ---
 
