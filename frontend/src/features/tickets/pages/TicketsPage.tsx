@@ -326,7 +326,17 @@ export default function Tickets({ role, userName, onToast }: Props) {
     try {
       const c = await ticketAddComment(selected.id, body.trim(), internal);
       setComments((prev) => [...prev, c as Comment]);
-      onToast(internal ? "Internal note added — hidden from the customer" : "Comment added");
+      if (c?.jira_synced === false) {
+        // Stored here but not in Jira: saying "added" would be a lie the audit trail repeats.
+        onToast(
+          internal
+            ? "Note saved here — Jira refused the internal comment"
+            : "Comment saved here — Jira refused it",
+          "err",
+        );
+      } else {
+        onToast(internal ? "Internal note added — hidden from the customer" : "Comment added");
+      }
     } catch {
       onToast("Comment failed", "err");
     }

@@ -585,6 +585,20 @@ def _issue_url(path: str) -> str:
     return cfg["base_url"].rstrip("/") + path
 
 
+def internal_roles() -> list[str]:
+    """Project roles an internal note may be restricted to, most specific first.
+
+    The first entry is the support-team role; if the API account does not hold it (Jira
+    refuses to restrict a comment to a role the author is not in), the administrator role is
+    used instead — still invisible to customers.
+    """
+    import os
+
+    first = (os.getenv("JIRA_INTERNAL_ROLE") or "Service Desk Team").strip()
+    roles = [first, "Administrators"]
+    return [r for i, r in enumerate(roles) if r and r not in roles[:i]]
+
+
 def add_comment(issue_key: str, body: str, internal: bool = False) -> dict:
     """Post a comment to the Jira issue. Jira Cloud v3 wants an ADF document, not a string.
 
@@ -633,16 +647,26 @@ def add_comment(issue_key: str, body: str, internal: bool = False) -> dict:
                             "internal": False, "via": "rest/api/3"}
                 return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
 
-            # Fallback for internal notes: the platform endpoint plus the sdPublic property,
-            # which is what the JSM UI itself writes for an internal note.
-            r = client.post(
-                _issue_url(f"/rest/api/3/issue/{issue_key}/comment"),
-                json={"body": adf, "properties": [{"key": "sdPublic", "value": False}]},
-            )
-            if r.status_code in (200, 201):
-                return {"ok": True, "id": (r.json() or {}).get("id"),
-                        "internal": True, "via": "sdPublic-property"}
-            return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+            # Fallback: a role-restricted comment. `properties: [{"key": "sdPublic"}]` is
+            # rejected by the platform API ("not a valid JSON"), and the JSM endpoint only
+            # answers for issues that came through a portal, so role visibility is the one
+            # mechanism that works for every issue — customers hold the "Service Desk
+            # Customers" role and therefore never see a comment restricted to agents.
+            last = None
+            for role in internal_roles():
+                r = client.post(
+                    _issue_url(f"/rest/api/3/issue/{issue_key}/comment"),
+                    json={**{"body": adf}, "visibility": {"type": "role", "value": role}},
+                )
+                if r.status_code in (200, 201):
+                    return {"ok": True, "id": (r.json() or {}).get("id"),
+                            "internal": True, "via": f"role:{role}"}
+                last = f"HTTP {r.status_code}: {r.text[:180]}"
+                # Only a role the author does not hold is worth skipping past; any other
+                # refusal means the project will not take a restricted comment at all.
+                if "not a member of the project role" not in r.text:
+                    break
+            return {"ok": False, "detail": last or "internal comment refused"}
     except Exception as exc:
         return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 

@@ -126,8 +126,8 @@ def test_an_internal_note_goes_through_the_jsm_endpoint_as_non_public(configured
     assert call["json"] == {"body": "Checking the gateway logs.", "public": False}
 
 
-def test_an_internal_note_falls_back_to_the_sdpublic_property(configured):
-    """A business project has no servicedesk endpoint; the note must still stay internal."""
+def test_an_internal_note_falls_back_to_role_visibility(configured):
+    """No service-desk request: the note is restricted to a role the author holds."""
     import httpx
 
     class _SDRefuses(_FakeClient):
@@ -138,11 +138,41 @@ def test_an_internal_note_falls_back_to_the_sdpublic_property(configured):
             return _Resp(201, {"id": "99"})
 
     configured.setattr(httpx, "Client", _SDRefuses)
+    configured.setattr(jira_mod, "internal_roles", lambda: ["Service Desk Team", "Administrators"])
 
     out = jira_mod.add_comment("ITHD-36", "Internal only.", internal=True)
 
-    assert out["ok"] is True and out["via"] == "sdPublic-property"
-    assert _FakeClient.calls[-1]["json"]["properties"] == [{"key": "sdPublic", "value": False}]
+    assert out["ok"] is True and out["via"] == "role:Service Desk Team"
+    assert _FakeClient.calls[-1]["json"]["visibility"] == {
+        "type": "role", "value": "Service Desk Team"}
+
+
+def test_an_internal_note_skips_a_role_the_author_does_not_hold(configured):
+    import httpx
+
+    class _RoleSkip(_FakeClient):
+        def post(self, url, **kw):
+            _FakeClient.calls.append({"url": url, "json": kw.get("json")})
+            if "servicedeskapi" in url:
+                return _Resp(404, {"errorMessages": ["no such request"]})
+            if (kw.get("json") or {}).get("visibility", {}).get("value") == "Service Desk Team":
+                return _Resp(400, {"errors": {
+                    "commentLevel": "You are currently not a member of the project role: Service Desk Team."}})
+            return _Resp(201, {"id": "100"})
+
+    configured.setattr(httpx, "Client", _RoleSkip)
+    configured.setattr(jira_mod, "internal_roles", lambda: ["Service Desk Team", "Administrators"])
+
+    out = jira_mod.add_comment("ITHD-36", "Internal only.", internal=True)
+
+    assert out["ok"] is True and out["via"] == "role:Administrators"
+
+
+def test_internal_roles_are_deduplicated_and_configurable(monkeypatch):
+    monkeypatch.delenv("JIRA_INTERNAL_ROLE", raising=False)
+    assert jira_mod.internal_roles()[:2] == ["Service Desk Team", "Administrators"]
+    monkeypatch.setenv("JIRA_INTERNAL_ROLE", "Administrators")
+    assert jira_mod.internal_roles() == ["Administrators"]
 
 
 def test_an_empty_comment_is_not_sent(configured):

@@ -25,7 +25,7 @@ spec:
         app.kubernetes.io/name: frontend
     spec:
       containers:
-      - image: harbor.drlinuxer.com/rag-chatbot-dev/frontend:dev-1.7.0
+      - image: harbor.drlinuxer.com/rag-chatbot-dev/frontend:dev-1.7.1
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
