@@ -3,6 +3,7 @@ import {
   ADMIN_BANDS,
   MIN_SPAN,
   USER_BANDS,
+  MIN_BAND_PX,
   boardRows,
   packBands,
   resizeBand,
@@ -87,56 +88,57 @@ describe("resizeSpan", () => {
 });
 
 describe("resizeBand", () => {
-  it("south drag grows this band out of the one below", () => {
+  it("south drag raises this band's floor out of the one below", () => {
     const bands = ADMIN_BANDS.map((b) => ({ ...b }));
-    const next = resizeBand(bands, 2, "s", 0.2);
-    expect(next[1].fr).toBeCloseTo(1.16, 5);
-    expect(next[2].fr).toBeCloseTo(0.64, 5);
-    const total = next.reduce((sum, b) => sum + b.fr, 0);
-    expect(total).toBeCloseTo(0.96 + 0.84 + 1.18, 5);
+    const next = resizeBand(bands, 2, "s", 40);
+    expect(next[1].px).toBe(182 + 40);
+    expect(next[2].px).toBe(168 - 40);
+    // a band's height is a floor now, so no total has to be conserved vertically
+    expect(next[1].min).toBeLessThanOrEqual(next[1].px!);
   });
 
-  it("north drag takes from the band above", () => {
+  it("north drag takes from the band above, including the content-sized strip", () => {
     const bands = USER_BANDS.map((b) => ({ ...b }));
-    const next = resizeBand(bands, 2, "n", 0.3);
-    expect(next[0].auto).toBe(true);
-    // the content-sized band has no share to trade
-    expect(next[1].fr).toBe(1.2);
+    const next = resizeBand(bands, 2, "n", 40);
+    expect(next[0].px).toBe(112 - 40);
+    expect(next[1].px).toBe(210 + 40);
+    expect(next[0].auto).toBe(false);
   });
 
-  it("pulling an edge upward shrinks the band and grows the one below", () => {
+  it("pulling an edge upward shrinks this band and grows the one below", () => {
     const bands = ADMIN_BANDS.map((b) => ({ ...b }));
-    const next = resizeBand(bands, 3, "s", -0.15);
-    expect(next[2].fr).toBeCloseTo(0.69, 5);
-    expect(next[3].fr).toBeCloseTo(1.33, 5);
+    const next = resizeBand(bands, 3, "s", -50);
+    expect(next[2].px).toBe(168 - 50);
+    expect(next[3].px).toBe(200 + 50);
   });
 
-  it("grows the last band, taking the space from the bands above", () => {
+  it("grows the last band, taking the room from the bands above", () => {
     // The bottom panel has no neighbour below it; its south edge used to be dead, which is
     // why guardrail events could never be extended downward.
     const bands = ADMIN_BANDS.map((b) => ({ ...b }));
-    const next = resizeBand(bands, 4, "s", 0.4);
+    const next = resizeBand(bands, 4, "s", 60);
 
-    expect(next[3].fr).toBeCloseTo(1.58, 5);
-    const given = (bands[1].fr - next[1].fr) + (bands[2].fr - next[2].fr);
-    expect(given).toBeCloseTo(0.4, 3);
-    expect(next[0]).toEqual(bands[0]); // the content-sized strip never trades height
+    expect(next[3].px).toBe(200 + 60);
+    // every band above donates in proportion to the room it has left above the floor
+    const taken = [0, 1, 2].reduce((sum, i) => sum + (bands[i].min - next[i].px!), 0);
+    expect(taken).toBeCloseTo(60, 5);
+    expect(next[1].px!).toBeLessThan(bands[1].min);
   });
 
-  it("refuses to shrink a band below its floor, and leaves the auto band alone", () => {
+  it("never shrinks a band below the floor, and ignores a zero drag", () => {
     const bands = ADMIN_BANDS.map((b) => ({ ...b }));
-    expect(resizeBand(bands, 1, "s", 1)).toEqual(bands);
-    const floored = resizeBand(bands, 2, "s", 5);
-    // the panel below can only give up what it has above the floor
-    expect(floored[1].fr).toBeCloseTo(1.55, 5);
-    expect(floored[2].fr).toBeCloseTo(0.25, 5);
+    expect(resizeBand(bands, 2, "s", 0)).toEqual(bands);
+    const collapsed = resizeBand(bands, 2, "s", -10_000);
+    // band 2 can only shrink to MIN_BAND_PX; the rest of the drag is dropped
+    expect(collapsed[1].px).toBe(MIN_BAND_PX);
+    expect(collapsed[2].px).toBe(168 + (182 - MIN_BAND_PX));
   });
 });
 
 describe("boardRows", () => {
   it("writes the template the page hands to CSS", () => {
     expect(boardRows(ADMIN_BANDS)).toBe(
-      "minmax(112px,auto) minmax(182px,0.96fr) minmax(168px,0.84fr) minmax(200px,1.18fr)",
+      "minmax(112px,auto) minmax(182px,auto) minmax(168px,auto) minmax(200px,auto)",
     );
   });
 });

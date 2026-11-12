@@ -139,29 +139,15 @@ export function usePanelResize(
     const startBands = bands;
     const startSpans = spans;
 
-    // A content-sized band has no share to trade, so measure it once and turn the drag into a
-    // fixed height. From then on its edge moves in pixels, which is what the pointer expects.
-    const index = row - 1;
-    const panelEl = event.currentTarget.closest<HTMLElement>("[data-panel]");
-    const fixedFrom = startBands[index]?.px ?? null;
-    const autoFrom =
-      startBands[index]?.auto === true
-        ? Math.round(panelEl?.getBoundingClientRect().height || startBands[index]?.min || 112)
-        : null;
-
-    const gap = parseFloat(getComputedStyle(board).columnGap || "8") || 8;
-    const step = (board.clientWidth - gap * (COLUMNS - 1)) / COLUMNS + gap;
-    const totalFr = startBands.reduce((sum, b) => sum + (b.auto || b.px != null ? 0 : b.fr), 0);
-    const frPerPx = totalFr > 0 ? totalFr / Math.max(1, board.clientHeight) : 0;
-
     const horizontal = edge.includes("e") || edge.includes("w");
     const vertical = edge.includes("n") || edge.includes("s");
+    /* One column is `step` px wide, so a pointer move maps to whole columns. */
+    const step = board.clientWidth / COLUMNS;
     const north = edge.includes("n");
+    const index = row - 1;
+
     let nextSpans = startSpans;
     let nextBands = startBands;
-
-    board.dataset.resizing = "1";
-    document.body.style.userSelect = "none";
 
     const onMove = (e: PointerEvent) => {
       if (horizontal) {
@@ -180,18 +166,12 @@ export function usePanelResize(
         setSpans(updated);
       }
       if (vertical) {
+        /* Bands are content-sized: the drag moves their *floor* in pixels, and a panel with
+           more to show simply grows past it. No fr arithmetic, so a taller band can never
+           squeeze the content of the band below it. */
         const dy = e.clientY - startY;
-        if (autoFrom != null || fixedFrom != null) {
-          const base = autoFrom ?? fixedFrom ?? 112;
-          const height = Math.max(64, Math.round(base + (north ? -dy : dy)));
-          nextBands = startBands.map((b, i) =>
-            i === index ? { ...b, auto: false, fr: 0, px: height, min: Math.min(b.min, height) } : b,
-          );
-          setBands(nextBands);
-          return;
-        }
-        const deltaFr = dy * frPerPx;
-        nextBands = resizeBand(startBands, row, north ? "n" : "s", deltaFr);
+        const delta = north ? -dy : dy;
+        nextBands = index >= 0 ? resizeBand(startBands, row, north ? "n" : "s", delta) : startBands;
         setBands(nextBands);
       }
     };

@@ -27,6 +27,10 @@ export const MIN_SPAN = 2;
 /** Below this a band stops being a panel and becomes a caption. */
 export const MIN_BAND_FR = 0.25;
 
+/** Height floor a band may be dragged to, and the ceiling that keeps one band sane. */
+export const MIN_BAND_PX = 60;
+export const MAX_BAND_PX = 1200;
+
 export const COLUMNS = 12;
 
 export type BandSpec = {
@@ -57,15 +61,20 @@ export function bandsFor(role: string | undefined): BandSpec[] {
   return (role === "admin" ? ADMIN_BANDS : USER_BANDS).map((b) => ({ ...b }));
 }
 
-/** The `grid-template-rows` value for a band set. */
+/**
+ * The `grid-template-rows` value for a band set.
+ *
+ * Every band is `minmax(<floor>px, auto)`: the dragged height is a **floor**, not a cap. The
+ * content decides how tall a band really is, so a panel that has nine rows shows all nine and
+ * the page scrolls — nothing is clipped to fit one screen.
+ */
 export function boardRows(bands: readonly BandSpec[]): string {
-  return bands
-    .map((b) => (b.px != null
-      ? `minmax(${Math.round(b.px)}px,${Math.round(b.px)}px)`
-      : b.auto || b.fr <= 0
-        ? `minmax(${b.min}px,auto)`
-        : `minmax(${b.min}px,${round2(b.fr)}fr)`))
-    .join(" ");
+  return bands.map((b) => `minmax(${bandFloor(b)}px,auto)`).join(" ");
+}
+
+/** The height a band starts at: the dragged value, else its designed floor. */
+export function bandFloor(b: BandSpec): number {
+  return Math.round(b.px ?? b.min);
 }
 
 export type PanelBox = {
@@ -141,58 +150,48 @@ export function resizeSpan(
 }
 
 /**
- * Trade height between a band and its neighbour. Dragging the south edge of a panel grows
- * its band and shrinks the one below; the north edge does the reverse. Heights are a band
- * property, not a panel one, so every panel in the band moves together — that is the only
- * way a board of shared bands can stay flush.
+ * Trade height between a band and its neighbour(s), in pixels.
+ *
+ * Heights are a band property, not a panel one, so every panel in a band moves together.
+ * The value is a floor: dragging grows the minimum, and content longer than it still expands
+ * the band — the board never clips a panel to keep a one-screen layout.
+ *
+ * A band with a neighbour below gives/takes from it; the last band's south edge takes from
+ * every band above, in proportion to the room each has left, so the bottom panel can always
+ * be made taller.
  */
 export function resizeBand(
   bands: readonly BandSpec[],
   row: number,
   edge: "n" | "s",
-  deltaFr: number,
+  deltaPx: number,
 ): BandSpec[] {
   const index = row - 1;
-  if (index < 0 || index >= bands.length) return bands as BandSpec[];
-  const from = bands[index];
+  if (index < 0 || index >= bands.length || !deltaPx) return bands as BandSpec[];
 
-  /* The last band has no neighbour below it, which used to make its south edge dead: the
-     bottom panel (guardrail events) could never be made taller. Grow it by taking a share
-     from every weighted band above, in proportion to what each can give up. */
-  if (edge === "s" && index === bands.length - 1 && !from.auto && from.px == null) {
-    const donors = bands
-      .map((b, i) => ({ b, i }))
-      .filter(({ b, i }) => i !== index && !b.auto && b.px == null && b.fr > MIN_BAND_FR);
-    const capacity = donors.reduce((sum, { b }) => sum + (b.fr - MIN_BAND_FR), 0);
-    if (capacity <= 0) return bands as BandSpec[];
-    const applied = clamp(deltaFr, -(from.fr - MIN_BAND_FR), capacity);
-    if (Math.abs(applied) < 0.001) return bands as BandSpec[];
-    return bands.map((b, i) => {
-      if (i === index) return { ...b, fr: round2(b.fr + applied) };
-      const donor = donors.find((d) => d.i === i);
-      if (!donor) return b;
-      const share = (donor.b.fr - MIN_BAND_FR) / capacity;
-      return { ...b, fr: round2(b.fr - applied * share) };
-    });
-  }
+  const neighbour = index + (edge === "s" ? 1 : -1);
+  const donors = neighbour >= 0 && neighbour < bands.length
+    ? [neighbour]
+    : bands.map((_, i) => i).filter((i) => i !== index);
 
-  const toward = index + (edge === "s" ? 1 : -1);
-  if (toward < 0 || toward >= bands.length) return bands as BandSpec[];
-  const to = bands[toward];
-  // The content-sized band has no share to trade.
-  if (from.auto || to.auto) return bands as BandSpec[];
+  const capacity = donors.reduce(
+    (sum, i) => sum + Math.max(0, bandFloor(bands[i]) - MIN_BAND_PX),
+    0,
+  );
+  const canGive = Math.max(0, bandFloor(bands[index]) - MIN_BAND_PX);
+  const applied = deltaPx > 0 ? Math.min(deltaPx, capacity) : -Math.min(-deltaPx, canGive);
+  if (Math.round(applied) === 0) return bands as BandSpec[];
 
-  // Symmetric clamp: `from` may give up down to its floor (negative delta) and take from
-  // `to` only as far as `to` may give up (positive delta).
-  const canGive = from.fr - MIN_BAND_FR;
-  const canTake = to.fr - MIN_BAND_FR;
-  const applied = clamp(deltaFr, -canGive, canTake);
-  if (Math.abs(applied) < 0.001) return bands as BandSpec[];
+  const move = (b: BandSpec, px: number): BandSpec => {
+    const next = clamp(Math.round(px), MIN_BAND_PX, MAX_BAND_PX);
+    return { ...b, auto: false, fr: 0, px: next, min: Math.min(b.min, next) };
+  };
 
   return bands.map((b, i) => {
-    if (i === index) return { ...b, fr: b.fr + applied };
-    if (i === toward) return { ...b, fr: b.fr - applied };
-    return b;
+    if (i === index) return move(b, bandFloor(b) + applied);
+    if (!donors.includes(i) || capacity === 0) return b;
+    const share = (bandFloor(b) - MIN_BAND_PX) / capacity;
+    return move(b, bandFloor(b) - applied * share);
   });
 }
 
@@ -211,8 +210,4 @@ export function hasVerticalEdges(enabled: readonly ResizeEdge[]): boolean {
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

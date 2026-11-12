@@ -79,6 +79,9 @@ export function Legend({
  * leftover room, so a taller panel would show the same 620×240 chart with empty space above and
  * below. Grafana redraws; so does this.
  */
+/** Ceiling for a measured chart; without it an auto-height card grows without bound. */
+export const MAX_CHART_HEIGHT = 320;
+
 export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: fallbackWidth, h: fallbackHeight });
@@ -88,7 +91,12 @@ export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
     const ro = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect;
       if (!box || box.width < 20 || box.height < 40) return;
-      setSize({ w: Math.round(box.width), h: Math.round(box.height) });
+      /* The board is content-sized now, so the container height is driven BY this chart.
+         Measuring it back unclamped made the two feed each other (a 240px plot grew to
+         9,000px). A ceiling breaks the loop; the panel scrolls the page, not itself. */
+      const h = Math.min(MAX_CHART_HEIGHT, Math.round(box.height));
+      const w = Math.round(box.width);
+      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
     });
     ro.observe(el);
     return () => ro.disconnect();

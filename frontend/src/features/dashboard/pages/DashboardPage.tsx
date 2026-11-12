@@ -379,8 +379,8 @@ export default function Dashboard({ role, perms }: Props) {
   };
 
   return (
-    <PageShell fill>
-      <div className="flex h-full min-h-0 flex-col gap-2">
+    <PageShell>
+      <div className="flex flex-col gap-2">
       <PageHeader
         breadcrumbs={["Workspace", "Overview"]}
         eyebrow="Workspace"
@@ -532,7 +532,7 @@ export default function Dashboard({ role, perms }: Props) {
         </>}
       />
 
-      <main className="flex min-h-0 flex-1 flex-col gap-2">
+      <main className="flex flex-col gap-2">
         {loadError && !loading && (
           <ErrorState
             banner
@@ -553,30 +553,22 @@ export default function Dashboard({ role, perms }: Props) {
           />
         ) : (
           <DashboardDataProvider value={data}>
-            {/* One screen, five bands. The header and the attention/KPI strip take what they
-                need; the rest share the leftover height by weight, so 1920×1080 and 1440×900
-                both fit without a page scrollbar. Below lg the board stacks and the page
-                scrolls again — a phone should not be squeezed to fit a desktop board. */}
+            {/* Content-sized bands, one scrolling page. Each band has a floor (draggable) but
+                grows to fit whatever its panel has to show, so nothing is clipped to fit one
+                screen: scroll the page and every panel is fully readable — same model as the
+                Knowledge page. */}
             <div
               data-board="fill"
-              className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden max-lg:flex-none max-lg:overflow-visible lg:grid-cols-12"
+              className="grid grid-cols-1 gap-2 lg:grid-cols-12"
               style={{ ["--board-rows" as string]: board.rows }}
             >
               {panels.map((panel) => {
-                const tall = panel.type !== "attention" && panel.type !== "kpis";
                 const box = board.boxes.find((b) => b.id === panel.id);
                 return (
                   <div
                     key={panel.id}
                     data-panel={panel.type}
-                    className={[
-                      "flex min-h-0 min-w-0 flex-col",
-                      /* A phone stacks the board and the page scrolls. The band keeps a
-                         bounded height (lists scroll inside their card) — what changed is
-                         the board no longer flexes, so the page's scroll range matches the
-                         content and the last screen is not blank. */
-                      tall ? "max-lg:h-[340px]" : "",
-                    ].join(" ")}
+                    className="flex min-w-0 flex-col"
                     style={{
                       ["--span" as string]: box?.span ?? panel.span,
                       ["--start" as string]: box?.start ?? "",
@@ -585,7 +577,7 @@ export default function Dashboard({ role, perms }: Props) {
                   >
                     <div
                       data-panel-body
-                      className={panel.type === "kpis" ? "h-full min-h-0 w-full" : "panel-surface h-full min-h-0 overflow-hidden rounded-xl"}
+                      className={panel.type === "kpis" ? "w-full" : "panel-surface rounded-xl"}
                     >
                       {renderPanelBody(panel, panelTitle(panel))}
                     </div>
