@@ -142,24 +142,26 @@ export default function Login({
             </header>
 
             {/* flexible content area */}
-            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-4 xl:px-8 xl:py-6">
-              <div className="mx-auto flex w-full max-w-[820px] flex-col gap-4">
-                <div>
-                  <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[32px]">
+            {/* No scrollbar here: the illustration takes whatever height is left and the copy
+                is a step smaller on short screens, so image + text always fit the frame. */}
+            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-6 py-4 xl:px-8 xl:py-5">
+              <div className="mx-auto flex min-h-0 w-full max-w-[800px] flex-1 flex-col justify-center gap-3.5">
+                <div className="shrink-0">
+                  <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[clamp(24px,3.1vh,32px)]">
                     Find the right{" "}
                     <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent-foreground)] bg-clip-text text-transparent">
                       IT answer faster.
                     </span>
                   </h1>
-                  <p className="mt-2 max-w-[54ch] text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-1.5 max-w-[54ch] text-[13px] leading-relaxed text-muted-foreground xl:text-sm">
                     Search your internal knowledge base, get grounded answers, verify the source,
                     and escalate to IT support when you need a human.
                   </p>
                 </div>
 
                 {/* illustration inside a structured "app window" frame — fills frame edge-to-edge */}
-                <figure className="w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-background shadow-sm">
-                  <div className="flex items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
+                <figure className="flex min-h-0 w-full max-h-[520px] flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-background shadow-sm">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3 py-2">
                     <span className="flex gap-1" aria-hidden>
                       <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
                       <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
@@ -174,15 +176,14 @@ export default function Login({
                     width={1280}
                     height={548}
                     alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                    className="pointer-events-none block h-auto w-full select-none object-cover"
-                    style={{ aspectRatio: "1280 / 548" }}
+                    className="pointer-events-none block min-h-0 w-full flex-1 select-none object-contain object-top"
                     fetchPriority="high"
                     decoding="async"
                     draggable={false}
                   />
                 </figure>
 
-                <div className="grid gap-2.5 sm:grid-cols-3">
+                <div className="grid shrink-0 gap-2.5 sm:grid-cols-3">
                   <FeatureCard icon={<BookOpenCheck className="size-4" />} title="Grounded" description="Answers use internal knowledge." />
                   <FeatureCard icon={<Link2 className="size-4" />} title="Traceable" description="Sources stay visible." />
                   <FeatureCard icon={<TicketCheck className="size-4" />} title="Actionable" description="Escalate when needed." />
@@ -235,8 +236,8 @@ export default function Login({
           <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
             <div className="w-full max-w-[460px]">
               {/* sign-in card */}
-              <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-7">
-                <div className="mb-6">
+              <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-6">
+                <div className="mb-5">
                   <div className="mb-4 grid size-11 place-items-center rounded-2xl bg-[var(--accent)] text-[var(--accent-foreground)]">
                     <LockKeyhole className="size-5" />
                   </div>
