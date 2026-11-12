@@ -122,14 +122,6 @@ async function typeInto(el: HTMLInputElement | HTMLTextAreaElement, value: strin
   await settle();
 }
 
-async function selectOption(el: HTMLSelectElement, value: string) {
-  await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!;
-    setter.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  await settle();
-}
 
 const rowCount = (el: ParentNode) => el.querySelectorAll("tbody tr").length;
 
@@ -265,89 +257,35 @@ describe("TicketsPage — filtering and sorting", () => {
   });
 });
 
-describe("TicketsPage — detail panel and create dialog", () => {
-  it("opens the detail panel for the clicked ticket", async () => {
-    const el = await mount("admin");
-    expect(el.textContent).toContain("No ticket selected");
-    await click(button(el, "IT-1"));
-    const text = el.textContent!;
-    expect(text).not.toContain("No ticket selected");
-    expect(text).toContain("VPN down");
-    expect(text).toContain("Cannot reach the VPN gateway.");
-    // Read-only until Edit: the rail is visible, but the step picker and the note box are not.
-    expect(text).toContain("Jira workflow");
-    expect(text).toContain("Read-only. Press Edit at the top of this panel");
-    expect(text).not.toContain("Pick a step above to move the ticket");
-
-    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
-    await Promise.resolve();
-    // Unlocked: the Jira workflow rail offers its four steps on one track.
-    expect(el.textContent).toContain("Pick a step above to move the ticket, or just write a note.");
-    for (const step of ["Open", "Pending", "In progress", "Done"]) expect(text).toContain(step);
-  });
-
+describe("TicketsPage — queue, edit dialog and create dialog", () => {
   /**
-   * The panel is a document until the operator unlocks it. The bug this guards: a read-only
-   * look at a ticket exposed a live workflow stepper, a comment composer and an upload label,
-   * so a stray click could write to Jira.
+   * The right-hand detail sheet is gone: an empty "No ticket selected" column used to sit
+   * beside the queue taking a third of the width, and every ticket action now lives in the
+   * edit modal. This guards against the placeholder coming back.
    */
-  it("keeps every control read-only until Edit is pressed", async () => {
+  it("never renders a 'No ticket selected' placeholder beside the queue", async () => {
     const el = await mount("admin");
+    expect(el.textContent).not.toContain("No ticket selected");
+    expect(el.querySelector('aside[aria-label="Ticket detail"]')).toBeNull();
+    // The queue itself is there, and rows are still clickable.
+    expect(el.textContent).toContain("IT-1");
     await click(button(el, "IT-1"));
-    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-
-    expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeNull();
-    expect(pane.querySelector('textarea[aria-label="Comment to post with the status change"]')).toBeNull();
-    expect(pane.querySelector('input[type="file"]')).toBeNull();
-    expect(pane.textContent).toContain("Read-only. Press Edit at the top of this panel");
-    // One Edit control, not one per end of the card, and the fields are still text.
-    expect(pane.querySelectorAll('button[aria-label="Edit ticket"]').length).toBe(1);
-    expect(pane.querySelector('input[aria-label="Subject"]')).toBeNull();
-    expect(pane.querySelector('select[aria-label="Priority"]')).toBeNull();
-
-    const steps = [...pane.querySelectorAll("button[data-step]")] as HTMLButtonElement[];
-    expect(steps.length).toBe(4);
-    expect(steps.every((s) => s.disabled)).toBe(true);
-
-    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
-    await Promise.resolve();
-
-    expect(pane.querySelector('textarea[aria-label="Add a comment"]')).toBeTruthy();
-    expect(pane.querySelector('input[type="file"]')).toBeTruthy();
-    expect(pane.textContent).toContain("Pick a step above to move the ticket");
-    // Edit must be enough on its own: the fields open with it, no second sheet to reach for.
-    expect((pane.querySelector('input[aria-label="Subject"]') as HTMLInputElement).value).toBe("VPN down");
-    expect(pane.querySelector('textarea[aria-label="Description"]')).toBeTruthy();
-    expect(pane.querySelector('select[aria-label="Priority"]')).toBeTruthy();
-    expect(pane.querySelector('select[aria-label="Assignee"]')).toBeTruthy();
-    expect(pane.querySelector('input[aria-label="Due date"]')).toBeTruthy();
-    expect(pane.querySelector('button[title="Nothing changed yet"]')).toBeTruthy();
+    expect(el.textContent).not.toContain("No ticket selected");
   });
 
-  it("writes the fields to Jira from the panel, with no Details step in between", async () => {
-    m.ticketUpdate.mockResolvedValue({ ok: true, fields_synced: true });
+  it("opens the edit dialog from the row's Edit button", async () => {
     const el = await mount("admin");
-    await click(button(el, "IT-1"));
-    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
+    const row = [...el.querySelectorAll("tbody tr")].find((r) => r.textContent?.includes("IT-1")) as HTMLElement;
+    const edit = row.querySelector('button[aria-label^="Edit ticket"]') as HTMLButtonElement;
+    expect(edit).toBeTruthy();
+    await click(edit);
     await Promise.resolve();
 
-    const subject = pane.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
-    await typeInto(subject, "VPN down — floor 3");
-    const priority = pane.querySelector('select[aria-label="Priority"]') as HTMLSelectElement;
-    await selectOption(priority, "high");
-    await Promise.resolve();
-
-    const save = [...pane.querySelectorAll("button")].find((b) => b.textContent?.includes("Save")) as HTMLButtonElement;
-    expect(save.disabled).toBe(false);
-    await click(save);
-    await Promise.resolve();
-
-    expect(m.ticketUpdate).toHaveBeenCalledWith("IT-1", expect.objectContaining({
-      subject: "VPN down — floor 3",
-      priority: "high",
-    }));
+    const dialog = document.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+    expect(dialog).toBeTruthy();
+    expect(dialog.textContent).toContain("Edit ticket");
+    expect(dialog.textContent).toContain("IT-1");
+    expect((dialog.querySelector("#ticket-subject") as HTMLInputElement).value).toBe("VPN down");
   });
 
   it("opens the create dialog and refuses to create a ticket with no subject", async () => {
@@ -382,52 +320,4 @@ describe("TicketsPage — detail panel and create dialog", () => {
     expect(onToast).toHaveBeenCalledWith("Ticket created in Jira");
   });
 
-  it("keeps the workflow read-only when Jira is not configured", async () => {
-    m.listTicketDestinations.mockResolvedValue([
-      { key: "jira", label: "Jira", configured: false },
-    ]);
-    const el = await mount("admin");
-    await click(button(el, "IT-1"));
-    const text = el.textContent!;
-    expect(text).toContain("read-only until Jira is connected");
-    expect(text).toContain("Jira is not connected");
-    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-    const step = pane.querySelector('button[data-step="pending"]') as HTMLButtonElement;
-    expect(step.disabled).toBe(true);
-  });
-
-  it("sends the status change and the comment in one update", async () => {
-    m.ticketUpdate.mockResolvedValue({ ok: true, jira_synced: true, comment_synced: true });
-    const el = await mount("admin");
-    await click(button(el, "IT-1"));
-
-    const pane = el.querySelector('aside[aria-label="Ticket detail"]') as HTMLElement;
-    // Workflow, comments and attachments unlock only after Edit.
-    await click(pane.querySelector('button[aria-label="Edit ticket"]') as HTMLElement);
-    await Promise.resolve();
-    const step = pane.querySelector('button[data-step="in_progress"]') as HTMLButtonElement;
-
-    // Selecting a step is not a save: nothing reaches Jira until the operator says so.
-    await click(step);
-    expect(m.ticketUpdate).not.toHaveBeenCalled();
-    expect(pane.textContent).toContain("Move to");
-    expect(pane.textContent).toContain("In progress");
-
-    const note = pane.querySelector(
-      'textarea[aria-label="Comment to post with the status change"]',
-    ) as HTMLTextAreaElement;
-    await typeInto(note, "Replaced the drum unit.");
-
-    const save = [...pane.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes("Update in Jira"),
-    );
-    await click(save);
-
-    expect(m.ticketUpdate).toHaveBeenCalledTimes(1);
-    expect(m.ticketUpdate).toHaveBeenCalledWith("IT-1", {
-      status: "in_progress",
-      comment: "Replaced the drum unit.",
-      comment_internal: false,
-    });
-  });
 });

@@ -30,10 +30,7 @@ import {
   type Ticket,
 } from "@/features/tickets/model";
 import { RefreshIcon } from "@/features/tickets/components/presentational";
-import {
-  TicketDetailPanel,
-  type TicketEditPayload,
-} from "@/features/tickets/components/TicketDetailPanel";
+import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
 import { TicketStats, type TicketTotals } from "@/features/tickets/components/TicketStats";
 import { TicketTable, type SortKey } from "@/features/tickets/components/TicketTable";
 import { TicketToolbar } from "@/features/tickets/components/TicketToolbar";
@@ -83,7 +80,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [assignable, setAssignable] = useState<Assignable[]>([]);
   const [statusBusy, setStatusBusy] = useState<string | null>(null);
-  const [editBusy, setEditBusy] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -267,7 +263,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
    */
   async function handleSaveTicket(p: TicketEditPayload): Promise<boolean> {
     if (!selected) return false;
-    setEditBusy(true);
     const target = selected;
     const problems: string[] = [];
     try {
@@ -316,8 +311,6 @@ export default function Tickets({ role, userName, onToast }: Props) {
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Save failed — nothing was changed", "err");
       return false;
-    } finally {
-      setEditBusy(false);
     }
   }
 
@@ -515,7 +508,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
           }}
         />
 
-        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid items-start gap-5">
           <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-4">
               <div className="min-w-0">
@@ -629,26 +622,9 @@ export default function Tickets({ role, userName, onToast }: Props) {
             )}
           </section>
 
-          {/* Below xl the panel was a bottom sheet; hidden now as edit modal popup is used */}
-
-          <TicketDetailPanel
-            ticket={selected}
-            canManage={canManage}
-            comments={comments}
-            attachments={attachments}
-            statusBusy={statusBusy}
-            jiraReady={jiraReady !== false}
-            onClose={() => setSelected(null)}
-            onStatus={handleStatus}
-            onSave={handleSaveTicket}
-            saveBusy={editBusy}
-            assignable={assignable}
-            onDeleteAttachment={handleDeleteAttachment}
-            onAddComment={handleAddComment}
-            onAddAttachment={handleAddAttachment}
-            onOpenEdit={() => setEditOpen(true)}
-            className="hidden"
-          />
+          {/* The right-hand detail sheet is gone: every ticket action lives in the
+              edit modal, and an empty "No ticket selected" column only took width from
+              the queue. */}
 
         </div>
       </main>
