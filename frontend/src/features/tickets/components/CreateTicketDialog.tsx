@@ -37,6 +37,7 @@ import {
   listTicketDestinations,
   ticketAssignees,
   ticketAttachmentAdd,
+  type CategoryAssignee,
 } from "@/features/tickets/api";
 
 export type CreateTicketPreset = {
@@ -62,7 +63,9 @@ type Props = {
 const EMPTY = {
   subject: "",
   description: "",
-  category: "General",
+  // Deliberately empty: "General" is a routing dead end (no request type, no owner pool), so
+  // the reporter has to say where the ticket belongs instead of accepting a silent default.
+  category: "",
   priority: "medium",
   assignee: "",
   due_date: "",
@@ -116,7 +119,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   const [categories, setCategories] = useState<{ key: string; label: string }[]>([
     { key: "general", label: "General" },
   ]);
-  const [assignable, setAssignable] = useState<{ username: string; group?: string | null }[]>([]);
+  const [assignable, setAssignable] = useState<CategoryAssignee[]>([]);
   const [assigneeScope, setAssigneeScope] = useState<"category" | "all">("all");
   const [jiraReady, setJiraReady] = useState<boolean | null>(null);
   const [creating, setCreating] = useState(false);
@@ -151,6 +154,10 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   useEffect(() => {
     let alive = true;
     setDraft((d) => ({ ...d, assignee: "" }));
+    if (!draft.category) {
+      setAssignable([]);
+      return;
+    }
     ticketAssignees(draft.category.toLowerCase())
       .then((d) => {
         if (!alive) return;
@@ -201,6 +208,10 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
       subjectRef.current?.focus();
       return;
     }
+    if (!draft.category) {
+      onToast?.("Choose a category — it decides the queue and who owns the ticket", "err");
+      return;
+    }
     setCreating(true);
     try {
       const created = await createTicketApi({
@@ -223,7 +234,12 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
       onOpenChange(false);
       setDraft({ ...EMPTY });
       setPendingFiles([]);
-      onToast?.("Ticket created in Jira");
+      // Say what Jira actually did with the owner: a silent refusal used to leave the ticket
+      // looking claimed here while it sat unassigned there.
+      onToast?.(created.assignee
+        ? `Ticket ${created.id} created · assigned to ${created.assignee}`
+        : `Ticket ${created.id} created · unassigned${created.assignee_error ? " (Jira rejected the assignee)" : ""}`,
+        created.assignee_error ? "err" : "ok");
       onCreated?.(created);
     } catch (err: any) {
       onToast?.(err?.message || "Ticket creation failed", "err");
@@ -422,6 +438,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 aria-label="Category"
                 className={FIELD}
               >
+                <option value="">Select a category…</option>
                 {categories.map((c) => (
                   <option key={c.key} value={c.label}>{c.label}</option>
                 ))}
@@ -473,7 +490,9 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 ).map(([group, users]) => (
                   <optgroup key={group} label={group}>
                     {users.map((u) => (
-                      <option key={u.username} value={u.username}>{u.username}</option>
+                      <option key={u.username} value={u.username}>
+                        {u.username}{u.jira_account === false ? " — no Jira account" : ""}
+                      </option>
                     ))}
                   </optgroup>
                 ))}
@@ -483,6 +502,11 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   ? `Only people mapped to ${draft.category} can be picked.`
                   : "No team is mapped to this category yet — showing every assignable user."}
               </span>
+              {assignable.find((u) => u.username === draft.assignee)?.jira_account === false && (
+                <span className="mt-1 block rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-1 text-[10px] leading-snug text-[var(--warn)]">
+                  {draft.assignee} has no Jira account, so Jira will leave this ticket unassigned.
+                </span>
+              )}
             </label>
 
             <div>

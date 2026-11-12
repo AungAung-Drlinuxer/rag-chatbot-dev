@@ -185,7 +185,8 @@ describe("CreateTicketDialog", () => {
 
     const el = await mount();
     const select = el.querySelector('select[aria-label="Assignee"]') as HTMLSelectElement;
-    expect([...select.options].map((o) => o.value)).toContain("alice");
+    // Nothing is offered before a category is chosen: "General" is no longer a silent default.
+    expect([...select.options].map((o) => o.value)).toEqual([""]);
 
     setValue(el.querySelector('select[aria-label="Category"]') as HTMLSelectElement, "Network");
     await settle();

@@ -86,7 +86,11 @@ export async function createTicketApi(body: {
     try { detail = (await r.json())?.detail || detail; } catch { /* non-json */ }
     throw new Error(detail);
   }
-  return r.json();
+  return r.json() as Promise<{
+    id: string; subject: string; status: string; priority: string; category: string;
+    requester: string; assignee: string | null; due_date: string | null;
+    assignee_error?: string | null; jira_link?: string;
+  }>;
 }
 
 export async function ticketUpdate(ref: string, patch: {
@@ -135,7 +139,13 @@ export async function ticketAddComment(ref: string, body: string, internal = fal
   return r.json();
 }
 
-export type CategoryAssignee = { username: string; email?: string | null; group?: string | null };
+export type CategoryAssignee = {
+  username: string;
+  email?: string | null;
+  group?: string | null;
+  /** false = no Jira account, so Jira will leave the ticket unassigned; null = unknown. */
+  jira_account?: boolean | null;
+};
 
 export async function ticketAssignees(domain: string) {
   const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";

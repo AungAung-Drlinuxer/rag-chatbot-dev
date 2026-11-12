@@ -82,6 +82,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [statusBusy, setStatusBusy] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+  // The last category this person filed under; seeds the create dialog so the second ticket
+  // is routed like the first instead of falling back to a dead-end default.
+  const [lastCategory, setLastCategory] = useState<string>(() => {
+    try { return localStorage.getItem("ith:ticket-category") || ""; } catch { return ""; }
+  });
   const [editOpen, setEditOpen] = useState(false);
 
   const [syncBusy, setSyncBusy] = useState(false);
@@ -633,6 +638,10 @@ export default function Tickets({ role, userName, onToast }: Props) {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onToast={onToast}
+        // Reuse the category from the last ticket this person filed: the chat dialog seeds it
+        // from the answer's domain, and the Tickets page had no equivalent, so every default
+        // ticket landed in "General" — unrouted and (once General had no mapped owner) unowned.
+        preset={{ domain: lastCategory || undefined }}
         onCreated={(created: any) => {
           // Jira is eventually consistent: the list refetch can land before the mirror has
           // the new row, so the created ticket goes on top immediately.
@@ -642,7 +651,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
             description: created?.description ?? "",
             status: (created?.status ?? "open") as Ticket["status"],
             priority: created?.priority ?? "medium",
-            category: created?.category ?? "General",
+            category: created?.category ?? lastCategory ?? "",
             requester: created?.requester ?? userName ?? "you",
             assignee: created?.assignee ?? null,
             due_date: created?.due_date ?? null,
@@ -651,6 +660,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
           };
           // Refresh first, then prepend: the reverse order let the refetch replace the list
           // and drop the row we had just added.
+          const filedAs = (created?.category || "").trim();
+          if (filedAs && filedAs.toLowerCase() !== "general") {
+            setLastCategory(filedAs);
+            try { localStorage.setItem("ith:ticket-category", filedAs); } catch { /* private mode */ }
+          }
           void loadTickets().then(() => {
             setTickets((prev) => [fresh, ...(prev ?? []).filter((t) => t.id !== fresh.id)]);
             setPage(1);

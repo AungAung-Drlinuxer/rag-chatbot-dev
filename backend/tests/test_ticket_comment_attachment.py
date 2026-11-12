@@ -199,6 +199,7 @@ def test_attachment_handler_uploads_to_jira_before_storing():
 def test_assign_issue_resolves_a_username_to_an_account_id(configured):
     import httpx
 
+    jira_mod._USER_CACHE.clear()  # resolution is cached for ten minutes
     _FakeClient.get_payload = [{"accountId": "acc-1", "displayName": "Carol",
                                 "emailAddress": "carol@example.com"}]
     _FakeClient.response = _Resp(204, {})
@@ -208,7 +209,8 @@ def test_assign_issue_resolves_a_username_to_an_account_id(configured):
 
     assert out["ok"] is True
     assert out["account_id"] == "acc-1"
-    put = _FakeClient.calls[0]
+    # Resolution and assignment are separate HTTP clients now, so find the PUT explicitly.
+    put = next(c for c in _FakeClient.calls if "put_url" in c)
     assert put["put_url"].endswith("/rest/api/3/issue/ITHD-36/assignee")
     assert put["json"] == {"accountId": "acc-1"}
 

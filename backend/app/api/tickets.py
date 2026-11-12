@@ -46,6 +46,32 @@ class AttachmentRequest(BaseModel):
     data_base64: str
 
 
+def _jira_account_flags(users: list[dict]) -> dict[str, bool | None]:
+    """Mark which candidates actually exist as Jira users.
+
+    `None` means "unknown" (Jira not configured, or the lookup failed) — which the UI treats as
+    "no comment" rather than as a failure. Without this, the dropdown happily offers app logins
+    like `ith@admin` that Jira cannot assign, and the ticket quietly lands unassigned.
+    """
+    from app.integrations.jira import _jira_cfg, resolve_jira_user
+
+    cfg = _jira_cfg()
+    if not (cfg.get("base_url") and cfg.get("api_token") and cfg.get("email")):
+        return {u["username"]: None for u in users}
+    out: dict[str, bool | None] = {}
+    for u in users[:25]:
+        # Username first: the app's directory email often differs from the Jira account's, and
+        # searching on the wrong one reported "no Jira account" for people who have one.
+        try:
+            ok = bool(resolve_jira_user(u["username"]))
+            if not ok and u.get("email"):
+                ok = bool(resolve_jira_user(u["email"]))
+            out[u["username"]] = ok
+        except Exception:
+            out[u["username"]] = None
+    return out
+
+
 @router.get("/tickets/assignees")
 def ticket_assignees(domain: str = "", user: str = Depends(get_current_user)) -> dict:
     """Assignees offered for a ticket category.
@@ -86,15 +112,26 @@ def ticket_assignees(domain: str = "", user: str = Depends(get_current_user)) ->
             for name, entry in pool.items():
                 entry["email"] = emails.get(name)
             out = sorted(pool.values(), key=lambda e: (e["group"] or "", e["username"]))
+            flags = _jira_account_flags(out)
+            for entry in out:
+                entry["jira_account"] = flags.get(entry["username"])
+            usable = [e for e in out if e["jira_account"] is not False]
             return {"domain": key, "configured": True, "assignees": out,
-                    "default": out[0]["username"] if out else None}
+                    "default": (usable or out)[0]["username"] if out else None}
 
     from app.api.users import assignable_users
 
     fallback = assignable_users(user).get("users", [])
     out = [{"username": u["username"], "email": u.get("email"), "group": None} for u in fallback]
+    flags = _jira_account_flags(out)
+    for entry in out:
+        entry["jira_account"] = flags.get(entry["username"])
+    # No mapping means no meaningful default: offering the first directory entry made every
+    # such ticket "assigned" to somebody who never agreed to take it (and often has no Jira
+    # account at all). The reporter now chooses, or leaves it unassigned.
+    usable = [e for e in out if e["jira_account"] is not False]
     return {"domain": key, "configured": False, "assignees": out,
-            "default": out[0]["username"] if out else None}
+            "default": usable[0]["username"] if usable else None}
 
 
 @router.get("/ticket-destinations")
@@ -412,6 +449,16 @@ def create_ticket(
                 detail=f"Jira ticket creation failed"
                        f"{(': ' + res['error']) if res.get('error') else ' (integration not configured — check Settings → Integrations)'}")
 
+        # Jira is the source of truth for ownership: a requested assignee Jira could not
+        # resolve leaves the issue unassigned there, so the mirror must not claim otherwise.
+        # (Previously the requested name was written even when assignment failed, and the
+        # board showed an owner Jira had never heard of.)
+        assigned = res.get("assignee") or {}
+        assignee_name = assigned.get("display_name") if assigned.get("ok") else None
+        assignee_error = None
+        if assignee and not assigned.get("ok"):
+            assignee_error = assigned.get("detail") or "Jira did not accept the assignee"
+
         from datetime import datetime as _dt
 
         row = JiraTicket(
@@ -422,7 +469,7 @@ def create_ticket(
             subject=subj[:200],
             description=req.description,
             priority=req.priority[:16],
-            assignee=assignee,
+            assignee=assignee_name,
             due_date=(_dt.fromisoformat(req.due_date) if req.due_date else None),
         )
         s.add(row)
@@ -443,6 +490,7 @@ def create_ticket(
                     f"✅ Ticket {ext_key} created in "
                     "Jira."
                     + (f" Follow: {ext_link}" if ext_link else "")
+                    + (f" Assigned to {assignee_name}." if assignee_name else " Unassigned — the IT team will pick it up.")
                     + " The IT team will follow up."
                 )
                 s.add(ChatMessage(session_id=req.session_id, role="assistant",
@@ -464,6 +512,7 @@ def create_ticket(
             ),
             "requester": user,
             "assignee": row.assignee,
+            "assignee_error": assignee_error,
             "due_date": row.due_date.isoformat() if row.due_date else None,
         }
 
@@ -673,6 +722,15 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             logger.warning("jira field update refused for %s: %s", row.jira_key, pushed.get("detail"))
             sync_notes.append(f"fields not saved to Jira ({pushed.get('detail')})")
 
+    # Ownership is Jira's to grant: resolve first, mirror the result, and never record a name
+    # Jira refused (the edit dialog used to write it regardless).
+    assignee_result: dict | None = None
+    if req.assignee is not None and getattr(row, "jira_key", None):
+        from app.integrations.jira import assign_issue, unassign_issue
+
+        assignee_result = unassign_issue(row.jira_key) if not req.assignee.strip() \
+            else assign_issue(row.jira_key, req.assignee)
+
     with SessionLocal() as s:
         s.add(row)
         s.refresh(row)
@@ -683,8 +741,13 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             row.status = req.status[:32].lower()
             changes.append(f"status → {row.status}")
         if req.assignee is not None:
-            row.assignee = req.assignee[:64] or None
-            changes.append(f"assignee → {row.assignee or 'Unassigned'}")
+            if assignee_result is not None and not assignee_result.get("ok"):
+                sync_notes.append(
+                    f"assignee not changed in Jira ({assignee_result.get('detail')})")
+            else:
+                mirrored = (assignee_result or {}).get("display_name") if assignee_result else req.assignee[:64]
+                row.assignee = (mirrored or None)
+                changes.append(f"assignee → {row.assignee or 'Unassigned'}")
         if req.due_date is not None:
             from datetime import datetime as _dt
             row.due_date = _dt.fromisoformat(req.due_date) if req.due_date else None

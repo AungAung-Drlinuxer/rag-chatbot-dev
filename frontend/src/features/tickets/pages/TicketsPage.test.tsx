@@ -87,6 +87,13 @@ let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 const onToast = vi.fn();
 
+function setValue(el: HTMLSelectElement | HTMLInputElement, value: string) {
+  const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(el, value);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 async function settle() {
   for (let i = 0; i < 4; i++) await act(async () => { await Promise.resolve(); });
 }
@@ -314,13 +321,18 @@ describe("TicketsPage — queue, edit dialog and create dialog", () => {
     const subject = document.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
     await typeInto(subject, "New issue");
     const dialog = document.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+    // A category is mandatory now — it decides the queue and the owner pool.
+    const category = dialog.querySelector('select[aria-label="Category"]') as HTMLSelectElement;
+    const opts = [...category.options];
+    setValue(category, opts[opts.length - 1].value);
+    await settle();
     const dialogCreate = [...dialog.querySelectorAll("button")].find(
       (b) => b.textContent?.includes("Create ticket"),
     );
     await click(dialogCreate);
     expect(m.createTicketApi).toHaveBeenCalled();
     expect(el.textContent).toContain("IT-99");
-    expect(onToast).toHaveBeenCalledWith("Ticket created in Jira");
+    expect(onToast).toHaveBeenCalledWith(expect.stringContaining("Ticket IT-99 created"), "ok");
   });
 
 });

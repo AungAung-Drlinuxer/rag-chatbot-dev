@@ -529,34 +529,47 @@ def request_types(desk_id: str) -> list[dict]:
 
 # ---------------------------------------------------------------- assignment
 
-def assign_issue(issue_key: str, identifier: str) -> dict:
-    """Assign an issue to a person.
+_USER_CACHE: dict[tuple[str, str], tuple[float, dict | None]] = {}
+_USER_TTL = 600.0
 
-    Jira takes an `accountId`; this app stores usernames and emails. Resolve through the
-    assignable-user search (scoped to the issue, so it only offers people who may actually
-    take it), then fall back to the global user search.
+
+def resolve_jira_user(identifier: str, issue_key: str = "") -> dict | None:
+    """Map an app username/email/display name onto a Jira account.
+
+    Returns the Jira user dict (with `accountId`) or None. Cached for ten minutes because the
+    assignee dropdown asks about every candidate each time it opens, and Jira's user search is
+    the slowest call in that path.
     """
+    import time
+
     cfg = _jira_cfg()
     ident = (identifier or "").strip()
-    if not ident or not (cfg.get("base_url") and cfg.get("api_token")):
-        return {"ok": False, "detail": "nothing to assign"}
+    if not ident or not (cfg.get("base_url") and cfg.get("api_token") and cfg.get("email")):
+        return None
+    cache_key = (ident.lower(), issue_key or "")
+    hit = _USER_CACHE.get(cache_key)
+    if hit and time.time() - hit[0] < _USER_TTL:
+        return hit[1]
+
     base = cfg["base_url"].rstrip("/")
     headers = {"Authorization": _auth_header(), "Accept": "application/json"}
+    found: dict | None = None
     try:
         import httpx
 
-        with httpx.Client(timeout=20, headers=headers) as client:
+        with httpx.Client(timeout=15, headers=headers) as client:
             candidates: list[dict] = []
-            r = client.get(f"{base}/rest/api/3/user/assignable/search",
-                           params={"issueKey": issue_key, "query": ident, "maxResults": 50})
-            if r.status_code == 200:
-                candidates = r.json() or []
+            if issue_key:
+                r = client.get(f"{base}/rest/api/3/user/assignable/search",
+                               params={"issueKey": issue_key, "query": ident, "maxResults": 50})
+                if r.status_code == 200:
+                    candidates = r.json() or []
             if not candidates:
                 r = client.get(f"{base}/rest/api/3/user/search",
                                params={"query": ident, "maxResults": 50})
                 if r.status_code == 200:
                     candidates = r.json() or []
-            match = next(
+            exact = next(
                 (c for c in candidates
                  if ident.lower() in {
                      (c.get("accountId") or "").lower(),
@@ -564,10 +577,59 @@ def assign_issue(issue_key: str, identifier: str) -> dict:
                      (c.get("displayName") or "").lower(),
                      (c.get("name") or "").lower(),
                  }),
-                candidates[0] if candidates else None,
+                None,
             )
-            if not match or not match.get("accountId"):
-                return {"ok": False, "detail": f"no Jira user matches '{ident}'"}
+            # Jira's search is fuzzy: an app username ("AungAung") can match a single account
+            # whose display name is "Aung Lay". Accept a lone candidate, but never guess between
+            # several — assigning the wrong person is worse than reporting no match.
+            match = exact or (candidates[0] if len(candidates) == 1 else None)
+            if match and match.get("accountId"):
+                found = match
+    except Exception:
+        found = None
+
+    _USER_CACHE[cache_key] = (time.time(), found)
+    return found
+
+
+def unassign_issue(issue_key: str) -> dict:
+    """Clear the assignee in Jira (Jira models that as accountId: null)."""
+    cfg = _jira_cfg()
+    base = cfg["base_url"].rstrip("/")
+    headers = {"Authorization": _auth_header(), "Accept": "application/json"}
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20, headers=headers) as client:
+            put = client.put(f"{base}/rest/api/3/issue/{issue_key}/assignee",
+                             json={"accountId": None})
+            if put.status_code in (200, 201, 204):
+                return {"ok": True, "display_name": None}
+            return {"ok": False, "detail": f"HTTP {put.status_code}: {put.text[:200]}"}
+    except Exception as exc:
+        return {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+
+def assign_issue(issue_key: str, identifier: str) -> dict:
+    """Assign an issue to a person.
+
+    Jira takes an `accountId`; this app stores usernames and emails. Resolution is delegated to
+    `resolve_jira_user`, and a miss is reported — never swallowed, because a ticket that looks
+    owned in this app but is unassigned in Jira is worse than one that is visibly unassigned.
+    """
+    ident = (identifier or "").strip()
+    if not ident:
+        return {"ok": False, "detail": "nothing to assign"}
+    match = resolve_jira_user(ident, issue_key)
+    if not match:
+        return {"ok": False, "detail": f"no Jira user matches '{ident}'"}
+    cfg = _jira_cfg()
+    base = cfg["base_url"].rstrip("/")
+    headers = {"Authorization": _auth_header(), "Accept": "application/json"}
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20, headers=headers) as client:
             put = client.put(f"{base}/rest/api/3/issue/{issue_key}/assignee",
                              json={"accountId": match["accountId"]})
             if put.status_code in (200, 201, 204):
