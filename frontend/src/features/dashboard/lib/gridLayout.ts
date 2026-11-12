@@ -31,14 +31,15 @@ export type PanelLike = { id: string; type: string; span: number };
  */
 const DEFAULT_H: Record<string, number> = {
   kpis: 4,
-  attention: 7,
-  "usage-kpis": 10,
-  trend: 10,
-  domains: 8,
-  "token-breakdown": 8,
-  health: 8,
-  knowledge: 8,
-  "guardrail-events": 10,
+  attention: 6,
+  "usage-kpis": 8,
+  trend: 8,
+  quality: 7,
+  domains: 7,
+  "token-breakdown": 7,
+  knowledge: 7,
+  health: 7,
+  "guardrail-events": 8,
 };
 
 /** The layout a user who has never arranged anything gets: the old board, row by row. */

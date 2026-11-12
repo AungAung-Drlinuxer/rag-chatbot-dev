@@ -109,6 +109,14 @@ const p = (
   id: string, type: PanelType, span: number, row: number, options: PanelSpec["options"] = {},
 ): PanelSpec => ({ id, type, title: "", span, row, options });
 
+/**
+ * 1280×720-first defaults.
+ *
+ * The board is a 12-column grid, so `span` is a real width: at 1280 the content column is
+ * ~950px and one column is ~78px. Three-column panels (232px) squeezed their tables into
+ * horizontal scrolling, so the defaults are built in halves and quarters-of-twelve that stay
+ * usable at 1280 and simply breathe more at 1920 — never fewer than four columns wide.
+ */
 export const DEFAULT_LAYOUT: PanelSpec[] = [
   p("kpis", "kpis", 12, 1),
   p("usage", "usage-kpis", 6, 2),
@@ -124,11 +132,12 @@ export const DEFAULT_LAYOUT_ADMIN: PanelSpec[] = [
   p("kpis", "kpis", 12, 1),
   p("usage", "usage-kpis", 6, 2),
   p("trend", "trend", 6, 2),
-  p("domains", "domains", 3, 3),
-  p("tokens", "token-breakdown", 3, 3),
-  p("health", "health", 3, 3),
-  p("knowledge", "knowledge", 3, 3),
-  p("guardrails", "guardrail-events", 12, 4, { limit: 6 }),
+  p("domains", "domains", 4, 3),
+  p("tokens", "token-breakdown", 4, 3),
+  p("knowledge", "knowledge", 4, 3),
+  // Full width: six dependencies read better in one row than wrapped in a quarter panel.
+  p("health", "health", 12, 4),
+  p("guardrails", "guardrail-events", 12, 5, { limit: 6 }),
 ];
 
 /** The board for a role. Agents see operations; administrators also see usage and spend. */
