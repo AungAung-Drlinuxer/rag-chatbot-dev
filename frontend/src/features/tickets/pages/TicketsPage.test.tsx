@@ -159,7 +159,7 @@ describe("TicketsPage — loading, data and stats", () => {
     expect(text).toContain("carol");
   });
 
-  it("counts total / open / pending / in progress / done from the loaded list", async () => {
+  it("counts total / open / pending / in progress / done / reopened from the loaded list", async () => {
     const el = await mount("admin");
     const text = el.textContent!;
     expect(text).toContain("Total tickets");
@@ -167,6 +167,9 @@ describe("TicketsPage — loading, data and stats", () => {
     expect(text).toContain("Pending");
     expect(text).toContain("In progress");
     expect(text).toContain("Done");
+    // Six figures now: the reopened card is part of the strip and filters like the rest.
+    expect(text).toContain("Reopened");
+    expect(text).toContain("Came back after closing");
     // The three stat figures 3,1,1,1 appear somewhere in the KPI cards.
     const cards = el.querySelectorAll('[data-slot="card"]');
     const kpi = [...cards].slice(0, 4).map((c) => c.textContent);

@@ -8,7 +8,7 @@
  * is currently applied), which is what makes the row useful rather than decorative.
  */
 import type { ReactNode } from "react";
-import { AlertOctagon, CheckCircle2, Clock3, Inbox } from "lucide-react";
+import { AlertOctagon, CheckCircle2, Clock3, Inbox, RotateCcw } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -22,7 +22,7 @@ export type TicketTotals = {
   reopened: number;
 };
 
-type Tone = "primary" | "amber" | "emerald" | "slate";
+type Tone = "primary" | "amber" | "emerald" | "slate" | "rose";
 
 const TONES: Record<Tone, { tile: string; ring: string; bar: string }> = {
   primary: {
@@ -39,6 +39,11 @@ const TONES: Record<Tone, { tile: string; ring: string; bar: string }> = {
     tile: "bg-[var(--ok)]/12 text-[var(--ok)]",
     ring: "border-[var(--ok)]/55",
     bar: "bg-[var(--ok)]",
+  },
+  rose: {
+    tile: "bg-[var(--danger)]/12 text-[var(--danger)]",
+    ring: "border-[var(--danger)]/50",
+    bar: "bg-[var(--danger)]",
   },
   slate: {
     tile: "bg-[var(--muted)] text-muted-foreground",
@@ -127,7 +132,7 @@ export function TicketStats({
   onPick: (status: string) => void;
 }) {
   return (
-    <section aria-label="Ticket summary" className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
+    <section aria-label="Ticket summary" className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6">
       <Tile
         label="All tickets"
         value={totals.total}
@@ -182,6 +187,16 @@ export function TicketStats({
         active={activeStatus === "done"}
         onClick={() => onPick("done")}
         title="Show tickets that are done"
+      />
+      <Tile
+        label="Reopened"
+        value={totals.reopened}
+        caption="Came back after closing"
+        icon={<RotateCcw className="size-3.5" />}
+        tone="rose"
+        active={activeStatus === "reopened"}
+        onClick={() => onPick("reopened")}
+        title="Show tickets that were reopened after being closed"
       />
     </section>
   );
