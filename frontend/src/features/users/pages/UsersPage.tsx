@@ -1083,7 +1083,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
         <DialogContent
           showCloseButton={false}
-          className="flex max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]"
+          className="flex max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
         >
           {/* ---- header: who this is, at a glance ---- */}
           <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pt-5">

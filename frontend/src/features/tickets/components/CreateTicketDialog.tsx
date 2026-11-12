@@ -271,7 +271,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]">
+      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
         {/* ---- header: what this is, and where it lands ---- */}
         <div className="flex items-start gap-3 px-6 pb-4 pt-5">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">

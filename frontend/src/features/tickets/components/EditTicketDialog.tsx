@@ -304,7 +304,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]">
+      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* ---- header ---- */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4 pr-14">
