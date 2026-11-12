@@ -125,7 +125,7 @@ export default function Login({
         <section className="relative hidden min-h-0 flex-col p-4 lg:flex lg:min-h-0 xl:p-5">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-gradient-to-b from-card via-card to-muted/40 shadow-xs">
             {/* framed header */}
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-4 xl:px-8">
+            <header className="flex min-h-[64px] flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-3 xl:px-8">
               <div className="flex min-w-0 items-center gap-3">
                 <Logo branding={branding} size="md" />
                 <div className="min-w-0">
@@ -145,7 +145,7 @@ export default function Login({
             {/* No scrollbar here: the illustration takes whatever height is left and the copy
                 is a step smaller on short screens, so image + text always fit the frame. */}
             <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-6 py-4 xl:px-8 xl:py-5">
-              <div className="mx-auto flex min-h-0 w-full max-w-[800px] flex-1 flex-col justify-center gap-3.5">
+              <div className="mx-auto flex w-full max-w-[800px] flex-col justify-center gap-4">
                 <div className="shrink-0">
                   <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[clamp(24px,3.1vh,32px)]">
                     Find the right{" "}
@@ -163,10 +163,10 @@ export default function Login({
                     min(available width, (viewport - chrome) x image ratio), so the picture and its
                     border are always the same box. A 600px-tall window shrinks the artwork (220px
                     floor) instead of letterboxing or clipping it. */}
-                <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+                <div className="flex w-full items-center justify-center">
                   <figure
                     className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm"
-                    style={{ width: "max(220px, min(100%, calc((100svh - 392px) * 2.34)))" }}
+                    style={{ width: "max(220px, min(100%, calc((100svh - 430px) * 2.34)))" }}
                   >
                     <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3">
                       <span className="flex gap-1" aria-hidden>
@@ -200,7 +200,7 @@ export default function Login({
             </div>
 
             {/* framed footer */}
-            <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3.5 text-2xs text-muted-foreground xl:px-8">
+            <footer className="flex min-h-[64px] flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[var(--border)] px-6 py-3 text-2xs text-muted-foreground xl:px-8">
               <span>Internal IT Service</span>
               <Dot />
               <span>RBAC protected</span>
