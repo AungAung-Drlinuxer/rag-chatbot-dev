@@ -244,12 +244,13 @@ export default function Login({
           <div className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
             <div className="w-full max-w-[404px]">
               {/* sign-in card */}
-              <div className="rounded-3xl border border-[var(--border)] bg-card p-5 text-card-foreground shadow-[0_20px_60px_-24px_rgba(24,16,45,0.35)] sm:p-5">
+              <div className="relative overflow-hidden rounded-[26px] border border-[var(--border)] bg-card p-6 text-card-foreground shadow-[0_24px_70px_-34px_rgba(124,58,237,0.45)]">
+                <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[var(--primary)] via-[var(--accent-foreground)] to-[var(--primary)]" />
                 <div className="mb-4">
-                  <div className="mb-3 grid size-10 place-items-center rounded-xl bg-[var(--accent)] text-[var(--accent-foreground)]">
-                    <LockKeyhole className="size-[18px]" />
+                  <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_10px_20px_-10px_var(--primary)] ring-1 ring-inset ring-white/20">
+                    <LockKeyhole className="size-5" />
                   </div>
-                  <h2 className="text-[clamp(1.25rem,3.4vw,1.375rem)] font-semibold tracking-tight">
+                  <h2 className="text-[clamp(1.3rem,3.4vw,1.45rem)] font-semibold tracking-tight">
                     Welcome back
                   </h2>
                   <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
@@ -262,7 +263,7 @@ export default function Login({
                     <button
                       type="button"
                       onClick={onSso}
-                      className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99]"
+                      className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-[var(--primary)]/25 bg-[var(--primary)]/[0.06] px-4 text-[13px] font-semibold text-[var(--primary)] shadow-xs transition hover:bg-[var(--primary)]/[0.12] focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99]"
                     >
                       <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-4 shrink-0" />
                       <span>Continue with {ssoLabel}</span>
@@ -297,7 +298,7 @@ export default function Login({
                         value={loginUser}
                         onChange={(e) => setLoginUser(e.target.value)}
                         aria-invalid={!!fieldErr && !loginUser.trim()}
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-background pl-10 pr-3 text-[13px] text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
+                        className="h-11 w-full rounded-xl border border-[var(--border)] bg-background pl-10 pr-3 text-[13px] transition hover:border-[var(--primary)]/35 text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
                       />
                     </div>
                   </div>
@@ -317,13 +318,13 @@ export default function Login({
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
                         aria-invalid={!!fieldErr && !loginPass}
-                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-background pl-10 pr-12 text-[13px] text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
+                        className="h-11 w-full rounded-xl border border-[var(--border)] bg-background pl-10 pr-12 text-[13px] transition hover:border-[var(--primary)]/35 text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/12"
                       />
                       <button
                         type="button"
                         aria-label={showPass ? "Hide password" : "Show password"}
                         onClick={() => setShowPass((v) => !v)}
-                        className="absolute right-1.5 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        className="absolute right-1.5 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]"
                       >
                         {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
@@ -349,7 +350,7 @@ export default function Login({
                   <button
                     type="submit"
                     disabled={!canSubmit}
-                    className="group flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-[13px] font-semibold text-[var(--primary-foreground)] shadow-[0_12px_26px_-14px_var(--primary)] transition hover:opacity-95 focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/25 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting ? (
                       <>
