@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, ChevronDown, Home, RefreshCw, RotateCcw, Save } from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, GripHorizontal, Home, LayoutGrid, RefreshCw, RotateCcw, Save } from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -38,9 +38,11 @@ import {
   panelTitle,
   type PanelSpec,
 } from "@/features/dashboard/panels/types";
-import { PanelResizeHandles } from "@/features/dashboard/components/PanelResizeHandles";
-import { usePanelResize } from "@/features/dashboard/lib/usePanelResize";
-import type { ResizeEdge } from "@/features/dashboard/lib/boardLayout";
+import { useGridLayout } from "@/features/dashboard/lib/useGridLayout";
+import { GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, layoutItems } from "@/features/dashboard/lib/gridLayout";
+import GridLayoutBase, { WidthProvider, type Layout } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 /**
  * Which edges of a panel can be dragged.
@@ -51,7 +53,6 @@ import type { ResizeEdge } from "@/features/dashboard/lib/boardLayout";
  * band and shrinks the band below, so the panels sharing that band move together. Both are
  * one-line changes; nothing else in the board needs to know which is in use.
  */
-const RESIZE_HANDLES: readonly ResizeEdge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
 /**
  * Overview — the board the rest of the app hangs off.
@@ -78,6 +79,111 @@ type Props = {
   /** Capability map from the shell: cost is gated by the same cap as the Audit log. */
   perms?: Record<string, boolean> | null;
 };
+
+const BoardGridLayout = WidthProvider(GridLayoutBase);
+
+/**
+ * The board itself: a 12-column grid where every panel is a rectangle the user owns.
+ *
+ * Drag/resize are live only while `editing` is on (the "Edit layout" button), and a drag
+ * starts from the header grip rather than anywhere on the card — so clicking a chart or a
+ * table row never nudges the layout by accident.
+ */
+/** Desktop is where a grid makes sense; below lg the board stacks like every other page. */
+function useIsDesktop() {
+  const query = "(min-width: 1024px)";
+  const [desktop, setDesktop] = useState(() =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia(query).matches
+      : true,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia(query);
+    const sync = () => setDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return desktop;
+}
+
+function BoardGrid({
+  panels,
+  rects,
+  editing,
+  onLayoutChange,
+}: {
+  panels: readonly PanelSpec[];
+  rects: Parameters<typeof layoutItems>[1];
+  editing: boolean;
+  onLayoutChange: (layout: Layout[]) => void;
+}) {
+  const desktop = useIsDesktop();
+
+  /* A 12-column grid at 390px gives 79px panels. Below lg the board is one column of
+     content-sized cards — the arrangement still applies on the screen it was made for. */
+  if (!desktop) {
+    return (
+      <div className="flex flex-col gap-2">
+        {panels.map((panel) => (
+          <div key={panel.id} data-panel={panel.type} className="flex min-w-0 flex-col">
+            <div
+              data-panel-body
+              className={panel.type === "kpis" ? "w-full" : "panel-surface rounded-xl"}
+            >
+              {renderPanelBody(panel, panelTitle(panel))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <BoardGridLayout
+      className="board-grid"
+      layout={layoutItems(panels, rects)}
+      cols={GRID_COLS}
+      rowHeight={GRID_ROW_HEIGHT}
+      margin={[GRID_GAP, GRID_GAP]}
+      containerPadding={[0, 0]}
+      isDraggable={editing}
+      isResizable={editing}
+      draggableHandle="[data-drag-handle]"
+      draggableCancel=".no-drag"
+      resizeHandles={["se", "sw", "ne", "nw", "e", "w", "s", "n"]}
+      compactType="vertical"
+      onLayoutChange={onLayoutChange}
+      useCSSTransforms
+    >
+      {panels.map((panel) => (
+        <div key={panel.id} data-panel={panel.type} className="flex min-w-0 flex-col">
+          {editing && (
+            <span
+              data-drag-handle
+              className="mb-1 flex cursor-grab items-center gap-1 self-start rounded-md border border-dashed border-[var(--primary)]/40 bg-[var(--primary)]/5 px-1.5 py-0.5 text-3xs font-medium uppercase tracking-wide text-[var(--accent-foreground)] active:cursor-grabbing"
+              title="Drag to move this panel"
+            >
+              <GripHorizontal className="size-3" />
+              {panelTitle(panel)}
+            </span>
+          )}
+          <div
+            data-panel-body
+            className={
+              panel.type === "kpis"
+                ? "min-h-0 flex-1 overflow-auto"
+                : "panel-surface min-h-0 flex-1 overflow-auto rounded-xl"
+            }
+          >
+            {renderPanelBody(panel, panelTitle(panel))}
+          </div>
+        </div>
+      ))}
+    </BoardGridLayout>
+  );
+}
 
 export default function Dashboard({ role, perms }: Props) {
   const canSeeUsage = role === "admin" || !!(perms && perms.manage_users);
@@ -127,7 +233,7 @@ export default function Dashboard({ role, perms }: Props) {
   const panels: PanelSpec[] = useMemo(() => layoutFor(role), [role]);
   // Placement + band heights. Persisted per role, so an admin and an agent can each keep
   // their own arrangement in the same browser.
-  const board = usePanelResize(panels, role);
+  const board = useGridLayout(panels, role);
   // Inline confirmation for the layout actions: the page has no toast host, and a button that
   // simply disappears is easy to miss.
   const [viewNote, setViewNote] = useState<string | null>(null);
@@ -487,6 +593,20 @@ export default function Dashboard({ role, perms }: Props) {
             <span role="status" className="text-2xs text-muted-foreground">{viewNote}</span>
           )}
 
+          <Button
+            variant={board.editing ? "default" : "outline"}
+            size="sm"
+            className="rounded-lg"
+            onClick={() => board.setEditing(!board.editing)}
+            title={board.editing
+              ? "Stop moving panels around"
+              : "Drag panels by their grip and resize them from any edge"}
+            aria-pressed={board.editing}
+          >
+            <LayoutGrid className="mr-2 size-3.5" />
+            {board.editing ? "Done editing" : "Edit layout"}
+          </Button>
+
           {board.dirty && (
             <>
               <Button
@@ -553,43 +673,16 @@ export default function Dashboard({ role, perms }: Props) {
           />
         ) : (
           <DashboardDataProvider value={data}>
-            {/* Content-sized bands, one scrolling page. Each band has a floor (draggable) but
-                grows to fit whatever its panel has to show, so nothing is clipped to fit one
-                screen: scroll the page and every panel is fully readable — same model as the
-                Knowledge page. */}
-            <div
-              data-board="fill"
-              className="grid grid-cols-1 gap-2 lg:grid-cols-12"
-              style={{ ["--board-rows" as string]: board.rows }}
-            >
-              {panels.map((panel) => {
-                const box = board.boxes.find((b) => b.id === panel.id);
-                return (
-                  <div
-                    key={panel.id}
-                    data-panel={panel.type}
-                    className="flex min-w-0 flex-col"
-                    style={{
-                      ["--span" as string]: box?.span ?? panel.span,
-                      ["--start" as string]: box?.start ?? "",
-                      ["--row" as string]: box?.row ?? panel.row,
-                    }}
-                  >
-                    <div
-                      data-panel-body
-                      className={panel.type === "kpis" ? "w-full" : "panel-surface rounded-xl"}
-                    >
-                      {renderPanelBody(panel, panelTitle(panel))}
-                    </div>
-                    <PanelResizeHandles
-                      handles={RESIZE_HANDLES}
-                      label={panelTitle(panel)}
-                      onResize={(edge, event) => board.beginResize(panel.id, box?.row ?? panel.row ?? 1, edge, event)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            {/* Grafana-style board: every panel is a rectangle in a 12-column grid, moved by
+                its grip and resized from any edge while "Edit layout" is on. Heights are the
+                user's, so a panel shows its content by growing — the page scrolls, nothing is
+                clipped to fit a screen. */}
+            <BoardGrid
+              panels={panels}
+              rects={board.rects}
+              editing={board.editing}
+              onLayoutChange={board.onLayoutChange}
+            />
           </DashboardDataProvider>
         )}
       </main>

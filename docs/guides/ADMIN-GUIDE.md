@@ -182,7 +182,7 @@ and the code is `backend/app/security/guardrails.py`.
 | --- | --- |
 | **Audit log** | who did what, when — sign-ins, settings changes, KB syncs, refusals, ticket writes. Exportable. |
 | **Conversations** | every session with its messages, confidence and citations; export as transcript |
-| **Overview** | KPIs, cost, latency, guardrail events, dependency health; resizable panels, saved per account |
+| **Overview** | KPIs, cost, latency, guardrail events, dependency health. **Edit layout** turns the board into a Grafana-style grid: drag a panel by its handle, resize it from any edge, then **Save view** — the arrangement is stored per account in `runtime_kv` (`board_layout:<user>`) and restored on every device. Below 1024 px the board stacks into one column. |
 | **`GET /api/health`** | dependency probe: Postgres, Redis, embeddings, vector store, LLM |
 | **`GET /api/setup/readiness`** | which integration is unconfigured, for a fresh install |
 

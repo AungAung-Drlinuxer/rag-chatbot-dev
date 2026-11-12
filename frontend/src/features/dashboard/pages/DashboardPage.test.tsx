@@ -191,39 +191,36 @@ describe("DashboardPage — data rendering", () => {
   });
 
   /**
-   * The board is one screen: five bands whose heights come from the page, not from the
-   * content. Both halves matter — the rows are positioned on lg, and there is no arrange
-   * mode to drift away from the documented layout.
+   * The board is a Grafana-style grid: every panel owns a rectangle, and the arrange mode
+   * frees it. Both halves matter — geometry is per panel (not per band), and drag/resize
+   * are off until the user asks for them, so reading the board never moves it.
    */
-  it("lays the board out as fixed bands and offers resize grips, not an arrange mode", async () => {
+  it("lays the board out as a per-panel grid with an arrange mode", async () => {
     const rootEl = await mount("admin");
-    const board = rootEl.querySelector("[data-board='fill']") as HTMLElement;
+
+    const board = rootEl.querySelector(".react-grid-layout") as HTMLElement;
     expect(board).toBeTruthy();
-    expect(board.style.getPropertyValue("--board-rows")).toContain("minmax");
+    expect(board.querySelectorAll("[data-panel]").length).toBeGreaterThan(4);
 
-    const bands = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--row"));
-    expect(new Set(bands)).toEqual(new Set(["1", "2", "3", "4"]));
+    const items = [...board.querySelectorAll<HTMLElement>("[data-panel]")];
+    const positioned = items.filter((el) => el.style.transform);
+    expect(positioned.length).toBe(items.length);
 
-    // Every panel is placed from column 1..12 by the packer, so a resize has a boundary to move.
-    const starts = [...board.querySelectorAll<HTMLElement>("[data-panel]")].map((el) => el.style.getPropertyValue("--start"));
-    expect(starts.every((start) => Number(start) >= 1)).toBe(true);
+    // Nothing is draggable until Edit layout is pressed.
+    expect(board.querySelectorAll("[data-drag-handle]").length).toBe(0);
+    expect(rootEl.textContent).toContain("Edit layout");
+    expect(rootEl.textContent).toContain("Export CSV");
+    expect(rootEl.textContent).toContain("Print");
+  });
 
-    // Every panel carries the configured grips; the set is the page's one-line choice.
-    const edges = [...board.querySelectorAll<HTMLElement>("[data-resize-edge]")].map((el) => el.dataset.resizeEdge!);
-    expect(edges.length).toBeGreaterThan(0);
-    expect(edges).toContain("w");
-    expect(edges).toContain("e");
-    expect(edges.every((e) => ["n", "s", "e", "w", "ne", "nw", "se", "sw"].includes(e))).toBe(true);
-    // Eight edges per panel means the full ring is on, so height grips exist too.
-    expect(edges).toContain("s");
+  it("frees the panels for drag and resize in the arrange mode", async () => {
+    const rootEl = await mount("admin");
+    const edit = [...rootEl.querySelectorAll("button")].find((b) => b.textContent?.includes("Edit layout"))!;
+    await act(async () => { edit.click(); });
 
-    const text = rootEl.textContent!;
-    expect(text).not.toContain("Customize");
-    // Nothing to reset until the board has actually been rearranged.
-    expect(text).not.toContain("Reset layout");
-    // One report pair across the console: Print, then Export CSV.
-    expect(text).toContain("Export CSV");
-    expect(text).toContain("Print");
+    const board = rootEl.querySelector(".react-grid-layout") as HTMLElement;
+    expect(board.querySelectorAll("[data-drag-handle]").length).toBeGreaterThan(0);
+    expect(rootEl.textContent).toContain("Done editing");
   });
 
   it("names the failing dependency and the guardrail counter separately", async () => {

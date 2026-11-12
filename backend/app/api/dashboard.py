@@ -757,6 +757,9 @@ def reset_dashboard_layout(user: str = Depends(get_current_user)) -> dict:
 class BoardIn(BaseModel):
     #: Loose on purpose: a stale client (or a hand-edited row) is clamped by
     #: `_normalise_board` into something drawable instead of being rejected with a 422.
+    #: `rects` is the current model (a rectangle per panel, Grafana-style); `spans` and
+    #: `bands` are the older band geometry, still accepted so saved views keep loading.
+    rects: dict[str, Any] = {}
     spans: dict[str, Any] = {}
     bands: list[Any] = []
 
@@ -798,7 +801,25 @@ def _normalise_board(payload: BoardIn) -> dict:
             "fr": max(0.0, min(8.0, round(fr, 3))),
             "auto": bool(band.get("auto", False)),
         })
-    return {"spans": spans, "bands": bands[:12]}
+    rects = {}
+    for pid, rect in (payload.rects or {}).items():
+        if not isinstance(pid, str) or not isinstance(rect, dict):
+            continue
+        try:
+            x = int(rect.get("x", 0))
+            y = int(rect.get("y", 0))
+            w = int(rect.get("w", 4))
+            h = int(rect.get("h", 6))
+        except (TypeError, ValueError):
+            continue
+        rects[pid[:64]] = {
+            "x": max(0, min(11, x)),
+            "y": max(0, min(400, y)),
+            "w": max(1, min(12, w)),
+            "h": max(1, min(40, h)),
+        }
+
+    return {"rects": rects, "spans": spans, "bands": bands[:12]}
 
 
 @router.get("/dashboard/board")

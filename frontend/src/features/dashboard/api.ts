@@ -63,7 +63,15 @@ export async function dashHealth() {
  * localStorage. */
 
 export type BoardBand = { min: number; fr: number; auto?: boolean; px?: number };
-export type BoardLayout = { spans: Record<string, number>; bands: BoardBand[] };
+/** Grafana-style rectangle per panel: column, row, width and height in a 12-column grid. */
+export type PanelRect = { x: number; y: number; w: number; h: number };
+export type BoardLayout = {
+  /** Current geometry. */
+  rects?: Record<string, PanelRect>;
+  /** Legacy band geometry, still accepted by older rows on the server. */
+  spans?: Record<string, number>;
+  bands?: BoardBand[];
+};
 
 export async function getBoardLayout(): Promise<{
   board: BoardLayout | null;
