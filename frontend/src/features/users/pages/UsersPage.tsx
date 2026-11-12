@@ -38,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 import {
   listUsers,
@@ -1001,76 +1002,54 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
   });
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
+    <>
+      <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent
+          showCloseButton={false}
+          className="flex max-h-[86dvh] w-[94vw] max-w-[min(1120px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(1120px,94vw)]"
+        >
+          {/* ---- header: who this is, at a glance ---- */}
+          <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pt-5">
+            <span className={["grid size-12 shrink-0 place-items-center rounded-2xl text-sm font-bold", avatarTone(user.name)].join(" ")} aria-hidden>
+              {getInitials(user.name)}
+            </span>
 
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={`User details for ${user.name}`}
-        className="absolute inset-y-0 right-0 flex h-full w-full max-w-[480px] flex-col border-l border-[var(--border)] bg-card shadow-2xl"
-      >
-        {/* ---------- header: who this is, at a glance ---------- */}
-        <header className="shrink-0 border-b border-[var(--border)] px-4 pb-4 pt-4 sm:px-5">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
+              <DialogTitle className="mt-0.5 truncate text-lg font-bold leading-tight tracking-tight text-foreground" title={user.name}>
+                {user.name}
+              </DialogTitle>
+              <p className="mt-0.5 truncate font-mono text-2xs text-muted-foreground" title={user.email}>
+                @{user.username} · {user.email}
+              </p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <StatusBadge status={user.status} />
+                <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium">
+                  <Shield className="size-3 text-muted-foreground" aria-hidden />
+                  {roleLabel}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium text-muted-foreground">
+                  {isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
+                  {isAdUser ? "Directory account" : "Local account"}
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={onClose}
-              className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
               aria-label="Close"
             >
               <X className="size-4" />
             </button>
           </div>
 
-          <div className="mt-2 flex items-center gap-3">
-            <span className={["grid size-12 shrink-0 place-items-center rounded-2xl text-sm font-bold", avatarTone(user.name)].join(" ")} aria-hidden>
-              {getInitials(user.name)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-base font-semibold leading-tight" title={user.name}>{user.name}</h2>
-              <p className="mt-0.5 truncate font-mono text-2xs text-muted-foreground" title={user.email}>@{user.username}</p>
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <StatusBadge status={user.status} />
-            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium">
-              <Shield className="size-3 text-muted-foreground" aria-hidden />
-              {roleLabel}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium text-muted-foreground">
-              {isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
-              {isAdUser ? "Directory account" : "Local account"}
-            </span>
-          </div>
-        </header>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="space-y-6 px-4 py-4 sm:px-5">
-            {/* ---------- account metadata ---------- */}
-            <section aria-labelledby="account-heading">
-              <SectionHeading
-                icon={<UsersIcon className="size-3.5" />}
-                title="Account"
-                hint="Identity and source of record."
-              />
-              <MetaGrid>
-                <MetaItem icon={<Mail className="size-3" aria-hidden />} label="Email" value={user.email} title={user.email} />
-                <MetaItem icon={<Building2 className="size-3" aria-hidden />} label="Department" value={user.department || "—"} />
-                <MetaItem
-                  icon={isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
-                  label="Account type"
-                  value={isAdUser ? "Active Directory" : "Local"}
-                />
-                <MetaItem icon={<AtSign className="size-3" aria-hidden />} label="Username" value={user.username} mono />
-                <MetaItem icon={<CalendarDays className="size-3" aria-hidden />} label="Joined" value={formatDateTime(user.joined)} />
-                <MetaItem icon={<Clock className="size-3" aria-hidden />} label="Last login" value={formatDateTime(user.lastLogin)} />
-              </MetaGrid>
-            </section>
-
-            {/* ---------- role + permissions ---------- */}
+          {/* ---- body: the decision on the left, the facts on the right ---- */}
+          <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5 lg:grid-cols-12">
+            <div className="space-y-5 lg:col-span-7">
+              {/* ---------- role + permissions ---------- */}
             <section aria-labelledby="access-heading">
               <SectionHeading
                 icon={<Shield className="size-3.5" />}
@@ -1138,8 +1117,30 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 </p>
               </div>
             </section>
+            </div>
 
-            {/* ---------- directory ---------- */}
+            <div className="space-y-5 lg:col-span-5">
+              {/* ---------- account metadata ---------- */}
+            <section aria-labelledby="account-heading">
+              <SectionHeading
+                icon={<UsersIcon className="size-3.5" />}
+                title="Account"
+                hint="Identity and source of record."
+              />
+              <MetaGrid>
+                <MetaItem icon={<Mail className="size-3" aria-hidden />} label="Email" value={user.email} title={user.email} />
+                <MetaItem icon={<Building2 className="size-3" aria-hidden />} label="Department" value={user.department || "—"} />
+                <MetaItem
+                  icon={isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
+                  label="Account type"
+                  value={isAdUser ? "Active Directory" : "Local"}
+                />
+                <MetaItem icon={<AtSign className="size-3" aria-hidden />} label="Username" value={user.username} mono />
+                <MetaItem icon={<CalendarDays className="size-3" aria-hidden />} label="Joined" value={formatDateTime(user.joined)} />
+                <MetaItem icon={<Clock className="size-3" aria-hidden />} label="Last login" value={formatDateTime(user.lastLogin)} />
+              </MetaGrid>
+            </section>
+              {/* ---------- directory ---------- */}
             <section aria-labelledby="directory-heading">
               <SectionHeading
                 icon={<UserCog className="size-3.5" />}
@@ -1188,8 +1189,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 )}
               </div>
             </section>
-
-            {/* ---------- security ---------- */}
+              {/* ---------- security ---------- */}
             <section aria-labelledby="security-heading">
               <SectionHeading icon={<KeyRound className="size-3.5" />} title="Security" hint="Password and access recovery." />
               {isAdUser ? (
@@ -1220,8 +1220,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 </div>
               )}
             </section>
-
-            {(roleSaved || error) && (
+              {(roleSaved || error) && (
               <div
                 role="status"
                 className={[
@@ -1235,12 +1234,12 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
                 <span className="min-w-0 break-words">{error ?? "Access updated"}</span>
               </div>
             )}
+            </div>
           </div>
-        </div>
 
-        {/* ---------- footer actions: destructive left, routine right ---------- */}
-        <footer className="shrink-0 border-t border-[var(--border)] bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* ---- footer actions: destructive left, routine right ---- */}
+          <div className="border-t border-[var(--border)] bg-card px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               disabled={busy}
@@ -1276,15 +1275,17 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
               </button>
             </div>
           </div>
-
-          <p className="mt-2 text-center text-[10px] text-muted-foreground sm:text-left">
+            <p className="mt-2 text-center text-[10px] text-muted-foreground sm:text-left">
             {roleChanged
               ? `Unsaved role change: ${user.role} → ${selectedRole}`
               : "Role changes take effect the next time this user signs in."}
           </p>
-        </footer>
+        
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* Deactivation revokes access immediately (the backend invalidates the token);
+      {/* Deactivation revokes access immediately (the backend invalidates the token);
             reset-access forces a fresh sign-in — both ask first. */}
         <ConfirmDialog
           open={confirmKind === "disable"}
@@ -1305,8 +1306,7 @@ function UserDrawer({ user, onClose, onUserUpdated }: {
           onCancel={() => setConfirmKind(null)}
           onConfirm={() => { setConfirmKind(null); void handleResetAccess(); }}
         />
-      </aside>
-    </div>
+    </>
   );
 }
 

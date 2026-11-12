@@ -220,11 +220,17 @@ describe("UsersPage — filtering, empty state and pagination", () => {
   });
 });
 
-describe("UsersPage — the detail drawer", () => {
+/** The detail panel is a Radix dialog now: it renders into a portal on document.body, so the
+ *  assertions have to read the dialog node rather than the page container. */
+function detailDialog(): HTMLElement {
+  return document.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+}
+
+describe("UsersPage — the detail dialog", () => {
   it("opens the drawer with account info and effective permissions", async () => {
     const el = await mount();
     await click(button(el, "Alice Anderson"));
-    const text = el.textContent!;
+    const text = detailDialog().textContent!;
     expect(text).toContain("User details");
     expect(text).toContain("alice@corp.com");
     expect(text).toContain("Account type");
@@ -237,10 +243,10 @@ describe("UsersPage — the detail drawer", () => {
   it("previews a role change and saves it through updateUserRole", async () => {
     const el = await mount();
     await click(button(el, "Alice Anderson"));
-    const roleSelect = el.querySelector('aside select[aria-label="Role"]') as HTMLSelectElement;
+    const roleSelect = detailDialog().querySelector('select[aria-label="Role"]') as HTMLSelectElement;
     await choose(roleSelect, "User");
-    expect(el.textContent).toContain("Preview: User");
-    const save = button(el, "Save access changes")!;
+    expect(detailDialog().textContent).toContain("Preview: User");
+    const save = button(detailDialog(), "Save access changes")!;
     await click(save);
     expect(m.updateUserRole).toHaveBeenCalledWith("alice", "User");
   });
@@ -248,7 +254,7 @@ describe("UsersPage — the detail drawer", () => {
   it("treats a directory-sourced account as AD-managed (no local password form)", async () => {
     const el = await mount();
     await click(button(el, "Bob Brown"));
-    const text = el.textContent!;
+    const text = detailDialog().textContent!;
     expect(text).toContain("Managed by Active Directory");
     expect(text).not.toContain("Update password");
   });
@@ -256,13 +262,13 @@ describe("UsersPage — the detail drawer", () => {
   it("offers the local password form for a local account and refuses a short password", async () => {
     const el = await mount();
     await click(button(el, "Alice Anderson"));
-    expect(el.textContent).toContain("Update password");
-    const pw = el.querySelector('input[aria-label="New password"]') as HTMLInputElement;
+    expect(detailDialog().textContent).toContain("Update password");
+    const pw = detailDialog().querySelector('input[aria-label="New password"]') as HTMLInputElement;
     await typeInto(pw, "short");
-    const update = button(el, "Update password") as HTMLButtonElement;
+    const update = button(detailDialog(), "Update password") as HTMLButtonElement;
     expect(update.disabled).toBe(true);
     await typeInto(pw, "longenough1");
-    await click(button(el, "Update password"));
+    await click(button(detailDialog(), "Update password"));
     expect(m.setUserPassword).toHaveBeenCalledWith("alice", "longenough1");
   });
 });
