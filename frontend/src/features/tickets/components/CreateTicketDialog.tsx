@@ -271,9 +271,9 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
+      <DialogContent size="editor">
         {/* ---- header: what this is, and where it lands ---- */}
-        <div className="flex items-start gap-3 px-6 pb-4 pt-5">
+        <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pr-14 pt-5">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
             <TicketIcon className="size-5" aria-hidden />
           </span>
@@ -309,7 +309,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
           </div>
         </div>
 
-        <div className="max-h-[min(54vh,520px)] space-y-4 overflow-y-auto px-6 pb-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
           {/* ---- quick templates ---- */}
           <div>
             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">

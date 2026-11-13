@@ -1007,7 +1007,7 @@ function ConfirmDialog({ open, title, description, confirmLabel, destructive, bu
 }) {
   return (
     <AlertDialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
-      <AlertDialogContent size="sm">
+      <AlertDialogContent size="confirm">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -1169,7 +1169,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
         <DialogContent
           showCloseButton={false}
-          className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
+          size="editor"
         >
           {/* ---- header: who this is, at a glance ---- */}
           <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pt-5">
@@ -1544,18 +1544,15 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[2px]">
-      <div data-slot="card" className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-          <div>
-            <h2 className="text-sm font-semibold">Add user</h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">Create a local account or provision an account for directory access.</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-2 hover:bg-[var(--muted)]">
-            <X className="size-4" />
-          </button>
+    /* Shared Dialog, not a hand-rolled overlay: this gets Esc, a focus trap, scroll lock and
+       the same 16px radius / shadow / header rhythm as every other popup. */
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent size="form">
+        <div className="border-b border-[var(--border)] px-6 pb-4 pt-5 pr-14">
+          <DialogTitle className="text-base font-bold leading-tight tracking-tight">Add user</DialogTitle>
+          <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">Create a local account or provision an account for directory access.</p>
         </div>
-        <div className="space-y-4 p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
           <InputField label="Username" value={username} onChange={setUsername} placeholder="e.g. john.smith" />
           <InputField label="Display name" value={displayName} onChange={setDisplayName} placeholder="John Smith" />
           <InputField label="Email" value={email} onChange={setEmail} placeholder="john.smith@company.com" type="email" />
@@ -1585,15 +1582,15 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-[var(--border)] p-4">
+        <div className="flex justify-end gap-2 border-t border-[var(--border)] px-6 py-4">
           <button type="button" onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2.5 text-2xs font-semibold hover:bg-[var(--muted)]">Cancel</button>
           <button type="button" onClick={createUser} disabled={saving}
             className="rounded-lg bg-[var(--primary)] px-5 py-2.5 text-2xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-40">
             {saving ? "Creating..." : "Create user"}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

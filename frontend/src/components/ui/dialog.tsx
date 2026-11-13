@@ -45,16 +45,68 @@ function DialogOverlay({
   )
 }
 
+/**
+ * One shell, three sizes. Before this existed every dialog hard-coded its own width, so the
+ * app ended up with five (520 / 576 / 960 / 512 / 320) — drift, not design.
+ *
+ *   editor  — forms with two columns or a long body (ticket, domain, user details, transcript)
+ *   form    — short single-column forms (add user, assignees, connections)
+ *   confirm — a question and two buttons
+ */
+export type DialogSize = "editor" | "form" | "confirm"
+
+const DIALOG_SIZES: Record<DialogSize, string> = {
+  editor: "w-[94vw] max-w-[min(960px,94vw)]",
+  form: "w-[94vw] max-w-[min(560px,96vw)]",
+  confirm: "w-[94vw] max-w-[min(420px,96vw)]",
+}
+
+/** Border, radius, shadow, scroll behaviour — identical for every size. */
+const DIALOG_SHELL =
+  "flex max-h-[min(86dvh,calc(100dvh-1.5rem))] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl"
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   side = "center",
+  size,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
   side?: "center" | "right"
+  size?: DialogSize
 }) {
+  if (size) {
+    return (
+      <DialogPortal data-slot="dialog-portal">
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          data-size={size}
+          className={cn(
+            "fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] duration-200 outline-none",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            DIALOG_SHELL,
+            DIALOG_SIZES[size],
+            className
+          )}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    )
+  }
   if (side === "right") {
     return (
       <DialogPortal data-slot="dialog-portal">
@@ -174,6 +226,7 @@ function DialogDescription({
 }
 
 export {
+  DIALOG_SHELL,
   Dialog,
   DialogClose,
   DialogContent,

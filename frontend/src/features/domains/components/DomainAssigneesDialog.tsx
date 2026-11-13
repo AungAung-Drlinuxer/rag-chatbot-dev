@@ -146,7 +146,7 @@ export function DomainAssigneesDialog({
 
   return (
     <Dialog open={Boolean(domain)} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xl rounded-2xl">
+      <DialogContent size="form">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="size-4" aria-hidden />

@@ -588,12 +588,12 @@ export default function ConversationHistoryPage() {
         <Dialog open={!!detail} onOpenChange={(open) => { if (!open) closeDetail(); }}>
           <DialogContent
             showCloseButton={false}
-            className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
+            size="editor"
           >
             <DialogTitle className="sr-only">Conversation transcript</DialogTitle>
               {detail && (
                 <>
-                  <div className="border-b border-[var(--border)] px-5 py-4">
+                  <div className="border-b border-[var(--border)] px-6 pb-4 pr-14 pt-5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span className={`grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold ${toneFor(openUser)}`}>
@@ -636,7 +636,7 @@ export default function ConversationHistoryPage() {
                     </div>
                   </div>
 
-                  <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
                     {detailLoading && (
                       <div className="space-y-3">
                         {Array.from({ length: 5 }).map((_, i) => (
