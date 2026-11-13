@@ -24,6 +24,9 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   const [rows, setRows] = useState<Connection[] | null>(null);
   const [editing, setEditing] = useState<Connection | "new" | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  /* Add-site takes as many rows as you need: an estate often has several Jira projects or
+     Confluence sites to enter in one sitting, and one modal per site turns that into a chore. */
+  const [extra, setExtra] = useState<Record<string, string>[]>([]);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
@@ -40,17 +43,32 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
 
   useEffect(() => { void load(); }, [load]);
 
+  const blankRow = useCallback(
+    (sequence: number): Record<string, string> =>
+      provider === "confluence"
+        ? { label: "", base_url: "", email: "", api_token: "", cloud_id: "", spaces: "", sequence: String(sequence) }
+        : { label: "", base_url: "", email: "", api_token: "", project_key: "", sequence: String(sequence) },
+    [provider],
+  );
+
+  function addRow() {
+    setExtra((rows_) => [...rows_, blankRow((rows?.length ?? 0) + rows_.length + 2)]);
+  }
+
+  function dropRow(index: number) {
+    setExtra((rows_) => rows_.filter((_, i) => i !== index));
+  }
+
   function startNew() {
     setEditing("new");
-    setForm(provider === "confluence"
-      ? { label: "", base_url: "", email: "", api_token: "", cloud_id: "", spaces: "" }
-      : { label: "", base_url: "", email: "", api_token: "", project_key: "" });
-    setForm((f) => ({ ...f, sequence: String((rows?.length ?? 0) + 1) }));
+    setExtra([]);
+    setForm(blankRow((rows?.length ?? 0) + 1));
     setNotice(null);
   }
 
   function startEdit(c: Connection) {
     setEditing(c);
+    setExtra([]);
     setForm({
       label: c.label, base_url: c.base_url, email: c.email,
       api_token: "", cloud_id: c.cloud_id,
@@ -60,27 +78,54 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
     setNotice(null);
   }
 
+  function payloadOf(row: Record<string, string>): Record<string, unknown> {
+    return {
+      provider,
+      label: row.label?.trim() ?? "",
+      base_url: row.base_url?.trim() ?? "",
+      email: row.email ?? "",
+      cloud_id: row.cloud_id ?? "",
+      project_key: row.project_key ?? "",
+      api_token: row.api_token || undefined,
+      spaces: provider === "confluence"
+        ? (row.spaces || "").split(",").map((s) => s.trim()).filter(Boolean)
+        : [],
+      sequence: row.sequence ? Number(row.sequence) : undefined,
+    };
+  }
+
   async function save() {
     setSaving(true);
     setNotice(null);
-    const payload: Record<string, unknown> = {
-      provider,
-      label: form.label,
-      base_url: form.base_url,
-      email: form.email,
-      cloud_id: form.cloud_id,
-      project_key: form.project_key,
-      api_token: form.api_token || undefined,
-      spaces: provider === "confluence"
-        ? form.spaces.split(",").map((s) => s.trim()).filter(Boolean)
-        : [],
-      sequence: form.sequence ? Number(form.sequence) : undefined,
-    };
     try {
-      if (editing === "new") await createConnection(payload as never);
-      else if (editing) await updateConnection(editing.id, payload as never);
-      setEditing(null);
-      setNotice({ ok: true, message: "Saved. Sites sync on the next Knowledge sync." });
+      if (editing === "new") {
+        /* Every row with a label and a URL is written; a half-filled row is simply skipped
+           rather than failing the whole batch. */
+        const queue = [form, ...extra].filter((r) => r.label?.trim() && r.base_url?.trim());
+        const failed: string[] = [];
+        for (const row of queue) {
+          try {
+            await createConnection(payloadOf(row) as never);
+          } catch (e) {
+            failed.push(`${row.label}: ${e instanceof Error ? e.message : "failed"}`);
+          }
+        }
+        const added = queue.length - failed.length;
+        /* Anything that failed stays in the form so it can be corrected, not retyped. */
+        const leftovers = extra.filter((r) => failed.some((f) => f.startsWith(`${r.label}:`)));
+        setExtra(leftovers);
+        if (added > 0 && !failed.length) setEditing(null);
+        setNotice(
+          failed.length
+            ? { ok: false, message: `${added} added, ${failed.length} failed — ${failed.join("; ")}` }
+            : { ok: true, message: `${added} site${added === 1 ? "" : "s"} added. Sites sync on the next Knowledge sync.` },
+        );
+      } else if (editing) {
+        await updateConnection(editing.id, payloadOf(form) as never);
+        setEditing(null);
+        setExtra([]);
+        setNotice({ ok: true, message: "Saved. Sites sync on the next Knowledge sync." });
+      }
       await load();
     } catch (e) {
       setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not save" });
@@ -272,39 +317,75 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            {[
-              { k: "label", l: "Label", ph: "HQ Confluence" },
-              { k: "base_url", l: "Base URL", ph: "https://hq.atlassian.net/wiki" },
-              { k: "email", l: "Account email", ph: "svc-account@corp.com" },
-              { k: "api_token", l: "API token", ph: editing === "new" ? "ATATT3x…" : "leave blank to keep current", secret: true },
-              ...(isConf
-                ? [
-                    { k: "spaces", l: "Space keys (comma separated)", ph: "IHKB, HELP, IT" },
-                    { k: "cloud_id", l: "Cloud ID (optional)", ph: "b7f1…" },
-                  ]
-                : [{ k: "project_key", l: "Default project key", ph: "ITHD" }]),
-              { k: "sequence", l: `${isConf ? "Confluence" : "Jira"} sequence`, ph: "1" },
-            ].map((f) => (
-              <label key={f.k} className="space-y-1 text-2xs">
-                <span className="font-medium text-foreground">{f.l}</span>
-                <input
-                  type={f.secret ? "password" : f.k === "sequence" ? "number" : "text"}
-                  min={f.k === "sequence" ? 1 : undefined}
-                  max={f.k === "sequence" ? 999 : undefined}
-                  value={form[f.k] || ""}
-                  onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}
-                  placeholder={f.ph}
-                  autoComplete="off"
-                  className="w-full rounded-lg border border-[var(--border)] bg-background px-2.5 py-1.5 text-xs outline-none focus:border-[var(--primary)]"
-                />
-              </label>
-            ))}
-          </div>
+          {/* One block for the first site, then one per "Add another" row: the same six fields
+              repeated is what an estate with several projects actually needs to type. */}
+          {[form, ...extra].map((row, idx) => (
+            <div
+              key={idx}
+              className={`grid grid-cols-1 gap-2 md:grid-cols-2 ${idx > 0 ? "mt-2.5 rounded-lg border border-dashed border-[var(--border)] p-2.5" : ""}`}
+            >
+              {idx > 0 && (
+                <div className="flex items-center gap-2 md:col-span-2">
+                  <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Site {idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => dropRow(idx - 1)}
+                    className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-1.5 py-0.5 text-2xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="size-3" /> Remove
+                  </button>
+                </div>
+              )}
+              {[
+                { k: "label", l: "Label", ph: isConf ? "HQ Confluence" : "HQ Jira" },
+                { k: "base_url", l: "Base URL", ph: "https://hq.atlassian.net/wiki" },
+                { k: "email", l: "Account email", ph: "svc-account@corp.com" },
+                { k: "api_token", l: "API token", ph: editing === "new" ? "ATATT3x…" : "leave blank to keep current", secret: true },
+                ...(isConf
+                  ? [
+                      { k: "spaces", l: "Space keys (comma separated)", ph: "IHKB, HELP, IT" },
+                      { k: "cloud_id", l: "Cloud ID (optional)", ph: "b7f1…" },
+                    ]
+                  : [{ k: "project_key", l: "Default project key", ph: "ITHD" }]),
+                { k: "sequence", l: `${isConf ? "Confluence" : "Jira"} sequence`, ph: "1" },
+              ].map((f) => (
+                <label key={f.k} className="space-y-1 text-2xs">
+                  <span className="font-medium text-foreground">{f.l}</span>
+                  <input
+                    type={f.secret ? "password" : f.k === "sequence" ? "number" : "text"}
+                    min={f.k === "sequence" ? 1 : undefined}
+                    max={f.k === "sequence" ? 999 : undefined}
+                    value={row[f.k] || ""}
+                    onChange={(e) => {
+                      const next = { ...row, [f.k]: e.target.value };
+                      if (idx === 0) setForm(next);
+                      else setExtra((list) => list.map((r, i) => (i === idx - 1 ? next : r)));
+                    }}
+                    placeholder={f.ph}
+                    autoComplete="off"
+                    className="w-full rounded-lg border border-[var(--border)] bg-background px-2.5 py-1.5 text-xs outline-none focus:border-[var(--primary)]"
+                  />
+                </label>
+              ))}
+            </div>
+          ))}
+
+          {editing === "new" && (
+            <button
+              type="button"
+              onClick={addRow}
+              className="mt-2 inline-flex items-center gap-1 rounded-lg border border-dashed border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground transition hover:border-[var(--primary)] hover:text-foreground"
+            >
+              <Plus className="size-3" /> Add another site
+            </button>
+          )}
           <div className="mt-2.5 flex items-center gap-2">
             <button type="button" onClick={save} disabled={saving || !form.label?.trim() || !form.base_url?.trim()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-2xs font-semibold text-[var(--primary-foreground)] disabled:opacity-50">
-              {saving && <Loader2 className="size-3 animate-spin" />} Save site
+              {saving && <Loader2 className="size-3 animate-spin" />}
+              {editing === "new" && extra.length > 0 ? `Save ${1 + extra.length} sites` : "Save site"}
             </button>
             <button type="button" onClick={() => setEditing(null)}
               className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-2xs font-medium hover:bg-muted">
