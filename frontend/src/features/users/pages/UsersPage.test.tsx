@@ -246,9 +246,11 @@ describe("UsersPage — the detail dialog", () => {
     const roleSelect = detailDialog().querySelector('select[aria-label="Role"]') as HTMLSelectElement;
     await choose(roleSelect, "User");
     expect(detailDialog().textContent).toContain("Preview: User");
-    const save = button(detailDialog(), "Save access changes")!;
+    const save = button(detailDialog(), "Save changes")!;
     await click(save);
     expect(m.updateUserRole).toHaveBeenCalledWith("alice", "User");
+    // Saving is the end of the edit: the drawer closes instead of sitting there submitted.
+    expect(detailDialog()).toBeNull();
   });
 
   it("treats a directory-sourced account as AD-managed (no local password form)", async () => {

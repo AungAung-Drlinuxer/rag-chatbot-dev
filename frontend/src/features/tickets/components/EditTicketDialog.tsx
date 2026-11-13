@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { attachmentUrl, downloadAttachment } from "@/features/tickets/api";
+import { listActiveDomains } from "@/features/tickets/api";
 import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
 import {
   PRIORITY_META,
@@ -89,6 +90,10 @@ export function EditTicketDialog({
   // Details
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<{ key: string; label: string }[]>([
+    { key: "general", label: "General" },
+  ]);
   const [priority, setPriority] = useState<Ticket["priority"]>("medium");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -102,9 +107,11 @@ export function EditTicketDialog({
   const [addingNote, setAddingNote] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tried, setTried] = useState(false);
+  const [statusError, setStatusError] = useState("");
 
   // Attachments
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dueRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
   // Load the opened ticket into the form — once per ticket, not on every refresh of the same
@@ -117,14 +124,32 @@ export function EditTicketDialog({
     loadedId.current = ticket.id;
     setSubject(ticket.subject || "");
     setDescription(ticket.description || "");
+    setCategory(ticket.category || "General");
     setPriority(ticket.priority || "medium");
     setAssignee(ticket.assignee || "");
     setDueDate(ticket.due_date ? ticket.due_date.slice(0, 10) : "");
     setStatus(ticket.status || "open");
     setNote("");
     setTried(false);
+    setStatusError("");
     setTab("details");
   }, [ticket]);
+
+  /* Category was a disabled single-option select: it looked like a control and refused every
+     click. It is now a real choice, fed by the same live domain list the create dialog uses,
+     and it travels with the save. */
+  useEffect(() => {
+    let live = true;
+    listActiveDomains()
+      .then((ds) => {
+        if (!live || !ds.length) return;
+        const opts = ds.map((d) => ({ key: d.key, label: d.label }));
+        if (!opts.some((o) => o.key === "general")) opts.unshift({ key: "general", label: "General" });
+        setCategories(opts);
+      })
+      .catch(() => { /* keep the General fallback */ });
+    return () => { live = false; };
+  }, []);
 
   // Closing forgets the ticket so the next open reads it again.
   useEffect(() => {
@@ -282,13 +307,26 @@ export function EditTicketDialog({
       const ok = await onSave({
         subject: subject.trim(),
         description: description.trim(),
+        category,
         priority,
         assignee,
         due_date: dueDate,
       });
 
+      let statusOk = true;
       if (targetStatus !== originalStatus || transitionNote.length > 0) {
-        await onStatus(targetStatus, transitionNote, composer === "internal");
+        statusOk = await onStatus(targetStatus, transitionNote, composer === "internal");
+      }
+
+      if (!statusOk) {
+        /* Jira's workflow decides which moves exist (a Done issue often has no way back to
+           Open). Closing on a refused transition told the operator nothing happened, so the
+           dialog stays open with the reason above the status field. */
+        setStatusError(
+          `Jira did not accept the move to “${statusMetaOf(targetStatus).label}”. ` +
+          "Its workflow only allows the transitions it offers for this issue — the details were saved, the status was not.",
+        );
+        return;
       }
 
       if (ok) {
@@ -386,7 +424,7 @@ export function EditTicketDialog({
                     <select
                       id="ticket-status"
                       value={status}
-                      onChange={(e) => setStatus(e.target.value as Ticket["status"])}
+                      onChange={(e) => { setStatus(e.target.value as Ticket["status"]); setStatusError(""); }}
                       aria-label="Status"
                       className={SELECT}
                     >
@@ -396,10 +434,17 @@ export function EditTicketDialog({
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   </div>
-                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
-                    Pushed to the Jira issue when you save.
-                  </p>
+                  {statusError ? (
+                    <p className="mt-1.5 flex items-start gap-1.5 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-2 py-1.5 text-[11px] leading-relaxed text-[var(--danger)]">
+                      <AlertTriangle className="mt-px size-3.5 shrink-0" aria-hidden />
+                      {statusError}
+                    </p>
+                  ) : (
+                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
+                      Pushed to the Jira issue when you save.
+                    </p>
+                  )}
                 </div>
 
                 {/* subject */}
@@ -449,12 +494,17 @@ export function EditTicketDialog({
                     <div className="relative">
                       <select
                         id="ticket-category"
-                        value={ticket.category || "General"}
-                        disabled
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
                         aria-label="Category"
-                        className={[SELECT, "cursor-default pl-3 opacity-80"].join(" ")}
+                        className={[SELECT, "pl-3"].join(" ")}
                       >
-                        <option value={ticket.category || "General"}>{ticket.category || "General"}</option>
+                        {!categories.some((c) => c.label === category) && category && (
+                          <option value={category}>{category}</option>
+                        )}
+                        {categories.map((c) => (
+                          <option key={c.key} value={c.label}>{c.label}</option>
+                        ))}
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     </div>
@@ -523,17 +573,31 @@ export function EditTicketDialog({
                     </label>
                     <div className="relative">
                       <input
+                        ref={dueRef}
                         id="ticket-due-date"
                         type="date"
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
                         aria-label="Due date"
+                        /* Clicking the field opens the calendar. A date input only opens on
+                           its (invisible) picker glyph by default, which is why the field
+                           read as "can't set a date" — the caret was there, the picker was
+                           not. */
+                        onClick={() => dueRef.current?.showPicker?.()}
                         className={[
                           FIELD,
-                          "pl-9 pr-9 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-9 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0",
+                          "pl-9 pr-11 [&::-webkit-calendar-picker-indicator]:hidden",
                           dueDate ? "[&::-webkit-datetime-edit]:text-transparent" : "",
                         ].join(" ")}
                       />
+                      <button
+                        type="button"
+                        onClick={() => dueRef.current?.showPicker?.()}
+                        aria-label="Open calendar"
+                        className="absolute right-1 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition hover:bg-[var(--muted)] hover:text-foreground"
+                      >
+                        <CalendarDays className="size-4" aria-hidden />
+                      </button>
                       {dueDate ? (
                         <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-foreground">
                           {formatDate(dueDate)}
@@ -543,7 +607,9 @@ export function EditTicketDialog({
                           Select date
                         </span>
                       )}
-                      <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                      <span className="pointer-events-none absolute left-3 top-1/2 grid size-4 -translate-y-1/2 place-items-center text-muted-foreground">
+                        <CalendarDays className="size-4" aria-hidden />
+                      </span>
                     </div>
                   </div>
                 </div>

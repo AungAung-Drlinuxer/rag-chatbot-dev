@@ -528,10 +528,29 @@ def transition_issue(issue_key: str, status: str) -> dict:
             # 1) list available transitions
             r = client.get(f"{cfg['base_url'].rstrip('/')}/rest/api/3/issue/{issue_key}/transitions")
             r.raise_for_status()
-            available = {t["name"].lower(): t["id"] for t in r.json().get("transitions", [])}
+            transitions = r.json().get("transitions", [])
+            available = {t["name"].lower(): t["id"] for t in transitions}
 
-            # 2) first matching transition name
+            # 2) a transition whose own name we know
             tid = next((available[n.lower()] for n in names if n.lower() in available), None)
+
+            # 3) otherwise go by where the transition LANDS. A workflow names its buttons
+            #    for the story ("back to open", "mark as done"), not for our canonical keys,
+            #    so matching only labels rejected perfectly valid moves.
+            if tid is None:
+                for t in transitions:
+                    dest = ((t.get("to") or {}).get("name") or "")
+                    if dest and _canonical_from_jira_status(dest) == target:
+                        tid = t["id"]
+                        break
+
+            # 4) last resort: the label contains the target ("back to open")
+            if tid is None:
+                for label, ident in available.items():
+                    if target.replace("_", " ") in label:
+                        tid = ident
+                        break
+
             if tid is None:
                 return {"ok": False,
                         "detail": f"no matching transition for '{status}' "

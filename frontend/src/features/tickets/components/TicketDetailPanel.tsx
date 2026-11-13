@@ -45,6 +45,7 @@ import {
 export type TicketEditPayload = {
   subject: string;
   description: string;
+  category: string;
   priority: string;
   assignee: string;
   due_date: string;
@@ -211,6 +212,7 @@ export function TicketDetailPanel({
                   void onSave({
                     subject: form.subject.trim(),
                     description: form.description,
+                    category: ticket.category,
                     priority: form.priority,
                     assignee: form.assignee,
                     due_date: form.due_date,

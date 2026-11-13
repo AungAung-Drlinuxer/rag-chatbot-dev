@@ -95,7 +95,7 @@ export async function createTicketApi(body: {
 
 export async function ticketUpdate(ref: string, patch: {
   status?: string; assignee?: string | null; due_date?: string | null;
-  subject?: string; description?: string; priority?: string; comment?: string;
+  subject?: string; description?: string; category?: string; priority?: string; comment?: string;
   comment_internal?: boolean;
 }) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}`, {

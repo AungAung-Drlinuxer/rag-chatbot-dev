@@ -1104,11 +1104,14 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
 
   const roleChanged = selectedRole !== user.role;
 
+  /* Saves the role (when it changed) and closes the drawer. The button used to stay
+     disabled until the role differed and then left the panel open on success, so the last
+     thing an operator saw was a form they had already submitted. */
   async function saveRole() {
-    if (!roleChanged) return;
+    if (savingRole) return;
     setSavingRole(true); setError(null); setRoleSaved(false);
     try {
-      await updateUserRole(user.username, selectedRole);
+      if (roleChanged) await updateUserRole(user.username, selectedRole);
       const updatedUser: User = { ...user, role: selectedRole, roleOverride: selectedRole.toLowerCase() };
       onUserUpdated?.({ ...updatedUser, role: normalizeRole(updatedUser.role as string) });
       setRoleSaved(true);
@@ -1118,6 +1121,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
           .then((data) => setPermissions({ ...EMPTY_PERMISSIONS, ...(data.effective ?? {}) }))
           .catch(() => { /* Keep existing permission display. */ });
       } catch { /* Keep existing permission display. */ }
+      onClose();
     } catch (err: any) {
       setError(err?.message || "Failed to update user role.");
     } finally {
@@ -1468,11 +1472,11 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
               <button
                 type="button"
                 onClick={saveRole}
-                disabled={savingRole || !roleChanged}
+                disabled={savingRole}
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-4 text-2xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Check className="size-3.5" aria-hidden />
-                {savingRole ? "Saving…" : "Save access changes"}
+                {savingRole ? "Saving…" : "Save changes"}
               </button>
             </div>
           </div>

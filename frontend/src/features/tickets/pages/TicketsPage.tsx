@@ -4,7 +4,7 @@ import {
   RefreshCw,
   Ticket as TicketIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
@@ -94,9 +94,16 @@ export default function Tickets({ role, userName, onToast }: Props) {
   const [jiraReady, setJiraReady] = useState<boolean | null>(null);
 
   /* ---------------------------------------------------------------- loading */
-  const loadTickets = (limit = 50) =>
-    listTickets(limit)
+  /* Only the newest list request may paint. A save issues one refresh for the fields and
+     the status change issues another; when the first landed second it replaced the board
+     with the pre-transition snapshot, so a status that Jira had accepted snapped back to
+     the old pill until the next manual refresh. */
+  const ticketsSeq = useRef(0);
+  const loadTickets = (limit = 50) => {
+    const seq = ++ticketsSeq.current;
+    return listTickets(limit)
       .then((d) => {
+        if (seq !== ticketsSeq.current) return;
         setTicketsError(null);
         setTickets((d?.tickets ?? []) as Ticket[]);
         setSelected((cur) =>
@@ -104,9 +111,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
         );
       })
       .catch((err) => {
+        if (seq !== ticketsSeq.current) return;
         setTicketsError(err instanceof Error ? err.message : String(err));
         setTickets([]);
       });
+  };
 
   useEffect(() => {
     void loadTickets();
@@ -274,9 +283,12 @@ export default function Tickets({ role, userName, onToast }: Props) {
       const res = await ticketUpdate(target.id, {
         subject: p.subject,
         description: p.description,
+        category: p.category || undefined,
         priority: p.priority,
-        assignee: p.assignee || null,
-        due_date: p.due_date || null,
+        /* Empty string, not null: null means "field not supplied" to the API, so clearing
+           a due date or unassigning used to be silently dropped. */
+        assignee: p.assignee ?? "",
+        due_date: p.due_date ?? "",
       });
       if (res?.fields_synced === false) problems.push("Jira kept its own copy of the details");
       const [fresh, freshComments] = await Promise.all([
@@ -289,6 +301,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
         ...target,
         subject: p.subject,
         description: p.description,
+        category: p.category || target.category,
         priority: p.priority as Ticket["priority"],
         assignee: p.assignee || null,
         due_date: p.due_date || null,
@@ -300,6 +313,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 ? {
                     ...t,
                     subject: p.subject,
+                    category: p.category || t.category,
                     priority: p.priority as Ticket["priority"],
                     assignee: p.assignee || null,
                     due_date: p.due_date || null,

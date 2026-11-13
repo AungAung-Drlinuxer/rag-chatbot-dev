@@ -639,6 +639,9 @@ class TicketUpdateRequest(BaseModel):
     status: str | None = None
     assignee: str | None = None
     priority: str | None = None
+    #: The routing category (domain label). Local to this board: Jira has no equivalent
+    #: field on the issue, so it is stored here and shown on the row.
+    category: str | None = None
     due_date: str | None = None  # ISO date
     subject: str | None = None
     description: str | None = None
@@ -678,14 +681,27 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             )
         # The transition name can land somewhere adjacent to what was asked: from DONE the only
         # way out is "Reopen issue", which produces REOPENED. Store what Jira actually reports
-        # so the row never claims a state the issue is not in.
+        # so the row never claims a state the issue is not in — but give Jira a moment to
+        # report it. A single immediate read often returns the PRE-transition status, and the
+        # row then kept the old pill even though the move had just succeeded.
         try:
+            import time as _time
             from app.integrations.jira import fetch_issue_status
-            from app.integrations.ticket_status import canonical_from_jira_status
+            from app.integrations.ticket_status import canonical_from_jira_status, is_terminal
 
-            live = fetch_issue_status(row.jira_key)
-            if live.get("ok") and live.get("status"):
-                req.status = canonical_from_jira_status(live["status"])
+            wanted = req.status
+            for _attempt in range(4):
+                live = fetch_issue_status(row.jira_key)
+                got = canonical_from_jira_status(live.get("status") or "") if live.get("ok") else ""
+                if got and (got == wanted or (is_terminal(got) and is_terminal(wanted))):
+                    req.status = got
+                    break
+                _time.sleep(0.25)
+            else:
+                # Jira never confirmed inside a second: keep the transition we just made
+                # rather than writing back the state we just left.
+                logger.info("jira status read lagged after transition for %s; keeping %s",
+                            row.jira_key, wanted)
         except Exception as _exc:
             logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
         sync_notes.append("synced to Jira")
@@ -752,6 +768,17 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             from datetime import datetime as _dt
             row.due_date = _dt.fromisoformat(req.due_date) if req.due_date else None
             changes.append(f"due date → {req.due_date or 'none'}")
+        if req.category:
+            # `category` is a display label derived from the routing domain (see the list
+            # mapper), so an edit is a change of domain, not of a text column. Writing a
+            # `category` attribute did nothing at all — the select looked editable and every
+            # save came back with the old label.
+            labels = _domain_labels()
+            wanted = req.category.strip()
+            key = next((k for k, v in labels.items() if v.strip().lower() == wanted.lower()),
+                       wanted.lower().replace(" ", "_"))
+            row.domain = key[:64]
+            changes.append(f"category → {labels.get(key, wanted)}")
         if req.subject:
             row.subject = req.subject[:200]
             changes.append("subject edited")
