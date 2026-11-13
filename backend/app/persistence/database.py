@@ -221,6 +221,21 @@ def init_db() -> None:
         ("kb_meta.connection_id",
          "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS connection_id INTEGER"),
         ("kb_meta.site", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS site VARCHAR(255)"),
+        (
+            "integration_connections.sequence",
+            "ALTER TABLE integration_connections ADD COLUMN IF NOT EXISTS sequence INTEGER DEFAULT 100",
+        ),
+        # One pass over a table that predates the column: without it every existing site would
+        # show sequence 100 and the arrows would have nothing to swap against. Guarded so it
+        # only fires while no sequence has ever been set.
+        (
+            "integration_connections.sequence.seed",
+            "UPDATE integration_connections c SET sequence = r.rn FROM ("
+            " SELECT id, row_number() OVER (PARTITION BY provider ORDER BY label, id) AS rn"
+            " FROM integration_connections) r"
+            " WHERE c.id = r.id AND NOT EXISTS ("
+            " SELECT 1 FROM integration_connections WHERE sequence <> 100)",
+        ),
         ("classifier_domains.confluence_connection_id",
          "ALTER TABLE classifier_domains ADD COLUMN IF NOT EXISTS confluence_connection_id INTEGER"),
         ("classifier_domains.jira_connection_id",

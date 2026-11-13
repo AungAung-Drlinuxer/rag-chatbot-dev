@@ -356,6 +356,8 @@ export type Connection = {
   spaces: string[];
   project_key: string;
   active: boolean;
+  /** 1-based order within this provider: what the assistant reads first, and what syncs first. */
+  sequence: number;
   last_sync_at: string | null;
   last_error: string | null;
   token_set?: boolean;
@@ -378,6 +380,17 @@ export async function createConnection(payload: Partial<Connection> & { api_toke
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(body?.detail || `HTTP ${r.status}`);
   return body;
+}
+
+export async function reorderConnections(provider: "confluence" | "jira", ids: number[]) {
+  const r = await apiFetch(`${BASE}/api/settings/connections/order`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, ids }),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body?.detail || "Could not reorder the sites");
+  return body as { ok: boolean; connections: Connection[] };
 }
 
 export async function updateConnection(id: number, payload: Partial<Connection> & { api_token?: string }) {

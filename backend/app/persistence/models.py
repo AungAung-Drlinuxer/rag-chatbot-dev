@@ -160,6 +160,9 @@ class IntegrationConnection(Base):
     spaces: Mapped[str | None] = mapped_column(Text)      # JSON array of space keys
     project_key: Mapped[str | None] = mapped_column(String(32))
     active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    # 1-based order within the provider: which site is read first when the assistant looks
+    # something up, and which one syncs first. Lower number wins.
+    sequence: Mapped[int] = mapped_column(Integer, server_default=text("100"))
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

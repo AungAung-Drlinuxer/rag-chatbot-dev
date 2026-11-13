@@ -407,6 +407,24 @@ def list_connections_endpoint(provider: str | None = None,
     return {"connections": list_connections(provider, include_secret=False)}
 
 
+@router.put("/settings/connections/order")
+def reorder_connections_endpoint(payload: dict,
+                                 user: str = Depends(require_role("admin"))) -> dict:
+    """Renumber one provider's sites in the order the admin dragged them."""
+    from app.integrations.connections import reorder_connections
+
+    provider = str(payload.get("provider") or "").strip().lower()
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail="ids must be a list of connection ids")
+    try:
+        rows = reorder_connections(provider, ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit("update", user, detail=f"connections:order:{provider}")
+    return {"ok": True, "connections": rows}
+
+
 @router.post("/settings/connections")
 def create_connection_endpoint(payload: dict,
                                user: str = Depends(require_role("admin"))) -> dict:

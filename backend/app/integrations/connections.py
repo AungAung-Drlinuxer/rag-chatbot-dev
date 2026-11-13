@@ -35,6 +35,7 @@ def _row_to_dict(row: Any, include_secret: bool = False) -> dict:
         "spaces": parse_spaces(row["spaces"]),
         "project_key": row["project_key"] or "",
         "active": bool(row["active"]),
+        "sequence": int(row["sequence"]) if row["sequence"] is not None else 100,
         "last_sync_at": row["last_sync_at"].isoformat() if row["last_sync_at"] else None,
         "last_error": row["last_error"],
     }
@@ -73,7 +74,7 @@ def list_connections(provider: str | None = None, active_only: bool = False,
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     with SessionLocal() as s:
         rows = s.execute(text(
-            f"SELECT * FROM integration_connections {clause} ORDER BY provider, label, id"
+            f"SELECT * FROM integration_connections {clause} ORDER BY provider, sequence, label, id"
         ), params).mappings().all()
     return [_row_to_dict(r, include_secret=include_secret) for r in rows]
 
@@ -83,6 +84,42 @@ def get_connection(cid: int, include_secret: bool = True) -> dict | None:
         row = s.execute(text("SELECT * FROM integration_connections WHERE id = :i"),
                         {"i": cid}).mappings().first()
     return _row_to_dict(row, include_secret=include_secret) if row else None
+
+
+def _as_sequence(value: Any) -> int | None:
+    """A 1-based order number, or None when the client did not send one."""
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return max(1, min(999, n))
+
+
+def _next_sequence(session: Any, provider: str) -> int:
+    row = session.execute(text(
+        "SELECT COALESCE(MAX(sequence), 0) FROM integration_connections WHERE provider = :p"
+    ), {"p": provider}).scalar()
+    return int(row or 0) + 1
+
+
+def reorder_connections(provider: str, ids: list[int]) -> list[dict]:
+    """Renumber a provider's sites 1..n in the order given.
+
+    The whole list is rewritten in one transaction so two admins dragging at the same time
+    cannot leave duplicate numbers behind.
+    """
+    if provider not in PROVIDERS:
+        raise ValueError("provider must be 'confluence' or 'jira'")
+    clean = [int(i) for i in ids]
+    with SessionLocal() as s:
+        for pos, cid in enumerate(clean, start=1):
+            s.execute(text(
+                "UPDATE integration_connections SET sequence = :n WHERE id = :i AND provider = :p"
+            ), {"n": pos, "i": cid, "p": provider})
+        s.commit()
+    return list_connections(provider, include_secret=False)
 
 
 def create_connection(data: dict) -> dict:
@@ -98,12 +135,16 @@ def create_connection(data: dict) -> dict:
     spaces = data.get("spaces")
     if isinstance(spaces, list):
         spaces = json.dumps([s.strip() for s in spaces if str(s).strip()])
+    sequence = _as_sequence(data.get("sequence"))
     with SessionLocal() as s:
+        if sequence is None:
+            sequence = _next_sequence(s, provider)
         row = s.execute(text("""
             INSERT INTO integration_connections
-                (provider, label, base_url, email, api_token, cloud_id, spaces, project_key, active)
+                (provider, label, base_url, email, api_token, cloud_id, spaces, project_key,
+                 active, sequence)
             VALUES (:provider, :label, :base_url, :email, :api_token, :cloud_id, :spaces,
-                    :project_key, :active)
+                    :project_key, :active, :sequence)
             ON CONFLICT (provider, base_url) DO UPDATE SET
                 label = EXCLUDED.label, email = EXCLUDED.email,
                 api_token = COALESCE(NULLIF(EXCLUDED.api_token, ''), integration_connections.api_token),
@@ -118,6 +159,7 @@ def create_connection(data: dict) -> dict:
             "spaces": spaces if isinstance(spaces, (str, type(None))) else None,
             "project_key": str(data.get("project_key") or ""),
             "active": bool(data.get("active", True)),
+            "sequence": sequence,
         }).scalar()
         s.commit()
     return get_connection(int(row), include_secret=False) or {}
@@ -139,7 +181,7 @@ def update_connection(cid: int, data: dict) -> dict | None:
                 label = :label, base_url = :base_url, email = :email,
                 api_token = COALESCE(NULLIF(:api_token, ''), api_token),
                 cloud_id = :cloud_id, spaces = :spaces, project_key = :project_key,
-                active = :active
+                active = :active, sequence = :sequence
             WHERE id = :i
         """), {
             "i": cid,
@@ -151,6 +193,7 @@ def update_connection(cid: int, data: dict) -> dict | None:
             "spaces": spaces if isinstance(spaces, (str, type(None))) else None,
             "project_key": str(data.get("project_key", current["project_key"])),
             "active": bool(data.get("active", current["active"])),
+            "sequence": _as_sequence(data.get("sequence")) or current.get("sequence") or 100,
         })
         s.commit()
     return get_connection(cid, include_secret=False)
@@ -193,7 +236,8 @@ def legacy_connection(provider: str) -> dict | None:
             "base_url": cfg.get("base_url", ""), "email": cfg.get("email", ""),
             "api_token": cfg.get("api_token", ""), "cloud_id": cfg.get("cloud_id", ""),
             "spaces": parse_spaces(cfg.get("space_keys")),
-            "project_key": "", "active": True, "last_sync_at": None, "last_error": None,
+            "project_key": "", "active": True, "sequence": 1,
+            "last_sync_at": None, "last_error": None,
         }
     cfg = _jira_cfg()
     if not (cfg.get("base_url") and cfg.get("api_token")):
@@ -203,7 +247,7 @@ def legacy_connection(provider: str) -> dict | None:
         "base_url": cfg.get("base_url", ""), "email": cfg.get("email", ""),
         "api_token": cfg.get("api_token", ""), "cloud_id": "",
         "spaces": [], "project_key": cfg.get("project", ""),
-        "active": True, "last_sync_at": None, "last_error": None,
+        "active": True, "sequence": 1, "last_sync_at": None, "last_error": None,
     }
 
 

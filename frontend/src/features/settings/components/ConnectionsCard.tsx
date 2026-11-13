@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, ListOrdered, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import {
   createConnection,
   deleteConnection,
   listConnections,
+  reorderConnections,
   testConnection,
   updateConnection,
   type Connection,
@@ -26,6 +27,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
+  const [ordering, setOrdering] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -43,6 +45,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
     setForm(provider === "confluence"
       ? { label: "", base_url: "", email: "", api_token: "", cloud_id: "", spaces: "" }
       : { label: "", base_url: "", email: "", api_token: "", project_key: "" });
+    setForm((f) => ({ ...f, sequence: String((rows?.length ?? 0) + 1) }));
     setNotice(null);
   }
 
@@ -52,6 +55,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
       label: c.label, base_url: c.base_url, email: c.email,
       api_token: "", cloud_id: c.cloud_id,
       spaces: (c.spaces || []).join(", "), project_key: c.project_key,
+      sequence: String(c.sequence ?? 1),
     });
     setNotice(null);
   }
@@ -70,6 +74,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
       spaces: provider === "confluence"
         ? form.spaces.split(",").map((s) => s.trim()).filter(Boolean)
         : [],
+      sequence: form.sequence ? Number(form.sequence) : undefined,
     };
     try {
       if (editing === "new") await createConnection(payload as never);
@@ -81,6 +86,32 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
       setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not save" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  /**
+   * Move one site one step up or down and renumber the provider 1..n.
+   * The list is written as a whole, so the numbers can never end up duplicated.
+   */
+  async function move(c: Connection, dir: -1 | 1) {
+    if (!rows || ordering) return;
+    const current = [...rows].sort((a, b) => a.sequence - b.sequence || a.id - b.id);
+    const at = current.findIndex((r) => r.id === c.id);
+    const to = at + dir;
+    if (at < 0 || to < 0 || to >= current.length) return;
+    const next = [...current];
+    [next[at], next[to]] = [next[to], next[at]];
+    setRows(next.map((r, i) => ({ ...r, sequence: i + 1 })));
+    setOrdering(true);
+    try {
+      const res = await reorderConnections(provider, next.map((r) => r.id));
+      if (res.connections) setRows(res.connections);
+      setNotice({ ok: true, message: "Sequence saved." });
+    } catch (e) {
+      setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not save the order" });
+      await load();
+    } finally {
+      setOrdering(false);
     }
   }
 
@@ -114,6 +145,8 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   }
 
   const isConf = provider === "confluence";
+  const sequenceLabel = isConf ? "Confluence sequence" : "Jira sequence";
+  const ordered = rows ? [...rows].sort((a, b) => a.sequence - b.sequence || a.id - b.id) : [];
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-muted/20 p-3.5">
@@ -134,6 +167,33 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
         </button>
       </div>
 
+      {/* Sequence: which site the assistant reads first, and which one syncs first. The order
+          is the list order, so the strip doubles as a summary of what the numbers mean. */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-dashed border-[var(--border)] bg-background/60 px-2.5 py-1.5">
+        <span className="inline-flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <ListOrdered className="size-3" />
+          {sequenceLabel}
+        </span>
+        {ordered.length === 0 ? (
+          <span className="text-2xs text-muted-foreground/80">no site to order yet</span>
+        ) : (
+          <span className="flex flex-wrap items-center gap-1">
+            {ordered.map((c) => (
+              <span key={c.id} className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-card px-1.5 py-0.5 text-2xs">
+                <span className="grid size-4 place-items-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--primary-foreground)]">
+                  {c.sequence}
+                </span>
+                <span className="max-w-[9rem] truncate">{c.label}</span>
+              </span>
+            ))}
+          </span>
+        )}
+        <span className="text-2xs text-muted-foreground/70">
+          1 is read and synced first — use the arrows on a row to change it
+        </span>
+        {ordering && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
+      </div>
+
       {rows === null ? (
         <p className="text-2xs text-muted-foreground">Loading sites…</p>
       ) : rows.length === 0 ? (
@@ -142,8 +202,26 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
         </p>
       ) : (
         <ul className="space-y-1.5">
-          {rows.map((c) => (
+          {ordered.map((c, idx) => (
             <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5">
+              <span
+                className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--primary)]/15 text-[10px] font-bold text-[var(--accent-foreground)]"
+                title={`${sequenceLabel}: ${c.sequence}`}
+              >
+                {c.sequence}
+              </span>
+              <span className="flex flex-col">
+                <button type="button" onClick={() => move(c, -1)} disabled={idx === 0 || ordering}
+                  aria-label={`Move ${c.label} earlier`}
+                  className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25">
+                  <ChevronUp className="size-3" />
+                </button>
+                <button type="button" onClick={() => move(c, 1)} disabled={idx === ordered.length - 1 || ordering}
+                  aria-label={`Move ${c.label} later`}
+                  className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25">
+                  <ChevronDown className="size-3" />
+                </button>
+              </span>
               <span className="text-xs font-semibold text-foreground">{c.label}</span>
               <span className="truncate text-2xs text-muted-foreground" title={c.base_url}>{c.base_url}</span>
               {isConf && c.spaces.length > 0 && (
@@ -206,11 +284,14 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
                     { k: "cloud_id", l: "Cloud ID (optional)", ph: "b7f1…" },
                   ]
                 : [{ k: "project_key", l: "Default project key", ph: "ITHD" }]),
+              { k: "sequence", l: `${isConf ? "Confluence" : "Jira"} sequence`, ph: "1" },
             ].map((f) => (
               <label key={f.k} className="space-y-1 text-2xs">
                 <span className="font-medium text-foreground">{f.l}</span>
                 <input
-                  type={f.secret ? "password" : "text"}
+                  type={f.secret ? "password" : f.k === "sequence" ? "number" : "text"}
+                  min={f.k === "sequence" ? 1 : undefined}
+                  max={f.k === "sequence" ? 999 : undefined}
                   value={form[f.k] || ""}
                   onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}
                   placeholder={f.ph}
