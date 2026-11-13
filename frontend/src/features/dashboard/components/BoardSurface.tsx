@@ -6,12 +6,31 @@
  * `layout` prop we kept rebuilding, and on the real 8-panel board it settled into a loop that
  * pinned the CPU — the board visibly reshuffled and, after a refresh, appeared to fall back to
  * the defaults. The whole placement problem is arithmetic we already own (`gridLayout.ts`), so
- * the grid is positioned directly: one absolutely placed box per panel, a grip to drag, one
- * corner to resize, and nothing that can feed its own output back into itself.
+ * the grid is positioned directly: one absolutely placed box per panel, pointer-driven move
+ * and resize, and nothing that can feed its own output back into itself.
+ *
+ * Behaviour follows a Grafana dashboard, which is what people already know:
+ *  - the panel follows the pointer pixel-for-pixel while it is held, and a dashed outline shows
+ *    the cell it will land in, so the drop is never a surprise;
+ *  - there is no gravity. A panel dropped in the middle of the board stays where it was put,
+ *    gaps and all — nothing is compacted upward behind the user's back;
+ *  - a panel only moves out of the way when another is actually dropped on it, and it moves
+ *    the minimum distance down;
+ *  - the whole panel is a drag target while arranging, not a 20px strip, and the edges resize.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, compactRects, type PanelRect, type PanelRects } from "@/features/dashboard/lib/gridLayout";
+import {
+  GRID_COLS,
+  GRID_GAP,
+  GRID_ROW_HEIGHT,
+  MAX_H,
+  MIN_H,
+  MIN_W,
+  pushDownRects,
+  type PanelRect,
+  type PanelRects,
+} from "@/features/dashboard/lib/gridLayout";
 
 type Props = {
   panels: readonly { id: string }[];
@@ -22,22 +41,28 @@ type Props = {
   children: (id: string) => React.ReactNode;
 };
 
-const MIN_W = 2;
-const MIN_H = 3;
-const MAX_H = 40;
+type Mode = "move" | "resize-se" | "resize-e" | "resize-s";
+
+type DragState = {
+  id: string;
+  mode: Mode;
+  startX: number;
+  startY: number;
+  from: PanelRect;
+};
+
+/** Pixel offset the held panel is painted at, before it snaps on release. */
+type Live = { id: string; dx: number; dy: number; mode: Mode };
 
 /** How many grid cells a pixel offset covers, rounded to the nearest boundary. */
 function cells(delta: number, cell: number) {
   return Math.round(delta / (cell + GRID_GAP));
 }
 
-type DragState = {
-  id: string;
-  mode: "move" | "resize";
-  startX: number;
-  startY: number;
-  from: PanelRect;
-};
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** Elements that must keep their own click/drag behaviour inside a panel. */
+const INTERACTIVE = "button, a, input, select, textarea, label, [role='button'], [data-no-drag], svg";
 
 export function BoardSurface({ panels, rects, editing, onChange, children }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -62,7 +87,11 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
   const boardWidth = width > 0 ? width : 1120;
   const colWidth = (boardWidth - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 
+  /** Snapped geometry while a drag is in flight (draws the ghost and pushes neighbours). */
   const [draft, setDraft] = useState<PanelRects | null>(null);
+  /** Raw pointer offset, so the held panel tracks the cursor instead of jumping cell to cell. */
+  const [live, setLive] = useState<Live | null>(null);
+
   const drag = useRef<DragState | null>(null);
   /* Read inside the window `pointerup` listener: a state updater must stay pure, and calling
      `onChange` from inside one made React drop the commit (the board kept the draft and never
@@ -82,17 +111,35 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
     if (!editing) {
       drag.current = null;
       setDraft(null);
+      setLive(null);
     }
   }, [editing]);
 
   const begin = useCallback(
-    (e: React.PointerEvent, id: string, mode: "move" | "resize") => {
+    (e: React.PointerEvent, id: string, mode: Mode, fromBody: boolean) => {
       if (!editing) return;
+      if (e.button !== 0 && e.pointerType === "mouse") return;
+      /* On a touch screen the body must stay scrollable; only the header grabs the finger. */
+      if (fromBody && e.pointerType !== "mouse") return;
+      if (fromBody) {
+        const el = e.target as HTMLElement;
+        const hit = el.closest(INTERACTIVE);
+        if (hit && !hit.closest("[data-drag-handle]")) return;
+      }
       e.preventDefault();
       e.stopPropagation();
+      /* Pointer capture keeps the drag alive when the pointer crosses the panel edge — and
+         gives us `lostpointercapture`, the only reliable signal that the button was released
+         somewhere the window never hears about (over browser chrome, another display). */
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      } catch {
+        /* no capture available: the window listeners still carry the drag */
+      }
       const from = { ...(rectsRef.current[id] ?? { x: 0, y: 0, w: 4, h: 6 }) };
       drag.current = { id, mode, startX: e.clientX, startY: e.clientY, from };
       setDraft({ ...rectsRef.current, [id]: from });
+      setLive({ id, dx: 0, dy: 0, mode });
     },
     [editing],
   );
@@ -106,17 +153,31 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
     const move = (e: PointerEvent) => {
       const d = drag.current;
       if (!d) return;
-      const dx = cells(e.clientX - d.startX, colWidthRef.current);
-      const dy = cells(e.clientY - d.startY, GRID_ROW_HEIGHT);
+      const dxPx = e.clientX - d.startX;
+      const dyPx = e.clientY - d.startY;
+      const dx = cells(dxPx, colWidthRef.current);
+      const dy = cells(dyPx, GRID_ROW_HEIGHT);
       const r = { ...d.from };
+
       if (d.mode === "move") {
-        r.x = Math.min(GRID_COLS - r.w, Math.max(0, d.from.x + dx));
+        r.x = clamp(d.from.x + dx, 0, GRID_COLS - r.w);
         r.y = Math.max(0, d.from.y + dy);
       } else {
-        r.w = Math.min(GRID_COLS - r.x, Math.max(MIN_W, d.from.w + dx));
-        r.h = Math.min(MAX_H, Math.max(MIN_H, d.from.h + dy));
+        if (d.mode === "resize-se" || d.mode === "resize-e") {
+          r.w = clamp(d.from.w + dx, MIN_W, GRID_COLS - d.from.x);
+        }
+        if (d.mode === "resize-se" || d.mode === "resize-s") {
+          r.h = clamp(d.from.h + dy, MIN_H, MAX_H);
+        }
       }
-      setDraft((cur) => ({ ...(cur ?? rectsRef.current), [d.id]: r }));
+
+      setLive({ id: d.id, dx: dxPx, dy: dyPx, mode: d.mode });
+      setDraft((cur) => {
+        const base = { ...(cur ?? rectsRef.current), [d.id]: r };
+        /* Only a held panel makes room for itself; nothing re-flows while the pointer moves,
+           which is what made the board feel like it was fighting the drag. */
+        return d.mode === "move" ? base : base;
+      });
     };
 
     const up = () => {
@@ -124,8 +185,11 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
       const cur = draftRef.current;
       drag.current = null;
       setDraft(null);
+      setLive(null);
       if (!d || !cur) return;
-      const next = compactRects(cur);
+      /* No compaction: the drop is the layout. Panels the user actually landed on are pushed
+         down just far enough to stop overlapping. */
+      const next = pushDownRects(cur, d.id);
       const changed = Object.keys(next).some((id) => {
         const a = next[id];
         const b = rectsRef.current[id];
@@ -134,22 +198,47 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
       if (changed) onChange(next);
     };
 
+    /* Escape puts the panel back where it was picked up, as it does in a Grafana edit. */
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      /* `rects` was never touched during the drag, so dropping the preview is the undo. */
+      drag.current = null;
+      setDraft(null);
+      setLive(null);
+    };
+
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
+    document.addEventListener("lostpointercapture", up, true);
+    window.addEventListener("blur", up);
+    window.addEventListener("keydown", key);
     return () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      document.removeEventListener("lostpointercapture", up, true);
+      window.removeEventListener("blur", up);
+      window.removeEventListener("keydown", key);
     };
   }, [draft, onChange]);
 
-  const geometry = useMemo(() => {
-    const rows = Math.max(12, ...Object.values(draft ?? rects).map((r) => r.y + r.h));
-    return { height: rows * GRID_ROW_HEIGHT + (rows - 1) * GRID_GAP };
-  }, [draft, rects]);
-
   const shown = draft ?? rects;
+
+  const geometry = useMemo(() => {
+    const rows = Math.max(12, ...Object.values(shown).map((r) => r.y + r.h));
+    return { height: rows * GRID_ROW_HEIGHT + (rows - 1) * GRID_GAP };
+  }, [shown]);
+
+  const box = (r: PanelRect): React.CSSProperties => ({
+    left: r.x * (colWidth + GRID_GAP),
+    top: r.y * (GRID_ROW_HEIGHT + GRID_GAP),
+    width: r.w * colWidth + (r.w - 1) * GRID_GAP,
+    height: r.h * GRID_ROW_HEIGHT + (r.h - 1) * GRID_GAP,
+  });
+
+  const ghostId = live && live.mode === "move" ? live.id : null;
+  const ghostRect = ghostId ? shown[ghostId] : null;
 
   return (
     <div
@@ -157,31 +246,56 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
       className={`board-surface${editing ? " board-surface--editing" : ""}`}
       style={{ height: geometry.height }}
     >
+      {editing && ghostRect && (
+        <div className="board-surface__ghost" style={box(ghostRect)} aria-hidden />
+      )}
+
       {panels.map((panel) => {
         const r = shown[panel.id];
         if (!r) return <div key={panel.id} data-panel={panel.id} hidden />;
+        const held = live?.id === panel.id;
         const style: React.CSSProperties = {
-          left: r.x * (colWidth + GRID_GAP),
-          top: r.y * (GRID_ROW_HEIGHT + GRID_GAP),
-          width: r.w * colWidth + (r.w - 1) * GRID_GAP,
-          height: r.h * GRID_ROW_HEIGHT + (r.h - 1) * GRID_GAP,
+          ...box(r),
+          ...(held ? { transform: `translate3d(${live.dx}px, ${live.dy}px, 0)` } : null),
         };
         return (
-          <div key={panel.id} data-panel={panel.id} className="board-surface__item" style={style}>
+          <div
+            key={panel.id}
+            data-panel={panel.id}
+            className={`board-surface__item${held ? " board-surface__item--dragging" : ""}`}
+            style={style}
+            onPointerDown={(e) => begin(e, panel.id, "move", true)}
+          >
             <div className="board-surface__body">{children(panel.id)}</div>
             {editing && (
               <>
                 <span
                   data-drag-handle
                   className="board-surface__grip"
-                  onPointerDown={(e) => begin(e, panel.id, "move")}
+                  onPointerDown={(e) => begin(e, panel.id, "move", false)}
                   aria-label="Move panel"
+                  role="button"
+                  tabIndex={-1}
+                >
+                  <span className="board-surface__grip-dots" aria-hidden />
+                </span>
+                <span
+                  className="board-surface__resize board-surface__resize--e"
+                  onPointerDown={(e) => begin(e, panel.id, "resize-e", false)}
+                  aria-label="Resize panel width"
                   role="button"
                   tabIndex={-1}
                 />
                 <span
-                  className="board-surface__resize"
-                  onPointerDown={(e) => begin(e, panel.id, "resize")}
+                  className="board-surface__resize board-surface__resize--s"
+                  onPointerDown={(e) => begin(e, panel.id, "resize-s", false)}
+                  aria-label="Resize panel height"
+                  role="button"
+                  tabIndex={-1}
+                />
+                <span
+                  className="board-surface__resize board-surface__resize--se"
+                  onPointerDown={(e) => begin(e, panel.id, "resize-se", false)}
                   aria-label="Resize panel"
                   role="button"
                   tabIndex={-1}

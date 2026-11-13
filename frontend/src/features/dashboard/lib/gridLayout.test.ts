@@ -8,6 +8,7 @@ import {
   compactRects,
   defaultRects,
   layoutItems,
+  pushDownRects,
   sanitiseRects,
   spanPercent,
   type PanelLike,
@@ -101,6 +102,51 @@ describe("compactRects", () => {
     };
     const compacted = compactRects(stacked);
     expect(compacted.b.y).toBe(4);
+  });
+});
+
+describe("pushDownRects", () => {
+  const base: PanelRects = {
+    a: { x: 0, y: 0, w: 6, h: 4 },
+    b: { x: 6, y: 0, w: 6, h: 4 },
+    c: { x: 0, y: 8, w: 12, h: 4 },
+  };
+
+  it("keeps the gap the user left — nothing floats upward", () => {
+    const moved: PanelRects = { ...base, a: { x: 0, y: 12, w: 6, h: 4 } };
+    const out = pushDownRects(moved, "a");
+    expect(out.a.y).toBe(12);
+    expect(out.b.y).toBe(0);
+  });
+
+  it("does not move a panel the drop did not land on", () => {
+    const moved: PanelRects = { ...base, a: { x: 0, y: 20, w: 6, h: 4 } };
+    const out = pushDownRects(moved, "a");
+    expect(out.c.y).toBe(8);
+    expect(out.b.y).toBe(0);
+  });
+
+  it("pushes a panel the drop actually covers, just far enough to clear it", () => {
+    const moved: PanelRects = { ...base, a: { x: 0, y: 8, w: 12, h: 4 } };
+    const out = pushDownRects(moved, "a");
+    expect(out.a.y).toBe(8);
+    expect(out.c.y).toBe(12);
+    expect(out.b.y).toBe(0);
+  });
+
+  it("leaves a legal layout completely untouched", () => {
+    expect(pushDownRects(base, "c")).toEqual(base);
+  });
+});
+
+describe("sanitiseRects keeps an arranged board as arranged", () => {
+  it("does not compact a stored gap away on load", () => {
+    const stored = defaultRects(PANELS);
+    const last = PANELS[PANELS.length - 1].id;
+    stored[last] = { ...stored[last], y: stored[last].y + 6 };
+    const out = sanitiseRects(stored, PANELS);
+    expect(out[last].y).toBe(stored[last].y);
+    expect(pushDownRects(out)).toEqual(out);
   });
 });
 

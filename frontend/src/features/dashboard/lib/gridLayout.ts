@@ -16,7 +16,8 @@ export const GRID_GAP = 8;
 
 export const MIN_W = 2;
 export const MIN_H = 3;
-export const MAX_H = 40;
+export const MAX_H = 120;
+export const MAX_Y = 4000;
 
 export type PanelRect = { x: number; y: number; w: number; h: number };
 export type PanelRects = Record<string, PanelRect>;
@@ -88,18 +89,20 @@ export function sanitiseRects(
     const r = value as Record<string, unknown>;
     out[panel.id] = {
       x: clamp(number(r.x, fallback[panel.id].x), 0, GRID_COLS - 1),
-      y: clamp(number(r.y, 0), 0, 400),
+      y: clamp(number(r.y, 0), 0, MAX_Y),
       w: clamp(number(r.w, fallback[panel.id].w), MIN_W, GRID_COLS),
       h: clamp(number(r.h, fallback[panel.id].h), MIN_H, MAX_H),
     };
   }
-  return compactRects(out);
+  return pushDownRects(out);
 }
 
 /**
  * Gravity upward: walk the plan top-to-bottom, left-to-right and drop each rectangle to the
- * highest row where it does not collide. This is what visually "closes" a gap when a panel
- * above is made smaller, without the user having to tidy up.
+ * highest row where it does not collide.
+ *
+ * Not used for a user's board any more — a dashboard you arrange yourself keeps the gaps you
+ * left, exactly as Grafana does. It survives for the stored-layout repair path and its tests.
  */
 export function compactRects(rects: PanelRects): PanelRects {
   const ids = Object.keys(rects);
@@ -113,6 +116,39 @@ export function compactRects(rects: PanelRects): PanelRects {
     let y = 0;
     while (collides({ ...rect, y }, placed)) y += 1;
     placed[id] = { ...rect, y };
+  }
+  return placed;
+}
+
+/**
+ * Overlap repair with no gravity: keep every rectangle where it is and only move the ones that
+ * are standing on each other, the minimum number of rows down. `anchor` (the panel the user
+ * just dropped) is placed first and never moves.
+ *
+ * This is the difference between "drop it here" and "drop it here and watch the board tidy
+ * itself": a gap is a decision, an overlap is an accident.
+ */
+export function pushDownRects(rects: PanelRects, anchor?: string): PanelRects {
+  const ids = Object.keys(rects);
+  const order = ids
+    .slice()
+    .sort((a, b) => rects[a].y - rects[b].y || rects[a].x - rects[b].x);
+  if (anchor && order.includes(anchor)) {
+    order.splice(order.indexOf(anchor), 1);
+    order.unshift(anchor);
+  }
+
+  const placed: PanelRects = {};
+  for (const id of order) {
+    const rect = { ...rects[id] };
+    if (id !== anchor) {
+      let guard = 0;
+      while (collides(rect, placed) && guard < MAX_Y) {
+        rect.y += 1;
+        guard += 1;
+      }
+    }
+    placed[id] = rect;
   }
   return placed;
 }

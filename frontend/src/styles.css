@@ -1709,32 +1709,103 @@ table tbody tr {
 .board-surface--editing .board-surface__item:hover {
   outline-color: var(--primary);
 }
-/* The grip is the whole header strip while editing, so a drag never starts from a chart. */
+/* Arrange mode: the whole panel is a drag target, the header shows a grip, the edges resize.
+   While a panel is held it follows the pointer (no cell-by-cell jumping) and a dashed ghost
+   marks the cell it will land in — the Grafana gesture, not a nudge-and-hope. */
+.board-surface--editing .board-surface__item {
+  cursor: grab;
+}
+.board-surface--editing .board-surface__item:active {
+  cursor: grabbing;
+}
+.board-surface__item--dragging {
+  transition: none !important;
+  z-index: 30;
+  cursor: grabbing;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+  outline-color: var(--primary) !important;
+  opacity: 0.97;
+}
+.board-surface__ghost {
+  position: absolute;
+  z-index: 1;
+  border: 1px dashed var(--primary);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  pointer-events: none;
+  transition: left 90ms ease, top 90ms ease, width 90ms ease, height 90ms ease;
+}
 .board-surface__grip {
   position: absolute;
   inset: 0 0 auto 0;
-  height: 20px;
+  height: 26px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: grab;
+  touch-action: none;
+  border-radius: 10px 10px 0 0;
 }
 .board-surface__grip:active {
   cursor: grabbing;
 }
+/* Six dots, drawn rather than an icon font: the affordance Grafana puts in a panel header. */
+.board-surface__grip-dots {
+  width: 22px;
+  height: 8px;
+  opacity: 0;
+  border-radius: 3px;
+  background-image: radial-gradient(circle, var(--muted-foreground) 1.2px, transparent 1.3px);
+  background-size: 6px 4px;
+  background-position: center;
+  transition: opacity 120ms ease;
+}
+.board-surface__item:hover .board-surface__grip-dots,
+.board-surface__item--dragging .board-surface__grip-dots {
+  opacity: 0.85;
+}
 .board-surface__resize {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 18px;
-  height: 18px;
   z-index: 6;
-  cursor: nwse-resize;
-  border-right: 2px solid var(--primary);
-  border-bottom: 2px solid var(--primary);
-  border-bottom-right-radius: 6px;
-  opacity: 0.8;
+  touch-action: none;
+  opacity: 0;
+  background: var(--primary);
+  transition: opacity 120ms ease;
+}
+.board-surface__item:hover .board-surface__resize {
+  opacity: 0.5;
 }
 .board-surface__resize:hover {
-  opacity: 1;
+  opacity: 1 !important;
+}
+.board-surface__resize--e {
+  top: 10px;
+  bottom: 16px;
+  right: -2px;
+  width: 4px;
+  border-radius: 2px;
+  cursor: ew-resize;
+}
+.board-surface__resize--s {
+  left: 10px;
+  right: 16px;
+  bottom: -2px;
+  height: 4px;
+  border-radius: 2px;
+  cursor: ns-resize;
+}
+.board-surface__resize--se {
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  border-right: 3px solid var(--primary);
+  border-bottom: 3px solid var(--primary);
+  border-bottom-right-radius: 8px;
+  background: transparent;
+  opacity: 0.6;
+  cursor: nwse-resize;
 }
 
 /* ---------------------------------------------------------------- touch targets
