@@ -350,7 +350,7 @@ export function FloatingChatPopup() {
       >
         <Bot className="size-6" />
         {messages.length > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full border-2 border-white bg-emerald-500 text-2xs font-bold text-white dark:border-[#071318]">
+          <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full border-2 border-white bg-emerald-500 text-2xs font-bold text-white dark:border-[#09090F]">
             {messages.filter((m) => m.role === "assistant" && !m.failed).length || "•"}
           </span>
         )}
