@@ -7,7 +7,7 @@ import {
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { ConnectionsCard } from "@/features/settings/components/ConnectionsCard";
 import {
-  deleteIntegrationSettings, getIntegrationSettings, getMySettings, putIntegrationSettings, testIntegration, updateMySettings,
+  deleteIntegrationSettings, getIntegrationSettings, getMySettings, listConnections, putIntegrationSettings, testIntegration, updateMySettings,
 } from "@/features/settings/api";
 
 /* ============================================================
@@ -274,7 +274,18 @@ function ProviderEditor({ provider, onConfigured }: {
       const res = await getIntegrationSettings(provider.key);
       setForm({});
       setReplacing({});
-      const set = res.fields_set || [];
+      let set = res.fields_set || [];
+      /* Multi-site: a provider can be fully configured with its credentials living on the
+         connection rows instead of the legacy single-site settings. Without this the panel
+         kept saying "Not set up" after an admin added three sites. */
+      if (provider.key === "confluence" || provider.key === "jira") {
+        try {
+          const conns = await listConnections(provider.key);
+          if ((conns.connections ?? []).length > 0) set = set.length ? set : ["connections"];
+        } catch {
+          /* the connection list is an enhancement, not a requirement */
+        }
+      }
       setFieldsSet(set);
       setSecretFields(res.secret_fields || []);
       setUpdatedAt(res.updated_at || null);
@@ -801,7 +812,16 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
     Promise.allSettled(
       PROVIDERS.map(async (p) => {
         const res = await getIntegrationSettings(p.key);
-        return [p.key, (res.fields_set || []).length > 0] as const;
+        if ((res.fields_set || []).length > 0) return [p.key, true] as const;
+        if (p.key === "confluence" || p.key === "jira") {
+          try {
+            const conns = await listConnections(p.key);
+            return [p.key, (conns.connections ?? []).length > 0] as const;
+          } catch {
+            return [p.key, false] as const;
+          }
+        }
+        return [p.key, false] as const;
       }),
     ).then((rows) => {
       if (cancelled) return;
