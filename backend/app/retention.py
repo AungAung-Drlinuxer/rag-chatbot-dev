@@ -109,6 +109,31 @@ def scope_counts(policy: dict | None = None) -> dict:
     return out
 
 
+def totals() -> dict:
+    """What is stored right now — the denominator for the preview.
+
+    "0 to remove" is only meaningful next to "20 stored": without it the panel looks like
+    it does not know the data exists."""
+    with _session() as s:
+        return {
+            "conversations": s.execute(text("SELECT count(*) FROM chat_sessions")).scalar() or 0,
+            "messages": s.execute(text("SELECT count(*) FROM chat_messages")).scalar() or 0,
+            "audit": s.execute(text("SELECT count(*) FROM audit_log")).scalar() or 0,
+            "pinned": s.execute(text(
+                "SELECT count(*) FROM chat_sessions WHERE coalesce(is_pinned, false) = true"
+            )).scalar() or 0,
+        }
+
+
+def oldest() -> dict:
+    """Age of the oldest row in each scope, so an admin can see how far back the data goes."""
+    with _session() as s:
+        return {
+            "conversations": s.execute(text("SELECT min(started_at) FROM chat_sessions")).scalar(),
+            "audit": s.execute(text("SELECT min(created_at) FROM audit_log")).scalar(),
+        }
+
+
 def purge(policy: dict | None = None) -> dict:
     """Delete what the policy says is expired. Returns what was actually removed."""
     policy = policy or get_policy()

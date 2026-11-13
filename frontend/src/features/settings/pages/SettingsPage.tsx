@@ -637,16 +637,9 @@ export default function Settings({ role }: { role?: string }) {
                 decision, so they are one section with one Save. */}
             {active === "skills" && <AiServiceSettings isAdmin={isAdmin} />}
 
-            {active === "retention" && isAdmin && (
-              <SectionCard
-                icon={<Archive className="size-4" />}
-                iconTone="bg-rose-50 dark:bg-rose-950/40"
-                title="Data retention"
-                description="How long conversation history and the audit trail are kept before the nightly job removes them."
-              >
-                <DataRetentionSettings />
-              </SectionCard>
-            )}
+            {/* The component renders its own Panels (SettingsKit), so it is not wrapped in
+                SectionCard — one card inside another reads as a different page. */}
+            {active === "retention" && isAdmin && <DataRetentionSettings />}
           </div>
 
         </main>

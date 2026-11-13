@@ -347,10 +347,14 @@ def _reload_after_change(key: str) -> None:
 def get_retention(user: str = Depends(require_role("admin"))) -> dict:
     from app.retention import ALLOWED_DAYS, get_policy, last_run, scope_counts
 
+    from app.retention import oldest, totals
+
     policy = get_policy()
     return {
         "policy": policy,
         "preview": scope_counts(policy),
+        "totals": totals(),
+        "oldest": {k: (v.isoformat() if v else None) for k, v in oldest().items()},
         "last_run": last_run(),
         "allowed_days": sorted(ALLOWED_DAYS),
     }
@@ -364,9 +368,11 @@ def put_retention(payload: dict, user: str = Depends(require_role("admin"))) -> 
         policy = set_policy(payload.get("conversations_days"), payload.get("audit_days"))
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    from app.retention import totals
+
     audit("retention_changed", user,
           detail=f"conversations={policy.get('conversations_days')} audit={policy.get('audit_days')}")
-    return {"ok": True, "policy": policy, "preview": scope_counts(policy)}
+    return {"ok": True, "policy": policy, "preview": scope_counts(policy), "totals": totals()}
 
 
 @router.post("/settings/retention/run")
@@ -384,9 +390,11 @@ def run_retention(confirm: str | None = None,
     policy = get_policy()
     if not policy.get("conversations_days") and not policy.get("audit_days"):
         return {"ok": True, "removed": {}, "note": "Both windows are set to keep forever."}
+    from app.retention import totals
+
     removed = purge(policy)
     audit("retention_run", user, detail=json.dumps(removed)[:400])
-    return {"ok": True, "removed": removed, "preview": scope_counts(policy)}
+    return {"ok": True, "removed": removed, "preview": scope_counts(policy), "totals": totals()}
 
 
 @router.get("/settings/connections")
