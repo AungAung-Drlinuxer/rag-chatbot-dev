@@ -5,7 +5,7 @@
  * components/PageSidebar.tsx, theme/router/session in src/app/.
  * B-3: collapsible sidebar (Cmd/Ctrl+B, persisted). B-4: global Cmd+K palette.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast, ToastHost } from "@/shared/useToast";
 import PageSidebar from "@/components/PageSidebar";
 import CommandPalette from "@/components/CommandPalette";
@@ -29,8 +29,10 @@ import { getMySettings } from "@/features/settings/api";
 
 import LoginPage from "@/features/auth/pages/LoginPage";
 import ChatPage from "@/features/chat/pages/ChatPage";
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { PageFallback } from "@/components/PageFallback";
+import { PageErrorBoundary } from "@/components/PageErrorBoundary";
+import { lazyPage } from "@/app/lazyPage";
 import { displayAppName, useBranding } from "@/app/useBranding";
 
 /**
@@ -41,14 +43,14 @@ import { displayAppName, useBranding } from "@/app/useBranding";
  * Login and Chat are the two routes a session starts on, so they stay eager; everything
  * else is fetched the first time its nav item is selected.
  */
-const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
-const KnowledgePage = lazy(() => import("@/features/knowledge/pages/KnowledgePage"));
-const TicketsPage = lazy(() => import("@/features/tickets/pages/TicketsPage"));
-const DomainsPage = lazy(() => import("@/features/domains/pages/DomainsPage"));
-const UsersPage = lazy(() => import("@/features/users/pages/UsersPage"));
-const ConversationHistoryPage = lazy(() => import("@/features/conversations/pages/ConversationHistoryPage"));
-const AuditsPage = lazy(() => import("@/features/audits/pages/AuditsPage"));
-const SettingsPage = lazy(() => import("@/features/settings/pages/SettingsPage"));
+const DashboardPage = lazyPage(() => import("@/features/dashboard/pages/DashboardPage"));
+const KnowledgePage = lazyPage(() => import("@/features/knowledge/pages/KnowledgePage"));
+const TicketsPage = lazyPage(() => import("@/features/tickets/pages/TicketsPage"));
+const DomainsPage = lazyPage(() => import("@/features/domains/pages/DomainsPage"));
+const UsersPage = lazyPage(() => import("@/features/users/pages/UsersPage"));
+const ConversationHistoryPage = lazyPage(() => import("@/features/conversations/pages/ConversationHistoryPage"));
+const AuditsPage = lazyPage(() => import("@/features/audits/pages/AuditsPage"));
+const SettingsPage = lazyPage(() => import("@/features/settings/pages/SettingsPage"));
 
 export default function App() {
   // v0.21.44 — apply persisted theme on every page load (previously only Settings
@@ -61,6 +63,15 @@ export default function App() {
     document.title = displayAppName(brand.appName);
   }, [brand.appName]);
   const [nav, setNav] = useHashNav();
+  /* Switching pages must land at the top. The shell keeps ONE scroll container for every
+     page, so leaving a long page (audits, history) scrolled down and arriving on a short
+     one (settings, users) showed the empty space below the content — "the page is blank".
+     Resetting here is the fix, and it also matches what a real page load does. */
+  const pageScrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = pageScrollRef.current;
+    if (el) el.scrollTop = 0;
+  }, [nav]);
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const toast = useToast();
@@ -245,8 +256,14 @@ export default function App() {
           {/* No shell-level top bar (v1.3.0): every workspace page now leads with its own
               in-page header, the same shape the chat column uses — breadcrumb, title,
               description and actions in one block that scrolls with the content. */}
-          <div data-slot="page-scroll" className={active === "chat" ? "min-w-0 flex-1 overflow-hidden" : "min-w-0 flex-1 overflow-y-auto"}>
-            <Suspense fallback={<PageFallback />}>{children}</Suspense>
+          <div
+            ref={pageScrollRef}
+            data-slot="page-scroll"
+            className={active === "chat" ? "min-w-0 flex-1 overflow-hidden" : "min-w-0 flex-1 overflow-y-auto"}
+          >
+            <PageErrorBoundary resetKey={active}>
+              <Suspense fallback={<PageFallback />}>{children}</Suspense>
+            </PageErrorBoundary>
           </div>
         </div>
       </div>

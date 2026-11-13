@@ -192,7 +192,20 @@ export function TicketTable({
                 <tr
                   key={t.id}
                   aria-selected={selected}
-                  onClick={() => onSelect(t)}
+                  tabIndex={0}
+                  onClick={() => {
+                    /* The right-hand detail pane is gone, so selecting a row on its own
+                       rendered nothing — a click that looked broken. A row now opens the
+                       same editor the ticket key does. */
+                    onSelect(t);
+                    onOpenEdit?.(t);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    onSelect(t);
+                    onOpenEdit?.(t);
+                  }}
                   className={[
                     "group cursor-pointer border-b border-[var(--border)]/70 transition last:border-b-0",
                     selected ? "bg-[var(--accent-soft)]" : "hover:bg-muted/40",
