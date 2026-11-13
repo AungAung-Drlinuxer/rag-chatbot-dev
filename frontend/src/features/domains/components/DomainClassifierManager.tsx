@@ -10,6 +10,7 @@ import { AlertCircle, Plus } from "lucide-react";
 
 import { ClassifierDomainItem, deleteClassifierDomain } from "@/features/domains/api";
 import { DomainFormSheet, type DomainFormMode } from "@/features/domains/components/DomainFormSheet";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DomainRoutingItem } from "@/features/domains/components/DomainRoutingItem";
 import { DomainAssigneesDialog } from "@/features/domains/components/DomainAssigneesDialog";
 
@@ -123,14 +124,9 @@ export function DomainClassifierManager({
       {/* Delete stays a separate, explicit confirmation — no destructive action inside the
           edit sheet, where it would sit one mis-click away from "Save changes". */}
       {deleting && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Delete ${deleting.display_name}`}
-          onClick={(e) => { if (e.target === e.currentTarget && !busy) setDeleting(null); }}
-        >
-          <div data-slot="card" className="my-auto w-full max-w-sm rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl">
+        <Dialog open onOpenChange={(next) => { if (!next && !busy) setDeleting(null); }}>
+          <DialogContent size="confirm" className="p-5" showCloseButton={false}>
+            <DialogTitle className="sr-only">Delete {deleting.display_name}</DialogTitle>
             <div className="flex items-start gap-3">
               <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--danger)]/10 text-[var(--danger)]">
                 <AlertCircle className="size-4.5" aria-hidden />
@@ -169,8 +165,8 @@ export function DomainClassifierManager({
                 {busy ? "Deleting…" : "Delete domain"}
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

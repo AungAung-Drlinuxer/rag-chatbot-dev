@@ -40,6 +40,7 @@ import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/p
 import { providerOf } from "@/lib/kbProvider";
 import ReclassifyPanel from "../components/ReclassifyPanel";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -1315,24 +1316,10 @@ export default function Knowledge({ role, onToast }: Props) {
       {/* Details dialog — the title cell opens it. It shows only the fields the list row
           already carries, so nothing here is invented. */}
       {detail && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Article details: ${detail.title}`}
-          onClick={(e) => { if (e.target === e.currentTarget) setDetail(null); }}
-        >
-          <div data-slot="card" className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-card p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-base font-semibold">{detail.title}</h2>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setDetail(null)}
-                className="rounded-md p-1 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10"
-              >
-                <X className="size-4" />
-              </button>
+        <Dialog open onOpenChange={(next) => { if (!next) setDetail(null); }}>
+          <DialogContent size="form" className="p-6">
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <DialogTitle className="text-base font-semibold">{detail.title}</DialogTitle>
             </div>
 
             <dl className="mt-4 space-y-2.5 text-xs">
@@ -1385,8 +1372,8 @@ export default function Knowledge({ role, onToast }: Props) {
                 Open source <ExternalLink className="size-3" />
               </a>
             )}
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </PageShell>
   );

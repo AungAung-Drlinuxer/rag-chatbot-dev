@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, Trash2, Image as ImageIcon, Check, AlertCircle } from "lucide-react";
 import { apiFetch, authHeaders, BASE } from "@/shared/api/client";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { brandInitials, refreshBrandingCache } from "@/app/useBranding";
 
 type Branding = { logo: string | null; appName: string | null };
@@ -139,8 +140,9 @@ export function BrandingSettings({
 
       {/* Logo upload confirmation (v0.22 — user asked for explicit confirm) */}
       {pendingFile && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Confirm logo upload">
-          <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
+        <Dialog open onOpenChange={(next) => { if (!next && !busy) setPendingFile(null); }}>
+          <DialogContent size="confirm" className="p-5" showCloseButton={false}>
+            <DialogTitle className="sr-only">Replace logo</DialogTitle>
             <div className="flex items-start gap-3">
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--primary)]">
                 <ImageIcon className="size-5" />
@@ -163,8 +165,8 @@ export function BrandingSettings({
                 {busy ? "Uploading…" : "Yes, replace logo"}
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* The brand name — one field, saved by the page's single Save */}

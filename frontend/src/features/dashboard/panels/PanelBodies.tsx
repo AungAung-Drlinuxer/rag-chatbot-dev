@@ -8,9 +8,9 @@
  */
 import {
   Activity, AlertTriangle, BookOpen, CheckCircle2, Eye, ExternalLink, Gauge,
-  MessageSquare, ShieldAlert, Ticket, Users, X,
-} from "lucide-react";
+  MessageSquare, ShieldAlert, Ticket, Users, } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 import { ConversationChart, DonutChart, Legend, useChartSize } from "@/features/dashboard/components/DashboardCharts";
 import { DomainRow, HealthRow, KpiCard } from "@/features/dashboard/components/DashboardRows";
@@ -772,35 +772,16 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
       </div>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Guardrail event detail"
-          onClick={() => setOpen(null)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--popover)] p-6 shadow-2xl"
-            onClick={(ev) => ev.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <ShieldAlert className="size-5" />
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Guardrail Trigger Details</h3>
-                  <p className="text-xs text-muted-foreground">ID: {open.id ? `${open.id}` : "—"}</p>
-                </div>
+        <Dialog open onOpenChange={(next) => { if (!next) setOpen(null); }}>
+          <DialogContent size="form" className="p-6">
+            <div className="flex items-start gap-3 pr-8">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400">
+                <ShieldAlert className="size-5" />
+              </span>
+              <div>
+                <DialogTitle className="text-base font-bold text-foreground">Guardrail Trigger Details</DialogTitle>
+                <p className="text-xs text-muted-foreground">ID: {open.id ? `${open.id}` : "—"}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(null)}
-                className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label="Close guardrail detail"
-              >
-                <X className="size-5" />
-              </button>
             </div>
 
             <div className="mt-4 space-y-4 text-xs">
@@ -847,8 +828,8 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </section>
   );
