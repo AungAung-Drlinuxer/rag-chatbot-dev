@@ -3,6 +3,7 @@ import {
   BookOpen,
   Bot,
   Check,
+  Archive,
   Monitor,
   Plug,
   RotateCcw,
@@ -17,6 +18,7 @@ import { Panel, Row, Segmented } from "../components/SettingsKit";
 
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
+import { DataRetentionSettings } from "../components/DataRetentionSettings";
 import NotificationSettings from "../components/NotificationSettings";
 import SetupChecklist from "../components/SetupChecklist";
 import { BrandingSettings, fetchBranding } from "../components/BrandingSettings";
@@ -90,6 +92,13 @@ const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: R
       /* One tab, not two: both answer "how does this workspace tell me things", and the old
          pair (Notifications + Email server) read as a duplicate row in the sidebar. */
       { id: "notifications", label: "Email & Notifications", icon: <BellRing className="size-4" /> },
+    ],
+  },
+  {
+    group: "Governance",
+    items: [
+      /* Administrator-only: how long conversations and audit rows are kept. */
+      { id: "retention", label: "Data retention", icon: <Archive className="size-4" /> },
     ],
   },
 ];
@@ -627,6 +636,17 @@ export default function Settings({ role }: { role?: string }) {
             {/* Provider, credentials, model detection and the retrieval knobs are one
                 decision, so they are one section with one Save. */}
             {active === "skills" && <AiServiceSettings isAdmin={isAdmin} />}
+
+            {active === "retention" && isAdmin && (
+              <SectionCard
+                icon={<Archive className="size-4" />}
+                iconTone="bg-rose-50 dark:bg-rose-950/40"
+                title="Data retention"
+                description="How long conversation history and the audit trail are kept before the nightly job removes them."
+              >
+                <DataRetentionSettings />
+              </SectionCard>
+            )}
           </div>
 
         </main>

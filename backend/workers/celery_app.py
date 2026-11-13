@@ -10,7 +10,7 @@ celery_app = Celery(
     "it_help_chatbot",
     broker=broker_url(),
     backend=result_backend_url(),  # DB 1 for results, DB 0 for broker (standalone keeps split)
-    include=["workers.sync_tasks", "workers.reclassify_task"],
+    include=["workers.sync_tasks", "workers.reclassify_task", "workers.retention_tasks"],
 )
 
 # Sentinel HA (Phase 10): kombu needs the master_name transport option.
@@ -25,6 +25,10 @@ celery_app.conf.beat_schedule = {
     # 04:10 UTC — after the KB sync, fill only the blanks in newly created domains.
     "backfill-domain-profiles": {"task": "workers.sync_tasks.backfill_domain_profiles",
                                  "schedule": crontab(hour="4", minute="10")},
+    # 04:30 UTC — its own slot: deleting user data must not share a worker moment with the
+    # KB sync, and the log line stays attributable.
+    "retention-purge": {"task": "workers.retention_tasks.purge_expired",
+                        "schedule": crontab(hour="4", minute="30")},
 }
 celery_app.conf.timezone = "UTC"
 celery_app.conf.task_serializer = "json"

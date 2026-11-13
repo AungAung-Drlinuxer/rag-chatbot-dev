@@ -339,6 +339,56 @@ def _reload_after_change(key: str) -> None:
 # One row per Confluence/Jira site. Kept on their own prefix (`/settings/connections`)
 # because `/settings/integrations/{key}` would otherwise swallow "connections" as a key.
 
+# --- Data retention ---------------------------------------------------------
+# Two windows, one decision each. `null` means keep forever and is the only safe default:
+# a missing or malformed row must never be read as "delete everything older than 0 days".
+
+@router.get("/settings/retention")
+def get_retention(user: str = Depends(require_role("admin"))) -> dict:
+    from app.retention import ALLOWED_DAYS, get_policy, last_run, scope_counts
+
+    policy = get_policy()
+    return {
+        "policy": policy,
+        "preview": scope_counts(policy),
+        "last_run": last_run(),
+        "allowed_days": sorted(ALLOWED_DAYS),
+    }
+
+
+@router.put("/settings/retention")
+def put_retention(payload: dict, user: str = Depends(require_role("admin"))) -> dict:
+    from app.retention import get_policy, scope_counts, set_policy
+
+    try:
+        policy = set_policy(payload.get("conversations_days"), payload.get("audit_days"))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit("retention_changed", user,
+          detail=f"conversations={policy.get('conversations_days')} audit={policy.get('audit_days')}")
+    return {"ok": True, "policy": policy, "preview": scope_counts(policy)}
+
+
+@router.post("/settings/retention/run")
+def run_retention(confirm: str | None = None,
+                  user: str = Depends(require_role("admin"))) -> dict:
+    """Delete expired rows NOW (the nightly task would do it anyway).
+
+    Requires the word DELETE: the preview shows counts, but a single mis-click must not be
+    able to erase a year of conversations.
+    """
+    from app.retention import get_policy, purge, scope_counts
+
+    if (confirm or "").strip().upper() != "DELETE":
+        raise HTTPException(status_code=400, detail="Confirmation required: ?confirm=DELETE")
+    policy = get_policy()
+    if not policy.get("conversations_days") and not policy.get("audit_days"):
+        return {"ok": True, "removed": {}, "note": "Both windows are set to keep forever."}
+    removed = purge(policy)
+    audit("retention_run", user, detail=json.dumps(removed)[:400])
+    return {"ok": True, "removed": removed, "preview": scope_counts(policy)}
+
+
 @router.get("/settings/connections")
 def list_connections_endpoint(provider: str | None = None,
                               user: str = Depends(require_role("admin"))) -> dict:

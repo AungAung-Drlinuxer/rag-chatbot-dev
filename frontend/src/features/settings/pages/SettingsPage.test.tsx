@@ -134,10 +134,10 @@ afterEach(async () => {
 });
 
 describe("SettingsPage — role gating and the grouped nav", () => {
-  it("shows an admin all five nav entries and the Administrator badge", async () => {
+  it("shows an admin every nav entry, including data retention, and the Administrator badge", async () => {
     const el = await mount("admin");
     const nav = el.querySelector('nav[aria-label="Settings sections"]')!;
-    expect(nav.querySelectorAll("button")).toHaveLength(4);
+    expect(nav.querySelectorAll("button")).toHaveLength(5);
     expect(nav.textContent).toContain("Preferences");
     expect(nav.textContent).toContain("Integrations");
     expect(nav.textContent).toContain("AI service");
