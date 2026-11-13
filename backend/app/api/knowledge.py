@@ -321,7 +321,7 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
         params["prov"] = provider_like
 
     clause = " AND ".join(where)
-    sql = ("SELECT page_id, title, domain, source_url, updated_by, last_synced "
+    sql = ("SELECT page_id, title, domain, space_key, source_url, updated_by, last_synced "
            f"FROM kb_meta WHERE {clause} "
            f"ORDER BY {sort_col} {direction} NULLS LAST, page_id ASC "
            "LIMIT :lim OFFSET :off")
@@ -334,6 +334,7 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
         total = s.execute(_text(count_sql), count_params).scalar() or 0
     articles = [
         {"page_id": r["page_id"], "title": r["title"], "domain": r["domain"] or "general",
+         "space_key": r["space_key"] or _space_from_url(r["source_url"]),
          "source_url": r["source_url"], "updated_by": r["updated_by"],
          "last_synced": r["last_synced"].isoformat() if r["last_synced"] else None}
         for r in rows

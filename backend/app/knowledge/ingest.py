@@ -44,7 +44,8 @@ def _delete_vectors(page_id: str) -> None:
 
 
 def _upsert_meta(page_id: str, chash: str, domain: str, title: str, source_url: str,
-                 body: str | None = None, updated_by: str | None = None) -> None:
+                 body: str | None = None, updated_by: str | None = None,
+                 space_key: str | None = None) -> None:
     with SessionLocal() as s:
         meta = s.get(KbMeta, page_id) or KbMeta(page_id=page_id)
         meta.content_hash = chash
@@ -55,6 +56,8 @@ def _upsert_meta(page_id: str, chash: str, domain: str, title: str, source_url: 
             meta.body = body
         if updated_by:
             meta.updated_by = updated_by
+        if space_key:
+            meta.space_key = space_key
         meta.last_synced = datetime.now(UTC)
         s.add(meta)
         s.commit()
@@ -161,6 +164,7 @@ def ingest_article(art: dict) -> str:
     if texts:
         add_texts(texts, metadatas=metadatas)
     _upsert_meta(art["page_id"], chash, art["domain"], art["title"], art.get("source_url") or "",
+                 space_key=art.get("space_key"),
                  body=art.get("body"), updated_by=art.get("updated_by"))
 
     try:

@@ -169,10 +169,14 @@ def _fetch_confluence_rest(space_key: str) -> list[dict]:
                     "page_id": page_id,
                     "title": page.get("title", "Untitled"),
                     "domain": space_key.lower(),
+                    # The space a page came from, independent of the pipeline domain it
+                    # later gets classified into (the two diverge when the classifier
+                    # re-assigns a page).
                     "source_url": (
                         str(cfg.get("base_url") or "").rstrip("/") + "/" + webui.lstrip("/")
                         if webui else f"{api_root}/spaces/{space_key}/pages/{page_id}"
                     ),
+                    "space_key": space_key,
                     "body": body_text,
                 })
             next_link = payload.get("_links", {}).get("next")

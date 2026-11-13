@@ -193,6 +193,10 @@ def init_db() -> None:
         ("users.missing_scans",
          "ALTER TABLE users ADD COLUMN IF NOT EXISTS missing_scans INTEGER DEFAULT 0"),
         ("users.removed_at", "ALTER TABLE users ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ"),
+        # Which Confluence space a page came from. `domain` is the routing category and
+        # can be re-classified away from the space name, so it cannot stand in for this.
+        ("kb_meta.space_key",
+         "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS space_key VARCHAR(64)"),
         # HNSW index for fast cosine search (needs pgvector >= 0.5).
         (
             "langchain_pg_embedding HNSW index",

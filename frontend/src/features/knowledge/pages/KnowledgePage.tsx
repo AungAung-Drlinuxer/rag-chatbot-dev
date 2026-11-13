@@ -97,6 +97,8 @@ type DomainCard = {
 type RecentItem = {
   title: string;
   domain: string;
+  /** Confluence space the page came from — null for non-Confluence sources. */
+  space_key?: string | null;
   source_url: string;
   updated_by?: string | null;
   last_synced?: string | null;
@@ -970,6 +972,7 @@ export default function Knowledge({ role, onToast }: Props) {
                     { k: "title", l: "Article title", cls: "px-5 py-3.5 font-semibold" },
                     { k: null, l: "Source", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
                     { k: "domain", l: "Domain", cls: "px-4 py-3.5 font-semibold" },
+                    { k: null, l: "Space key", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
                     { k: "last_synced", l: "Last sync", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
                   ] as const).map((h) => (
                     <th key={h.l} className={h.cls}>
@@ -1006,13 +1009,13 @@ export default function Knowledge({ role, onToast }: Props) {
               <tbody>
                 {listing ? (
                   <tr>
-                    <td colSpan={5} className="p-4">
+                    <td colSpan={6} className="p-4">
                       <Skeleton className="h-9 w-full rounded-lg" />
                     </td>
                   </tr>
                 ) : listError ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <ErrorState
                         compact
                         title="Could not load the knowledge base"
@@ -1023,7 +1026,7 @@ export default function Knowledge({ role, onToast }: Props) {
                   </tr>
                 ) : !items || items.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       {/* "Nothing here yet" and "nothing matches" need different words:
                           only the second is something the user caused and can undo, so
                           only it gets the clear-filters action. */}
@@ -1103,6 +1106,18 @@ export default function Knowledge({ role, onToast }: Props) {
                           <Badge variant="outline" className={`text-2xs ${meta.bgClass} ${meta.iconClass}`}>
                             {meta.label}
                           </Badge>
+                        </td>
+                        <td className="hidden px-4 py-3 md:table-cell">
+                          {/* The Confluence space, which is NOT the same thing as the
+                              domain: the classifier can move a page to another domain,
+                              while the space stays where the author put it. */}
+                          {article.space_key ? (
+                            <span className="rounded-md border border-[var(--border)] bg-muted/50 px-1.5 py-0.5 font-mono text-2xs text-muted-foreground">
+                              {article.space_key}
+                            </span>
+                          ) : (
+                            <span className="text-2xs text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td
                           className="hidden px-4 py-3 text-xs text-muted-foreground lg:table-cell"
