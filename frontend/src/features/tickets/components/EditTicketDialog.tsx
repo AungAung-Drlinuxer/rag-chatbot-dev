@@ -304,7 +304,7 @@ export function EditTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
+      <DialogContent className="max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* ---- header ---- */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4 pr-14">
@@ -356,7 +356,7 @@ export function EditTicketDialog({
                   <Icon className="size-3.5" aria-hidden />
                   {t.label}
                   {t.key === "activity" && comments.length > 0 && (
-                    <span className="rounded-full bg-[var(--muted)] px-1.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                    <span className="rounded-full bg-[var(--muted)] px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
                       {comments.length}
                     </span>
                   )}
@@ -392,7 +392,7 @@ export function EditTicketDialog({
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   </div>
-                  <p className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
                     Pushed to the Jira issue when you save.
                   </p>
@@ -490,7 +490,7 @@ export function EditTicketDialog({
                     </label>
                     <div className="relative">
                       <span
-                        className="pointer-events-none absolute left-2.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full bg-[var(--muted)] text-[10px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]"
+                        className="pointer-events-none absolute left-2.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full bg-[var(--muted)] text-[11px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]"
                         aria-hidden
                       >
                         {(assignee || "?").slice(0, 1)}
@@ -607,7 +607,7 @@ export function EditTicketDialog({
                 <div className="lg:col-span-8">
                   {/* ticket brief */}
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3.5">
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Ticket brief
                     </span>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -616,7 +616,7 @@ export function EditTicketDialog({
                         {statusMetaOf(status).label}
                       </span>
                       <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="grid size-5 place-items-center rounded-full bg-[var(--muted)] text-[10px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]" aria-hidden>
+                        <span className="grid size-5 place-items-center rounded-full bg-[var(--muted)] text-[11px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]" aria-hidden>
                           {(assignee || "?")[0]}
                         </span>
                         {assignee || "Unassigned"}
@@ -628,7 +628,7 @@ export function EditTicketDialog({
                   {/* timeline header + filters */}
                   <div className="mt-4 flex flex-wrap items-end justify-between gap-2">
                     <div>
-                      <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Activity timeline
                       </span>
                       <h3 className="text-sm font-semibold text-foreground">Activity</h3>
@@ -670,7 +670,7 @@ export function EditTicketDialog({
                         return (
                           <li key={e.key}>
                             {showDay && (
-                              <p className="mb-1.5 mt-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                              <p className="mb-1.5 mt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                                 {dayLabel(e.at)}
                               </p>
                             )}
@@ -694,12 +694,12 @@ export function EditTicketDialog({
                               <div className="min-w-0 flex-1 pb-4">
                                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                   <span className="text-xs font-semibold text-foreground">{e.author}</span>
-                                  <span className="text-[10px] text-muted-foreground">{timeLabel(e.at)}</span>
+                                  <span className="text-[11px] text-muted-foreground">{timeLabel(e.at)}</span>
                                 </div>
 
                                 {e.kind === "note" ? (
                                   <>
-                                    <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                                       <Lock className="size-3" aria-hidden /> Internal note
                                     </span>
                                     <div className="mt-1 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-3 py-2 text-xs leading-5 text-foreground">
@@ -722,7 +722,7 @@ export function EditTicketDialog({
                                       <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                                       <span className="min-w-0 flex-1">
                                         <span className="block truncate text-xs font-medium text-foreground">{e.file.name}</span>
-                                        <span className="block text-[10px] text-muted-foreground">
+                                        <span className="block text-[11px] text-muted-foreground">
                                           {fileKind(e.file.name)} · {formatBytes(e.file.size)}
                                         </span>
                                       </span>
@@ -734,7 +734,7 @@ export function EditTicketDialog({
                                     <p className="mt-0.5 text-xs text-muted-foreground">{e.text}</p>
                                     {e.body && <p className="mt-0.5 text-xs leading-5 text-foreground">{e.body}</p>}
                                     {e.kind === "created" && (
-                                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                      <p className="mt-0.5 text-[11px] text-muted-foreground">
                                         Category: {ticket.category || "General"} · Priority: {priorityMetaOf(ticket.priority).label}
                                       </p>
                                     )}
@@ -752,7 +752,7 @@ export function EditTicketDialog({
                 {/* --- composer (right) --- */}
                 <div className="lg:col-span-4">
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/20 p-3">
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Note composer
                     </span>
 
@@ -785,7 +785,7 @@ export function EditTicketDialog({
                           key={tag}
                           type="button"
                           onClick={() => handleQuickTag(tag)}
-                          className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-foreground"
+                          className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-muted-foreground transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 hover:text-foreground"
                         >
                           + {tag}
                         </button>
@@ -803,7 +803,7 @@ export function EditTicketDialog({
                     />
 
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <Paperclip className="size-3" aria-hidden />
                         <Lock className="size-3" aria-hidden />
                         {composer === "internal"
@@ -819,7 +819,7 @@ export function EditTicketDialog({
                         {addingNote ? "Adding…" : "Add note"}
                       </button>
                     </div>
-                    <p className="mt-1 text-right font-mono text-[10px] text-muted-foreground">{note.length}/280</p>
+                    <p className="mt-1 text-right font-mono text-[11px] text-muted-foreground">{note.length}/280</p>
                   </div>
                 </div>
               </div>

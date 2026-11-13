@@ -711,13 +711,13 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
                     <p className="text-sm font-semibold leading-snug text-foreground">{p.name}</p>
                     <div className="flex shrink-0 flex-col items-center gap-0.5">
                       <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
-                      <span className={["text-[10px] font-medium uppercase tracking-wide", on ? "text-[var(--primary)]" : "text-muted-foreground/70"].join(" ")}>
+                      <span className={["text-[11px] font-medium uppercase tracking-wide", on ? "text-[var(--primary)]" : "text-muted-foreground/70"].join(" ")}>
                         {on ? "On" : "Off"}
                       </span>
                     </div>
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.tagline}</p>
-                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+                  <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
                     {p.category}
                   </p>
                 </div>

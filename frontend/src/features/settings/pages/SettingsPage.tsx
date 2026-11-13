@@ -665,7 +665,7 @@ function IntegrationStatusCards() {
     if (!s) return null;
     const ok = /healthy|ok|up/i.test(s);
     return (
-      <span className={["inline-flex items-center gap-1 text-[10px] font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
+      <span className={["inline-flex items-center gap-1 text-[11px] font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
         <span className={["size-1.5 rounded-full", ok ? "bg-[var(--ok)]" : "bg-[var(--danger)]"].join(" ")} />
         {ok ? "Connected" : s}
       </span>
@@ -705,7 +705,7 @@ function IntegrationStatusCards() {
               <span className="truncate text-[11px] font-semibold">{c.name}</span>
               {chip(c.key)}
             </div>
-            <p className="mt-0.5 truncate text-[10px] leading-4 text-muted-foreground" title={c.detail}>
+            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground" title={c.detail}>
               {c.detail}
             </p>
           </div>

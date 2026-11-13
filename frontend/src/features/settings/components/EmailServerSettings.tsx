@@ -202,7 +202,7 @@ export function EmailServerSettings() {
               App password help <ExternalLink className="size-3" />
             </a>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <ServerIcon /> {form.host || (smtpConfigured("host") ? "stored host" : "no host")}:{form.port || "—"}
             </span>
@@ -361,7 +361,7 @@ export function EmailServerSettings() {
               </p>
             )}
             {smtpSet.length > 0 && (
-              <p className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <p className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                 <Lock className="size-3" /> {smtpSet.length} stored field{smtpSet.length === 1 ? "" : "s"} · write-only
               </p>
             )}

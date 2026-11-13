@@ -796,7 +796,7 @@ export default function Knowledge({ role, onToast }: Props) {
               </span>
             </h2>
             <span className="flex shrink-0 items-center gap-1 text-2xs text-muted-foreground">
-              Sorted by {SORT_LABELS[sortKey]}
+              <span className="hidden sm:inline">Sorted by </span>{SORT_LABELS[sortKey]}
               {sortDir === "desc" ? <ChevronDown className="size-3" /> : <ChevronUp className="size-3" />}
             </span>
           </div>

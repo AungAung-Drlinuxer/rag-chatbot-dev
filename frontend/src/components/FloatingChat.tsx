@@ -346,7 +346,7 @@ export function FloatingChatPopup() {
         aria-label={open ? "Reopen chat" : "Open IT assistant"}
         title={open ? "Reopen chat" : "Ask the IT assistant"}
         onClick={() => { setOpen(true); setMinimized(false); }}
-        className="fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-2xl shadow-black/30 transition hover:scale-105 hover:opacity-95"
+        className="safe-b fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-2xl shadow-black/30 transition hover:scale-105 hover:opacity-95"
       >
         <Bot className="size-6" />
         {messages.length > 0 && (
@@ -362,7 +362,7 @@ export function FloatingChatPopup() {
     <div
       role="dialog"
       aria-label="AI assistant chat"
-      className="fixed bottom-5 right-5 z-50 flex h-[min(72vh,470px)] w-[min(92vw,340px)] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
+      className="safe-b fixed bottom-5 right-5 z-50 flex h-[min(72vh,470px)] w-[min(92vw,340px)] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
     >
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-violet-800/40 bg-gradient-to-r from-violet-700 to-violet-800 px-4 py-3 text-white">

@@ -93,7 +93,7 @@ export function TicketToolbar({
                   aria-pressed={active}
                   onClick={() => onChange({ status: tab.key })}
                   className={[
-                    "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-2xs font-medium transition",
+                    "tap inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-2xs font-medium transition",
                     active
                       ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-xs"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -103,7 +103,7 @@ export function TicketToolbar({
                   {typeof n === "number" && (
                     <span
                       className={[
-                        "rounded px-1 text-[10px] font-semibold tabular-nums",
+                        "rounded px-1 text-[11px] font-semibold tabular-nums",
                         active ? "bg-black/15" : "bg-[var(--muted)] text-muted-foreground",
                       ].join(" ")}
                     >

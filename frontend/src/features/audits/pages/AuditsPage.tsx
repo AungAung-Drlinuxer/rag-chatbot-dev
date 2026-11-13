@@ -445,7 +445,7 @@ export default function AuditsPage() {
             </button>
           </div>
 
-          <div className="table-scroll overflow-auto">
+          <div className="table-scroll hidden overflow-auto md:block">
             <table className="w-full table-fixed text-xs">
               <colgroup>
                 <col className="w-[15%]" /><col className="w-[13%]" /><col className="w-[15%]" />
@@ -569,6 +569,52 @@ export default function AuditsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* mobile: one card per event — six columns cannot be read on a phone */}
+          <div className="divide-y divide-[var(--border)] md:hidden">
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <div key={"msk" + i} className="px-4 py-4"><div className="h-14 animate-pulse rounded bg-muted" /></div>
+            ))}
+            {!loading && pageRows.map((r) => {
+              const res = resultOf(r);
+              const style = RESULT_STYLE[res];
+              return (
+                <article key={"mc" + r.id} className="px-4 py-4" data-slot="audit-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-2xs text-muted-foreground" title={relTimeAgo(r.created_at)}>
+                      {fmtDate(r.created_at)} · {fmtTime(r.created_at)}
+                    </span>
+                    <span className={`inline-flex shrink-0 items-center gap-1 text-2xs font-semibold ${style.text}`}>
+                      <span aria-hidden className={style.dot}>●</span>{style.label}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs font-semibold capitalize ${toneFor(r.action)}`}>
+                      {r.action}
+                    </span>
+                    {r.domain && <span className="text-2xs text-muted-foreground">{r.domain}</span>}
+                  </div>
+                  {r.username && (
+                    <p className="mt-1.5 text-2xs text-muted-foreground">{r.username}</p>
+                  )}
+                  {r.detail && (
+                    <p className="mt-1 line-clamp-3 text-2xs leading-relaxed text-muted-foreground">{r.detail}</p>
+                  )}
+                </article>
+              );
+            })}
+            {!loading && !error && filtered.length === 0 && (
+              <div className="p-4">
+                {rows.length === 0 ? (
+                  <EmptyState icon={<ScrollText className="size-5" />} title="No audit events yet"
+                    description="Administrative actions — sign-ins, permission changes, knowledge edits and approvals — are recorded here as they happen." />
+                ) : (
+                  <EmptyState icon={<SearchX className="size-5" />} title="No matching events"
+                    description="Try a wider time range or clear the filters." actionLabel="Reset filters" onAction={resetFilters} />
+                )}
+              </div>
+            )}
           </div>
 
           {/* range + pagination footer */}

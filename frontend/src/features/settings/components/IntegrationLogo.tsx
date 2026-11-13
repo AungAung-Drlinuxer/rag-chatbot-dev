@@ -80,7 +80,7 @@ export function IntegrationLogo({
       <span
         role="img"
         aria-label={`${name} logo`}
-        className={`inline-flex shrink-0 items-center justify-center rounded-md bg-[var(--muted)] text-[10px] font-bold text-foreground ${sizeClass} ${className}`}
+        className={`inline-flex shrink-0 items-center justify-center rounded-md bg-[var(--muted)] text-[11px] font-bold text-foreground ${sizeClass} ${className}`}
       >
         {name.slice(0, 2).toUpperCase()}
       </span>

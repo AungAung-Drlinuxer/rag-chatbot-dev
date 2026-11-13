@@ -667,7 +667,7 @@ export default function Chat({ onNavigate, userName }: Props) {
               {/* ---------------- docked composer ---------------- */}
               <div className="shrink-0 bg-gradient-to-t from-background via-background to-background/0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
                 {composerForm(false)}
-                <p className="mx-auto mt-1.5 max-w-3xl text-center text-[10px] text-muted-foreground">
+                <p className="mx-auto mt-1.5 max-w-3xl text-center text-[11px] text-muted-foreground">
                   Answers cite the pages they used. Check anything destructive before acting on it.
                 </p>
               </div>

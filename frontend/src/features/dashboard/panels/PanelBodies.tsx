@@ -260,7 +260,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
 
       <div data-list-scroll className="mt-2.5 min-h-0 flex-1 overflow-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-card text-muted-foreground text-[10px] uppercase tracking-wider">
+          <thead className="sticky top-0 bg-card text-muted-foreground text-[11px] uppercase tracking-wider">
             <tr className="border-b border-[var(--border)]">
               <th className="py-1.5 pr-2 text-left font-semibold">Model</th>
               <th className="px-1.5 py-1.5 text-right font-semibold">Ans</th>
@@ -295,7 +295,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
         </table>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[11px] text-muted-foreground">
         <span className="truncate">
           {rows[0] ? `Default LLM: ${rows[0].model}` : "No model traffic in this window"}
         </span>
@@ -315,7 +315,7 @@ function Domains({ title }: PanelBodyProps) {
     <section data-slot="card" className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
-        <span className="rounded-full border border-slate-700/60 bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+        <span className="rounded-full border border-slate-700/60 bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-300">
           {totalArticles === null ? "— articles" : `${totalArticles} articles`}
         </span>
       </div>
@@ -388,10 +388,10 @@ function Health({ title }: PanelBodyProps) {
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
           {healthDown.length > 0 && (
-            <p className="text-[10px] text-[var(--danger)]">Failing: {healthDown.join(", ")}</p>
+            <p className="text-[11px] text-[var(--danger)]">Failing: {healthDown.join(", ")}</p>
           )}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-medium text-emerald-300">
+        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
           {healthSummary.overall || "Unknown"}
         </span>
       </div>
@@ -406,7 +406,7 @@ function Health({ title }: PanelBodyProps) {
         )}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[10px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[11px] text-muted-foreground">
         <span className="min-w-0 truncate">{count === 0 ? "No dependencies reporting" : `${count} dependencies reporting`}</span>
         <a
           href="http://10.10.10.18:3000/d/rag-platform-health"
@@ -500,7 +500,7 @@ function UsageKpis({ title }: PanelBodyProps) {
             className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2.5 py-1.5 transition-colors hover:border-[var(--primary)]/30"
             title={tile.hint}
           >
-            <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
               <span className={tile.tone}>{tile.icon}</span>
               <span className="truncate">{tile.label}</span>
             </div>
@@ -517,7 +517,7 @@ function UsageKpis({ title }: PanelBodyProps) {
             ) : (
               <p className={`mt-1 truncate text-lg font-bold tabular-nums leading-none ${tile.tone}`}>{tile.value}</p>
             )}
-            <p className="truncate text-[10px] text-muted-foreground">{tile.caption}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{tile.caption}</p>
           </div>
         ))}
       </div>
@@ -705,7 +705,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
 
       <div data-list-scroll className="table-scroll min-h-0 flex-1 overflow-auto border-t border-[var(--border)]">
         <table className="w-full text-left text-xs">
-          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[10px]">
+          <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[11px]">
             <tr className="border-b border-[var(--border)]">
               <th className="px-4 py-2.5 font-semibold">When</th>
               <th className="px-4 py-2.5 font-semibold">Type</th>
@@ -724,12 +724,12 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 <tr key={`${e.created_at}-${i}`} className="transition hover:bg-[var(--muted)]/40">
                   <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-muted-foreground">{fmtTime(e.created_at ?? "") || "—"}</td>
                   <td className="whitespace-nowrap px-4 py-2.5">
-                    <span className="inline-block rounded border border-rose-500/25 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                    <span className="inline-block rounded border border-rose-500/25 bg-rose-500/15 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
                       {evType}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">
-                    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${riskBadgeStyle(evRisk)}`}>
+                    <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${riskBadgeStyle(evRisk)}`}>
                       {evRisk}
                     </span>
                   </td>

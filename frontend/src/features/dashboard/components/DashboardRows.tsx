@@ -230,7 +230,7 @@ export function HealthRow({ item }: { item: HealthItem }) {
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium leading-tight text-foreground">{item.name}</div>
         {!healthy && item.detail && (
-          <div className="mt-0.5 truncate text-[10px] leading-tight text-[var(--danger)]" title={item.detail}>
+          <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--danger)]" title={item.detail}>
             {item.detail}
           </div>
         )}

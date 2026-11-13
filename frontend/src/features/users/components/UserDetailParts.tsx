@@ -65,7 +65,7 @@ export function MetaItem({
 }) {
   return (
     <div className="bg-card px-3 py-2.5">
-      <dt className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <dt className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {icon}
         {label}
       </dt>
@@ -186,7 +186,7 @@ export function PermissionMatrix({ rows, loading }: { rows: PermissionRow[]; loa
               {row.label}
             </span>
             {row.changed && (
-              <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wide">
+              <span className="ml-auto shrink-0 text-[11px] font-semibold uppercase tracking-wide">
                 {row.enabled ? <span className="text-[var(--ok)]">new</span> : <span className="text-[var(--danger)]">lost</span>}
               </span>
             )}

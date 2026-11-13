@@ -303,7 +303,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               Provider docs
             </a>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><Layers className="size-3" /> {models.length || "—"} models</span>
             <span className="inline-flex items-center gap-1"><Gauge className="size-3" /> gate {Math.round((Number(threshold) || 0.75) * 100)}%</span>
             <span className="inline-flex items-center gap-1"><Search className="size-3" /> top-k {topK || "—"}</span>
@@ -461,7 +461,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               aria-label="Confidence threshold"
               className="mt-3 h-1.5 w-full accent-[var(--primary)]"
             />
-            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground/70">
+            <div className="mt-1 flex justify-between text-[11px] text-muted-foreground/70">
               <span>50%</span><span>75%</span><span>100%</span>
             </div>
           </div>
@@ -532,7 +532,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
             </p>
           )}
           {updatedAt && !msg && (
-            <p className="mt-3 text-[10px] text-muted-foreground">Last saved {new Date(updatedAt).toLocaleString()}</p>
+            <p className="mt-3 text-[11px] text-muted-foreground">Last saved {new Date(updatedAt).toLocaleString()}</p>
           )}
 
           {(tokenSet || fieldsSet.length > 0) && (

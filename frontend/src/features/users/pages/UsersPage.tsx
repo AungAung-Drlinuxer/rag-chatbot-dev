@@ -478,7 +478,7 @@ export default function Users() {
         <main className="grid items-start gap-5">
         <div className="min-w-0 space-y-4">
         {/* summary cards — label left, icon right, big number, muted caption */}
-        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="kpi-row grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard icon={<UsersIcon className="size-4" />} label="Total users"
             value={totalUsers} caption="Members in this workspace" />
           <SummaryCard icon={<UserCheck className="size-4" />} label="Active users"
@@ -500,8 +500,15 @@ export default function Users() {
                   : `${filteredUsers.length} of ${totalUsers} users`}
               </span>
             </div>
-            <p className="text-2xs text-muted-foreground">
-              {filteredUsers.length === totalUsers ? "Sorted by name" : `${filteredUsers.length} shown`}
+            <p className="shrink-0 whitespace-nowrap text-2xs text-muted-foreground">
+              {/* On a phone the toolbar is one line shorter than the sentence: "Sorted by
+                  name" was clipping to "Sorted b…", which reads as a bug. */}
+              <span className="hidden sm:inline">
+                {filteredUsers.length === totalUsers ? "Sorted by name" : `${filteredUsers.length} shown`}
+              </span>
+              <span className="sm:hidden" title={filteredUsers.length === totalUsers ? "Sorted by name" : "Filtered"}>
+                {filteredUsers.length === totalUsers ? "A–Z" : `${filteredUsers.length} shown`}
+              </span>
             </p>
           </div>
 
@@ -538,7 +545,7 @@ export default function Users() {
             </button>
           </div>
 
-          <div className="table-scroll overflow-x-auto">
+          <div className="table-scroll hidden overflow-x-auto md:block">
             {/* Fixed layout: the table obeys the panel instead of the panel obeying the
                 longest email it happens to hold (that is what forced a sideways scroll). */}
             <table className="w-full table-fixed text-xs">
@@ -616,6 +623,32 @@ export default function Users() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* ---------- mobile: the same rows as cards ----------
+              Eight columns cannot be read at 390px, and the row actions were shrinking to
+              14px. Below md each member becomes a card with 44px actions instead. */}
+          <div className="divide-y divide-[var(--border)] md:hidden">
+            {loading && Array.from({ length: 5 }).map((_, i) => (
+              <div key={"mksk" + i} className="px-4 py-4"><Skeleton className="h-16 w-full" /></div>
+            ))}
+            {!loading && pagedUsers.map((u) => (
+              <UserCard key={"mc" + u.id} user={u}
+                onSelect={() => setSelectedUser(u)}
+                onToggle={() => toggleUser(u.id)}
+                onDelete={() => setPurgeTarget(u)} />
+            ))}
+            {!loading && !error && filteredUsers.length === 0 && (
+              <div className="p-4">
+                {users.length === 0 ? (
+                  <EmptyState icon={<UsersIcon className="size-5" />} title="No workspace members yet"
+                    description="Members appear here as they are created locally or synchronized from Active Directory." />
+                ) : (
+                  <EmptyState icon={<SearchX className="size-5" />} title="No users found"
+                    description="Try changing your search or filters." actionLabel="Clear filters" onAction={resetFilters} />
+                )}
+              </div>
+            )}
           </div>
 
           {/* range + pager footer */}
@@ -827,7 +860,7 @@ function UserRow({ user, onSelect, onToggle, onDelete }: {
           <button type="button" onClick={onToggle}
             title={isActive ? "Disable user" : user.status === "Pending" ? "Approve registration" : "Enable user"}
             aria-label={isActive ? "Disable user" : "Enable user"}
-            className="grid size-7 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--muted)] hover:text-foreground">
+            className="grid size-9 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--muted)] hover:text-foreground lg:size-7">
             {isActive ? <UserX className="size-3.5" /> : <UserCheck className="size-3.5" />}
           </button>
           <button type="button" onClick={onDelete} disabled={!canDelete}
@@ -835,12 +868,60 @@ function UserRow({ user, onSelect, onToggle, onDelete }: {
               ? user.state === "removed" ? "Purge this removed account" : "Delete this local account"
               : "Managed in Active Directory — disable the account there and the sync will remove it here"}
             aria-label={`Delete ${user.name}`}
-            className="grid size-7 place-items-center rounded-lg text-muted-foreground transition enabled:hover:bg-[var(--danger)]/10 enabled:hover:text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-35">
+            className="grid size-9 place-items-center rounded-lg text-muted-foreground transition enabled:hover:bg-[var(--danger)]/10 enabled:hover:text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-35 lg:size-7">
             <Trash2 className="size-3.5" />
           </button>
         </div>
       </td>
     </tr>
+  );
+}
+
+/** The mobile member row: identity, the three facts that matter, then 44px actions. */
+function UserCard({ user, onSelect, onToggle, onDelete }: {
+  user: User; onSelect: () => void; onToggle: () => void; onDelete: () => void;
+}) {
+  const isDirectory = user.source === "ad" || Boolean(user.directoryLinked);
+  const canDelete = !isDirectory || user.state === "removed";
+  const isActive = user.status === "Active";
+  return (
+    <div className="px-4 py-4" data-slot="user-card">
+      <button type="button" onClick={onSelect} className="flex w-full min-w-0 items-center gap-3 text-left">
+        <Avatar name={user.name} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{user.name}</span>
+          <span className="mt-0.5 block truncate text-2xs text-muted-foreground">@{user.username}</span>
+        </span>
+      </button>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <RoleBadge role={user.role} />
+        <StatusBadge status={user.status} />
+        <span className="rounded border border-[var(--border)] bg-[var(--muted)] px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {isDirectory ? "Directory" : "Local"}
+        </span>
+        {user.state === "removed" && (
+          <span className="rounded border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[var(--danger)]">Removed</span>
+        )}
+        {user.state === "suspended" && (
+          <span className="rounded border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[var(--warn)]">Suspended</span>
+        )}
+      </div>
+      {user.email && <p className="mt-2 truncate text-2xs text-muted-foreground">{user.email}</p>}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <button type="button" onClick={onSelect}
+          className="h-11 rounded-xl border border-[var(--border)] bg-card text-xs font-semibold transition active:bg-[var(--muted)]">
+          Edit
+        </button>
+        <button type="button" onClick={onToggle}
+          className="h-11 rounded-xl border border-[var(--border)] bg-card text-xs font-semibold transition active:bg-[var(--muted)]">
+          {isActive ? "Disable" : "Enable"}
+        </button>
+        <button type="button" onClick={onDelete} disabled={!canDelete}
+          className="h-11 rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/8 text-xs font-semibold text-[var(--danger)] transition active:bg-[var(--danger)]/15 disabled:border-[var(--border)] disabled:bg-card disabled:text-muted-foreground disabled:opacity-50">
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1083,7 +1164,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
       <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
         <DialogContent
           showCloseButton={false}
-          className="flex max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
+          className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
         >
           {/* ---- header: who this is, at a glance ---- */}
           <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pt-5">
@@ -1092,7 +1173,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
             </span>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
               <DialogTitle className="mt-0.5 truncate text-lg font-bold leading-tight tracking-tight text-foreground" title={user.name}>
                 {user.name}
               </DialogTitle>
@@ -1140,11 +1221,11 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
                     Role
                   </label>
                   {roleChanged ? (
-                    <span className="rounded-full border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                    <span className="rounded-full border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-0.5 text-[11px] font-semibold text-foreground">
                       Preview: {selectedRole}
                     </span>
                   ) : (
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--muted)] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="rounded-full border border-[var(--border)] bg-[var(--muted)] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                       Current: {user.role}
                     </span>
                   )}
@@ -1277,7 +1358,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
               )}
 
               <div className="mt-2">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Groups ({user.groups.length})
                 </p>
                 {user.groups.length > 0 ? (
@@ -1384,7 +1465,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
               </button>
             </div>
           </div>
-            <p className="mt-2 text-center text-[10px] text-muted-foreground sm:text-left">
+            <p className="mt-2 text-center text-[11px] text-muted-foreground sm:text-left">
             {roleChanged
               ? `Unsaved role change: ${user.role} → ${selectedRole}`
               : "Role changes take effect the next time this user signs in."}

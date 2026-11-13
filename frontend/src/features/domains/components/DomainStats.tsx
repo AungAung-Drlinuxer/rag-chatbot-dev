@@ -71,7 +71,7 @@ export function DomainStats({
   loading: boolean;
 }) {
   return (
-    <section aria-label="Routing metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Routing metrics" className="kpi-row grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatTile
         tone="primary"
         icon={<Layers className="size-4" />}

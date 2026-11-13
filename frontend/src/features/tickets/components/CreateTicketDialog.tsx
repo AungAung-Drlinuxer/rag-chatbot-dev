@@ -271,7 +271,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[86dvh] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
+      <DialogContent className="max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
         {/* ---- header: what this is, and where it lands ---- */}
         <div className="flex items-start gap-3 px-6 pb-4 pt-5">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
@@ -312,7 +312,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
         <div className="max-h-[min(54vh,520px)] space-y-4 overflow-y-auto px-6 pb-5">
           {/* ---- quick templates ---- */}
           <div>
-            <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Quick templates
             </span>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -337,7 +337,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
               <label htmlFor="ticket-subject" className="text-xs font-medium text-foreground">
                 Subject <span className="text-[var(--danger)]">*</span>
               </label>
-              <span className="text-[10px] tabular-nums text-muted-foreground">
+              <span className="text-[11px] tabular-nums text-muted-foreground">
                 {draft.subject.length} / {MAX_SUBJECT}
               </span>
             </div>
@@ -371,7 +371,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 Description <span className="text-[var(--danger)]">*</span>
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] tabular-nums text-muted-foreground">
+                <span className="text-[11px] tabular-nums text-muted-foreground">
                   {draft.description.length} / {MAX_DESCRIPTION}
                 </span>
                 <button
@@ -396,7 +396,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                       setDrafting(false);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/20 disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/20 disabled:opacity-40"
                 >
                   <Sparkles className="size-3" />
                   {drafting ? "Improving…" : "Improve with AI"}
@@ -448,7 +448,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             <div>
               <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground">
                 <span>Priority</span>
-                <span className="flex items-center gap-1.5 text-[10px] font-normal capitalize text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-[11px] font-normal capitalize text-muted-foreground">
                   <span className={["size-1.5 rounded-full", PRIORITY_DOT[draft.priority] ?? PRIORITY_DOT.medium].join(" ")} />
                   {draft.priority}
                 </span>
@@ -464,7 +464,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
-              <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">
+              <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
                 {PRIORITY_GUIDE[draft.priority] ?? PRIORITY_GUIDE.medium}
               </span>
             </div>
@@ -497,13 +497,13 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   </optgroup>
                 ))}
               </select>
-              <span className="mt-1 block text-[10px] leading-snug text-muted-foreground">
+              <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
                 {assigneeScope === "category"
                   ? `Only people mapped to ${draft.category} can be picked.`
                   : "No team is mapped to this category yet — showing every assignable user."}
               </span>
               {assignable.find((u) => u.username === draft.assignee)?.jira_account === false && (
-                <span className="mt-1 block rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-1 text-[10px] leading-snug text-[var(--warn)]">
+                <span className="mt-1 block rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-1 text-[11px] leading-snug text-[var(--warn)]">
                   {draft.assignee} has no Jira account, so Jira will leave this ticket unassigned.
                 </span>
               )}
@@ -550,7 +550,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                 <button
                   type="button"
                   onClick={() => setPendingFiles([])}
-                  className="text-[10px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  className="text-[11px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                 >
                   Clear all
                 </button>
@@ -593,7 +593,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   >
                     <Paperclip className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                     <span className="min-w-0 flex-1 truncate text-xs">{f.name}</span>
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                    <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
                       {formatBytes(f.size)}
                     </span>
                     <button

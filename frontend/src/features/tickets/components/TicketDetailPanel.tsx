@@ -182,7 +182,7 @@ export function TicketDetailPanel({
               <span className="font-mono text-[11px] font-semibold tracking-wide text-[var(--accent-foreground)]">
                 {ticket.id}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--accent-foreground)]">
                 <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3" />
                 Jira
               </span>
@@ -282,7 +282,7 @@ export function TicketDetailPanel({
         {canManage && (
           <div className="mb-5">
             <div className="mb-3 flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <Workflow className="size-3" />
                 Jira workflow
               </p>
@@ -336,7 +336,7 @@ export function TicketDetailPanel({
                         )}
                         <span
                           className={[
-                            "relative grid size-6 place-items-center rounded-full border text-[10px] font-bold transition-all duration-500",
+                            "relative grid size-6 place-items-center rounded-full border text-[11px] font-bold transition-all duration-500",
                             active
                               ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] ring-4 ring-[var(--primary)]/20"
                               : done
@@ -368,7 +368,7 @@ export function TicketDetailPanel({
             </div>
 
             {!jiraReady ? (
-              <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+              <p className="mt-3 text-[11px] leading-4 text-muted-foreground">
                 Jira is not connected, so this workflow is read-only — a local status change
                 would not reach the tracker. Add the base URL, email and API token in
                 Settings → Integrations.
@@ -390,20 +390,20 @@ export function TicketDetailPanel({
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
                   {target ? (
                     <>
-                      <span className="text-[10px] text-muted-foreground">Move to</span>
-                      <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-foreground)]">
+                      <span className="text-[11px] text-muted-foreground">Move to</span>
+                      <span className="rounded-md bg-[var(--accent-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--accent-foreground)]">
                         {statusMeta(target).label}
                       </span>
                       <button
                         type="button"
                         onClick={() => setTarget(null)}
-                        className="text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+                        className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
                       >
                         clear
                       </button>
                     </>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[11px] text-muted-foreground">
                       Pick a step above to move the ticket, or just write a note.
                     </span>
                   )}
@@ -445,7 +445,7 @@ export function TicketDetailPanel({
           </div>
         )}
 
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Description
         </p>
         {editing ? (
@@ -470,7 +470,7 @@ export function TicketDetailPanel({
           {editing ? (
             <>
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   <Users className="size-3" /> Assignee
                 </span>
                 <select
@@ -490,7 +490,7 @@ export function TicketDetailPanel({
               </label>
 
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   <CheckCircle2 className="size-3" /> Priority
                 </span>
                 <select
@@ -508,7 +508,7 @@ export function TicketDetailPanel({
               </label>
 
               <label className="block">
-                <span className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   <CalendarClock className="size-3" /> Due date
                 </span>
                 <input
@@ -535,7 +535,7 @@ export function TicketDetailPanel({
 
         {/* activity */}
         <div className="mb-5">
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Activity
           </p>
           <ol className="relative space-y-3 border-l border-[var(--border)] pl-4">
@@ -553,7 +553,7 @@ export function TicketDetailPanel({
                   {c.kind === "comment" ? `${c.author ?? "user"} commented` : `Updated by ${c.author ?? "user"}`}
                 </p>
                 <p className="whitespace-pre-wrap text-[11.5px] leading-5 text-muted-foreground">{c.body}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
               </li>
             ))}
           </ol>
@@ -562,7 +562,7 @@ export function TicketDetailPanel({
         {/* attachments */}
         {attachments.length > 0 && (
           <div className="mb-5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Attachments
             </p>
             <div className="space-y-1.5">
@@ -612,7 +612,7 @@ export function TicketDetailPanel({
             />
           </label>
         ) : (
-          <p className="mb-5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <p className="mb-5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Paperclip className="size-3" /> Attachments are read-only — Edit to add or remove files.
           </p>
         )}
@@ -638,7 +638,7 @@ export function TicketDetailPanel({
                 className="w-full resize-none bg-transparent px-3 pt-2.5 text-xs leading-5 outline-none placeholder:text-muted-foreground"
               />
               <div className="flex items-center justify-between px-2 pb-2">
-                <span className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
+                <span className="text-[11px] text-muted-foreground">⌘/Ctrl + Enter to send</span>
                 <Button
                   size="sm"
                   className="rounded-lg text-[11px]"
@@ -653,7 +653,7 @@ export function TicketDetailPanel({
                 </Button>
               </div>
             </div>
-            <p className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+            <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
               <MessageSquare className="size-2.5" />
               Comments are mirrored to the Jira issue.
             </p>

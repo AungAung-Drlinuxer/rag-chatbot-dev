@@ -58,7 +58,7 @@ export function Legend({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-all hover:bg-[var(--muted)]/60 ${
+      className={`tap flex items-center gap-1.5 rounded-md px-2 py-1 transition-all hover:bg-[var(--muted)]/60 ${
         active ? "opacity-100" : "opacity-50"
       }`}
     >
@@ -204,7 +204,7 @@ export function ConversationChart({
                 <text
                   x="5"
                   y={y + 3}
-                  fontSize="10"
+                  fontSize="11"
                   className="fill-slate-400"
                 >
                   {value}
@@ -295,7 +295,7 @@ export function ConversationChart({
                 x={xAt(index)}
                 y={height - 10}
                 textAnchor="middle"
-                fontSize="10"
+                fontSize="11"
                 className={hover === index ? "fill-[var(--foreground)] font-semibold" : "fill-slate-400"}
               >
                 {item.day}

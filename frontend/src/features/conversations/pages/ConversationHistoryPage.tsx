@@ -461,8 +461,8 @@ export default function ConversationHistoryPage() {
                   <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-5 py-3 font-medium">User</th>
                     <th className="px-5 py-3 font-medium">Conversation</th>
-                    <th className="px-5 py-3 font-medium">Msgs</th>
-                    <th className="px-5 py-3 font-medium">Last activity</th>
+                    <th className="hidden px-5 py-3 font-medium md:table-cell">Msgs</th>
+                    <th className="hidden px-5 py-3 font-medium sm:table-cell">Last activity</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -494,13 +494,13 @@ export default function ConversationHistoryPage() {
                           <span className="truncate text-xs font-medium text-foreground">{c.username}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 align-middle">
-                        <div className="text-xs font-medium leading-snug text-foreground">
+                      <td className="px-3 py-3.5 align-middle md:px-5">
+                        <div className="line-clamp-2 max-w-[52vw] text-xs font-medium leading-snug text-foreground md:max-w-none">
                           {maskProfanity(c.title) || "(untitled conversation)"}
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 align-middle text-muted-foreground">{c.messages}</td>
-                      <td className="whitespace-nowrap px-5 py-3.5 align-middle text-muted-foreground">{fmt(c.last_at)}</td>
+                      <td className="hidden px-5 py-3.5 align-middle text-muted-foreground md:table-cell">{c.messages}</td>
+                      <td className="hidden whitespace-nowrap px-3 py-3.5 align-middle text-2xs text-muted-foreground sm:table-cell md:px-5 md:text-xs">{fmt(c.last_at)}</td>
                     </tr>
                   ))}
                   {error && !loading && (
@@ -658,13 +658,13 @@ export default function ConversationHistoryPage() {
                                   {!isUser && <Bot className="size-3 shrink-0" />}
                                   <span className="truncate font-medium">{isUser ? openUser : "IT Assistant"}</span>
                                   {isJira && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent-foreground)]">
+                                    <span className="inline-flex items-center gap-1 rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--accent-foreground)]">
                                       <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-2.5" />
                                       Jira
                                     </span>
                                   )}
                                   {isConfluence && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-500">
+                                    <span className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-sky-500">
                                       <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-2.5" />
                                       Confluence
                                     </span>

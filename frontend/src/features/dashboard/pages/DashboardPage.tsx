@@ -120,13 +120,17 @@ function BoardGrid({
   onLayoutChange: (layout: Layout[]) => void;
 }) {
   const desktop = useIsDesktop();
+  // A phone showing eight stacked panels is 1,900px of scrolling before the reader reaches
+  // anything they chose to look at. Four is enough to orient; the rest is one tap away.
+  const [showAll, setShowAll] = useState(false);
 
   /* A 12-column grid at 390px gives 79px panels. Below lg the board is one column of
      content-sized cards — the arrangement still applies on the screen it was made for. */
   if (!desktop) {
+    const visible = showAll ? panels : panels.slice(0, 4);
     return (
       <div className="flex flex-col gap-2">
-        {panels.map((panel) => (
+        {visible.map((panel) => (
           <div key={panel.id} data-panel={panel.type} className="flex min-w-0 flex-col">
             <div
               data-panel-body
@@ -136,6 +140,12 @@ function BoardGrid({
             </div>
           </div>
         ))}
+        {panels.length > 4 && (
+          <button type="button" onClick={() => setShowAll((v) => !v)}
+            className="tap-y mt-1 h-11 rounded-xl border border-[var(--border)] bg-card text-xs font-semibold text-muted-foreground transition active:bg-[var(--muted)]">
+            {showAll ? "Show fewer panels" : `Show ${panels.length - 4} more panels`}
+          </button>
+        )}
       </div>
     );
   }

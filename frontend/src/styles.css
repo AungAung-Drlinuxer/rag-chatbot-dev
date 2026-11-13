@@ -1290,3 +1290,32 @@ table tbody tr {
 
 /* Cards and panels breathe less, but never below 12px: text touching a border reads broken. */
 [data-compact="1"] [data-panel] { border-radius: 10px; }
+
+
+/* ---------------------------------------------------------------- touch targets
+   A 28px chip is fine with a mouse and wrong with a thumb. `.tap` keeps the desktop
+   density and grows to a finger-sized target only on coarse pointers. */
+.tap { min-height: 36px; }
+@media (pointer: coarse) {
+  .tap { min-height: 44px; min-width: 44px; }
+  .tap-y { min-height: 44px; }
+}
+
+/* The chat launcher and any sticky footer must clear an iPhone home indicator. */
+.safe-b { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+
+/* On a phone the KPI cards become one swipeable strip, so the list underneath starts on
+   the first screen instead of below four stacked cards. */
+@media (max-width: 639px) {
+  .kpi-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(9.5rem, 68%);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .kpi-row::-webkit-scrollbar { display: none; }
+  .kpi-row > * { scroll-snap-align: start; }
+}
