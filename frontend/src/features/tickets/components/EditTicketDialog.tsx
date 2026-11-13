@@ -305,7 +305,11 @@ export function EditTicketDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="editor">
-        <form onSubmit={handleSubmit} className="flex flex-col">
+        {/* min-h-0 + flex-1: the dialog has a max height, and the form must be able to
+            shrink inside it so the body (not the dialog) is what scrolls. Without the
+            two constraints the form took its natural height, the dialog clipped, and
+            an edit either lost its footer or had no scrollbar at all. */}
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           {/* ---- header ---- */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 pb-4 pr-14 pt-5">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-lg shadow-black/25">
