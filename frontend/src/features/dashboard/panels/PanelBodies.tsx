@@ -299,7 +299,7 @@ function TokenBreakdown({ title }: PanelBodyProps) {
         <span className="truncate">
           {rows[0] ? `Default LLM: ${rows[0].model}` : "No model traffic in this window"}
         </span>
-        <a href="#/settings" className="shrink-0 font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
+        <a href="#/settings" className="shrink-0 font-medium text-[var(--accent-blue)] hover:opacity-80 transition-colors">
           Configure models
         </a>
       </div>
@@ -350,7 +350,7 @@ function Workspace({ title }: PanelBodyProps) {
           className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
           title="Knowledge-base articles that are indexed and searchable"
         >
-          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--brand-text)]/20 bg-[var(--brand-soft)] text-[var(--brand-text)]">
             <BookOpen className="size-3.5" />
           </span>
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">KB Articles</span>
@@ -412,7 +412,7 @@ function Health({ title }: PanelBodyProps) {
           href="http://10.10.10.18:3000/d/rag-platform-health"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="inline-flex items-center gap-1 font-medium text-[var(--accent-blue)] hover:opacity-80 transition-colors"
         >
           Open in Grafana <ExternalLink className="size-3" />
         </a>
@@ -739,7 +739,7 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                     <button
                       type="button"
                       onClick={() => setOpen({ ...e, type: evType, risk: evRisk, id: evId ?? undefined })}
-                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors ml-auto"
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--accent-blue)] hover:opacity-80 hover:bg-[var(--brand-soft)] transition-colors ml-auto"
                       aria-label={`View detail for the ${evType} event`}
                     >
                       <Eye className="size-3.5" /> View Detail
@@ -811,9 +811,9 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3 text-indigo-300">
+              <div className="rounded-lg border border-[var(--brand-text)]/20 bg-[var(--brand-soft)] p-3 text-[var(--brand-text)]">
                 <div className="font-semibold mb-1 text-xs">Automated Action Taken:</div>
-                <p className="text-[11px] text-indigo-300/80 leading-relaxed">
+                <p className="text-[11px] text-[var(--brand-text)]/80 leading-relaxed">
                   The query was blocked before passing to the model provider. A standard refusal response was rendered to the end user.
                 </p>
               </div>

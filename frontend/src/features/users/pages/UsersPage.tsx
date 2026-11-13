@@ -168,7 +168,7 @@ const ROLE_DEFAULTS: Record<UserRole, PermissionMap> = {
    at a glance. Presentation only; nothing here is derived from account data. */
 const AVATAR_TONES = [
   "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
+  "bg-[var(--brand-soft)] text-[var(--brand-text)]",
   "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
   "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
@@ -942,7 +942,7 @@ function Avatar({ name }: { name: string }) {
 function RoleBadge({ role }: { role: UserRole }) {
   // v1.5.6 — distinct role colors: Administrator=violet, IT Support=sky, KM=teal, User=slate
   const styles: Record<UserRole, string> = {
-    Administrator: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+    Administrator: "border-[var(--brand-text)]/35 bg-[var(--brand-soft)] text-[var(--brand-text)]",
     "Knowledge Manager": "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
     User: "border-[var(--border)] bg-[var(--muted)] text-muted-foreground",
   };

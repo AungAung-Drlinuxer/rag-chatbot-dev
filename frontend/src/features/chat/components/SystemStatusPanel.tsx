@@ -46,7 +46,7 @@ const ACTIONS: {
   prompt: string;
 }[] = [
   { label: "Reset my password", hint: "Self-service steps before you call IT", icon: KeyRound,
-    tint: "text-violet-600 bg-violet-500/10 dark:text-violet-400",
+    tint: "text-[var(--brand-text)] bg-[var(--brand-soft)]",
     prompt: "How do I reset my password?" },
   { label: "VPN won't connect", hint: "Check the usual causes first", icon: Wifi,
     tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400",

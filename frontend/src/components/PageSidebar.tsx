@@ -238,7 +238,7 @@ export default function PageSidebar({
               window.dispatchEvent(new CustomEvent("ith:new-chat"));
               setMobileOpen(false);
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:bg-[var(--primary)] dark:text-white dark:hover:bg-violet-500"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:bg-[var(--primary)] dark:text-white dark:hover:opacity-90"
           >
             <Plus className="size-3.5" />
             New conversation
@@ -276,7 +276,7 @@ export default function PageSidebar({
                 {item.icon}
                 {!collapsed && <span className="flex-1">{item.label}</span>}
                 {active === item.id && (
-                  <span className="ml-auto size-1.5 shrink-0 rounded-full bg-violet-500" aria-hidden="true" />
+                  <span className="ml-auto size-1.5 shrink-0 rounded-full bg-[var(--sidebar-active-text)]" aria-hidden="true" />
                 )}
               </button>
             </div>
@@ -488,7 +488,7 @@ export default function PageSidebar({
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <div className="grid size-8 place-items-center overflow-hidden rounded-lg bg-violet-600 text-2xs font-bold text-white">
+          <div className="grid size-8 place-items-center overflow-hidden rounded-lg bg-[var(--brand-solid)] text-2xs font-bold text-white">
             {branding.logo ? (
               <img src={branding.logo} alt="" className="size-full object-contain p-1" />
             ) : (

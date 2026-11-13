@@ -113,7 +113,7 @@ export default function SourcePanel({
               {sources.length}
             </span>
           )}
-          <span className="grid size-5 place-items-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+          <span className="grid size-5 place-items-center rounded-md bg-[var(--brand-soft)] text-[var(--brand-text)]">
             <Link2 className="size-3" aria-hidden />
           </span>
         </div>
@@ -193,7 +193,7 @@ export default function SourcePanel({
       <div className="flex-1 overflow-y-auto p-4">
         {sources.length === 0 ? (
           <EmptyState
-            icon={<Link2 className="size-5 text-violet-500" />}
+            icon={<Link2 className="size-5 text-[var(--brand-text)]" />}
             title="No sources yet"
             description="Ask a question — the knowledge base articles used to ground the answer appear here, ranked by relevance."
             actionLabel="Ask a question"

@@ -14,8 +14,8 @@ import {
 const DOMAIN_ICONS: Record<string, { icon: any; color: string; bg: string }> = {
   database: { icon: Database, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/40" },
   network: { icon: Network, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/40" },
-  security: { icon: Shield, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/40" },
-  server: { icon: Server, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950/40" },
+  security: { icon: Shield, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/40" },
+  server: { icon: Server, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/40" },
   kubernetes: { icon: Layers, color: "text-sky-600", bg: "bg-sky-50 dark:bg-sky-950/40" },
   help_desk: { icon: HelpCircle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/40" },
   general: { icon: Globe, color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" },

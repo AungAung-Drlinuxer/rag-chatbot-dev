@@ -186,7 +186,7 @@
   /* Brand gradient: violet in light, blue→slate in dark. Buttons and hero headers read
      these instead of hard-coded from-violet-600, so the theme can actually change. */
   --brand-grad-from: #7c3aed; --brand-grad-to: #5b21b6;
-  --brand-soft: rgba(139, 92, 246, 0.16); --brand-text: #7c3aed;
+  --brand-soft: rgba(139, 92, 246, 0.16); --brand-text: #7c3aed; --brand-solid: #7c3aed;
   --chat-font-size: 14px;
 }
 
@@ -257,8 +257,8 @@ html, body, #root { height: 100%; margin: 0; }
 }
 
 [data-theme="dark"] {
-  --chart-1: #818cf8;
-  --chart-2: #a78bfa;
+  --chart-1: #60A5FA;  /* blue    */
+  --chart-2: #38BDF8;  /* sky     */
   --chart-3: #22d3ee;
   --chart-4: #34d399;
   --chart-5: #fbbf24;
@@ -1640,19 +1640,19 @@ table tbody tr {
 }
 
 [data-theme="dark"] table tbody tr:hover {
-  background-color: rgba(139, 92, 246, 0.05);
+  background-color: rgba(59, 130, 246, 0.06);
 }
 
 /* Primary Gradient Action Buttons */
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  background: linear-gradient(135deg, var(--brand-grad-from) 0%, var(--brand-grad-to) 100%);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 .btn-primary-gradient:hover {
   filter: brightness(1.08);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
 }
 .btn-primary-gradient:active {
   transform: scale(0.98);
@@ -1908,6 +1908,20 @@ table tbody tr {
   --brand-grad-to: #1E3A8A;
   --brand-soft: rgba(59, 130, 246, 0.16);
   --brand-text: #93C5FD;
+  --brand-solid: #3B82F6;
+  /* The @theme ramp maps blue-* onto the violet brand (light mode). Dark mode wants blue,
+     so the same variables are re-pointed here — every `blue-600` utility follows. */
+  --color-blue-50: #EFF6FF;
+  --color-blue-100: #DBEAFE;
+  --color-blue-200: #BFDBFE;
+  --color-blue-300: #93C5FD;
+  --color-blue-400: #60A5FA;
+  --color-blue-500: #3B82F6;
+  --color-blue-600: #2563EB;
+  --color-blue-700: #1D4ED8;
+  --color-blue-800: #1E40AF;
+  --color-blue-900: #1E3A8A;
+  --color-blue-950: #172554;
   --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
   --shadow-md: 0 2px 4px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
   --shadow-lg: 0 4px 6px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.45);

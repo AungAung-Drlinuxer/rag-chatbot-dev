@@ -154,7 +154,7 @@ export function SourceCard({
             "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
             top
               ? (source.page_id
-                  ? "bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-xs"
+                  ? "bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-xs"
                   : "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-xs")
               : "bg-muted text-muted-foreground",
           ].join(" ")}

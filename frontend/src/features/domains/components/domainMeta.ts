@@ -64,10 +64,10 @@ export const COLOR_OPTIONS: Record<string, ColorDef> = {
   },
   violet: {
     label: "Violet",
-    textClass: "text-violet-600 dark:text-violet-400",
-    bgClass: "bg-violet-50 dark:bg-violet-950/40",
-    borderClass: "border-violet-200 dark:border-violet-900/50",
-    swatchBg: "bg-violet-500",
+    textClass: "text-sky-600 dark:text-sky-400",
+    bgClass: "bg-sky-50 dark:bg-sky-950/40",
+    borderClass: "border-sky-200 dark:border-sky-900/50",
+    swatchBg: "bg-sky-500",
   },
   sky: {
     label: "Sky",

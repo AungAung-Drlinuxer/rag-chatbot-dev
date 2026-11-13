@@ -56,12 +56,12 @@ function displayName(raw?: string): string {
 function Greeting({ name, composer, onPickPrompt }: { name: string; composer: React.ReactNode; onPickPrompt?: (prompt: string) => void }) {
   return (
     <section className="w-full text-center">
-      <span className="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
+      <span className="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-lg shadow-black/25">
         <Sparkles className="size-5" aria-hidden />
       </span>
 
       <h1 className="text-[28px] font-bold leading-tight tracking-tight sm:text-[34px] text-foreground">
-        {greetingFor()}, <span className="bg-gradient-to-r from-violet-400 via-indigo-300 to-purple-200 bg-clip-text text-transparent">{name}</span>
+        {greetingFor()}, <span className="bg-gradient-to-r from-[var(--brand-text)] via-[var(--lavender)] to-[var(--accent-blue)] bg-clip-text text-transparent">{name}</span>
       </h1>
       <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground sm:text-sm">
         Ask an IT question. Get a clear answer grounded in your organization&rsquo;s knowledge base.
@@ -548,7 +548,7 @@ export default function Chat({ onNavigate, userName }: Props) {
               disabled={!input.trim()}
               aria-label="Send message"
               className={[
-                "inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-800 text-white font-semibold shadow-md shadow-violet-950/25 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40",
+                "inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white font-semibold shadow-md shadow-black/25 transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40",
                 hero ? "size-9 justify-center" : "h-9 px-3.5 text-xs",
               ].join(" ")}
             >
