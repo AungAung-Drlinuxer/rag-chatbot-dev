@@ -586,7 +586,10 @@ export default function ConversationHistoryPage() {
             until a row was clicked — a permanent empty column. It is a dialog now: closed
             by default, opened by the row, dismissed with Esc or the backdrop. */}
         <Dialog open={!!detail} onOpenChange={(open) => { if (!open) closeDetail(); }}>
-          <DialogContent className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
+          <DialogContent
+            showCloseButton={false}
+            className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]"
+          >
             <DialogTitle className="sr-only">Conversation transcript</DialogTitle>
               {detail && (
                 <>
