@@ -39,10 +39,8 @@ import {
   type PanelSpec,
 } from "@/features/dashboard/panels/types";
 import { useGridLayout } from "@/features/dashboard/lib/useGridLayout";
-import { GRID_COLS, GRID_GAP, GRID_ROW_HEIGHT, layoutItems } from "@/features/dashboard/lib/gridLayout";
-import GridLayoutBase, { WidthProvider, type Layout } from "react-grid-layout";
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+import type { PanelRects } from "@/features/dashboard/lib/gridLayout";
+import { BoardSurface } from "@/features/dashboard/components/BoardSurface";
 
 /**
  * Which edges of a panel can be dragged.
@@ -80,7 +78,6 @@ type Props = {
   perms?: Record<string, boolean> | null;
 };
 
-const BoardGridLayout = WidthProvider(GridLayoutBase);
 
 /**
  * The board itself: a 12-column grid where every panel is a rectangle the user owns.
@@ -112,12 +109,12 @@ function BoardGrid({
   panels,
   rects,
   editing,
-  onLayoutChange,
+  onChange,
 }: {
   panels: readonly PanelSpec[];
-  rects: Parameters<typeof layoutItems>[1];
+  rects: PanelRects;
   editing: boolean;
-  onLayoutChange: (layout: Layout[]) => void;
+  onChange: (next: PanelRects) => void;
 }) {
   const desktop = useIsDesktop();
   // A phone showing eight stacked panels is 1,900px of scrolling before the reader reaches
@@ -151,47 +148,40 @@ function BoardGrid({
   }
 
   return (
-    <BoardGridLayout
-      className="board-grid"
-      layout={layoutItems(panels, rects)}
-      cols={GRID_COLS}
-      rowHeight={GRID_ROW_HEIGHT}
-      margin={[GRID_GAP, GRID_GAP]}
-      containerPadding={[0, 0]}
-      isDraggable={editing}
-      isResizable={editing}
-      draggableHandle="[data-drag-handle]"
-      draggableCancel=".no-drag"
-      resizeHandles={["se", "sw", "ne", "nw", "e", "w", "s", "n"]}
-      compactType="vertical"
-      onLayoutChange={onLayoutChange}
-      useCSSTransforms
+    <BoardSurface
+      panels={panels}
+      rects={rects}
+      editing={editing}
+      onChange={onChange}
     >
-      {panels.map((panel) => (
-        <div key={panel.id} data-panel={panel.type} className="flex min-w-0 flex-col">
-          {editing && (
-            <span
-              data-drag-handle
-              className="mb-1 flex cursor-grab items-center gap-1 self-start rounded-md border border-dashed border-[var(--primary)]/40 bg-[var(--primary)]/5 px-1.5 py-0.5 text-3xs font-medium uppercase tracking-wide text-[var(--accent-foreground)] active:cursor-grabbing"
-              title="Drag to move this panel"
+      {(id) => {
+        const panel = panels.find((p) => p.id === id);
+        if (!panel) return null;
+        return (
+          <div className="flex min-w-0 flex-col">
+            {editing && (
+              <span
+                className="mb-1 flex cursor-grab items-center gap-1 self-start rounded-md border border-dashed border-[var(--primary)]/40 bg-[var(--primary)]/5 px-1.5 py-0.5 text-3xs font-medium uppercase tracking-wide text-[var(--accent-foreground)] active:cursor-grabbing"
+                title="Drag to move this panel"
+              >
+                <GripHorizontal className="size-3" />
+                {panelTitle(panel)}
+              </span>
+            )}
+            <div
+              data-panel-body
+              className={
+                panel.type === "kpis"
+                  ? "min-h-0 flex-1 overflow-auto"
+                  : "panel-surface min-h-0 flex-1 overflow-auto rounded-xl"
+              }
             >
-              <GripHorizontal className="size-3" />
-              {panelTitle(panel)}
-            </span>
-          )}
-          <div
-            data-panel-body
-            className={
-              panel.type === "kpis"
-                ? "min-h-0 flex-1 overflow-auto"
-                : "panel-surface min-h-0 flex-1 overflow-auto rounded-xl"
-            }
-          >
-            {renderPanelBody(panel, panelTitle(panel))}
+              {renderPanelBody(panel, panelTitle(panel))}
+            </div>
           </div>
-        </div>
-      ))}
-    </BoardGridLayout>
+        );
+      }}
+    </BoardSurface>
   );
 }
 
@@ -242,6 +232,20 @@ export default function Dashboard({ role, perms }: Props) {
     down: string[];
     guardrailEvents: number;
   }>({ overall: "Healthy", down: [], guardrailEvents: 0 });
+
+  /* TEMP DIAG: count renders in this commit window and bail out with the counters rather
+     than freezing the tab. */
+  if (typeof window !== "undefined") {
+    const w = window as unknown as { __dash?: { n: number; t: number; sr: number } };
+    const now = Date.now();
+    if (!w.__dash || now - w.__dash.t > 4000) w.__dash = { n: 0, t: now, sr: 0 };
+    w.__dash.n += 1;
+    if (w.__dash.n > 60) {
+      const info = JSON.stringify({ renders: w.__dash.n, setRects: (window as any).__setRects ?? 0 });
+      w.__dash = { n: 0, t: now, sr: 0 };
+      throw new Error("DIAG-LOOP " + info);
+    }
+  }
 
   // The board is fixed. It is curated per role and positioned by the product, not the user:
   // the admin board adds the usage panels, everyone else gets the operational ones.
@@ -721,7 +725,7 @@ export default function Dashboard({ role, perms }: Props) {
               panels={panels}
               rects={board.rects}
               editing={board.editing}
-              onLayoutChange={board.onLayoutChange}
+              onChange={board.commit}
             />
           </DashboardDataProvider>
         )}

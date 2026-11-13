@@ -9,11 +9,9 @@
  * dashboard someone reads every day cannot be rearranged by a stray drag.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Layout } from "react-grid-layout";
 
 import { clearBoardLayout, getBoardLayout, saveBoardLayout } from "@/features/dashboard/api";
 import {
-  compactRects,
   defaultRects,
   sanitiseRects,
   type PanelLike,
@@ -65,7 +63,8 @@ export type GridLayoutApi = {
   /** Leave the arrange mode without keeping anything moved since it started. */
   cancelEdit: () => void;
   setEditing: (value: boolean) => void;
-  onLayoutChange: (layout: Layout[]) => void;
+  /** Apply geometry the surface committed (after a drag or a resize). */
+  commit: (next: PanelRects) => void;
   saveView: () => Promise<void>;
   reset: () => Promise<void>;
   dirty: boolean;
@@ -81,7 +80,14 @@ export function useGridLayout(
   const key = String(role ?? "user");
   const defaults = useMemo(() => defaultRects(panels), [panels]);
 
-  const [rects, setRects] = useState<PanelRects>(defaults);
+  /* First paint comes from the stored arrangement, not the default one. Starting at
+     `defaults` and correcting in an effect is what made a refresh visibly rearrange the
+     board: every observer saw the default grid for a frame (or for as long as the layout
+     request took) before their own layout landed. */
+  const [rects, setRects] = useState<PanelRects>(() => {
+    const local = loadLocal(key);
+    return local ? sanitiseRects(local.rects, panels) : defaults;
+  });
   const [savedPrint, setSavedPrint] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -92,22 +98,40 @@ export function useGridLayout(
   const [saved, setSaved] = useState(false);
   const alive = useRef(true);
 
+  /* Panels arrive from the data fetch and are a fresh array on every render; reading them
+     through a ref keeps this effect keyed to the identity (role) alone, so a data refresh
+     can never reset an arrangement that is already on screen. */
+  const panelsRef = useRef(panels);
+  panelsRef.current = panels;
+  const rectsRef = useRef(rects);
+  rectsRef.current = rects;
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
+  const defaultsRef = useRef(defaults);
+  defaultsRef.current = defaults;
+
   useEffect(() => {
     alive.current = true;
-    setRects(defaults);
+    const list = panelsRef.current;
 
     const local = loadLocal(key);
     if (local) {
-      setRects(sanitiseRects(local.rects, panels));
-      setSavedPrint(print(sanitiseRects(local.rects, panels)));
+      const clean = sanitiseRects(local.rects, list);
+      setRects(clean);
+      setSavedPrint(print(clean));
       setSavedAt(local.savedAt);
+    } else if (!Object.keys(rectsRef.current).length) {
+      /* Nothing stored for this identity AND nothing already drawn: start from the default
+         grid. When the identity is still resolving (role "" → "admin") the board keeps what
+         it is showing instead of jumping to defaults and back. */
+      setRects(defaultsRef.current);
     }
 
     getBoardLayout()
       .then((res) => {
         if (!alive.current) return;
         if (res.board?.rects && Object.keys(res.board.rects).length) {
-          const clean = sanitiseRects(res.board.rects, panels);
+          const clean = sanitiseRects(res.board.rects, panelsRef.current);
           setRects(clean);
           setSavedPrint(print(clean));
           setSavedAt(res.updated_at);
@@ -122,16 +146,22 @@ export function useGridLayout(
     return () => {
       alive.current = false;
     };
-  }, [key, panels, defaults]);
+  }, [key]);
 
-  const onLayoutChange = useCallback((layout: Layout[]) => {
+  /* A panel added (or removed) since the layout was saved: fit the stored rectangles to the
+     new set without touching where anything already sits. */
+  useEffect(() => {
     setRects((prev) => {
-      const next: PanelRects = { ...prev };
-      for (const item of layout) {
-        next[item.i] = { x: item.x, y: item.y, w: item.w, h: item.h };
-      }
-      return compactRects(next);
+      const clean = sanitiseRects(prev, panels);
+      return print(clean) === print(prev) ? prev : clean;
     });
+  }, [panels]);
+
+  /* Only a geometry that differs from what is on screen is accepted, so a stray commit does
+     not mark the view dirty and cannot loop back into the surface. */
+  const commit = useCallback((next: PanelRects) => {
+    if (print(next) === print(rectsRef.current)) return;
+    setRects(next);
     setSaved(false);
   }, []);
 
@@ -197,7 +227,7 @@ export function useGridLayout(
     beginEdit,
     cancelEdit,
     setEditing: setEditingMode,
-    onLayoutChange,
+    commit,
     saveView,
     reset,
     dirty,

@@ -198,13 +198,14 @@ describe("DashboardPage — data rendering", () => {
   it("lays the board out as a per-panel grid with an arrange mode", async () => {
     const rootEl = await mount("admin");
 
-    const board = rootEl.querySelector(".react-grid-layout") as HTMLElement;
+    const board = rootEl.querySelector(".board-surface") as HTMLElement;
     expect(board).toBeTruthy();
     expect(board.querySelectorAll("[data-panel]").length).toBeGreaterThan(4);
 
-    const items = [...board.querySelectorAll<HTMLElement>("[data-panel]")];
-    const positioned = items.filter((el) => el.style.transform);
-    expect(positioned.length).toBe(items.length);
+    /* Placed from the saved rectangles: absolute left/top, no transform trickery. */
+    const items = [...board.querySelectorAll<HTMLElement>(".board-surface__item")];
+    expect(items.length).toBeGreaterThan(4);
+    expect(items.every((el) => el.style.left !== "" && el.style.top !== "")).toBe(true);
 
     // Nothing is draggable until Edit layout is pressed.
     expect(board.querySelectorAll("[data-drag-handle]").length).toBe(0);
@@ -218,8 +219,9 @@ describe("DashboardPage — data rendering", () => {
     const edit = [...rootEl.querySelectorAll("button")].find((b) => b.textContent?.includes("Edit layout"))!;
     await act(async () => { edit.click(); });
 
-    const board = rootEl.querySelector(".react-grid-layout") as HTMLElement;
+    const board = rootEl.querySelector(".board-surface") as HTMLElement;
     expect(board.querySelectorAll("[data-drag-handle]").length).toBeGreaterThan(0);
+    expect(board.querySelectorAll(".board-surface__resize").length).toBeGreaterThan(0);
     expect(rootEl.textContent).toContain("Done editing");
   });
 

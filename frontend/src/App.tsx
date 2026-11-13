@@ -259,6 +259,7 @@ export default function App() {
           <div
             ref={pageScrollRef}
             data-slot="page-scroll"
+            style={{ scrollbarGutter: "stable" }}
             className={active === "chat" ? "min-w-0 flex-1 overflow-hidden" : "min-w-0 flex-1 overflow-y-auto"}
           >
             <PageErrorBoundary resetKey={active}>

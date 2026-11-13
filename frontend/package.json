@@ -1,6 +1,6 @@
 {
   "name": "it-help-chatbot-frontend",
-  "version": "dev-1.11.58",
+  "version": "dev-1.11.73",
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,7 +21,6 @@
     "radix-ui": "^1.6.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-grid-layout": "^1.5.2",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0",
     "shiki": "^4.4.3",
