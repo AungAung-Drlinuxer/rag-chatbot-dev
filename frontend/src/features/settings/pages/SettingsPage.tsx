@@ -79,18 +79,17 @@ function ToggleRow({ checked, onChange, title, description }: {
  * Integrations. */
 const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: React.ReactNode }[] }[] = [
   {
-    group: "Application",
+    group: "Workspace",
     items: [
       { id: "general", label: "Preferences", icon: <Monitor className="size-4" /> },
-      { id: "integrations", label: "Integrations", icon: <Plug className="size-4" /> },
     ],
   },
   {
-    group: "Customize",
+    group: "Connections",
     items: [
+      { id: "integrations", label: "Integrations", icon: <Plug className="size-4" /> },
       { id: "skills", label: "AI service", icon: <BookOpen className="size-4" /> },
-      /* One tab, not two: both answer "how does this workspace tell me things", and the old
-         pair (Notifications + Email server) read as a duplicate row in the sidebar. */
+      /* One tab, not two: both answer "how does this workspace tell me things". */
       { id: "notifications", label: "Email & Notifications", icon: <BellRing className="size-4" /> },
     ],
   },
@@ -102,6 +101,126 @@ const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: R
     ],
   },
 ];
+
+/** One accent per group, so the rail is scannable before it is read. */
+const GROUP_ACCENT: Record<string, string> = {
+  Workspace: "bg-violet-500",
+  Connections: "bg-indigo-500",
+  Governance: "bg-emerald-500",
+};
+
+/** Live count of the four external systems — the rail states it once, not four times. */
+function useIntegrationLive() {
+  const [live, setLive] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getIntegrationSettings("confluence"),
+      getIntegrationSettings("jira"),
+      getIntegrationSettings("ldap"),
+      getIntegrationSettings("keycloak"),
+    ]).then((vals) => {
+      if (cancelled) return;
+      const ready = [
+        Boolean((vals[0] as any)?.settings?.base_url ?? (vals[0] as any)?.base_url),
+        Boolean((vals[1] as any)?.settings?.base_url ?? (vals[1] as any)?.base_url),
+        Boolean((vals[2] as any)?.settings?.host ?? (vals[2] as any)?.host),
+        Boolean((vals[3] as any)?.settings?.issuer ?? (vals[3] as any)?.issuer),
+      ];
+      setLive(ready.filter(Boolean).length);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  return live;
+}
+
+/**
+ * Left rail: three groups, one accent bar each, and the only navigation on the page.
+ *
+ * The horizontal tab strip it replaces gave every section the same weight and pushed the
+ * content down; a rail keeps the sections visible while you work, groups them by intent
+ * (what the workspace looks like / what it talks to / what it keeps), and has room for the
+ * one number that matters — how many of the four connections are live.
+ */
+function SettingsRail({ visible, active, onSelect, environment, roleLabel }: {
+  visible: { id: string; label: string }[];
+  active: string;
+  onSelect: (id: string) => void;
+  environment: string;
+  roleLabel: string;
+}) {
+  const live = useIntegrationLive();
+  const allowed = new Set(visible.map((v) => v.id));
+
+  const item = (it: { id: string; label: string; icon: React.ReactNode }, compact: boolean) => {
+    const on = active === it.id;
+    return (
+      <button
+        key={it.id}
+        type="button"
+        onClick={() => onSelect(it.id)}
+        aria-current={on ? "page" : undefined}
+        className={[
+          "group flex w-full items-center gap-2.5 rounded-xl text-left transition",
+          compact ? "shrink-0 px-3 py-2 text-xs" : "px-2.5 py-2 text-xs",
+          on
+            ? "bg-card font-semibold text-foreground shadow-xs ring-1 ring-[var(--border)]"
+            : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
+        ].join(" ")}
+      >
+        <span aria-hidden className={on ? "text-[var(--primary)]" : "opacity-70"}>{it.icon}</span>
+        <span className="truncate">{it.label}</span>
+        {it.id === "integrations" && live > 0 && (
+          <span
+            className="ml-auto shrink-0 rounded-full bg-[var(--ok)]/12 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--ok)]"
+            title={`${live} of 4 connections configured`}
+          >
+            {live}/4
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <>
+      {/* Desktop: sticky rail */}
+      <aside className="hidden shrink-0 lg:block lg:w-[224px] lg:sticky lg:top-6">
+        <nav aria-label="Settings sections" className="space-y-5">
+          {SETTINGS_NAV.map((g) => {
+            const items = g.items.filter((it) => allowed.has(it.id));
+            if (!items.length) return null;
+            return (
+              <div key={g.group}>
+                <p className="mb-1.5 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className={`h-[3px] w-4 rounded-full ${GROUP_ACCENT[g.group] ?? "bg-[var(--border)]"}`} aria-hidden />
+                  {g.group}
+                </p>
+                <div className="space-y-0.5">{items.map((it) => item(it, false))}</div>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="mt-5 rounded-xl border border-[var(--border)] bg-card px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Signed in as</p>
+          <p className="mt-1 text-2xs font-semibold text-foreground">{roleLabel}</p>
+          <p className="text-2xs text-muted-foreground">{environment} build</p>
+        </div>
+      </aside>
+
+      {/* Phone / tablet: the same groups, one scrolling row */}
+      <div className="sticky top-0 z-20 -mx-1 overflow-x-auto border-b border-[var(--border)] bg-background/85 py-1.5 backdrop-blur lg:hidden">
+        <nav aria-label="Settings sections (compact)" className="flex items-center gap-1.5 px-1">
+          {visible.map((it) => {
+            const full = SETTINGS_NAV.flatMap((g) => g.items).find((i) => i.id === it.id)!;
+            return item(full, true);
+          })}
+        </nav>
+      </div>
+    </>
+  );
+}
 
 function SectionCard({ icon, title, description, children }: {
   icon: React.ReactNode; iconTone?: string; title: string; description: string; children: React.ReactNode;
@@ -316,50 +435,25 @@ export default function Settings({ role }: { role?: string }) {
           title="Settings"
           description="Manage your workspace, connections, and preferences."
           actions={
-            <div className="flex items-center gap-2">
-              <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground">
-                {environment}
-              </span>
-              <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-2xs font-semibold text-[var(--accent-foreground)]">
-                {roleLabel}
-              </span>
-            </div>
+            <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground">
+              {isAdmin ? "Administrator" : "Personal settings"}
+            </span>
           }
         />
 
-        {/* Landing strip: the four external systems this app depends on, readable
-            without opening the integrations tab first. */}
-        {active !== "integrations" && <IntegrationStrip onOpen={() => setActive("integrations")} />}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
+          <SettingsRail
+            visible={visibleItems}
+            active={active}
+            onSelect={setActive}
+            environment={environment}
+            roleLabel={roleLabel}
+          />
 
-        {/* Tabs — one group visible at a time. Kept as a labelled landmark so the
-            section navigation stays addressable for assistive tech and tests. */}
-        <nav
-          aria-label="Settings sections"
-          className="mb-6 flex items-center gap-1 overflow-x-auto rounded-2xl border border-[var(--border)] bg-muted/25 p-1.5"
-        >
-          {visibleItems.map((it) => (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => setActive(it.id)}
-              aria-current={active === it.id ? "page" : undefined}
-              className={[
-                "flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium transition",
-                active === it.id
-                  ? "bg-card text-foreground shadow-xs ring-1 ring-[var(--border)]"
-                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
-              ].join(" ")}
-            >
-              <span aria-hidden className={active === it.id ? "text-[var(--primary)]" : ""}>{it.icon}</span>
-              {it.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Two-column body: content on the left, the 260px rail on the right. The rail
-            is hidden below ~1100px so the content column keeps the full width. */}
-        <main className="flex flex-1 items-start gap-8">
-          <div className="min-w-0 flex-1 space-y-4">
+          {/* Two-column body inside the rail: content on the left, the 340px aside right.
+              Below xl the aside folds under the content and the column keeps full width. */}
+          <main className="flex min-w-0 flex-1 items-start gap-8">
+            <div className="min-w-0 flex-1 space-y-4">
 
             {active === "general" && (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -640,9 +734,10 @@ export default function Settings({ role }: { role?: string }) {
             {/* The component renders its own Panels (SettingsKit), so it is not wrapped in
                 SectionCard — one card inside another reads as a different page. */}
             {active === "retention" && isAdmin && <DataRetentionSettings />}
-          </div>
+            </div>
 
-        </main>
+          </main>
+        </div>
 
       </div>
     </PageShell>
@@ -654,49 +749,6 @@ export default function Settings({ role }: { role?: string }) {
 ============================================================ */
 
 /** The four connected systems, at a glance, on every settings tab. */
-function IntegrationStrip({ onOpen }: { onOpen: () => void }) {
-  const [cfg, setCfg] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    Promise.all([
-      getIntegrationSettings("confluence"),
-      getIntegrationSettings("jira"),
-      getIntegrationSettings("ldap"),
-      getIntegrationSettings("keycloak"),
-    ]).then((vals) => {
-      const map: Record<string, any> = {};
-      vals.forEach((v: any, i) => { map[["confluence", "jira", "ldap", "keycloak"][i]] = v?.settings ?? v; });
-      setCfg(map);
-    }).catch(() => {});
-  }, []);
-
-  const rows = [
-    { key: "confluence", name: "Confluence", ready: Boolean(cfg.confluence?.base_url) },
-    { key: "jira", name: "Jira", ready: Boolean(cfg.jira?.base_url) },
-    { key: "ldap", name: "Active Directory", ready: Boolean(cfg.ldap?.host) },
-    { key: "keycloak", name: "Keycloak SSO", ready: Boolean(cfg.keycloak?.issuer) },
-  ];
-
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      {rows.map((r) => (
-        <button
-          key={r.key}
-          type="button"
-          onClick={onOpen}
-          title={r.ready ? `${r.name} is configured` : `${r.name} is not configured yet — open Integrations`}
-          className="tap inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-card px-3 py-1.5 text-2xs font-medium transition hover:border-[var(--primary)]/40 hover:bg-muted/40"
-        >
-          <IntegrationLogo providerKey={r.key} name={r.name} size="sm" className="size-4 shrink-0" />
-          <span className="text-foreground">{r.name}</span>
-          <span className={["size-1.5 rounded-full", r.ready ? "bg-[var(--ok)]" : "bg-[var(--border)]"].join(" ")} />
-          <span className="text-muted-foreground">{r.ready ? "Connected" : "Not set"}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function IntegrationStatusCards() {
   const [services, setServices] = useState<any[]>([]);
   const [cfg, setCfg] = useState<Record<string, any>>({});
