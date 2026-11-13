@@ -20,6 +20,7 @@ import { ReportActions } from "@/shared/ReportActions";
 import { listUsers } from "@/features/users/api";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 /**
  * ConversationHistory — v0.21.75/79, restyled to the workspace mockup.
@@ -386,7 +387,7 @@ export default function ConversationHistoryPage() {
           />
         </section>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0">
           {/* List table — USER · CONVERSATION · MSGS · LAST ACTIVITY, as in the mockup. */}
           <section data-slot="card" className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
             <div className="flex items-center justify-between gap-3 px-5 py-4">
@@ -579,11 +580,15 @@ export default function ConversationHistoryPage() {
             </div>
           </section>
 
-          {/* Detail side panel — header (user · "Conversation transcript" · close), then the
-              conversation title, its meta line and the two exports, then the transcript. */}
-          <div className="hidden lg:block">
-            <div data-slot="card" className="sticky top-6 flex h-[calc(100vh-9rem)] max-h-[640px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
-              {detail ? (
+        </div>
+
+        {/* The transcript used to live in a 380px rail that said "Select a conversation"
+            until a row was clicked — a permanent empty column. It is a dialog now: closed
+            by default, opened by the row, dismissed with Esc or the backdrop. */}
+        <Dialog open={!!detail} onOpenChange={(open) => { if (!open) closeDetail(); }}>
+          <DialogContent className="flex max-h-[min(86dvh,calc(100dvh-1.5rem))] w-[94vw] max-w-[min(960px,94vw)] flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-0 shadow-2xl sm:max-w-[min(960px,94vw)]">
+            <DialogTitle className="sr-only">Conversation transcript</DialogTitle>
+              {detail && (
                 <>
                   <div className="border-b border-[var(--border)] px-5 py-4">
                     <div className="flex items-center justify-between gap-2">
@@ -713,20 +718,9 @@ export default function ConversationHistoryPage() {
                     </div>
                   )}
                 </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-                  <span className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
-                    <MessagesSquare className="size-6" />
-                  </span>
-                  <div className="text-xs font-semibold">Select a conversation</div>
-                  <p className="max-w-[240px] text-2xs leading-relaxed text-muted-foreground">
-                    Click any row in the list to read the full transcript here.
-                  </p>
-                </div>
               )}
-            </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         <p className="text-2xs leading-relaxed text-muted-foreground">
           Transcripts are read-only. Exports contain exactly the messages stored for the

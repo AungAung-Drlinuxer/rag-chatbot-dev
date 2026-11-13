@@ -193,16 +193,20 @@ describe("ConversationHistoryPage — empty vs error", () => {
 });
 
 describe("ConversationHistoryPage — transcript panel", () => {
-  it("starts on the select-a-conversation placeholder", async () => {
+  it("starts with the transcript dialog closed and no placeholder column", async () => {
     const el = await mount();
-    expect(el.textContent).toContain("Select a conversation");
-    expect(el.textContent).not.toContain("Export .txt");
+    // The permanent "Select a conversation" rail is gone: nothing is rendered until a row
+    // is opened, so the list owns the full width.
+    expect(document.body.textContent).not.toContain("Select a conversation");
+    expect(document.body.textContent).not.toContain("Export .txt");
+    expect(el.textContent).toContain("Conversations");
   });
 
   it("opens the transcript with its meta line, both exports and the messages", async () => {
     const el = await mount();
     await click(el.querySelector("tbody tr"));
-    const text = el.textContent!;
+    // The transcript is a dialog, rendered through a portal — assert on the document.
+    const text = document.body.textContent!;
     expect(text).toContain("Conversation transcript");
     expect(text).toContain("Reset my password and re-sync my MFA token?");
     expect(text).toContain("6 messages");
@@ -218,7 +222,7 @@ describe("ConversationHistoryPage — transcript panel", () => {
     m.adminConversationMessages.mockRejectedValue(new Error("messages 500"));
     const el = await mount();
     await click(el.querySelector("tbody tr"));
-    expect(el.textContent).toContain("Could not load this transcript");
-    expect(el.textContent).toContain("messages 500");
+    expect(document.body.textContent).toContain("Could not load this transcript");
+    expect(document.body.textContent).toContain("messages 500");
   });
 });
