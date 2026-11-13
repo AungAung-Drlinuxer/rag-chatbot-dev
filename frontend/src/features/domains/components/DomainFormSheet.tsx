@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
   type ClassifierDomainItem,
   createClassifierDomain,
@@ -360,6 +361,20 @@ export function DomainFormSheet({
                 <span>{serverError}</span>
               </div>
             )}
+
+            {/* A domain is the join between knowledge and tickets: Confluence supplies the
+                answers, Jira receives what a domain cannot answer. Official marks, not
+                generic icons, so the two systems are recognisable at a glance. */}
+            <div className="flex flex-wrap items-center gap-2 lg:col-span-12">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-muted/40 px-2 py-1 text-2xs font-medium text-muted-foreground">
+                <IntegrationLogo providerKey="confluence" name="Confluence" size="sm" className="size-3.5 shrink-0" />
+                Confluence knowledge
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-muted/40 px-2 py-1 text-2xs font-medium text-muted-foreground">
+                <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="size-3.5 shrink-0" />
+                {jiraProject ? `Jira project ${jiraProject}` : "Jira project not linked"}
+              </span>
+            </div>
 
             <div className="space-y-5 lg:col-span-7">
             {/* ---------- identity ---------- */}

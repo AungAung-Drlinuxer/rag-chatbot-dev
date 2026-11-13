@@ -1563,7 +1563,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
           <InputField label="Password" value={password} onChange={setPassword} placeholder="Minimum 8 characters" type="password" />
           <div className="rounded-xl bg-[var(--accent)] p-3 text-2xs leading-4 text-[var(--accent-foreground)]">
             <div className="flex gap-2">
-              <Shield className="mt-0.5 size-3.5 shrink-0" />
+              <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="mt-0.5 size-3.5 shrink-0" />
               <span>LDAP / AD users should normally be synchronized from Active Directory. Their passwords are managed by AD.</span>
             </div>
           </div>

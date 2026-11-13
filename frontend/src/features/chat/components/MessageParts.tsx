@@ -3,9 +3,10 @@
  * ChatPage.tsx (v1.6.68) so the page file stops carrying them.
  */
 import { useState } from "react";
-import { Check, Copy, ExternalLink, FileText, Sparkles, Ticket } from "lucide-react";
+import { Check, Copy, ExternalLink, Sparkles } from "lucide-react";
 
 import { type Source } from "@/features/chat/model";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { groupedReferenceLabel } from "@/features/chat/sources";
 
 export function ConfidenceBadge({ confidence }: { confidence: number }) {
@@ -147,7 +148,16 @@ export function SourceCard({
           ].join(" ")}
           title={source.space ? `${collection} - ${index} · ${source.space}` : `${collection} - ${index}`}
         >
-          {source.page_id ? <FileText className="size-2.5" aria-hidden /> : <Ticket className="size-2.5" aria-hidden />}
+          {/* The official mark of the system the answer came from — Confluence for a
+              knowledge page, Jira for a ticket lookup — instead of a generic glyph. */}
+          <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-white p-[1.5px]">
+            <IntegrationLogo
+              providerKey={source.page_id ? "confluence" : "jira"}
+              name={source.page_id ? "Confluence" : "Jira"}
+              size="sm"
+              className="size-3"
+            />
+          </span>
           {collection} - {index}
         </span>
         <span
