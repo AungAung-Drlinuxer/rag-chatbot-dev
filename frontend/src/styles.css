@@ -1735,6 +1735,20 @@ table tbody tr {
   pointer-events: none;
   transition: left 90ms ease, top 90ms ease, width 90ms ease, height 90ms ease;
 }
+.board-surface__badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-md);
+}
 .board-surface__grip {
   position: absolute;
   inset: 0 0 auto 0;
@@ -1781,25 +1795,25 @@ table tbody tr {
 }
 .board-surface__resize--e {
   top: 10px;
-  bottom: 16px;
-  right: -2px;
-  width: 4px;
-  border-radius: 2px;
+  bottom: 18px;
+  right: 0;
+  width: 10px;
+  border-radius: 3px;
   cursor: ew-resize;
 }
 .board-surface__resize--s {
   left: 10px;
-  right: 16px;
-  bottom: -2px;
-  height: 4px;
-  border-radius: 2px;
+  right: 18px;
+  bottom: 0;
+  height: 10px;
+  border-radius: 3px;
   cursor: ns-resize;
 }
 .board-surface__resize--se {
-  right: 2px;
-  bottom: 2px;
-  width: 16px;
-  height: 16px;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
   border-right: 3px solid var(--primary);
   border-bottom: 3px solid var(--primary);
   border-bottom-right-radius: 8px;

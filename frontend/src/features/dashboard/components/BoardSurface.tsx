@@ -237,8 +237,9 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
     height: r.h * GRID_ROW_HEIGHT + (r.h - 1) * GRID_GAP,
   });
 
-  const ghostId = live && live.mode === "move" ? live.id : null;
+  const ghostId = live?.id ?? null;
   const ghostRect = ghostId ? shown[ghostId] : null;
+  const badge = ghostRect && live ? `${ghostRect.w} × ${ghostRect.h}` : null;
 
   return (
     <div
@@ -247,16 +248,28 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
       style={{ height: geometry.height }}
     >
       {editing && ghostRect && (
-        <div className="board-surface__ghost" style={box(ghostRect)} aria-hidden />
+        <div className="board-surface__ghost" style={box(ghostRect)} aria-hidden>
+          {badge && <span className="board-surface__badge">{badge}</span>}
+        </div>
       )}
 
       {panels.map((panel) => {
         const r = shown[panel.id];
         if (!r) return <div key={panel.id} data-panel={panel.id} hidden />;
         const held = live?.id === panel.id;
+        const moving = held && live.mode === "move";
+        const sizing = held && live.mode !== "move";
         const style: React.CSSProperties = {
           ...box(r),
-          ...(held ? { transform: `translate3d(${live.dx}px, ${live.dy}px, 0)` } : null),
+          ...(moving ? { transform: `translate3d(${live.dx}px, ${live.dy}px, 0)` } : null),
+          /* Resize tracks the pointer too, not just the cell it will snap to — a handle that
+             only jumps in 93px steps reads as "stuck". */
+          ...(sizing
+            ? {
+                width: Math.max(80, box(r).width as number + (live.mode === "resize-s" ? 0 : live.dx)),
+                height: Math.max(60, box(r).height as number + (live.mode === "resize-e" ? 0 : live.dy)),
+              }
+            : null),
         };
         return (
           <div
