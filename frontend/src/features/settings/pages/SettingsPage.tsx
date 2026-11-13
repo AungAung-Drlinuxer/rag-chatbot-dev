@@ -529,16 +529,16 @@ export default function Settings({ role }: { role?: string }) {
                               className={[
                                 "flex h-12 w-full gap-1 overflow-hidden rounded-lg border p-1",
                                 option === "dark"
-                                  ? "border-[#2A2F38] bg-[#0A0B0D]"
+                                  ? "border-[#1F4150] bg-[#071318]"
                                   : "border-[#E3E1EA] bg-[#F7F8FC]",
                               ].join(" ")}
                               aria-hidden
                             >
-                              <span className={["w-3 rounded-sm", option === "dark" ? "bg-[#121417]" : "bg-gradient-to-b from-[#7C3AED] to-[#5B21B6]"].join(" ")} />
+                              <span className={["w-3 rounded-sm", option === "dark" ? "bg-[#0C1D24]" : "bg-gradient-to-b from-[#7C3AED] to-[#5B21B6]"].join(" ")} />
                               <span className="flex flex-1 flex-col gap-1">
-                                <span className={["h-1.5 w-2/3 rounded-sm", option === "dark" ? "bg-[#10B981]" : "bg-[#C4B5FD]"].join(" ")} />
-                                <span className={["h-1.5 w-full rounded-sm", option === "dark" ? "bg-[#20242B]" : "bg-[#E3E1EA]"].join(" ")} />
-                                <span className={["h-1.5 w-4/5 rounded-sm", option === "dark" ? "bg-[#20242B]" : "bg-[#E3E1EA]"].join(" ")} />
+                                <span className={["h-1.5 w-2/3 rounded-sm", option === "dark" ? "bg-[#06B6D4]" : "bg-[#C4B5FD]"].join(" ")} />
+                                <span className={["h-1.5 w-full rounded-sm", option === "dark" ? "bg-[#17323F]" : "bg-[#E3E1EA]"].join(" ")} />
+                                <span className={["h-1.5 w-4/5 rounded-sm", option === "dark" ? "bg-[#17323F]" : "bg-[#E3E1EA]"].join(" ")} />
                               </span>
                             </span>
                             <span className="mt-1 flex items-center gap-1 px-0.5 text-2xs font-medium capitalize text-foreground">
