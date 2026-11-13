@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen, CheckCircle2, ExternalLink, Info, KeyRound, Loader2, Loader as LoaderIcon, Lock,
-  Pencil, Plug, Save, Search, ShieldCheck, Ticket, Trash2, Users, XCircle,
+  Pencil, Save, Search, ShieldCheck, Ticket, Trash2, Users, XCircle,
   Eye, EyeOff, ChevronRight,
 } from "lucide-react";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -246,57 +246,6 @@ function StatusChip({ configured, enabled }: { configured?: boolean; enabled?: b
     >
       <span className="size-1.5 rounded-full bg-[var(--warn)]" aria-hidden /> Not set up
     </span>
-  );
-}
-
-/** The count strip above the catalogue: one number, one bar, one way out. */
-function IntegrationSummary({ onCount, total, connected, personal, action }: {
-  onCount: number;
-  total: number;
-  connected: number;
-  personal: boolean;
-  action?: React.ReactNode;
-}) {
-  const pct = total === 0 ? 0 : Math.round((onCount / total) * 100);
-  return (
-    <section data-slot="card" className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-          <Plug className="size-4" aria-hidden />
-        </span>
-        <div className="min-w-0">
-        <p className="text-sm font-semibold leading-tight">
-          {onCount} of {total} integrations enabled
-        </p>
-        <div className="mt-2 flex items-center gap-2.5">
-          <div
-            className="h-1.5 w-36 overflow-hidden rounded-full bg-[var(--muted)]"
-            role="progressbar"
-            aria-valuenow={onCount}
-            aria-valuemin={0}
-            aria-valuemax={total}
-          >
-            <div
-              className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span
-            className="text-2xs text-muted-foreground"
-            title="Configured = credentials stored on the server. In use = you have this tool switched on."
-          >
-            {connected} configured · {onCount} in use
-          </span>
-        </div>
-        <p className="mt-1.5 text-2xs text-muted-foreground">
-          {personal
-            ? "Your choice is saved to your own account."
-            : "A provider you switch on gets a configuration panel below."}
-        </p>
-        </div>
-      </div>
-      {action}
-    </section>
   );
 }
 
@@ -643,6 +592,8 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
   onConfigure: (key: ProviderKey) => void;
   personal: boolean;
 }) {
+  // Admin: a switch would be a lie — credentials either exist (in use) or they do not.
+  // Personal: the same tools, and the person picks which ones to keep in their workspace.
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | "All">("All");
 
@@ -716,12 +667,14 @@ function Catalog({ enabled, status, onToggle, onConfigure, personal }: {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold leading-snug text-foreground">{p.name}</p>
-                    <div className="flex shrink-0 flex-col items-center gap-0.5">
-                      <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
-                      <span className={["text-[11px] font-medium uppercase tracking-wide", on ? "text-[var(--primary)]" : "text-muted-foreground/70"].join(" ")}>
-                        {on ? "On" : "Off"}
-                      </span>
-                    </div>
+                    {personal && (
+                      <div className="flex shrink-0 flex-col items-center gap-0.5">
+                        <Switch on={on} onChange={(next) => onToggle(p.key, next)} label={`Enable ${p.name}`} />
+                        <span className={["text-[11px] font-medium uppercase tracking-wide", on ? "text-[var(--primary)]" : "text-muted-foreground/70"].join(" ")}>
+                          {on ? "On" : "Off"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.tagline}</p>
                   <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
@@ -831,7 +784,15 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
 
   const markConfigured = useCallback((key: ProviderKey, configured: boolean) => {
     setStatus((prev) => (prev[key] === configured ? prev : { ...prev, [key]: configured }));
-  }, []);
+    if (!configured || personal) return;
+    // Saving credentials turns the integration on — the two states are the same fact.
+    setEnabled((prev) => {
+      if (prev[key]) return prev;
+      const merged = { ...prev, [key]: true };
+      void persist(merged);
+      return merged;
+    });
+  }, [personal]);
 
   // Probe every provider once so the catalogue can show real Configured / Needs setup
   // states. Ten small GETs on open beats showing a placeholder that looks like an answer.
@@ -844,10 +805,18 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       }),
     ).then((rows) => {
       if (cancelled) return;
-      setStatus((prev) => {
-        const next = { ...prev };
-        for (const r of rows) if (r.status === "fulfilled") next[r.value[0]] = r.value[1];
-        return next;
+      const next: Record<string, boolean> = {};
+      for (const r of rows) if (r.status === "fulfilled") next[r.value[0]] = r.value[1];
+      setStatus((prev) => ({ ...prev, ...next }));
+      if (personal) return; // a member still chooses which tools to keep in their workspace
+      // Configured is the switch. Without this, a working install read "0 of 4 enabled"
+      // while three providers had credentials — the count contradicted the cards.
+      setEnabled((prev) => {
+        const merged = { ...prev };
+        for (const [key, configured] of Object.entries(next)) if (configured) merged[key] = true;
+        const changed = Object.keys(merged).length !== Object.keys(prev).length;
+        if (changed) void persist(merged);
+        return changed ? merged : prev;
       });
     });
     return () => { cancelled = true; };
@@ -880,7 +849,6 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
     void persist(map);
   }
 
-  const enabledList = PROVIDERS.filter((p) => enabled[p.key]);
   const activeProvider = selected ? BY_KEY[selected] : null;
 
   if (loading) {
@@ -902,13 +870,6 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       {/* The catalogue is the page. There is no browse mode to enter or leave: the count,
           the search and every provider stay in front of you, and switching one on opens its
           panel below the list rather than taking the list away. */}
-      <IntegrationSummary
-        onCount={enabledList.length}
-        total={PROVIDERS.length}
-        connected={Object.values(status).filter(Boolean).length}
-        personal={personal}
-      />
-
       <Catalog
         enabled={enabled}
         status={status}

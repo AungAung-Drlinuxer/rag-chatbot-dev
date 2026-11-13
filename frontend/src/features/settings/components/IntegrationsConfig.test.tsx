@@ -76,9 +76,10 @@ describe("Settings → Integrations", () => {
     const el = await mount();
     expect(el.textContent).not.toContain("Close catalogue");
     expect(el.textContent).not.toContain("Browse integrations");
-    // Every provider card is still there with its switch, so the list is the page.
+    // Every provider card is still there, so the list is the page. An admin gets no
+    // switches: credentials are the switch.
     expect(el.querySelectorAll("[data-integration]").length).toBe(4);
-    expect(el.querySelectorAll("[data-integration] button[role=\"switch\"]").length).toBe(4);
+    expect(el.querySelectorAll("[data-integration] button[role=\"switch\"]").length).toBe(0);
   });
 
   it("shows the configuration panel under the list instead of replacing it", async () => {
@@ -95,6 +96,9 @@ describe("Settings → Integrations", () => {
     expect(text).toContain("Jira");
     expect(text).toContain("LDAP / Active Directory");
     expect(text).toContain("Keycloak SSO");
-    expect(text).toContain("4 of 4 integrations enabled");
+    // The count strip ("0 of 4 integrations enabled / 3 configured · 0 in use") is gone:
+    // it contradicted the cards, which already say Configured or Not set up.
+    expect(text).not.toContain("integrations enabled");
+    expect(text).not.toContain("configured · ");
   });
 });
