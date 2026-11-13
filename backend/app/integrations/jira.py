@@ -24,6 +24,8 @@ _CREATE_PATH = "/secure/CreateIssueDetails!init.jspa"
 # shows "configured" while escalate() still saw empty env vars and silently
 # skipped Jira (tickets saved local-only with jira_key=NULL).
 import time as _time
+from contextvars import ContextVar
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,40 @@ def reload_jira_cfg() -> None:
     _JIRA_CFG_CACHE, _JIRA_CFG_AT = None, 0.0
 
 
+# The site a request is acting on. A ContextVar keeps every helper (`_auth_header`,
+# `_create_via_jsm`, `assign_issue`, …) unchanged while letting one call target HQ Jira and
+# the next target the local one — without leaking between concurrent requests.
+_ACTIVE_CONN: ContextVar[dict | None] = ContextVar("jira_active_conn", default=None)
+
+
+@contextmanager
+def use_connection(conn: dict | None):
+    """Bind a connection for the duration of a block (no-op for None)."""
+    if not conn:
+        yield
+        return
+    token = _ACTIVE_CONN.set(conn)
+    try:
+        yield
+    finally:
+        _ACTIVE_CONN.reset(token)
+
+
+def _conn_cfg(conn: dict) -> dict:
+    return {
+        "base_url": str(conn.get("base_url") or ""),
+        "email": str(conn.get("email") or ""),
+        "api_token": str(conn.get("api_token") or ""),
+        "project": str(conn.get("project_key") or ""),
+        "service_desk_id": str(conn.get("service_desk_id") or SETTINGS.jira_service_desk_id or ""),
+        "request_types": conn.get("request_types") or SETTINGS.jira_request_types,
+    }
+
+
 def _jira_cfg() -> dict:
+    conn = _ACTIVE_CONN.get()
+    if conn:
+        return _conn_cfg(conn)
     global _JIRA_CFG_CACHE, _JIRA_CFG_AT
     now = _time.time()
     if _JIRA_CFG_CACHE is not None and (now - _JIRA_CFG_AT) < _JIRA_CFG_TTL:
@@ -124,11 +159,57 @@ def domain_project(domain: str | None) -> str:
         return ""
 
 
+def domain_connection_id(provider: str, domain: str | None) -> int | None:
+    """Which site this domain's tickets belong to (NULL = the default one)."""
+    key = (domain or "").strip().lower()
+    if not key:
+        return None
+    col = "jira_connection_id" if provider == "jira" else "confluence_connection_id"
+    try:
+        from sqlalchemy import text
+
+        from app.persistence.database import SessionLocal
+
+        with SessionLocal() as s:
+            return s.execute(text(
+                f"SELECT {col} FROM classifier_domains "
+                "WHERE lower(domain_key) = :k AND is_active = true"
+            ), {"k": key}).scalar()
+    except Exception:
+        return None
+
+
+def connection_for(domain: str | None) -> dict | None:
+    """The Jira connection a domain escalates through, else the first active one."""
+    from app.integrations.connections import effective_connections, get_connection
+
+    cid = domain_connection_id("jira", domain)
+    if cid:
+        conn = get_connection(int(cid))
+        if conn:
+            return conn
+    conns = effective_connections("jira")
+    return conns[0] if conns else None
+
+
 def escalate(summary: str, description: str, reporter=None,
              project=None, assignee=None, domain=None) -> dict:
+    """Create a ticket on the domain's Jira site (falls back to the default site)."""
+    return _escalate_with(connection_for(domain), summary, description,
+                          reporter=reporter, project=project, assignee=assignee, domain=domain)
+
+
+def _escalate_with(conn, summary: str, description: str, reporter=None,
+                   project=None, assignee=None, domain=None) -> dict:
     """Create a Jira ticket via JSM API (preferred) or issue REST (fallback)."""
+    with use_connection(conn):
+        return _escalate_locked(conn, summary, description, reporter, project, assignee, domain)
+
+
+def _escalate_locked(conn, summary: str, description: str, reporter=None,
+                     project=None, assignee=None, domain=None) -> dict:
     cfg = _jira_cfg()
-    project = project or domain_project(domain) or None
+    project = project or domain_project(domain) or (conn.get("project_key") if conn else "") or None
     if not cfg["base_url"]:
         return {"link": build_create_link(summary, description), "mode": "link",
                 "jira_key": None, "reporter": reporter}

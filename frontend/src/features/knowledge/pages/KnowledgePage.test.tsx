@@ -33,6 +33,7 @@ vi.mock("@/features/knowledge/api", () => ({
   articleDraft: vi.fn(),
   listRecentArticles: vi.fn(),
   listArticleSources: vi.fn(),
+  listArticleSpaces: vi.fn(),
 }));
 
 vi.mock("@/features/domains/api", () => ({
@@ -79,6 +80,7 @@ function happyPath() {
   // One provider genuinely contributed rows. The old figure was the length of a hardcoded
   // array, which reported "2 sources" on an install where only Confluence was configured.
   m.listArticleSources.mockResolvedValue({ sources: [{ key: "confluence", label: "Confluence", count: 12 }] });
+  m.listArticleSpaces.mockResolvedValue({ spaces: [{ key: "IHKB", count: 12 }] });
   m.searchArticles.mockResolvedValue({ data: { articles: [{ title: "VPN fix", domain: "database", source_url: "" }] } });
   m.triggerSync.mockResolvedValue({ status: 200, data: { queued: true } });
   m.bulkMoveArticles.mockResolvedValue({ status: 200, data: { moved: 1 } });

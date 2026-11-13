@@ -342,3 +342,69 @@ export async function getSetupReadiness(): Promise<SetupReadiness> {
   if (!r.ok) throw new Error(`setup readiness failed: ${r.status}`);
   return r.json();
 }
+
+// --- Multi-site connections (v1.11.28) --------------------------------------
+// One row per Confluence/Jira site. The legacy `settings/integrations/{key}` object is the
+// single-site path and still works; these endpoints are what the Sites list uses.
+export type Connection = {
+  id: number;
+  provider: "confluence" | "jira";
+  label: string;
+  base_url: string;
+  email: string;
+  cloud_id: string;
+  spaces: string[];
+  project_key: string;
+  active: boolean;
+  last_sync_at: string | null;
+  last_error: string | null;
+  token_set?: boolean;
+};
+
+export async function listConnections(provider: "confluence" | "jira"): Promise<{ connections: Connection[] }> {
+  const r = await apiFetch(`${BASE}/api/settings/connections?provider=${provider}`, {
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function createConnection(payload: Partial<Connection> & { api_token?: string }) {
+  const r = await apiFetch(`${BASE}/api/settings/connections`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body?.detail || `HTTP ${r.status}`);
+  return body;
+}
+
+export async function updateConnection(id: number, payload: Partial<Connection> & { api_token?: string }) {
+  const r = await apiFetch(`${BASE}/api/settings/connections/${id}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body?.detail || `HTTP ${r.status}`);
+  return body;
+}
+
+export async function deleteConnection(id: number, label: string) {
+  const r = await apiFetch(
+    `${BASE}/api/settings/connections/${id}?confirm=${encodeURIComponent(label)}`,
+    { method: "DELETE", headers: authHeaders() },
+  );
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function testConnection(id: number): Promise<{ ok: boolean; status: number | null; detail: string }> {
+  const r = await apiFetch(`${BASE}/api/settings/connections/${id}/test`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}

@@ -17,11 +17,41 @@ _TEXTLIKE = (".md", ".txt", ".pdf", ".docx")
 
 
 def load_confluence() -> list[dict]:
+    """Every configured Confluence site × every space it declares.
+
+    A failure on one site must not empty the KB of the others, so each site/space pair is
+    isolated. Page ids are prefixed with the connection id for non-default sites: Atlassian
+    page ids are per-instance, so the same number can exist on two sites and would otherwise
+    overwrite the other's row and vectors.
+    """
+    from app.integrations.connections import effective_connections
+
     articles: list[dict] = []
-    for space in _confluence_space_keys():
-        for a in _fetch_confluence(space):
-            a["domain"] = a.get("domain") or space.lower()
-            articles.append(a)
+    conns = effective_connections("confluence")
+    if not conns:
+        # Nothing configured at all — keep the legacy path's behaviour (no articles).
+        return articles
+
+    for conn in conns:
+        spaces = conn.get("spaces") or []
+        if isinstance(spaces, str):
+            spaces = [x.strip() for x in spaces.split(",") if x.strip()]
+        for space in spaces:
+            try:
+                fetched = _fetch_confluence(space, conn)
+            except Exception as exc:  # one site's token/URL must not stop the rest
+                logger.warning(
+                    "confluence %s / %s failed: %s", conn.get("label"), space, exc
+                )
+                continue
+            for a in fetched:
+                a.setdefault("domain", space.lower())
+                a["space_key"] = space
+                a["connection_id"] = conn.get("id")
+                a["site"] = a.get("site") or conn.get("site") or ""
+                if conn.get("id"):
+                    a["page_id"] = f"c{conn['id']}:{a['page_id']}"
+                articles.append(a)
     return articles
 
 

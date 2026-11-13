@@ -82,7 +82,7 @@ def space_keys() -> list[str]:
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
-def _fetch_confluence_rest(space_key: str) -> list[dict]:
+def _fetch_confluence_rest(space_key: str, conn: dict | None = None) -> list[dict]:
     """CQL-filtered Confluence REST fetcher using email + API-token Basic auth.
 
     Safety: only pulls pages tagged 'approved' + 'chatbot-safe' (excludes restricted/internal-only/on-call).
@@ -97,7 +97,9 @@ def _fetch_confluence_rest(space_key: str) -> list[dict]:
     #    GET https://api.atlassian.com/ex/confluence/{cloudId}/wiki/rest/api/content/search
     # B) Direct tenant URL with Basic auth (legacy / non-Cloud):
     #    GET https://{tenant}/wiki/rest/api/content/search
-    cfg = confluence_cfg()
+    # A connection (one Confluence site + its token) wins over the legacy single row. The
+    # fallback keeps an install that has not created connections working unchanged.
+    cfg = conn if conn is not None else confluence_cfg()
     cloud_id = (cfg.get("cloud_id") or "").strip()
     token = (cfg.get("api_token") or "").strip()
     if not token:
@@ -177,6 +179,8 @@ def _fetch_confluence_rest(space_key: str) -> list[dict]:
                         if webui else f"{api_root}/spaces/{space_key}/pages/{page_id}"
                     ),
                     "space_key": space_key,
+                    "connection_id": cfg.get("id"),
+                    "site": _site(str(cfg.get("base_url") or api_root)),
                     "body": body_text,
                 })
             next_link = payload.get("_links", {}).get("next")
@@ -205,8 +209,19 @@ def _html_to_text(html: str) -> str:
     return text
 
 
-def fetch_space(space_key: str) -> list[dict]:
+def _site(base_url: str) -> str:
+    """Host name, used to attribute an article to the site it came from."""
+    from urllib.parse import urlparse
+
+    try:
+        return urlparse(base_url if "//" in base_url else f"https://{base_url}").hostname or ""
+    except Exception:
+        return ""
+
+
+def fetch_space(space_key: str, conn: dict | None = None) -> list[dict]:
     """Return Confluence articles for a space. No mock fallback — Confluence is the only KB source (v0.16.0)."""
-    if confluence_cfg().get("base_url") and confluence_cfg().get("api_token"):
-        return _fetch_confluence_rest(space_key)
+    cfg = conn if conn is not None else confluence_cfg()
+    if (cfg.get("base_url") or cfg.get("cloud_id")) and cfg.get("api_token"):
+        return _fetch_confluence_rest(space_key, cfg)
     return []

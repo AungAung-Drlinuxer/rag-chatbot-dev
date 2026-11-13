@@ -197,6 +197,34 @@ def init_db() -> None:
         # can be re-classified away from the space name, so it cannot stand in for this.
         ("kb_meta.space_key",
          "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS space_key VARCHAR(64)"),
+        # Multi-site integrations: one row per Confluence/Jira site and its token.
+        ("integration_connections",
+         """CREATE TABLE IF NOT EXISTS integration_connections (
+                id SERIAL PRIMARY KEY,
+                provider VARCHAR(32) NOT NULL,
+                label VARCHAR(120) NOT NULL,
+                base_url VARCHAR(512) NOT NULL,
+                email VARCHAR(255),
+                api_token TEXT,
+                cloud_id VARCHAR(64),
+                spaces TEXT,
+                project_key VARCHAR(32),
+                active BOOLEAN DEFAULT TRUE,
+                last_sync_at TIMESTAMPTZ,
+                last_error TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                UNIQUE (provider, base_url)
+            )"""),
+        ("integration_connections.site_uniq",
+         "CREATE UNIQUE INDEX IF NOT EXISTS integration_connections_site_uniq "
+         "ON integration_connections (provider, base_url)"),
+        ("kb_meta.connection_id",
+         "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS connection_id INTEGER"),
+        ("kb_meta.site", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS site VARCHAR(255)"),
+        ("classifier_domains.confluence_connection_id",
+         "ALTER TABLE classifier_domains ADD COLUMN IF NOT EXISTS confluence_connection_id INTEGER"),
+        ("classifier_domains.jira_connection_id",
+         "ALTER TABLE classifier_domains ADD COLUMN IF NOT EXISTS jira_connection_id INTEGER"),
         # HNSW index for fast cosine search (needs pgvector >= 0.5).
         (
             "langchain_pg_embedding HNSW index",

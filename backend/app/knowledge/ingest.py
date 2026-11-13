@@ -45,7 +45,8 @@ def _delete_vectors(page_id: str) -> None:
 
 def _upsert_meta(page_id: str, chash: str, domain: str, title: str, source_url: str,
                  body: str | None = None, updated_by: str | None = None,
-                 space_key: str | None = None) -> None:
+                 space_key: str | None = None, connection_id: int | None = None,
+                 site: str | None = None) -> None:
     with SessionLocal() as s:
         meta = s.get(KbMeta, page_id) or KbMeta(page_id=page_id)
         meta.content_hash = chash
@@ -58,6 +59,10 @@ def _upsert_meta(page_id: str, chash: str, domain: str, title: str, source_url: 
             meta.updated_by = updated_by
         if space_key:
             meta.space_key = space_key
+        if connection_id:
+            meta.connection_id = connection_id
+        if site:
+            meta.site = site
         meta.last_synced = datetime.now(UTC)
         s.add(meta)
         s.commit()
@@ -155,6 +160,9 @@ def ingest_article(art: dict) -> str:
         "source_url": art["source_url"],
         "content_hash": chash,
         "chunk_index": str(i),
+        "space_key": str(art.get("space_key") or ""),
+        "site": str(art.get("site") or ""),
+        "connection_id": str(art.get("connection_id") or ""),
         **extra_meta,
     } for i in range(len(chunks))]
 
@@ -164,7 +172,8 @@ def ingest_article(art: dict) -> str:
     if texts:
         add_texts(texts, metadatas=metadatas)
     _upsert_meta(art["page_id"], chash, art["domain"], art["title"], art.get("source_url") or "",
-                 space_key=art.get("space_key"),
+                 space_key=art.get("space_key"), connection_id=art.get("connection_id"),
+                 site=art.get("site"),
                  body=art.get("body"), updated_by=art.get("updated_by"))
 
     try:

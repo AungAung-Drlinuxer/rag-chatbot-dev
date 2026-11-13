@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, ChevronRight,
 } from "lucide-react";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
+import { ConnectionsCard } from "@/features/settings/components/ConnectionsCard";
 import {
   deleteIntegrationSettings, getIntegrationSettings, getMySettings, putIntegrationSettings, testIntegration, updateMySettings,
 } from "@/features/settings/api";
@@ -574,6 +575,12 @@ function ProviderEditor({ provider, onConfigured }: {
           ))
         )}
       </div>
+
+      {(provider.key === "confluence" || provider.key === "jira") && (
+        <div className="border-t border-[var(--border)] px-5 py-3">
+          <ConnectionsCard provider={provider.key} />
+        </div>
+      )}
 
       {/* actions */}
       <footer className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] px-5 py-3">

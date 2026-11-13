@@ -1,0 +1,237 @@
+import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+
+import {
+  createConnection,
+  deleteConnection,
+  listConnections,
+  testConnection,
+  updateConnection,
+  type Connection,
+} from "@/features/settings/api";
+import { IntegrationLogo } from "./IntegrationLogo";
+
+/**
+ * Sites for one provider.
+ *
+ * A token belongs to exactly one Atlassian site, so an estate with its own Confluence and
+ * an HQ one needs two rows here — not two fields in one form. Each row owns its URL, its
+ * account and its spaces, and can be tested on its own, which is the only way to tell
+ * "HQ is down" apart from "the knowledge base is empty".
+ */
+export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" }) {
+  const [rows, setRows] = useState<Connection[] | null>(null);
+  const [editing, setEditing] = useState<Connection | "new" | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await listConnections(provider);
+      setRows(res.connections ?? []);
+    } catch {
+      setRows([]);
+    }
+  }, [provider]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  function startNew() {
+    setEditing("new");
+    setForm(provider === "confluence"
+      ? { label: "", base_url: "", email: "", api_token: "", cloud_id: "", spaces: "" }
+      : { label: "", base_url: "", email: "", api_token: "", project_key: "" });
+    setNotice(null);
+  }
+
+  function startEdit(c: Connection) {
+    setEditing(c);
+    setForm({
+      label: c.label, base_url: c.base_url, email: c.email,
+      api_token: "", cloud_id: c.cloud_id,
+      spaces: (c.spaces || []).join(", "), project_key: c.project_key,
+    });
+    setNotice(null);
+  }
+
+  async function save() {
+    setSaving(true);
+    setNotice(null);
+    const payload: Record<string, unknown> = {
+      provider,
+      label: form.label,
+      base_url: form.base_url,
+      email: form.email,
+      cloud_id: form.cloud_id,
+      project_key: form.project_key,
+      api_token: form.api_token || undefined,
+      spaces: provider === "confluence"
+        ? form.spaces.split(",").map((s) => s.trim()).filter(Boolean)
+        : [],
+    };
+    try {
+      if (editing === "new") await createConnection(payload as never);
+      else if (editing) await updateConnection(editing.id, payload as never);
+      setEditing(null);
+      setNotice({ ok: true, message: "Saved. Sites sync on the next Knowledge sync." });
+      await load();
+    } catch (e) {
+      setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not save" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function probe(c: Connection) {
+    setBusyId(c.id);
+    setNotice(null);
+    try {
+      const res = await testConnection(c.id);
+      setNotice({
+        ok: res.ok,
+        message: res.ok ? `${c.label}: connected${res.detail ? ` — ${res.detail}` : ""}` : `${c.label}: ${res.detail || "failed"}`,
+      });
+    } catch (e) {
+      setNotice({ ok: false, message: e instanceof Error ? e.message : "Test failed" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(c: Connection) {
+    if (!window.confirm(`Remove the ${c.label} site? Articles already synced stay in the knowledge base.`)) return;
+    setBusyId(c.id);
+    try {
+      await deleteConnection(c.id, c.label);
+      await load();
+    } catch (e) {
+      setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not remove" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const isConf = provider === "confluence";
+
+  return (
+    <section className="rounded-xl border border-[var(--border)] bg-muted/20 p-3.5">
+      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        <IntegrationLogo providerKey={provider} name={provider} size="sm" className="size-4" />
+        <h4 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {isConf ? "Confluence sites" : "Jira sites"}
+        </h4>
+        <span className="text-2xs text-muted-foreground/70">
+          one row per site — tokens never cross sites
+        </span>
+        <button
+          type="button"
+          onClick={startNew}
+          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-card px-2.5 py-1 text-2xs font-semibold transition hover:bg-muted"
+        >
+          <Plus className="size-3" /> Add site
+        </button>
+      </div>
+
+      {rows === null ? (
+        <p className="text-2xs text-muted-foreground">Loading sites…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-2xs text-muted-foreground">
+          No site configured yet — the fields below still work as the single default site.
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((c) => (
+            <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] bg-card px-2.5 py-1.5">
+              <span className="text-xs font-semibold text-foreground">{c.label}</span>
+              <span className="truncate text-2xs text-muted-foreground" title={c.base_url}>{c.base_url}</span>
+              {isConf && c.spaces.length > 0 && (
+                <span className="rounded border border-[var(--border)] px-1 font-mono text-2xs text-muted-foreground">
+                  {c.spaces.join(" · ")}
+                </span>
+              )}
+              {!isConf && c.project_key && (
+                <span className="rounded border border-[var(--border)] px-1 font-mono text-2xs text-muted-foreground">
+                  {c.project_key}
+                </span>
+              )}
+              <span className={`inline-flex items-center gap-1 text-2xs ${c.token_set ? "text-[var(--ok)]" : "text-[var(--warn)]"}`}>
+                {c.token_set ? <CheckCircle2 className="size-3" /> : null}
+                {c.token_set ? "token set" : "no token"}
+              </span>
+              <span className="ml-auto flex items-center gap-1">
+                <button type="button" onClick={() => probe(c)} disabled={busyId === c.id}
+                  className="rounded-md border border-[var(--border)] px-2 py-1 text-2xs font-medium transition hover:bg-muted disabled:opacity-50">
+                  {busyId === c.id ? <Loader2 className="size-3 animate-spin" /> : "Test"}
+                </button>
+                <button type="button" onClick={() => startEdit(c)} aria-label={`Edit ${c.label}`}
+                  className="rounded-md border border-[var(--border)] p-1 transition hover:bg-muted">
+                  <Pencil className="size-3" />
+                </button>
+                <button type="button" onClick={() => remove(c)} aria-label={`Remove ${c.label}`}
+                  className="rounded-md border border-[var(--danger)]/40 p-1 text-[var(--danger)] transition hover:bg-[var(--danger)]/10">
+                  <Trash2 className="size-3" />
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {notice && (
+        <p role="status" className={`mt-2 text-2xs ${notice.ok ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
+          {notice.message}
+        </p>
+      )}
+
+      {editing && (
+        <div className="mt-3 rounded-lg border border-[var(--border)] bg-background p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <h5 className="text-xs font-semibold">{editing === "new" ? "Add a site" : `Edit ${editing.label}`}</h5>
+            <button type="button" onClick={() => setEditing(null)} aria-label="Cancel"
+              className="ml-auto rounded p-1 text-muted-foreground hover:bg-muted">
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {[
+              { k: "label", l: "Label", ph: "HQ Confluence" },
+              { k: "base_url", l: "Base URL", ph: "https://hq.atlassian.net/wiki" },
+              { k: "email", l: "Account email", ph: "svc-account@corp.com" },
+              { k: "api_token", l: "API token", ph: editing === "new" ? "ATATT3x…" : "leave blank to keep current", secret: true },
+              ...(isConf
+                ? [
+                    { k: "spaces", l: "Space keys (comma separated)", ph: "IHKB, HELP, IT" },
+                    { k: "cloud_id", l: "Cloud ID (optional)", ph: "b7f1…" },
+                  ]
+                : [{ k: "project_key", l: "Default project key", ph: "ITHD" }]),
+            ].map((f) => (
+              <label key={f.k} className="space-y-1 text-2xs">
+                <span className="font-medium text-foreground">{f.l}</span>
+                <input
+                  type={f.secret ? "password" : "text"}
+                  value={form[f.k] || ""}
+                  onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}
+                  placeholder={f.ph}
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-[var(--border)] bg-background px-2.5 py-1.5 text-xs outline-none focus:border-[var(--primary)]"
+                />
+              </label>
+            ))}
+          </div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <button type="button" onClick={save} disabled={saving || !form.label?.trim() || !form.base_url?.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-2xs font-semibold text-[var(--primary-foreground)] disabled:opacity-50">
+              {saving && <Loader2 className="size-3 animate-spin" />} Save site
+            </button>
+            <button type="button" onClick={() => setEditing(null)}
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-2xs font-medium hover:bg-muted">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

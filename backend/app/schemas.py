@@ -72,6 +72,8 @@ class DomainCreateRequest(BaseModel):
     description: str | None = Field(None, description="Scope or summary of domain")
     keywords: list[str] = Field(default_factory=list, description="Keywords/phrases for classifier matching")
     jira_project: str | None = Field(None, max_length=32)
+    confluence_connection_id: int | None = None
+    jira_connection_id: int | None = None
     jira_assignee: str | None = Field(None, max_length=64)
     icon: str | None = Field("BookOpen", max_length=32)
     color: str | None = Field("blue", max_length=32)
@@ -83,6 +85,8 @@ class DomainUpdateRequest(BaseModel):
     description: str | None = None
     keywords: list[str] | None = None
     jira_project: str | None = None
+    confluence_connection_id: int | None = None
+    jira_connection_id: int | None = None
     jira_assignee: str | None = None
     icon: str | None = None
     color: str | None = None

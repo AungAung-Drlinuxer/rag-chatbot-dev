@@ -134,8 +134,35 @@ class KbMeta(Base):
     title: Mapped[str | None] = mapped_column(String(512))
     body: Mapped[str | None] = mapped_column(Text)          # source body (Knowledge edit/list UI)
     source_url: Mapped[str | None] = mapped_column(String(1024))
+    space_key: Mapped[str | None] = mapped_column(String(64))     # Confluence space it came from
+    connection_id: Mapped[int | None] = mapped_column(Integer)    # which site/token fetched it
+    site: Mapped[str | None] = mapped_column(String(255))         # host, e.g. hq.atlassian.net
     updated_by: Mapped[str | None] = mapped_column(String(64))   # who last synced/edited
     last_synced: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class IntegrationConnection(Base):
+    """One Confluence/Jira site + the token that may read it.
+
+    The single `system_settings` row per provider could only ever describe one site, which
+    is wrong for an estate with its own Confluence and an HQ one. A connection is the unit
+    of configuration: base URL, account, token, and the spaces (or project) it serves.
+    Tokens are site-scoped, so they can never be shared across rows.
+    """
+    __tablename__ = "integration_connections"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)   # confluence | jira
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255))
+    api_token: Mapped[str | None] = mapped_column(Text)
+    cloud_id: Mapped[str | None] = mapped_column(String(64))
+    spaces: Mapped[str | None] = mapped_column(Text)      # JSON array of space keys
+    project_key: Mapped[str | None] = mapped_column(String(32))
+    active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ApiKey(Base):
@@ -312,6 +339,10 @@ class ClassifierDomain(Base):
     description: Mapped[str | None] = mapped_column(Text)
     keywords: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
     jira_project: Mapped[str | None] = mapped_column(String(32))
+    # Which site this domain's articles come from and where its tickets go. NULL keeps the
+    # pre-multi-site behaviour (the single/default connection).
+    confluence_connection_id: Mapped[int | None] = mapped_column(Integer)
+    jira_connection_id: Mapped[int | None] = mapped_column(Integer)
     jira_assignee: Mapped[str | None] = mapped_column(String(64))
     icon: Mapped[str | None] = mapped_column(String(32), default="BookOpen", server_default="BookOpen")
     color: Mapped[str | None] = mapped_column(String(32), default="blue", server_default="blue")

@@ -20,9 +20,10 @@ def test_the_group_routes_exist():
 
 def test_escalation_uses_the_domains_own_project(monkeypatch):
     monkeypatch.setattr(jira, "domain_project", lambda domain: "NETOPS")
-    source = inspect.getsource(jira.escalate)
     # project resolution happens before the create call, and an explicit project still wins
-    assert "project = project or domain_project(domain) or None" in source
+    # (multi-site: the domain's own site is resolved first, then the project inside it)
+    source = inspect.getsource(jira._escalate_locked)
+    assert "domain_project(domain)" in source and "project = project or" in source
 
 
 def test_an_unknown_domain_still_falls_back_to_the_global_project(monkeypatch):

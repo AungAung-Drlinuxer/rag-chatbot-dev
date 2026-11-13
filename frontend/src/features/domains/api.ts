@@ -8,6 +8,8 @@ export type ClassifierDomainItem = {
   description: string | null;
   keywords: string[];
   jira_project: string | null;
+  confluence_connection_id?: number | null;
+  jira_connection_id?: number | null;
   jira_assignee: string | null;
   icon?: string | null;
   color?: string | null;
@@ -29,6 +31,8 @@ export async function createClassifierDomain(data: {
   description?: string;
   keywords: string[];
   jira_project?: string;
+  confluence_connection_id?: number | null;
+  jira_connection_id?: number | null;
   jira_assignee?: string;
   icon?: string;
   color?: string;
@@ -54,6 +58,8 @@ export async function updateClassifierDomain(
     description: string;
     keywords: string[];
     jira_project: string;
+  confluence_connection_id?: number | null;
+  jira_connection_id?: number | null;
     jira_assignee: string;
     icon: string;
     color: string;

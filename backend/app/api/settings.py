@@ -335,6 +335,105 @@ def _reload_after_change(key: str) -> None:
         from app.auth.ldap_auth import reload_ldap_cfg
         reload_ldap_cfg()
 
+# --- Multi-site connections --------------------------------------------------
+# One row per Confluence/Jira site. Kept on their own prefix (`/settings/connections`)
+# because `/settings/integrations/{key}` would otherwise swallow "connections" as a key.
+
+@router.get("/settings/connections")
+def list_connections_endpoint(provider: str | None = None,
+                              user: str = Depends(require_role("admin"))) -> dict:
+    from app.integrations.connections import list_connections
+
+    if provider and provider not in ("confluence", "jira"):
+        raise HTTPException(status_code=400, detail="provider must be confluence or jira")
+    return {"connections": list_connections(provider, include_secret=False)}
+
+
+@router.post("/settings/connections")
+def create_connection_endpoint(payload: dict,
+                               user: str = Depends(require_role("admin"))) -> dict:
+    from app.integrations.connections import create_connection
+
+    try:
+        conn = create_connection(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit("create", user, detail=f"connection:{conn.get('provider')}:{conn.get('id')}")
+    out: dict = {"ok": True, "connection": conn}
+    if conn.get("provider") == "confluence":
+        out["sync"] = _kickoff_kb_sync()
+    return out
+
+
+@router.put("/settings/connections/{cid}")
+def update_connection_endpoint(cid: int, payload: dict,
+                               user: str = Depends(require_role("admin"))) -> dict:
+    from app.integrations.connections import update_connection
+
+    conn = update_connection(cid, payload)
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    audit("update", user, detail=f"connection:{conn.get('provider')}:{cid}")
+    return {"ok": True, "connection": conn}
+
+
+@router.delete("/settings/connections/{cid}")
+def delete_connection_endpoint(cid: int, confirm: str | None = None,
+                               user: str = Depends(require_role("admin"))) -> dict:
+    from app.integrations.connections import delete_connection, get_connection
+
+    conn = get_connection(cid, include_secret=False)
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    # Deleting a connection does not delete what it already ingested; say so, and require
+    # the label so a mis-click cannot silently stop a site from syncing.
+    if confirm != conn["label"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Confirmation required: call DELETE /api/settings/connections/{cid}"
+                   f"?confirm={conn['label']}",
+        )
+    delete_connection(cid)
+    audit("delete", user, detail=f"connection:{conn.get('provider')}:{cid}")
+    return {"ok": True, "deleted": cid}
+
+
+@router.post("/settings/connections/{cid}/test")
+def test_connection_endpoint(cid: int, user: str = Depends(require_role("admin"))) -> dict:
+    """Probe one site with its own token — the only honest way to say 'connected'."""
+    import httpx
+
+    from app.integrations.connections import get_connection
+
+    conn = get_connection(cid, include_secret=True)
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    base = (conn.get("base_url") or "").rstrip("/")
+    if not base:
+        return {"ok": False, "status": None, "detail": "base_url not set"}
+    try:
+        if conn["provider"] == "confluence":
+            if conn.get("cloud_id"):
+                url = f"https://api.atlassian.com/ex/confluence/{conn['cloud_id']}/wiki/rest/api/content"
+                headers = {"Authorization": f"Bearer {conn.get('api_token') or ''}"}
+                r = httpx.get(url, params={"limit": 1}, headers=headers, timeout=15)
+            else:
+                r = httpx.get(f"{base}/rest/api/content", params={"limit": 1},
+                              auth=(conn.get("email") or "", conn.get("api_token") or ""),
+                              timeout=15)
+        else:
+            r = httpx.get(f"{base}/rest/api/3/myself",
+                          auth=(conn.get("email") or "", conn.get("api_token") or ""),
+                          timeout=15)
+        ok = r.status_code in (200, 201)
+        detail = "" if ok else r.text[:200]
+        if ok and conn["provider"] == "confluence":
+            detail = f"{r.json().get('size', 0) if r.headers.get('content-type','').startswith('application/json') else 0} pages visible"
+        return {"ok": ok, "status": r.status_code, "detail": detail}
+    except Exception as exc:
+        return {"ok": False, "status": None, "detail": f"{type(exc).__name__}: {exc}"[:300]}
+
+
 @router.get("/settings/integrations/{key}")
 def get_integration_settings(key: str, user: str = Depends(require_role("admin"))) -> dict:
     """Return the integration's configuration WITHOUT any stored value.

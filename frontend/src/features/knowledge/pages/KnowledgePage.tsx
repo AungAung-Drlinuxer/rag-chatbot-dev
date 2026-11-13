@@ -24,6 +24,7 @@ import {
   listArticleSources,
   getSyncStatus,
   listArticles,
+  listArticleSpaces,
 } from "@/features/knowledge/api";
 
 import {
@@ -99,6 +100,8 @@ type RecentItem = {
   domain: string;
   /** Confluence space the page came from — null for non-Confluence sources. */
   space_key?: string | null;
+  /** Host of the site that supplied the page (HQ vs local instance). */
+  site?: string | null;
   source_url: string;
   updated_by?: string | null;
   last_synced?: string | null;
@@ -389,6 +392,14 @@ export default function Knowledge({ role, onToast }: Props) {
   const [sortKey, setSortKey] = useState<"last_synced" | "title" | "domain">("last_synced");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [providerFilter, setProviderFilter] = useState<string>("all");
+  // Space key is a separate axis from domain: a space can hold pages in several domains.
+  const [spaceFilter, setSpaceFilter] = useState<string>("all");
+  const [spaces, setSpaces] = useState<{
+    key: string; count: number; connection_id?: number | null; site?: string; label?: string;
+  }[] | null>(null);
+  // A site (connection) filters which Confluence instance the list draws from; the space
+  // select then only offers that site's spaces — "IT" on HQ is not "IT" locally.
+  const [siteFilter, setSiteFilter] = useState<string>("all");
   const [qField, setQField] = useState<"all" | "title" | "body">("all");
   const [status, setStatus] = useState<SyncStatus | null>(null);
 
@@ -419,7 +430,23 @@ export default function Knowledge({ role, onToast }: Props) {
   const chipsRef = useRef<HTMLDivElement>(null);
 
   /** True when anything is narrowing the list — drives the filter summary row. */
-  const hasFilters = chip !== "all" || providerFilter !== "all" || query.trim().length > 0 || searchMode;
+  const hasFilters = chip !== "all" || providerFilter !== "all" || spaceFilter !== "all"
+    || siteFilter !== "all" || query.trim().length > 0 || searchMode;
+
+  /** Distinct sites present in the KB (connection id + the label an admin gave it). */
+  const sites = useMemo(() => {
+    const map = new Map<string, { id: string; label: string }>();
+    for (const sp of spaces ?? []) {
+      const id = String(sp.connection_id ?? "default");
+      if (!map.has(id)) map.set(id, { id, label: sp.label || sp.site || "Default" });
+    }
+    return [...map.values()];
+  }, [spaces]);
+
+  const visibleSpaces = useMemo(
+    () => (spaces ?? []).filter((sp) => siteFilter === "all" || String(sp.connection_id ?? "default") === siteFilter),
+    [spaces, siteFilter],
+  );
 
   async function loadBrowse() {
     const [domainResponse, syncResponse, sourceResponse] = await Promise.all([
@@ -439,11 +466,16 @@ export default function Knowledge({ role, onToast }: Props) {
   function buildQuery(o: {
     domain: string; q: string; offset: number; limit: number;
     sort: "last_synced" | "title" | "domain"; order: "asc" | "desc"; provider: string;
+    space: string; connection?: string;
   }) {
     const parts = new URLSearchParams();
     if (o.domain !== "all") parts.set("domain", o.domain);
     if (o.q.trim()) { parts.set("q", o.q.trim()); parts.set("q_field", qField); }
     if (o.provider !== "all") parts.set("provider", o.provider);
+    if (o.space !== "all") parts.set("space", o.space);
+    if (o.connection && o.connection !== "all" && o.connection !== "default") {
+      parts.set("connection", o.connection);
+    }
     parts.set("sort", o.sort);
     parts.set("order", o.order);
     parts.set("limit", String(o.limit));
@@ -458,7 +490,8 @@ export default function Knowledge({ role, onToast }: Props) {
   async function fetchList(
     offset = 0,
     override: Partial<{
-      domain: string; q: string; limit: number; provider: string;
+      domain: string; q: string; limit: number; provider: string; space: string;
+      connection: string;
       sort: "last_synced" | "title" | "domain"; order: "asc" | "desc";
     }> = {},
   ) {
@@ -466,13 +499,15 @@ export default function Knowledge({ role, onToast }: Props) {
     const q = override.q ?? query;
     const limit = override.limit ?? pageSize;
     const provider = override.provider ?? providerFilter;
+    const space = override.space ?? spaceFilter;
+    const connection = override.connection ?? siteFilter;
     const sort = override.sort ?? sortKey;
     const order = override.order ?? sortDir;
 
     setListing(true);
     setListError(null);
     try {
-      const res = await listArticles(buildQuery({ domain, q, offset, limit, sort, order, provider }));
+      const res = await listArticles(buildQuery({ domain, q, offset, limit, sort, order, provider, space, connection }));
       const articles: ListItem[] = res.articles ?? [];
       const reportedTotal = typeof res.total === "number" ? res.total : articles.length;
       setItems(articles);
@@ -505,7 +540,7 @@ export default function Knowledge({ role, onToast }: Props) {
     if (searchMode) return;
     void fetchList(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chip, providerFilter, sortKey, sortDir, pageSize, searchMode]);
+  }, [chip, providerFilter, spaceFilter, siteFilter, sortKey, sortDir, pageSize, searchMode]);
 
   /** Go to a 1-based page number, clamped to the real page count. */
   function goToPage(next: number) {
@@ -620,16 +655,22 @@ export default function Knowledge({ role, onToast }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domains, classifierDomains, domainCardMap]);
 
+  useEffect(() => {
+    listArticleSpaces().then((r) => setSpaces(r.spaces ?? [])).catch(() => setSpaces([]));
+  }, []);
+
   /** Reset every control that narrows the list, and reload from the top. */
   function resetAll() {
     setProviderFilter("all");
+    setSpaceFilter("all");
+    setSiteFilter("all");
     setChip("all");
     setQuery("");
     setSearchMode(false);
     setSearchTotal(0);
     // The filter effect refetches when these land; an explicit call keeps the reset
     // instant even when the values were already "all".
-    void fetchList(0, { domain: "all", q: "", provider: "all" });
+    void fetchList(0, { domain: "all", q: "", provider: "all", space: "all", connection: "all" });
   }
 
   const lastSync = relDuration(status?.last_run?.at);
@@ -862,6 +903,37 @@ export default function Knowledge({ role, onToast }: Props) {
               {(sources ?? []).map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
 
+            {sites.length > 1 && (
+              <select
+                value={siteFilter}
+                onChange={(e) => { setSiteFilter(e.target.value); setSpaceFilter("all"); setSearchMode(false); setPage(1); }}
+                title="Filter by Confluence site"
+                aria-label="Filter by Confluence site"
+                className="h-9 min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none transition focus:border-[var(--primary)] sm:flex-none"
+              >
+                <option value="all">All sites</option>
+                {sites.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            )}
+
+            {/* Shown whenever the KB has a space at all: with one space it still states
+                where the articles come from, and it is the control that appears the day
+                a second space key is configured. */}
+            {(spaces?.length ?? 0) >= 1 && (
+              <select
+                value={spaceFilter}
+                onChange={(e) => { setSpaceFilter(e.target.value); setSearchMode(false); setPage(1); }}
+                title="Filter by Confluence space"
+                aria-label="Filter by Confluence space"
+                className="h-9 min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none transition focus:border-[var(--primary)] sm:flex-none"
+              >
+                <option value="all">All spaces</option>
+                {(visibleSpaces).map((sp) => (
+                  <option key={`${sp.connection_id ?? "d"}:${sp.key}`} value={sp.key}>{sp.key} ({sp.count})</option>
+                ))}
+              </select>
+            )}
+
             {/* Sorting is server-side: the select re-sorts the whole KB, not the loaded page. */}
             <select
               value={`${sortKey}:${sortDir}`}
@@ -948,6 +1020,13 @@ export default function Knowledge({ role, onToast }: Props) {
               <span className="text-muted-foreground">Filtered by</span>
               {query.trim() && <FilterPill label={`"${query.trim()}"`} onClear={clearSearch} />}
               {chip !== "all" && <FilterPill label={metaFor(chip).label} onClear={() => setChip("all")} />}
+              {siteFilter !== "all" && (
+                <FilterPill label={`Site ${sites.find((s) => s.id === siteFilter)?.label ?? siteFilter}`}
+                  onClear={() => { setSiteFilter("all"); setSpaceFilter("all"); }} />
+              )}
+              {spaceFilter !== "all" && (
+                <FilterPill label={`Space ${spaceFilter}`} onClear={() => setSpaceFilter("all")} />
+              )}
               {providerFilter !== "all" && (
                 <FilterPill label={(sources ?? []).find((p) => p.key === providerFilter)?.label ?? providerFilter} onClear={() => setProviderFilter("all")} />
               )}
@@ -973,6 +1052,7 @@ export default function Knowledge({ role, onToast }: Props) {
                     { k: null, l: "Source", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
                     { k: "domain", l: "Domain", cls: "px-4 py-3.5 font-semibold" },
                     { k: null, l: "Space key", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
+                    { k: null, l: "Site", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
                     { k: "last_synced", l: "Last sync", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
                   ] as const).map((h) => (
                     <th key={h.l} className={h.cls}>
@@ -1009,13 +1089,13 @@ export default function Knowledge({ role, onToast }: Props) {
               <tbody>
                 {listing ? (
                   <tr>
-                    <td colSpan={6} className="p-4">
+                    <td colSpan={7} className="p-4">
                       <Skeleton className="h-9 w-full rounded-lg" />
                     </td>
                   </tr>
                 ) : listError ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <ErrorState
                         compact
                         title="Could not load the knowledge base"
@@ -1026,11 +1106,11 @@ export default function Knowledge({ role, onToast }: Props) {
                   </tr>
                 ) : !items || items.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       {/* "Nothing here yet" and "nothing matches" need different words:
                           only the second is something the user caused and can undo, so
                           only it gets the clear-filters action. */}
-                      {(kbTotal ?? 0) === 0 && !query && chip === "all" && providerFilter === "all" ? (
+                      {(kbTotal ?? 0) === 0 && !query && chip === "all" && providerFilter === "all" && spaceFilter === "all" ? (
                         <EmptyState
                           icon={<BookOpen className="size-5" />}
                           title="No articles yet"
@@ -1118,6 +1198,10 @@ export default function Knowledge({ role, onToast }: Props) {
                           ) : (
                             <span className="text-2xs text-muted-foreground">—</span>
                           )}
+                        </td>
+                        <td className="hidden max-w-[160px] truncate px-4 py-3 text-2xs text-muted-foreground lg:table-cell"
+                          title={article.site || undefined}>
+                          {article.site || "—"}
                         </td>
                         <td
                           className="hidden px-4 py-3 text-xs text-muted-foreground lg:table-cell"

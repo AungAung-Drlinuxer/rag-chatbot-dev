@@ -88,6 +88,17 @@ const ICON_BTN =
 /** Excerpts longer than this get a More/Less toggle instead of being silently cut. */
 const EXCERPT_CLAMP = 96;
 
+function sourceHost(url?: string | null) {
+  // The citation does not carry the site label, but its URL names the host — and with two
+  // Confluence instances configured, "which site answered" is a question readers will ask.
+  try {
+    return url ? new URL(url).hostname : "";
+  } catch {
+    return "";
+  }
+}
+
+
 export function SourceCard({
   source,
   index,
@@ -116,6 +127,7 @@ export function SourceCard({
   // carrying a page_id came out of the knowledge base; a row without one is a ticket
   // lookup. `space` still holds the domain and stays reachable as the chip's tooltip.
   const collection = source.page_id ? "KB" : "Ticket";
+  const siteHost = sourceHost(source.url);
 
   async function copyLink() {
     if (!source.url) return;
@@ -150,7 +162,10 @@ export function SourceCard({
         >
           {/* The official mark of the system the answer came from — Confluence for a
               knowledge page, Jira for a ticket lookup — instead of a generic glyph. */}
-          <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-white p-[1.5px]">
+          <span
+            className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-white p-[1.5px]"
+            title={`${collection} - ${index}${siteHost ? ` · ${siteHost}` : ""}`}
+          >
             <IntegrationLogo
               providerKey={source.page_id ? "confluence" : "jira"}
               name={source.page_id ? "Confluence" : "Jira"}

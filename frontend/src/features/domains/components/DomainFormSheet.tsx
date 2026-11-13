@@ -23,6 +23,7 @@ import {
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
+import { listConnections, type Connection } from "@/features/settings/api";
 import {
   type ClassifierDomainItem,
   createClassifierDomain,
@@ -99,6 +100,11 @@ export function DomainFormSheet({
   const [domainKey, setDomainKey] = useState("");
   const [description, setDescription] = useState("");
   const [jiraProject, setJiraProject] = useState("");
+  // Which site this domain's articles come from / tickets go to. Only meaningful once the
+  // admin has added more than one site.
+  const [confConn, setConfConn] = useState<string>("");
+  const [jiraConn, setJiraConn] = useState<string>("");
+  const [sites, setSites] = useState<{ confluence: Connection[]; jira: Connection[] }>({ confluence: [], jira: [] });
   const [keywords, setKeywords] = useState<string[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
@@ -129,6 +135,8 @@ export function DomainFormSheet({
     setDomainKey(d?.domain_key ?? "");
     setDescription(d?.description ?? "");
     setJiraProject(d?.jira_project ?? "");
+    setConfConn(d?.confluence_connection_id ? String(d.confluence_connection_id) : "");
+    setJiraConn(d?.jira_connection_id ? String(d.jira_connection_id) : "");
     setKeywords(d?.keywords ?? []);
     setDraft("");
     setIcon(d?.icon || "BookOpen");
@@ -149,6 +157,8 @@ export function DomainFormSheet({
       domain_key: domain?.domain_key ?? "",
       description: domain?.description ?? "",
       jira_project: domain?.jira_project ?? "",
+      confluence_connection_id: domain?.confluence_connection_id ?? null,
+      jira_connection_id: domain?.jira_connection_id ?? null,
       keywords: JSON.stringify(domain?.keywords ?? []),
       icon: domain?.icon || "BookOpen",
       color: domain?.color || "blue",
@@ -157,6 +167,14 @@ export function DomainFormSheet({
     }),
     [domain],
   );
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([listConnections("confluence"), listConnections("jira")])
+      .then(([c, j]) => { if (alive) setSites({ confluence: c.connections ?? [], jira: j.connections ?? [] }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const dirty =
     displayName !== initial.display_name ||
@@ -282,6 +300,8 @@ export function DomainFormSheet({
         description: description.trim() || undefined,
         keywords,
         jira_project: jiraProject.trim() || undefined,
+        confluence_connection_id: confConn ? Number(confConn) : null,
+        jira_connection_id: jiraConn ? Number(jiraConn) : null,
         icon,
         color,
         is_active: active,
@@ -302,6 +322,8 @@ export function DomainFormSheet({
           description: payload.description ?? "",
           keywords: payload.keywords,
           jira_project: payload.jira_project ?? "",
+          confluence_connection_id: payload.confluence_connection_id,
+          jira_connection_id: payload.jira_connection_id,
           icon: payload.icon,
           color: payload.color,
           custom_icon: customIcon ?? "",
@@ -603,6 +625,31 @@ export function DomainFormSheet({
                 />
               </Field>
 
+
+              {(sites.confluence.length > 1 || sites.jira.length > 1) && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {sites.confluence.length > 1 && (
+                    <Field label="Confluence site" htmlFor="domain-conf-site" optional
+                      hint="Which site this domain's knowledge comes from.">
+                      <select id="domain-conf-site" value={confConn} onChange={(e) => setConfConn(e.target.value)}
+                        className={[INPUT, "bg-background"].join(" ")}>
+                        <option value="">Any / default</option>
+                        {sites.confluence.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                  {sites.jira.length > 1 && (
+                    <Field label="Jira site" htmlFor="domain-jira-site" optional
+                      hint="Which Jira instance receives this domain's tickets.">
+                      <select id="domain-jira-site" value={jiraConn} onChange={(e) => setJiraConn(e.target.value)}
+                        className={[INPUT, "bg-background"].join(" ")}>
+                        <option value="">Any / default</option>
+                        {sites.jira.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                </div>
+              )}
               <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-[var(--border)] bg-muted/20 px-3 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-xs font-medium">Active</span>

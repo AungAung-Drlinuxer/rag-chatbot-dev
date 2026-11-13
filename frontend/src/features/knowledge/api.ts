@@ -106,6 +106,13 @@ export async function bulkDeleteArticles(page_ids: string[]) {
 
 export type ArticleSource = { key: string; label: string; count: number };
 
+/** Confluence spaces that actually contributed articles, with page counts. */
+export async function listArticleSpaces(): Promise<{ spaces: { key: string; count: number }[] }> {
+  const r = await apiFetch(`${BASE}/api/articles-spaces`, { headers: { ...authHeaders() } });
+  if (!r.ok) throw new Error(`failed to fetch spaces (HTTP ${r.status})`);
+  return r.json();
+}
+
 /** Providers that actually contributed articles (server counts rows, no fixed list). */
 export async function listArticleSources(): Promise<{ sources: ArticleSource[] }> {
   const r = await apiFetch(`${BASE}/api/articles-sources`, { headers: { ...authHeaders() } });

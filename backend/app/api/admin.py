@@ -182,6 +182,8 @@ def list_domains(user: str = Depends(require_cap("manage_domains"))) -> dict:
                     "description": d.description,
                     "keywords": d.keywords,
                     "jira_project": d.jira_project,
+                    "confluence_connection_id": d.confluence_connection_id,
+                    "jira_connection_id": d.jira_connection_id,
                     "jira_assignee": d.jira_assignee,
                     "icon": d.icon or "BookOpen",
                     "color": d.color or "blue",
@@ -213,6 +215,8 @@ def create_domain(req: DomainCreateRequest,
             description=req.description,
             keywords=cleaned_keywords,
             jira_project=req.jira_project.strip() if req.jira_project else None,
+            confluence_connection_id=req.confluence_connection_id,
+            jira_connection_id=req.jira_connection_id,
             jira_assignee=req.jira_assignee.strip() if req.jira_assignee else None,
             icon=req.icon.strip() if req.icon else "BookOpen",
             color=req.color.strip() if req.color else "blue",
@@ -267,6 +271,10 @@ def update_domain(domain_id: int,
             d.keywords = [str(k).lower().strip() for k in req.keywords if str(k).strip()]
         if req.jira_project is not None:
             d.jira_project = req.jira_project.strip() if req.jira_project else None
+        if req.confluence_connection_id is not None:
+            d.confluence_connection_id = req.confluence_connection_id or None
+        if req.jira_connection_id is not None:
+            d.jira_connection_id = req.jira_connection_id or None
         if req.jira_assignee is not None:
             d.jira_assignee = req.jira_assignee.strip() if req.jira_assignee else None
         if req.icon is not None:

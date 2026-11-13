@@ -12,6 +12,28 @@ from app.schemas import ArticleDraftRequest, ArticleRequest, ArticleSearchReques
 
 logger = logging.getLogger(__name__)
 
+def _host_of(url: str | None) -> str | None:
+    """Host of a source URL — the site a row came from, shown in the Site column."""
+    if not url:
+        return None
+    from urllib.parse import urlparse
+
+    try:
+        return urlparse(url if "//" in url else f"https://{url}").hostname
+    except Exception:
+        return None
+
+
+def _space_from_url(source_url: str | None) -> str | None:
+    """Recover the Confluence space from a page URL when the column is empty."""
+    import re
+
+    if not source_url:
+        return None
+    m = re.search(r"/spaces/([A-Za-z0-9._~-]+)/", source_url)
+    return m.group(1) if m else None
+
+
 router = APIRouter()
 
 @router.post("/api/articles/search")
@@ -259,10 +281,44 @@ def articles_recent(limit: int = 8, user: str = Depends(get_current_user)) -> di
     return {"articles": articles}
 
 
+@router.get("/api/articles-spaces")
+def articles_spaces(user: str = Depends(get_current_user)) -> dict:
+    """Space keys in the KB, grouped by the site they belong to.
+
+    Two sites can both have a space called IT, and they are different content — so the
+    filter is (connection, space), never the space key alone."""
+    from sqlalchemy import text as _text
+
+    with SessionLocal() as s:
+        rows = s.execute(_text(
+            "SELECT upper(space_key) AS k, connection_id, "
+            "       coalesce(nullif(site,''), substring(source_url from '^https?://([^/]+)'), "
+            "                '') AS site, count(*) AS n "
+            "FROM kb_meta WHERE space_key IS NOT NULL AND space_key <> '' "
+            "GROUP BY 1, 2, 3 ORDER BY 3 ASC, 1 ASC"
+        )).mappings().all()
+    labels: dict[int, str] = {}
+    try:
+        from app.integrations.connections import list_connections
+
+        labels = {c["id"]: c["label"] for c in list_connections("confluence")}
+    except Exception:
+        labels = {}
+    return {"spaces": [
+        {"key": r["k"], "count": int(r["n"]), "connection_id": r["connection_id"],
+         "site": r["site"],
+         # A NULL connection id is the pre-multi-site row: name it after the site it came
+         # from, so two "Default" entries can never appear as if they were the same thing.
+         "label": labels.get(r["connection_id"]) or r["site"] or "Default Confluence"}
+        for r in rows
+    ]}
+
+
 @router.get("/api/articles-list")
 def articles_list(domain: str | None = None, q: str | None = None, limit: int = 50,
                   offset: int = 0, sort: str = "last_synced", order: str = "desc",
                   provider: str | None = None, q_field: str = "all",
+                  space: str | None = None, connection: int | None = None,
                   user: str = Depends(get_current_user)) -> dict:
     """Paged KB list for the Manage table (no vector calls; kb_meta only).
 
@@ -319,9 +375,17 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
     if provider_like:
         where.append("coalesce(source_url,'') ILIKE :prov")
         params["prov"] = provider_like
+    # Space key is an exact match — "IHKB" must not also return a "IHKB-OLD" space.
+    if space and space.strip() and space.strip().lower() != "all":
+        where.append("upper(coalesce(space_key,'')) = upper(:spk)")
+        params["spk"] = space.strip()
+    if connection is not None:
+        where.append("connection_id = :conn")
+        params["conn"] = connection
 
     clause = " AND ".join(where)
-    sql = ("SELECT page_id, title, domain, space_key, source_url, updated_by, last_synced "
+    sql = ("SELECT page_id, title, domain, space_key, connection_id, site, source_url, "
+           "updated_by, last_synced "
            f"FROM kb_meta WHERE {clause} "
            f"ORDER BY {sort_col} {direction} NULLS LAST, page_id ASC "
            "LIMIT :lim OFFSET :off")
@@ -335,6 +399,8 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
     articles = [
         {"page_id": r["page_id"], "title": r["title"], "domain": r["domain"] or "general",
          "space_key": r["space_key"] or _space_from_url(r["source_url"]),
+         "connection_id": r["connection_id"],
+         "site": r["site"] or _host_of(r["source_url"]),
          "source_url": r["source_url"], "updated_by": r["updated_by"],
          "last_synced": r["last_synced"].isoformat() if r["last_synced"] else None}
         for r in rows
