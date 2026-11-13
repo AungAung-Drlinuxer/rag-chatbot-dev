@@ -191,46 +191,34 @@
 }
 
 [data-theme="dark"] {
-  /* Slate + Blue.
-     Base #0B1220 · Sidebar #0F172A · Surface #111A2B · Elevated #1B2740
-     Primary #3B82F6 · Border #26344A · Text #E6EDF7 · Muted #94A3B8 */
-  --background: #0B1220;
-  --foreground: #E6EDF7;
-  --card: #111A2B;
-  --card-foreground: #E6EDF7;
-  --popover: #1B2740; --popover-foreground: #E6EDF7;
-  --primary: #3B82F6;
-  --primary-foreground: #FFFFFF;
-  --secondary: #1E293B;
-  --secondary-foreground: #E2E8F0;
-  --accent-blue: #60A5FA;
-  --lavender: #93C5FD;
-  --muted: #1B2740;
-  --muted-foreground: #94A3B8;
-  --accent: rgba(59, 130, 246, 0.16);
-  --accent-foreground: #BFDBFE;
-  --destructive: #f87171;
-  --destructive-foreground: #0B1220;
-  --border: #26344A;
-  --input: #26344A;
-  --ring: #3B82F6;
-  --sidebar-bg: #0F172A;
-  --sidebar-border: #1E293B;
-  --sidebar-text: #CBD5E1;
-  --sidebar-text-muted: #7F8EA6;
-  --sidebar-hover: rgba(59, 130, 246, 0.14);
-  --sidebar-active-bg: rgba(59, 130, 246, 0.22);
-  --sidebar-active-text: #BFDBFE;
-  --topbar-bg: #111A2B;
-  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.35);
-  --shadow-md: 0 4px 6px rgba(0,0,0,.45), 0 2px 4px rgba(0,0,0,.35);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.35);
-  --shadow-xl: 0 20px 25px rgba(0,0,0,.55), 0 8px 10px rgba(0,0,0,.35);
-  --bg: var(--background); --surface: var(--card); --surface-2: var(--muted); --text: var(--foreground);
-  --text-muted: var(--muted-foreground); --accent-2: #3B82F6; --accent-soft: rgba(59, 130, 246, 0.16);
-  --ok: #34d399; --warn: #fbbf24; --danger: #f87171;
-  --brand-grad-from: #2563EB; --brand-grad-to: #1E3A8A;
-  --brand-soft: rgba(59, 130, 246, 0.16); --brand-text: #93C5FD;
+  --background: #0A0B0D; --bg: #0A0B0D;
+  --foreground: #E9EDF2; --text: #E9EDF2;
+  --card: #171A1F; --card-foreground: #E9EDF2;
+  --popover: #20242B; --popover-foreground: #E9EDF2;
+  --primary: #10B981; --primary-foreground: #04120C;
+  --secondary: #1D2126; --secondary-foreground: #D6DBE2;
+  --accent-blue: #6EE7B7; --lavender: #A7F3D0;
+  --muted: #20242B; --muted-foreground: #8B93A0; --text-muted: #8B93A0;
+  --accent: rgba(16,185,129,.16); --accent-soft: rgba(16,185,129,.16);
+  --accent-foreground: #A7F3D0; --accent-2: #10B981;
+  --destructive: #F87171; --destructive-foreground: #0A0B0D;
+  --border: #2A2F38; --input: #2A2F38; --ring: #10B981;
+  --sidebar-bg: #121417; --sidebar-border: #23272E;
+  --sidebar-text: #C7CDD6; --sidebar-text-muted: #7C838F;
+  --sidebar-hover: rgba(16,185,129,.12); --sidebar-active-bg: rgba(16,185,129,.20);
+  --sidebar-active-text: #A7F3D0;
+  --topbar-bg: #121417;
+  --ok: #34D399; --warn: #FBBF24; --danger: #F87171;
+  --brand-grad-from: #10B981; --brand-grad-to: #047857;
+  --brand-soft: rgba(16,185,129,.16); --brand-text: #6EE7B7; --brand-solid: #10B981;
+  --color-blue-50: #ECFDF5; --color-blue-100: #D1FAE5; --color-blue-200: #A7F3D0;
+  --color-blue-300: #6EE7B7; --color-blue-400: #34D399; --color-blue-500: #10B981;
+  --color-blue-600: #059669; --color-blue-700: #047857; --color-blue-800: #065F46;
+  --color-blue-900: #064E3B; --color-blue-950: #022C22;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.35);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.5), 0 4px 6px rgba(0,0,0,.35);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,.6), 0 8px 10px rgba(0,0,0,.35);
 }
 
 /* ---- Global ---- */
@@ -257,12 +245,12 @@ html, body, #root { height: 100%; margin: 0; }
 }
 
 [data-theme="dark"] {
-  --chart-1: #60A5FA;  /* blue    */
-  --chart-2: #38BDF8;  /* sky     */
-  --chart-3: #22d3ee;
-  --chart-4: #34d399;
-  --chart-5: #fbbf24;
-  --chart-6: #fb7185;
+  --chart-1: #34D399;  /* emerald  — volume     */
+  --chart-2: #6EE7B7;  /* mint     — our accent */
+  --chart-3: #22D3EE;  /* cyan     — tokens     */
+  --chart-4: #A3E635;  /* lime     — resolved   */
+  --chart-5: #FBBF24;  /* amber    — pending    */
+  --chart-6: #FB7185;  /* rose     — escalated  */
 }
 
 body {
@@ -346,7 +334,7 @@ body {
 }
 .avatar.assistant { background: linear-gradient(135deg, #6D28D9, #7C3AED); color: #fff; box-shadow: 0 4px 10px rgba(124, 58, 237,.25); }
 .avatar.user { background: var(--accent-soft); color: var(--primary); border: 1.5px solid color-mix(in srgb, var(--primary) 25%, transparent); }
-[data-theme="dark"] .avatar.user { color: #a5b4fc; }
+[data-theme="dark"] .avatar.user { color: #A7F3D0; }
 .msg { min-width: 0; max-width: min(78%, 680px); display: flex; flex-direction: column; gap: 4px; }
 .msg.user { align-items: flex-end; }
 .msg.assistant { align-items: flex-start; }
@@ -669,49 +657,34 @@ input:focus, select:focus, textarea:focus {
   --danger: #dc2626;
 }
 [data-theme="dark"] {
-  --bg: #0B1220;
-  --background: #0B1220;
-  --foreground: #E6EDF7;
-  --card: #111A2B;
-  --card-foreground: #E6EDF7;
-  --popover: #1B2740;
-  --popover-foreground: #E6EDF7;
-  --primary: #3B82F6;
-  --primary-foreground: #FFFFFF;
-  --secondary: #1E293B;
-  --secondary-foreground: #E2E8F0;
-  --accent-blue: #60A5FA;
-  --lavender: #93C5FD;
-  --muted: #1B2740;
-  --muted-foreground: #94A3B8;
-  --accent: rgba(59, 130, 246, .16);
-  --accent-foreground: #BFDBFE;
-  --accent-soft: rgba(59, 130, 246, .16);
-  --accent-2: #3B82F6;
-  --destructive: #f87171;
-  --destructive-foreground: #0B1220;
-  --border: #26344A;
-  --input: #26344A;
-  --ring: #3B82F6;
-  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
-  --shadow-md: 0 2px 4px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
-  --shadow-lg: 0 4px 6px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.45);
-  --shadow-xl: 0 12px 28px rgba(0,0,0,.65), 0 32px 80px rgba(0,0,0,.55);
-  --text: #E6EDF7;
-  --text-muted: #94A3B8;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --sidebar-bg: #0F172A;
-  --sidebar-border: #1E293B;
-  --sidebar-text: #CBD5E1;
-  --sidebar-text-muted: #7F8EA6;
-  --sidebar-hover: rgba(59, 130, 246, .14);
-  --sidebar-active-bg: rgba(59, 130, 246, .22);
-  --sidebar-active-text: #BFDBFE;
-  --topbar-bg: #111A2B;
-  --brand-grad-from: #2563EB; --brand-grad-to: #1E3A8A;
-  --brand-soft: rgba(59, 130, 246, .16); --brand-text: #93C5FD;
+  --background: #0A0B0D; --bg: #0A0B0D;
+  --foreground: #E9EDF2; --text: #E9EDF2;
+  --card: #171A1F; --card-foreground: #E9EDF2;
+  --popover: #20242B; --popover-foreground: #E9EDF2;
+  --primary: #10B981; --primary-foreground: #04120C;
+  --secondary: #1D2126; --secondary-foreground: #D6DBE2;
+  --accent-blue: #6EE7B7; --lavender: #A7F3D0;
+  --muted: #20242B; --muted-foreground: #8B93A0; --text-muted: #8B93A0;
+  --accent: rgba(16,185,129,.16); --accent-soft: rgba(16,185,129,.16);
+  --accent-foreground: #A7F3D0; --accent-2: #10B981;
+  --destructive: #F87171; --destructive-foreground: #0A0B0D;
+  --border: #2A2F38; --input: #2A2F38; --ring: #10B981;
+  --sidebar-bg: #121417; --sidebar-border: #23272E;
+  --sidebar-text: #C7CDD6; --sidebar-text-muted: #7C838F;
+  --sidebar-hover: rgba(16,185,129,.12); --sidebar-active-bg: rgba(16,185,129,.20);
+  --sidebar-active-text: #A7F3D0;
+  --topbar-bg: #121417;
+  --ok: #34D399; --warn: #FBBF24; --danger: #F87171;
+  --brand-grad-from: #10B981; --brand-grad-to: #047857;
+  --brand-soft: rgba(16,185,129,.16); --brand-text: #6EE7B7; --brand-solid: #10B981;
+  --color-blue-50: #ECFDF5; --color-blue-100: #D1FAE5; --color-blue-200: #A7F3D0;
+  --color-blue-300: #6EE7B7; --color-blue-400: #34D399; --color-blue-500: #10B981;
+  --color-blue-600: #059669; --color-blue-700: #047857; --color-blue-800: #065F46;
+  --color-blue-900: #064E3B; --color-blue-950: #022C22;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.35);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.5), 0 4px 6px rgba(0,0,0,.35);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,.6), 0 8px 10px rgba(0,0,0,.35);
 }
 body {
   font-family: var(--font); background: var(--background); color: var(--foreground);
@@ -794,7 +767,7 @@ body {
 }
 .avatar.assistant { background: linear-gradient(135deg, #6D28D9, #7C3AED); color: #fff; box-shadow: 0 4px 10px rgba(124, 58, 237,.25); }
 .avatar.user { background: var(--accent-soft); color: var(--primary); border: 1.5px solid color-mix(in srgb, var(--primary) 25%, transparent); }
-[data-theme="dark"] .avatar.user { color: #a5b4fc; }
+[data-theme="dark"] .avatar.user { color: #A7F3D0; }
 .msg { min-width: 0; max-width: min(78%, 680px); display: flex; flex-direction: column; gap: 4px; }
 .msg.user { align-items: flex-end; }
 .msg.assistant { align-items: flex-start; }
@@ -1117,39 +1090,34 @@ input:focus, select:focus, textarea:focus {
   --danger: #dc2626;
 }
 [data-theme="dark"] {
-  --bg: #09090F;
-  --background: #09090F;
-  --foreground: #EDEAF4;
-  --card: #191927;
-  --card-foreground: #EDEAF4;
-  --popover: #222236;
-  --popover-foreground: #EDEAF4;
-  --primary: #8B5CF6;
-  --primary-foreground: #FFFFFF;
-  --secondary: #6366F1;
-  --secondary-foreground: #FFFFFF;
-  --accent-blue: #3B82F6;
-  --lavender: #A78BFA;
-  --muted: #222236;
-  --muted-foreground: #9C93B4;
-  --accent: rgba(139, 92, 246, .16);
-  --accent-foreground: #C4B5FD;
-  --accent-soft: rgba(139, 92, 246, .16);
-  --accent-2: #8B5CF6;
-  --destructive: #f87171;
-  --destructive-foreground: #09090F;
-  --border: #2A253A;
-  --input: #2A253A;
-  --ring: #8B5CF6;
-  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
-  --shadow-md: 0 2px 4px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
-  --shadow-lg: 0 4px 6px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.45);
-  --shadow-xl: 0 12px 28px rgba(0,0,0,.65), 0 32px 80px rgba(0,0,0,.55);
-  --text: #EDEAF4;
-  --text-muted: #9C93B4;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
+  --background: #0A0B0D; --bg: #0A0B0D;
+  --foreground: #E9EDF2; --text: #E9EDF2;
+  --card: #171A1F; --card-foreground: #E9EDF2;
+  --popover: #20242B; --popover-foreground: #E9EDF2;
+  --primary: #10B981; --primary-foreground: #04120C;
+  --secondary: #1D2126; --secondary-foreground: #D6DBE2;
+  --accent-blue: #6EE7B7; --lavender: #A7F3D0;
+  --muted: #20242B; --muted-foreground: #8B93A0; --text-muted: #8B93A0;
+  --accent: rgba(16,185,129,.16); --accent-soft: rgba(16,185,129,.16);
+  --accent-foreground: #A7F3D0; --accent-2: #10B981;
+  --destructive: #F87171; --destructive-foreground: #0A0B0D;
+  --border: #2A2F38; --input: #2A2F38; --ring: #10B981;
+  --sidebar-bg: #121417; --sidebar-border: #23272E;
+  --sidebar-text: #C7CDD6; --sidebar-text-muted: #7C838F;
+  --sidebar-hover: rgba(16,185,129,.12); --sidebar-active-bg: rgba(16,185,129,.20);
+  --sidebar-active-text: #A7F3D0;
+  --topbar-bg: #121417;
+  --ok: #34D399; --warn: #FBBF24; --danger: #F87171;
+  --brand-grad-from: #10B981; --brand-grad-to: #047857;
+  --brand-soft: rgba(16,185,129,.16); --brand-text: #6EE7B7; --brand-solid: #10B981;
+  --color-blue-50: #ECFDF5; --color-blue-100: #D1FAE5; --color-blue-200: #A7F3D0;
+  --color-blue-300: #6EE7B7; --color-blue-400: #34D399; --color-blue-500: #10B981;
+  --color-blue-600: #059669; --color-blue-700: #047857; --color-blue-800: #065F46;
+  --color-blue-900: #064E3B; --color-blue-950: #022C22;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.35);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.5), 0 4px 6px rgba(0,0,0,.35);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,.6), 0 8px 10px rgba(0,0,0,.35);
 }
 body {
   font-family: var(--font);
@@ -1640,7 +1608,7 @@ table tbody tr {
 }
 
 [data-theme="dark"] table tbody tr:hover {
-  background-color: rgba(59, 130, 246, 0.06);
+  background-color: rgba(16, 185, 129, 0.06);
 }
 
 /* Primary Gradient Action Buttons */
@@ -1841,69 +1809,40 @@ table tbody tr {
 .stat-card__value--danger { color: var(--danger); }
 
 /* ============================================================
-   Dark theme — Slate + Blue (v1.11.47)
-   This file accumulated three [data-theme="dark"] token blocks over time; the last one
-   used to win with the old charcoal+violet values. Declaring the palette once, at the end,
-   makes the effective theme unambiguous. Keep this block last.
+   Dark theme — Graphite Emerald (v1.11.74)
+   Neutral graphite surfaces with one emerald accent. Neutral (not blue-tinted) so content
+   colour never competes with the UI, and green so it cannot be confused with the status
+   palette (ok/warn/danger) the way amber or cyan would be.
+   This file accumulated three [data-theme="dark"] token blocks over time; this one is last
+   and therefore wins. Keep it last.
    ============================================================ */
 [data-theme="dark"] {
-  --background: #0B1220;
-  --bg: #0B1220;
-  --foreground: #E6EDF7;
-  --text: #E6EDF7;
-  --card: #111A2B;
-  --card-foreground: #E6EDF7;
-  --popover: #1B2740;
-  --popover-foreground: #E6EDF7;
-  --primary: #3B82F6;
-  --primary-foreground: #FFFFFF;
-  --secondary: #1E293B;
-  --secondary-foreground: #E2E8F0;
-  --accent-blue: #60A5FA;
-  --lavender: #93C5FD;
-  --muted: #1B2740;
-  --muted-foreground: #94A3B8;
-  --text-muted: #94A3B8;
-  --accent: rgba(59, 130, 246, 0.16);
-  --accent-soft: rgba(59, 130, 246, 0.16);
-  --accent-foreground: #BFDBFE;
-  --accent-2: #3B82F6;
-  --destructive: #f87171;
-  --destructive-foreground: #0B1220;
-  --border: #26344A;
-  --input: #26344A;
-  --ring: #3B82F6;
-  --sidebar-bg: #0F172A;
-  --sidebar-border: #1E293B;
-  --sidebar-text: #CBD5E1;
-  --sidebar-text-muted: #7F8EA6;
-  --sidebar-hover: rgba(59, 130, 246, 0.14);
-  --sidebar-active-bg: rgba(59, 130, 246, 0.22);
-  --sidebar-active-text: #BFDBFE;
-  --topbar-bg: #111A2B;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --brand-grad-from: #2563EB;
-  --brand-grad-to: #1E3A8A;
-  --brand-soft: rgba(59, 130, 246, 0.16);
-  --brand-text: #93C5FD;
-  --brand-solid: #3B82F6;
-  /* The @theme ramp maps blue-* onto the violet brand (light mode). Dark mode wants blue,
-     so the same variables are re-pointed here — every `blue-600` utility follows. */
-  --color-blue-50: #EFF6FF;
-  --color-blue-100: #DBEAFE;
-  --color-blue-200: #BFDBFE;
-  --color-blue-300: #93C5FD;
-  --color-blue-400: #60A5FA;
-  --color-blue-500: #3B82F6;
-  --color-blue-600: #2563EB;
-  --color-blue-700: #1D4ED8;
-  --color-blue-800: #1E40AF;
-  --color-blue-900: #1E3A8A;
-  --color-blue-950: #172554;
-  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
-  --shadow-md: 0 2px 4px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.4);
-  --shadow-lg: 0 4px 6px rgba(0,0,0,.5), 0 16px 40px rgba(0,0,0,.45);
-  --shadow-xl: 0 12px 28px rgba(0,0,0,.65), 0 32px 80px rgba(0,0,0,.55);
+  --background: #0A0B0D; --bg: #0A0B0D;
+  --foreground: #E9EDF2; --text: #E9EDF2;
+  --card: #171A1F; --card-foreground: #E9EDF2;
+  --popover: #20242B; --popover-foreground: #E9EDF2;
+  --primary: #10B981; --primary-foreground: #04120C;
+  --secondary: #1D2126; --secondary-foreground: #D6DBE2;
+  --accent-blue: #6EE7B7; --lavender: #A7F3D0;
+  --muted: #20242B; --muted-foreground: #8B93A0; --text-muted: #8B93A0;
+  --accent: rgba(16,185,129,.16); --accent-soft: rgba(16,185,129,.16);
+  --accent-foreground: #A7F3D0; --accent-2: #10B981;
+  --destructive: #F87171; --destructive-foreground: #0A0B0D;
+  --border: #2A2F38; --input: #2A2F38; --ring: #10B981;
+  --sidebar-bg: #121417; --sidebar-border: #23272E;
+  --sidebar-text: #C7CDD6; --sidebar-text-muted: #7C838F;
+  --sidebar-hover: rgba(16,185,129,.12); --sidebar-active-bg: rgba(16,185,129,.20);
+  --sidebar-active-text: #A7F3D0;
+  --topbar-bg: #121417;
+  --ok: #34D399; --warn: #FBBF24; --danger: #F87171;
+  --brand-grad-from: #10B981; --brand-grad-to: #047857;
+  --brand-soft: rgba(16,185,129,.16); --brand-text: #6EE7B7; --brand-solid: #10B981;
+  --color-blue-50: #ECFDF5; --color-blue-100: #D1FAE5; --color-blue-200: #A7F3D0;
+  --color-blue-300: #6EE7B7; --color-blue-400: #34D399; --color-blue-500: #10B981;
+  --color-blue-600: #059669; --color-blue-700: #047857; --color-blue-800: #065F46;
+  --color-blue-900: #064E3B; --color-blue-950: #022C22;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.35);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.5), 0 4px 6px rgba(0,0,0,.35);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,.6), 0 8px 10px rgba(0,0,0,.35);
 }
