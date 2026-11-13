@@ -90,6 +90,8 @@ type User = {
   /** Directory lifecycle: active | suspended (disabled in AD) | removed (gone from AD). */
   state?: "active" | "suspended" | "removed";
   directoryLinked?: boolean;
+  /** Which identity provider owns the account: AD/LDAP, a local password, or Keycloak SSO. */
+  identitySource?: "ldap" | "local" | "sso";
   removedAt?: string | null;
 };
 
@@ -1145,6 +1147,9 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
   }
 
   const isAdUser = user.source === "ad" || user.id?.startsWith("ad:");
+  // AD accounts say so; a local password says local; anything else signed in through SSO.
+  const identity: "ldap" | "local" | "sso" =
+    user.identitySource ?? (isAdUser ? "ldap" : "local");
 
   const roleLabel = user.role;
   const deactivated = user.status === "Disabled" || user.status === "Inactive";
@@ -1187,9 +1192,15 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
                   <Shield className="size-3 text-muted-foreground" aria-hidden />
                   {roleLabel}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium text-muted-foreground">
-                  {isAdUser ? <Building2 className="size-3" aria-hidden /> : <Laptop className="size-3" aria-hidden />}
-                  {isAdUser ? "Directory account" : "Local account"}
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-muted/50 px-2 py-1 text-2xs font-medium text-muted-foreground">
+                  {identity === "ldap" ? (
+                    <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-3" />
+                  ) : identity === "sso" ? (
+                    <IntegrationLogo providerKey="keycloak" name="Keycloak SSO" size="sm" className="size-3" />
+                  ) : (
+                    <Laptop className="size-3" aria-hidden />
+                  )}
+                  {identity === "ldap" ? "Active Directory" : identity === "sso" ? "Keycloak SSO" : "Local account"}
                 </span>
               </div>
             </div>

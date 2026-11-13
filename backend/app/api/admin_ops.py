@@ -484,7 +484,12 @@ def admin_list_conversations(
             "count(cm.id) AS messages, max(cm.created_at) AS last_at, "
             "(SELECT cm2.content FROM chat_messages cm2 "
             " WHERE cm2.session_id = cs.id AND cm2.role = 'user' "
-            " ORDER BY cm2.created_at ASC LIMIT 1) AS first_user_msg "
+            " ORDER BY cm2.created_at ASC LIMIT 1) AS first_user_msg, "
+            # Which provider answered last: the history row shows its mark, so a reader can
+            # tell an Ollama answer from a hosted one without opening the session.
+            "(SELECT cm3.meta FROM chat_messages cm3 "
+            " WHERE cm3.session_id = cs.id AND cm3.role = 'assistant' "
+            " ORDER BY cm3.created_at DESC LIMIT 1) AS last_meta "
             "FROM chat_sessions cs JOIN chat_messages cm ON cm.session_id = cs.id "
             "WHERE (:u = '' OR cs.username = :u) "
             "GROUP BY cs.id, cs.username, cs.title, cs.started_at "
@@ -500,8 +505,25 @@ def admin_list_conversations(
             return "(untitled)"
         return text[:60] + ("…" if len(text) > 60 else "")
 
+    def _provider(raw_meta):
+        if not raw_meta:
+            return None
+        try:
+            import json as _json
+
+            meta = _json.loads(raw_meta) if isinstance(raw_meta, str) else raw_meta
+        except Exception:
+            return None
+        if not isinstance(meta, dict):
+            return None
+        for key in ("llm_resolved", "llm_provider", "provider", "model"):
+            value = meta.get(key)
+            if value:
+                return str(value)
+        return None
+
     return {"conversations": [
-        {"session_id": str(r["id"]), "username": r["username"],
+        {"session_id": str(r["id"]), "username": r["username"], "provider": _provider(r.get("last_meta")),
          "title": _derive_title(r["title"], r["first_user_msg"]), "messages": int(r["messages"]),
          "started_at": r["started_at"].isoformat() if r["started_at"] else None,
          "last_at": r["last_at"].isoformat() if r["last_at"] else None}

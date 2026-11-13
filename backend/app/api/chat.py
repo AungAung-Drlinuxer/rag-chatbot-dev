@@ -514,6 +514,11 @@ def chat_stream(req: ChatRequest, user: str = Depends(_require_chatbot)) -> Stre
         # conversation reloads (the SSE `meta` event has the live ones, but we
         # store a snapshot too so a re-opened chat can show usage under old answers).
         if last_usage is not None:
+            # `_provider` is transport detail, not a token count: lift it to its own key and
+            # keep it out of the usage payload the UI renders.
+            resolved = last_usage.pop("_provider", None)
+            if resolved:
+                meta["llm_resolved"] = resolved
             meta["usage"] = last_usage
         meta["top_k"] = result.top_k
         meta["context_tokens_estimate"] = result.context_tokens_estimate

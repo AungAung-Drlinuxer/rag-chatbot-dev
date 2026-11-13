@@ -127,9 +127,9 @@ describe("ConversationHistoryPage — header, figures and toolbar", () => {
 });
 
 describe("ConversationHistoryPage — the table", () => {
-  it("uses the mockup's four columns and one row per conversation", async () => {
+  it("shows the four core columns plus the answering provider", async () => {
     const el = await mount();
-    expect(headers(el)).toEqual(["User", "Conversation", "Msgs", "Last activity"]);
+    expect(headers(el)).toEqual(["User", "Conversation", "Msgs", "Provider", "Last activity"]);
     expect(rowCount(el)).toBe(2);
     const text = el.textContent!;
     expect(text).toContain("ith@dmin");

@@ -318,6 +318,10 @@ export default function Settings({ role }: { role?: string }) {
           }
         />
 
+        {/* Landing strip: the four external systems this app depends on, readable
+            without opening the integrations tab first. */}
+        {active !== "integrations" && <IntegrationStrip onOpen={() => setActive("integrations")} />}
+
         {/* Tabs — one group visible at a time. Kept as a labelled landmark so the
             section navigation stays addressable for assistive tech and tests. */}
         <nav
@@ -635,6 +639,50 @@ export default function Settings({ role }: { role?: string }) {
 /* ============================================================
    INTEGRATIONS STATUS CARDS + EDITOR + SYSTEM HEALTH (live)
 ============================================================ */
+
+/** The four connected systems, at a glance, on every settings tab. */
+function IntegrationStrip({ onOpen }: { onOpen: () => void }) {
+  const [cfg, setCfg] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    Promise.all([
+      getIntegrationSettings("confluence"),
+      getIntegrationSettings("jira"),
+      getIntegrationSettings("ldap"),
+      getIntegrationSettings("keycloak"),
+    ]).then((vals) => {
+      const map: Record<string, any> = {};
+      vals.forEach((v: any, i) => { map[["confluence", "jira", "ldap", "keycloak"][i]] = v?.settings ?? v; });
+      setCfg(map);
+    }).catch(() => {});
+  }, []);
+
+  const rows = [
+    { key: "confluence", name: "Confluence", ready: Boolean(cfg.confluence?.base_url) },
+    { key: "jira", name: "Jira", ready: Boolean(cfg.jira?.base_url) },
+    { key: "ldap", name: "Active Directory", ready: Boolean(cfg.ldap?.host) },
+    { key: "keycloak", name: "Keycloak SSO", ready: Boolean(cfg.keycloak?.issuer) },
+  ];
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      {rows.map((r) => (
+        <button
+          key={r.key}
+          type="button"
+          onClick={onOpen}
+          title={r.ready ? `${r.name} is configured` : `${r.name} is not configured yet — open Integrations`}
+          className="tap inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-card px-3 py-1.5 text-2xs font-medium transition hover:border-[var(--primary)]/40 hover:bg-muted/40"
+        >
+          <IntegrationLogo providerKey={r.key} name={r.name} size="sm" className="size-4 shrink-0" />
+          <span className="text-foreground">{r.name}</span>
+          <span className={["size-1.5 rounded-full", r.ready ? "bg-[var(--ok)]" : "bg-[var(--border)]"].join(" ")} />
+          <span className="text-muted-foreground">{r.ready ? "Connected" : "Not set"}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function IntegrationStatusCards() {
   const [services, setServices] = useState<any[]>([]);

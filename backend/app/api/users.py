@@ -95,6 +95,16 @@ def list_users(include_removed: bool = False,
     # Admin-managed app groups; a user's DEPARTMENT comes from the directory (`users.department`),
     # not from a groups table — the departments feature was removed, and the old join meant a
     # user could show a department that no longer existed anywhere.
+    local_pw_users: set[str] = set()
+    try:
+        with SessionLocal() as _s2:
+            local_pw_users = {
+                r[0] for r in _s2.execute(text(
+                    "SELECT username FROM local_user_credentials WHERE source = 'local'"
+                )).all()
+            }
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
     app_group_map: dict[str, list[str]] = {}
     try:
         from sqlalchemy import text as _t
@@ -140,6 +150,13 @@ def list_users(include_removed: bool = False,
                     "state": state,
                     "removedAt": r["removed_at"].isoformat() if r.get("removed_at") else None,
                     "directoryLinked": bool(r.get("ldap_dn")),
+                    # Which identity provider owns this account: directory (AD/LDAP), a local
+                    # password set here, or SSO (Keycloak) when neither is true.
+                    "identitySource": (
+                        "ldap" if r.get("ldap_dn")
+                        else "local" if u in local_pw_users
+                        else "sso"
+                    ),
                 }
         except Exception as _exc:
             logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
@@ -231,6 +248,7 @@ def list_users(include_removed: bool = False,
                     "state": "active",
                     "removedAt": None,
                     "directoryLinked": True,
+                    "identitySource": "ldap",
                 }
         except Exception as exc:
             logger.warning("LDAP user search failed: %s", exc)

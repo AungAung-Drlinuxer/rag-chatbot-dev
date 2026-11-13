@@ -307,6 +307,37 @@ def _extract_usage(chunk) -> dict | None:
     return None
 
 
+def _provider_tag(llm) -> str:
+    """Best-effort identity of the model actually answering.
+
+    The request only carries a mode ("auto"/"cloud"/"local"); the history row wants the
+    real provider, so derive it from the client's class, model name and base URL. Empty
+    string means "unknown" and the row shows a dash rather than a wrong logo."""
+    cls = type(llm).__name__.lower()
+    model = str(getattr(llm, "model_name", "") or getattr(llm, "model", "") or "").lower()
+    base = str(
+        getattr(llm, "openai_api_base", "")
+        or getattr(llm, "base_url", "")
+        or getattr(llm, "azure_endpoint", "")
+        or ""
+    ).lower()
+    if "ollama" in cls or "ollama" in base or ":11434" in base:
+        return "ollama"
+    if "openrouter" in base:
+        return "openrouter"
+    if "deepseek" in model or "deepseek" in base:
+        return "deepseek"
+    if "anthropic" in cls or "claude" in model:
+        return "anthropic"
+    if "google" in cls or "gemini" in model or "generativelanguage" in base:
+        return "google"
+    if "azure" in cls or "azure" in base:
+        return "microsoft"
+    if "openai" in cls or "openai" in base:
+        return "openai"
+    return ""
+
+
 def _stream_with_usage(llm, question: str, context: str,
                        system_prompt: str | None = None) -> Iterable[tuple[str, dict | None]]:
     """Stream the chat model DIRECTLY and yield (token, usage). `usage` is non-None
@@ -335,6 +366,8 @@ def _stream_with_usage(llm, question: str, context: str,
         if text:
             yield text, None
     if last_usage is not None:
+        # Tag the client identity so the caller can persist which provider answered.
+        last_usage["_provider"] = _provider_tag(llm)
         yield "", last_usage
 
 

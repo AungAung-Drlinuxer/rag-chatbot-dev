@@ -47,6 +47,8 @@ type Conv = {
   messages: number;
   started_at: string | null;
   last_at: string | null;
+  /** Which LLM answered last (from the assistant message meta), when known. */
+  provider?: string | null;
 };
 
 type Msg = { role: string; content: string; created_at: string | null };
@@ -462,6 +464,7 @@ export default function ConversationHistoryPage() {
                     <th className="px-5 py-3 font-medium">User</th>
                     <th className="px-5 py-3 font-medium">Conversation</th>
                     <th className="hidden px-5 py-3 font-medium md:table-cell">Msgs</th>
+                    <th className="hidden px-5 py-3 font-medium lg:table-cell">Provider</th>
                     <th className="hidden px-5 py-3 font-medium sm:table-cell">Last activity</th>
                   </tr>
                 </thead>
@@ -500,6 +503,19 @@ export default function ConversationHistoryPage() {
                         </div>
                       </td>
                       <td className="hidden px-5 py-3.5 align-middle text-muted-foreground md:table-cell">{c.messages}</td>
+                      <td className="hidden px-5 py-3.5 align-middle lg:table-cell">
+                        {(() => {
+                          const key = providerKey(c.provider);
+                          return key ? (
+                            <span className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground">
+                              <IntegrationLogo providerKey={key} name={key} size="sm" className="size-3.5" />
+                              <span className="capitalize">{key}</span>
+                            </span>
+                          ) : (
+                            <span className="text-2xs text-muted-foreground">—</span>
+                          );
+                        })()}
+                      </td>
                       <td className="hidden whitespace-nowrap px-3 py-3.5 align-middle text-2xs text-muted-foreground sm:table-cell md:px-5 md:text-xs">{fmt(c.last_at)}</td>
                     </tr>
                   ))}
@@ -719,4 +735,19 @@ export default function ConversationHistoryPage() {
       </main>
     </PageShell>
   );
+}
+
+/** Provider ids as they arrive from meta → the asset key. "auto" means the router picked,
+    so the mark would be a guess and is not shown. */
+function providerKey(provider?: string | null): string | null {
+  const p = (provider || "").toLowerCase();
+  if (!p || p === "auto") return null;
+  if (p.includes("anthropic") || p.includes("claude")) return "anthropic";
+  if (p.includes("openrouter")) return "openrouter";
+  if (p.includes("deepseek")) return "deepseek";
+  if (p.includes("ollama")) return "ollama";
+  if (p.includes("openai") || p.includes("gpt")) return "openai";
+  if (p.includes("google") || p.includes("gemini")) return "google";
+  if (p.includes("azure") || p.includes("microsoft")) return "microsoft";
+  return null;
 }
