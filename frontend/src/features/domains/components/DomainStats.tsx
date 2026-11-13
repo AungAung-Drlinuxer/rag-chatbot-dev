@@ -16,6 +16,13 @@ export type DomainTotals = {
   attention: number;
 };
 
+const EDGE = {
+  primary: "stat-card--accent",
+  emerald: "stat-card--ok",
+  sky: "stat-card--info",
+  warn: "stat-card--warn",
+} as const;
+
 const TONES = {
   primary: "bg-[var(--accent-soft)] text-[var(--accent-foreground)]",
   emerald: "bg-[var(--ok)]/12 text-[var(--ok)]",
@@ -42,10 +49,7 @@ function StatTile({
 }) {
   return (
     <div
-      className={[
-        "rounded-2xl border bg-card p-4 shadow-xs transition",
-        emphasis ? "border-[var(--warn)]/40" : "border-[var(--border)]",
-      ].join(" ")}
+      className={["stat-card p-4", emphasis ? "stat-card--warn" : EDGE[tone]].join(" ")}
     >
       <div className="flex items-start justify-between gap-3">
         <span className={["grid size-9 shrink-0 place-items-center rounded-xl", TONES[tone]].join(" ")} aria-hidden>

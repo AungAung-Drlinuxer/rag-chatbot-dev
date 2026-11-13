@@ -24,6 +24,15 @@ export type TicketTotals = {
 
 type Tone = "primary" | "amber" | "emerald" | "slate" | "rose";
 
+/** The left edge of each tile, matching the icon tile's tone. */
+const EDGE: Record<Tone, string> = {
+  primary: "stat-card--accent",
+  amber: "stat-card--warn",
+  emerald: "stat-card--ok",
+  rose: "stat-card--danger",
+  slate: "stat-card--muted",
+};
+
 const TONES: Record<Tone, { tile: string; ring: string; bar: string }> = {
   primary: {
     tile: "bg-[var(--accent-soft)] text-[var(--primary)]",
@@ -87,8 +96,9 @@ function Tile({
         }
       }}
       className={[
-        "group relative h-full cursor-pointer gap-0 overflow-hidden px-4 py-3.5 shadow-xs transition sm:px-5",
-        active ? t.ring : "border-[var(--border)] hover:border-[var(--primary)]/35",
+        "stat-card group relative h-full cursor-pointer gap-0 px-4 py-3.5 sm:px-5",
+        EDGE[tone],
+        active ? t.ring : "",
       ].join(" ")}
     >
       {/* The active card keeps a colour bar so the applied filter is visible at a glance. */}

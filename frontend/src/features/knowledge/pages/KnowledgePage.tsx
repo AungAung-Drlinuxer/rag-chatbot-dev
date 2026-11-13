@@ -287,7 +287,7 @@ function StatCard({
   caption: string;
 }) {
   return (
-    <div data-slot="card" className="flex flex-col rounded-xl border border-[var(--border)] bg-card p-5 shadow-xs">
+    <div data-slot="card" className="stat-card stat-card--accent flex flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <span className="text-[var(--primary)]">{icon}</span>

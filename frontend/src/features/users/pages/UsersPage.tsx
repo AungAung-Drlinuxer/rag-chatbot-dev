@@ -734,7 +734,7 @@ function SummaryCard({ icon, label, value, caption }: {
   icon: ReactNode; label: string; value: number; caption: string;
 }) {
   return (
-    <div data-slot="summary-card" className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
+    <div data-slot="summary-card" className="stat-card stat-card--accent h-full px-4 py-3.5 sm:px-5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
         <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>

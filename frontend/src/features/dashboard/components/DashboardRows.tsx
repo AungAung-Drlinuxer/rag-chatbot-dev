@@ -10,7 +10,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import type { Domain, HealthItem } from "@/features/dashboard/lib/dashboardTypes";
 import type { ReactNode } from "react";
 
@@ -24,6 +23,15 @@ import type { ReactNode } from "react";
  */
 // Tones are semantic tokens, not palette literals: the same tile has to hold up in the
 // light and the charcoal-navy theme without a per-tone dark: variant.
+/** Edge colour per tone — same palette as the icon tile, on the border instead of the fill. */
+const TONE_EDGE: Record<string, string> = {
+  emerald: "stat-card--ok",
+  orange: "stat-card--warn",
+  sky: "stat-card--info",
+  violet: "stat-card--accent",
+  rose: "stat-card--danger",
+};
+
 const TONE_TILE: Record<string, string> = {
   emerald: "bg-[var(--ok)]/12 text-[var(--ok)]",
   orange: "bg-[var(--warn)]/12 text-[var(--warn)]",
@@ -55,7 +63,7 @@ export function KpiCard({
   className?: string;
 }) {
   return (
-    <Card data-slot="summary-tile" className={["gap-0 rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs", className ?? ""].join(" ")}>
+    <div data-slot="summary-tile" className={["stat-card flex flex-col px-4 py-3.5", TONE_EDGE[tone ?? "sky"], className ?? ""].join(" ")}>
       <div className="flex items-start justify-between gap-2">
         {/* Two reserved lines: "Total conversations" and "Escalated to tickets" wrap on a
             phone instead of being cut to "TOTAL CONVERSA…", and every tile stays the same
@@ -107,7 +115,7 @@ export function KpiCard({
           )}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

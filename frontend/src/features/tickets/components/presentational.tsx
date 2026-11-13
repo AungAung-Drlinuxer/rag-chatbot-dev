@@ -1,7 +1,6 @@
 /** Tickets feature presentational components — pure, no state, no fetch. */
 import { type ReactNode } from "react";
 
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -32,14 +31,23 @@ export function StatCard({
     amber: "bg-amber-500",
     emerald: "bg-emerald-500",
   };
+  // The card stays white; the accent moves to the left edge and the status dot.
+  const edge = {
+    slate: "stat-card--accent",
+    blue: "stat-card--info",
+    amber: "stat-card--warn",
+    emerald: "stat-card--ok",
+  };
 
   return (
-    <Card
+    <div
+      data-slot="card"
       onClick={onClick}
       title={title}
       className={[
-        "gap-0 rounded-xl border-[var(--border)] px-5 py-4 shadow-xs",
-        onClick ? "cursor-pointer transition hover:border-[var(--primary)]/40" : "",
+        "stat-card flex flex-col px-5 py-4",
+        edge[accent],
+        onClick ? "cursor-pointer" : "",
       ].join(" ")}
       role={onClick ? "button" : undefined}
     >
@@ -54,14 +62,14 @@ export function StatCard({
         />
       </div>
 
-      <div className="mt-2.5 text-3xl font-semibold tracking-tight">
+      <div className="mt-2.5 text-3xl font-semibold tracking-tight tabular-nums">
         {value}
       </div>
 
       <div className="mt-1 text-2xs text-muted-foreground">
         {description}
       </div>
-    </Card>
+    </div>
   );
 }
 

@@ -1319,3 +1319,96 @@ table tbody tr {
   .kpi-row::-webkit-scrollbar { display: none; }
   .kpi-row > * { scroll-snap-align: start; }
 }
+
+/* ============================================================
+   Mobile bottom sheets — v1.11.40
+   A centred modal on a 390px screen wastes the top half and leaves a 12px border that
+   reads as a floating card. Below sm every dialog becomes a sheet: anchored to the
+   bottom, edge to edge, rounded only at the top, with a grab handle.
+   ============================================================ */
+@media (max-width: 639px) {
+  /* Bottom sheet geometry lives here only. Unlayered + !important because Radix's
+     translate/transform utilities are layered and would otherwise re-centre the sheet. */
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"] {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    translate: 0 0 !important;
+    /* Tailwind composes `translate` from these two custom properties; zeroing them is what
+       actually removes the -50% centring, because an animation beats a plain declaration. */
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 92dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-left-width: 0 !important;
+    border-right-width: 0 !important;
+    border-bottom-width: 0 !important;
+    padding-top: 14px !important;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+    animation: sheet-up 220ms cubic-bezier(0.22, 0.8, 0.24, 1);
+  }
+
+  /* the handle: 36x4, centred, muted — the only affordance a sheet needs */
+  [data-slot="dialog-content"]::before,
+  [data-slot="alert-dialog-content"]::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    translate: -50% 0;
+    height: 4px;
+    width: 36px;
+    border-radius: 9999px;
+    background: var(--border);
+    pointer-events: none;
+  }
+}
+
+@keyframes sheet-up {
+  /* `translate` is in the keyframes on purpose: Radix's animate-in utility animates that
+     property, and an animation beats both utilities and inline styles. Restating it here
+     is the only way the sheet stops inheriting the centred -50%/-50%. */
+  from { transform: translateY(16px); opacity: 0.55; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ============================================================
+   Stat cards — v1.11.40
+   White surface stays white. The brand arrives as a 3px accent edge, a tinted icon and
+   (only where the number is a warning) a tinted figure — never as a filled card.
+   ============================================================ */
+@layer components {
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--stat-accent, var(--primary));
+  opacity: 0.85;
+}
+.stat-card:hover { border-color: color-mix(in oklab, var(--stat-accent, var(--primary)) 35%, var(--border)); }
+.stat-card--accent { --stat-accent: var(--primary); }
+.stat-card--ok { --stat-accent: var(--ok); }
+.stat-card--warn { --stat-accent: var(--warn); }
+.stat-card--danger { --stat-accent: var(--danger); }
+.stat-card--info { --stat-accent: var(--primary); }
+.stat-card--muted { --stat-accent: var(--muted-foreground); }
+}
+
+/* the figure picks up the accent only when the card is asking for attention */
+.stat-card__value--warn { color: var(--warn); }
+.stat-card__value--danger { color: var(--danger); }
