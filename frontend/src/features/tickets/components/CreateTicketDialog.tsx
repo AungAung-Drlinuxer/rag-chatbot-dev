@@ -520,17 +520,15 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   value={draft.due_date}
                   onChange={(e) => setDraft({ ...draft, due_date: e.target.value })}
                   aria-label="Due date"
+                  /* No painted placeholder over a date input: WebKit on phones ignores the
+                     ::-webkit-datetime-edit rule that hides the native text, so an overlay
+                     doubled the value ("20/06/2026" printed twice). The native placeholder
+                     is the browser's own and cannot collide with anything. */
                   className={[
                     FIELD,
                     "pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0",
-                    draft.due_date ? "" : "[&::-webkit-datetime-edit]:text-transparent",
                   ].join(" ")}
                 />
-                {!draft.due_date && (
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/60">
-                    Select date
-                  </span>
-                )}
                 <CalendarDays
                   className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                   aria-hidden

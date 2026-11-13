@@ -48,13 +48,6 @@ const FIELD =
 const SELECT =
   "h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--background)] pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
-function formatDate(value: string) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -587,7 +580,12 @@ export function EditTicketDialog({
                         className={[
                           FIELD,
                           "pl-9 pr-11 [&::-webkit-calendar-picker-indicator]:hidden",
-                          dueDate ? "[&::-webkit-datetime-edit]:text-transparent" : "",
+                          /* Hide the native dd/mm/yyyy only while the placeholder is up.
+                             It used to be hidden whenever a date existed, and a formatted
+                             label was painted on top — on mobile WebKit the pseudo-element
+                             rule is ignored, so both renderings showed and the field read
+                             as doubled ("20/06/2026" printed twice). */
+                          dueDate ? "" : "[&::-webkit-datetime-edit]:text-transparent",
                         ].join(" ")}
                       />
                       <button
@@ -598,11 +596,7 @@ export function EditTicketDialog({
                       >
                         <CalendarDays className="size-4" aria-hidden />
                       </button>
-                      {dueDate ? (
-                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-foreground">
-                          {formatDate(dueDate)}
-                        </span>
-                      ) : (
+                      {!dueDate && (
                         <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/60">
                           Select date
                         </span>
