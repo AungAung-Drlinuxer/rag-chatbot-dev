@@ -46,8 +46,8 @@ type AuditRow = {
 const ACTION_TONES: Record<string, string> = {
   apikey: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   login: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  logout: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  chat: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+  logout: "bg-slate-100 text-slate-600 dark:bg-[var(--muted)] dark:text-[var(--secondary-foreground)]",
+  chat: "bg-blue-50 text-blue-700 dark:bg-[var(--accent)] dark:text-[var(--accent-foreground)]",
   escalate: "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
   feedback: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   sync: "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
@@ -64,7 +64,7 @@ const ACTION_TONES: Record<string, string> = {
   domain_updated: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300",
   domain_renamed: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300",
   branding: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300",
-  inventory: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  inventory: "bg-slate-100 text-slate-600 dark:bg-[var(--muted)] dark:text-[var(--secondary-foreground)]",
 };
 
 function toneFor(action: string): string {
@@ -72,7 +72,7 @@ function toneFor(action: string): string {
   for (const k of Object.keys(ACTION_TONES)) {
     if (action.startsWith(k)) return ACTION_TONES[k];
   }
-  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+  return "bg-slate-100 text-slate-600 dark:bg-[var(--muted)] dark:text-[var(--secondary-foreground)]";
 }
 
 /** Server times are UTC (timestamptz); render them in the viewer's locale. */

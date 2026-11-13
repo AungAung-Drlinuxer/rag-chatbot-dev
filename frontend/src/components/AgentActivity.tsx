@@ -122,7 +122,7 @@ export default function AgentActivity({
 
       {/* shimmering label */}
       <span className="flex min-w-0 flex-col">
-        <span className="agent-shimmer-text truncate text-xs font-medium text-slate-700 dark:text-slate-200">
+        <span className="agent-shimmer-text truncate text-xs font-medium text-slate-700 dark:text-[var(--foreground)]">
           {compact ? def.chip : def.label}
         </span>
         {extra && !compact && (

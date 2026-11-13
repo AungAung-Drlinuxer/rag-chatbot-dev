@@ -60,7 +60,7 @@ export function NeedHelpCard() {
             setDismissed(true);
           }
         }}
-        className="absolute -right-1 -top-1 hidden size-4 place-items-center rounded-full border border-[var(--border)] bg-white text-slate-500 shadow-xs transition hover:text-red-500 group-hover:grid dark:border-slate-700 dark:bg-slate-800"
+        className="absolute -right-1 -top-1 hidden size-4 place-items-center rounded-full border border-[var(--border)] bg-white text-slate-500 shadow-xs transition hover:text-red-500 group-hover:grid dark:border-[var(--border)] dark:bg-[var(--muted)]"
       >
         <X className="size-2.5" />
       </span>

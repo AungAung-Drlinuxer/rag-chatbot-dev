@@ -90,7 +90,7 @@ export default function Composer({
       {above}
       <div
         className={
-          "flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 shadow-xs transition-all focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-900/80 dark:focus-within:bg-slate-900 " +
+          "flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 shadow-xs transition-all focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/10 dark:border-[var(--border)] dark:bg-[var(--background)] dark:focus-within:bg-slate-900 " +
           className
         }
       >
@@ -104,7 +104,7 @@ export default function Composer({
               onClick={() => fileRef.current?.click()}
               aria-label="Attach file or image"
               title="Attach file or image"
-              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-200/60 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-200/60 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-[var(--muted)] dark:hover:text-slate-200"
             >
               <Paperclip className="size-4" />
             </button>
@@ -155,7 +155,7 @@ export default function Composer({
 
         {/* The hint belongs INSIDE the field, beside the button it describes. */}
         {hint && (
-          <kbd className="hidden shrink-0 rounded-md border border-slate-200 bg-white/70 px-1.5 py-0.5 font-mono text-2xs text-slate-500 md:inline-block dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400">
+          <kbd className="hidden shrink-0 rounded-md border border-slate-200 bg-white/70 px-1.5 py-0.5 font-mono text-2xs text-slate-500 md:inline-block dark:border-[var(--border)] dark:bg-[var(--muted)] dark:text-[var(--muted-foreground)]">
             Ctrl+Enter
           </kbd>
         )}
@@ -166,7 +166,7 @@ export default function Composer({
             onClick={onStop}
             aria-label="Stop generating"
             title="Stop generating (Esc)"
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 active:scale-95 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 active:scale-95 dark:border-[var(--border)] dark:bg-[var(--muted)] dark:text-[var(--foreground)] dark:hover:bg-[var(--muted)]"
           >
             <Square className="size-3.5 fill-current" />
           </button>

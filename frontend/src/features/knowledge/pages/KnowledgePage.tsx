@@ -147,8 +147,8 @@ const DOMAIN_META: Record<
     label: "Database",
     description: "PostgreSQL, Oracle, SQL, deadlocks, performance",
     icon: BookOpen,
-    iconClass: "text-blue-600 dark:text-blue-400",
-    bgClass: "bg-blue-50 dark:bg-blue-950/40",
+    iconClass: "text-blue-600 dark:text-[var(--accent-foreground)]",
+    bgClass: "bg-blue-50 dark:bg-[var(--accent)]",
   },
   network: {
     label: "Network & Connectivity",
@@ -168,8 +168,8 @@ const DOMAIN_META: Record<
     label: "Server & Hardware",
     description: "Linux, Windows, hardware, virtualization",
     icon: BookOpen,
-    iconClass: "text-blue-600 dark:text-blue-400",
-    bgClass: "bg-blue-50 dark:bg-blue-950/40",
+    iconClass: "text-blue-600 dark:text-[var(--accent-foreground)]",
+    bgClass: "bg-blue-50 dark:bg-[var(--accent)]",
   },
   kubernetes: {
     label: "Kubernetes & Cloud",
@@ -196,8 +196,8 @@ const DOMAIN_META: Record<
     label: "General IT",
     description: "All other IT questions, company policy, miscellaneous",
     icon: BookOpen,
-    iconClass: "text-slate-600 dark:text-slate-400",
-    bgClass: "bg-slate-100 dark:bg-slate-800",
+    iconClass: "text-slate-600 dark:text-[var(--muted-foreground)]",
+    bgClass: "bg-slate-100 dark:bg-[var(--muted)]",
   },
 };
 
@@ -364,10 +364,10 @@ export default function Knowledge({ role, onToast }: Props) {
     const dynamicColorDef = card?.color && COLOR_OPTIONS[card.color];
     const resolvedIconClass = dynamicColorDef
       ? dynamicColorDef.textClass
-      : fallback?.iconClass || "text-blue-600 dark:text-blue-400";
+      : fallback?.iconClass || "text-blue-600 dark:text-[var(--accent-foreground)]";
     const resolvedBgClass = dynamicColorDef
       ? dynamicColorDef.bgClass
-      : fallback?.bgClass || "bg-blue-50 dark:bg-blue-950/40";
+      : fallback?.bgClass || "bg-blue-50 dark:bg-[var(--accent)]";
 
     return {
       label: card?.display_name || apiCard?.display_name || fallback?.label || humanized,

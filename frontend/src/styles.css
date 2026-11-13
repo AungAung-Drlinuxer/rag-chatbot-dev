@@ -201,13 +201,13 @@
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
   --accent-blue: #3B82F6; --lavender: #A78BFA;
-  --muted: #222236; --muted-foreground: #9C93B4; --text-muted: #9C93B4;
+  --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
   --destructive: #f87171; --destructive-foreground: #09090F;
-  --border: #2A253A; --input: #2A253A; --ring: #8B5CF6;
+  --border: #3B3452; --input: #453C61; --ring: #8B5CF6;
   --sidebar-bg: #11111B; --sidebar-border: #1E1A2C;
-  --sidebar-text: #CFC8DF; --sidebar-text-muted: #8A82A0;
+  --sidebar-text: #D6D0E4; --sidebar-text-muted: #A69FB8;
   --sidebar-hover: rgba(139,92,246,.16); --sidebar-active-bg: rgba(139,92,246,.26);
   --sidebar-active-text: #C4B5FD;
   --topbar-bg: #191927;
@@ -468,7 +468,7 @@ body {
   border: none; border-radius: 16px; box-shadow: var(--shadow-xl); padding: 24px; background: var(--card);
 }
 [data-theme="dark"] [data-slot="alert-dialog-content"], [data-theme="dark"] [data-slot="dialog-content"] {
-  background: #1f2937; box-shadow: 0 20px 25px rgba(0,0,0,.5), 0 8px 10px rgba(0,0,0,.3);
+  background: var(--card); box-shadow: 0 20px 25px rgba(0,0,0,.55), 0 8px 10px rgba(0,0,0,.3);
 }
 [data-slot="alert-dialog-header"], [data-slot="dialog-header"] { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 [data-slot="alert-dialog-title"], [data-slot="dialog-title"] { font-size: 16px; font-weight: 700; }
@@ -670,13 +670,13 @@ input:focus, select:focus, textarea:focus {
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
   --accent-blue: #3B82F6; --lavender: #A78BFA;
-  --muted: #222236; --muted-foreground: #9C93B4; --text-muted: #9C93B4;
+  --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
   --destructive: #f87171; --destructive-foreground: #09090F;
-  --border: #2A253A; --input: #2A253A; --ring: #8B5CF6;
+  --border: #3B3452; --input: #453C61; --ring: #8B5CF6;
   --sidebar-bg: #11111B; --sidebar-border: #1E1A2C;
-  --sidebar-text: #CFC8DF; --sidebar-text-muted: #8A82A0;
+  --sidebar-text: #D6D0E4; --sidebar-text-muted: #A69FB8;
   --sidebar-hover: rgba(139,92,246,.16); --sidebar-active-bg: rgba(139,92,246,.26);
   --sidebar-active-text: #C4B5FD;
   --topbar-bg: #191927;
@@ -904,7 +904,7 @@ body {
   border: none; border-radius: 16px; box-shadow: var(--shadow-xl); padding: 24px; background: var(--card);
 }
 [data-theme="dark"] [data-slot="alert-dialog-content"], [data-theme="dark"] [data-slot="dialog-content"] {
-  background: #1f2937; box-shadow: 0 20px 25px rgba(0,0,0,.5), 0 8px 10px rgba(0,0,0,.3);
+  background: var(--card); box-shadow: 0 20px 25px rgba(0,0,0,.55), 0 8px 10px rgba(0,0,0,.3);
 }
 [data-slot="alert-dialog-header"], [data-slot="dialog-header"] { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 [data-slot="alert-dialog-title"], [data-slot="dialog-title"] { font-size: 16px; font-weight: 700; }
@@ -1106,13 +1106,13 @@ input:focus, select:focus, textarea:focus {
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
   --accent-blue: #3B82F6; --lavender: #A78BFA;
-  --muted: #222236; --muted-foreground: #9C93B4; --text-muted: #9C93B4;
+  --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
   --destructive: #f87171; --destructive-foreground: #09090F;
-  --border: #2A253A; --input: #2A253A; --ring: #8B5CF6;
+  --border: #3B3452; --input: #453C61; --ring: #8B5CF6;
   --sidebar-bg: #11111B; --sidebar-border: #1E1A2C;
-  --sidebar-text: #CFC8DF; --sidebar-text-muted: #8A82A0;
+  --sidebar-text: #D6D0E4; --sidebar-text-muted: #A69FB8;
   --sidebar-hover: rgba(139,92,246,.16); --sidebar-active-bg: rgba(139,92,246,.26);
   --sidebar-active-text: #C4B5FD;
   --topbar-bg: #191927;
@@ -1635,6 +1635,47 @@ table tbody tr {
   transform: scale(0.98);
 }
 
+/* ------------------------------------------------- dark leftovers from the light palette
+   A few hundred utilities were written for light mode only (`text-slate-400`, `bg-slate-50`,
+   `border-slate-200`) and only some of them carry a `dark:` twin. On the dark surface those
+   un-tinted ones are the "dim / missing" text the eye catches. They are re-pointed here once,
+   matching on the whole class token so `hover:bg-slate-50` and friends are left alone. */
+[data-theme="dark"] [class~="text-slate-400"] { color: #A79FBD; }
+[data-theme="dark"] [class~="text-slate-500"],
+[data-theme="dark"] [class~="text-slate-600"] { color: var(--muted-foreground); }
+[data-theme="dark"] [class~="text-slate-700"],
+[data-theme="dark"] [class~="text-slate-800"],
+[data-theme="dark"] [class~="text-slate-900"] { color: var(--foreground); }
+[data-theme="dark"] [class~="bg-slate-50"],
+[data-theme="dark"] [class~="bg-slate-100"],
+[data-theme="dark"] [class*="bg-slate-50/"],
+[data-theme="dark"] [class*="bg-slate-100/"] { background-color: var(--muted); }
+[data-theme="dark"] [class~="border-slate-200"],
+[data-theme="dark"] [class~="border-slate-300"] { border-color: var(--border); }
+
+/* ------------------------------------------------------------------ dark form contrast
+   Field backgrounds were the page colour (#09090F) sitting inside a #191927 card, so every
+   input looked like a hole in the dialog and its border barely registered. Placeholders at
+   60% of the muted colour were dimmer still. Both are lifted here once, for every form in
+   the app, instead of patching each dialog. */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: #23202F;
+  border-color: #5A5078;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #B7B1CB;
+  opacity: 1;
+}
+[data-theme="dark"] input:disabled,
+[data-theme="dark"] textarea:disabled,
+[data-theme="dark"] select:disabled {
+  background-color: #1C1929;
+  color: #918AA8;
+}
+
 /* ---------------------------------------------------------------- board grid
    Grafana-style Overview board: one rectangle per panel, dragged from its grip and
    resized from any edge. Geometry lives in the component; this is only the chrome —
@@ -1836,13 +1877,13 @@ table tbody tr {
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
   --accent-blue: #3B82F6; --lavender: #A78BFA;
-  --muted: #222236; --muted-foreground: #9C93B4; --text-muted: #9C93B4;
+  --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
   --destructive: #f87171; --destructive-foreground: #09090F;
-  --border: #2A253A; --input: #2A253A; --ring: #8B5CF6;
+  --border: #3B3452; --input: #453C61; --ring: #8B5CF6;
   --sidebar-bg: #11111B; --sidebar-border: #1E1A2C;
-  --sidebar-text: #CFC8DF; --sidebar-text-muted: #8A82A0;
+  --sidebar-text: #D6D0E4; --sidebar-text-muted: #A69FB8;
   --sidebar-hover: rgba(139,92,246,.16); --sidebar-active-bg: rgba(139,92,246,.26);
   --sidebar-active-text: #C4B5FD;
   --topbar-bg: #191927;

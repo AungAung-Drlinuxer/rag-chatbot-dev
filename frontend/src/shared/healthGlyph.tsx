@@ -28,7 +28,7 @@ const TABLE: { match: RegExp; glyph: HealthGlyph }[] = [
   { match: /jira/i,
     glyph: { Icon: SquareKanban, tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400", dot: "bg-sky-500", brand: "jira" } },
   { match: /confluence|docs?\b|wiki/i,
-    glyph: { Icon: FileText, tint: "text-blue-600 bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", brand: "confluence" } },
+    glyph: { Icon: FileText, tint: "text-blue-600 bg-blue-500/10 dark:text-[var(--accent-foreground)]", dot: "bg-blue-500", brand: "confluence" } },
   { match: /ldap|active directory|\bad\b|directory/i,
     glyph: { Icon: Users, tint: "text-sky-600 bg-sky-500/10 dark:text-sky-400", dot: "bg-sky-500", brand: "ldap" } },
   { match: /keycloak|\bsso\b|auth|identity/i,
@@ -46,7 +46,7 @@ const TABLE: { match: RegExp; glyph: HealthGlyph }[] = [
 ];
 
 const FALLBACK: HealthGlyph = {
-  Icon: Server, tint: "text-slate-600 bg-slate-500/10 dark:text-slate-300", dot: "bg-slate-400",
+  Icon: Server, tint: "text-slate-600 bg-slate-500/10 dark:text-[var(--secondary-foreground)]", dot: "bg-slate-400",
 };
 
 export function healthGlyph(key?: string | null, name?: string | null): HealthGlyph {

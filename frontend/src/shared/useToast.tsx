@@ -30,7 +30,7 @@ export function ToastHost({ toast }: { toast: ToastState }) {
         "shadow-lg shadow-black/10 dark:shadow-black/40",
         toast.kind === "err"
           ? "bg-red-50 text-red-700 ring-1 ring-red-500/15 dark:bg-red-950/70 dark:text-red-200"
-          : "bg-slate-50 text-slate-700 ring-1 ring-slate-500/10 dark:bg-slate-800 dark:text-slate-100",
+          : "bg-slate-50 text-slate-700 ring-1 ring-slate-500/10 dark:bg-[var(--muted)] dark:text-[var(--foreground)]",
       ].join(" ")}
     >
       {toast.msg}

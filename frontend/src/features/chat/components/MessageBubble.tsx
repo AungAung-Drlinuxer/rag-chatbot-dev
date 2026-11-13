@@ -149,7 +149,7 @@ function MessageBubble({
                     }
                   }}
                   rows={Math.min(6, Math.max(2, editDraft.split("\n").length))}
-                  className="w-full resize-none rounded-xl bg-white/95 px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400 dark:bg-slate-900/95 dark:text-slate-100"
+                  className="w-full resize-none rounded-xl bg-white/95 px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400 dark:bg-[var(--background)] dark:text-[var(--foreground)]"
                  aria-label="Edit message"/>
                 <div className="flex items-center justify-end gap-2">
                   <button

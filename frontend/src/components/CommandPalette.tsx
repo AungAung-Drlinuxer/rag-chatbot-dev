@@ -107,7 +107,7 @@ export default function CommandPalette({
         className="mx-4 w-full max-w-[560px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 border-b px-4 py-3 dark:border-slate-700">
+        <div className="flex items-center gap-2 border-b px-4 py-3 dark:border-[var(--border)]">
           <Search className="size-4 text-muted-foreground" />
           <input
             ref={inputRef}
@@ -118,7 +118,7 @@ export default function CommandPalette({
             placeholder="Search pages, conversations, KB articles…"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
            aria-label="Search commands"/>
-          <kbd className="shrink-0 rounded border bg-slate-50 px-1.5 py-0.5 text-2xs text-muted-foreground dark:border-slate-600 dark:bg-slate-800">
+          <kbd className="shrink-0 rounded border bg-slate-50 px-1.5 py-0.5 text-2xs text-muted-foreground dark:border-[var(--border)] dark:bg-[var(--muted)]">
             Esc
           </kbd>
         </div>
@@ -137,13 +137,13 @@ export default function CommandPalette({
                   onClick={run}
                   className={[
                     "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition",
-                    active ? "bg-blue-50 dark:bg-blue-950/40" : "hover:bg-slate-50 dark:hover:bg-slate-800",
+                    active ? "bg-blue-50 dark:bg-[var(--accent)]" : "hover:bg-slate-50 dark:hover:bg-[var(--muted)]",
                   ].join(" ")}
                 >
                   {r.kind === "page" ? (
-                    <span className="shrink-0 text-blue-600 dark:text-blue-400">{r.icon}</span>
+                    <span className="shrink-0 text-blue-600 dark:text-[var(--accent-foreground)]">{r.icon}</span>
                   ) : r.kind === "conv" ? (
-                    <MessageSquare className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                    <MessageSquare className="size-4 shrink-0 text-blue-600 dark:text-[var(--accent-foreground)]" />
                   ) : (
                     <BookOpen className="size-4 shrink-0 text-teal-600 dark:text-teal-400" />
                   )}

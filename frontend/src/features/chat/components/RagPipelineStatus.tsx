@@ -275,7 +275,7 @@ export default function RagPipelineStatus({
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-medium ${
               active
-                ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
+                ? "bg-blue-50 text-blue-600 dark:bg-[var(--accent)] dark:text-[var(--accent-foreground)]"
                 : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
             }`}
           >
@@ -431,7 +431,7 @@ export default function RagPipelineStatus({
                         ? "bg-blue-600 text-white"
                         : isDone
                           ? "bg-emerald-500 text-white"
-                          : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                          : "bg-slate-200 text-slate-500 dark:bg-[var(--muted)] dark:text-[var(--muted-foreground)]"
                     }`}
                   >
                     <step.icon aria-hidden className="size-3" />
@@ -448,10 +448,10 @@ export default function RagPipelineStatus({
                   <span
                     className={`inline-flex w-20 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-3xs font-medium ${
                       isActive
-                        ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
+                        ? "bg-blue-50 text-blue-600 dark:bg-[var(--accent)] dark:text-[var(--accent-foreground)]"
                         : isDone
                           ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
-                          : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                          : "bg-slate-100 text-slate-400 dark:bg-[var(--muted)] dark:text-[var(--muted-foreground)]"
                     }`}
                   >
                     {isActive ? (
@@ -470,7 +470,7 @@ export default function RagPipelineStatus({
 
           {/* live stage detail line */}
           {stage && !simulate && active && (
-            <div className="my-2 flex items-center gap-2 rounded-lg bg-blue-50/60 px-3 py-1.5 text-2xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <div className="my-2 flex items-center gap-2 rounded-lg bg-blue-50/60 px-3 py-1.5 text-2xs text-blue-700 dark:bg-[var(--accent)] dark:text-[var(--accent-foreground)]">
               <span className="size-1.5 animate-ping rounded-full bg-blue-600" />
               <span className="truncate">{stage}</span>
             </div>

@@ -597,7 +597,7 @@ export function EditTicketDialog({
                         <CalendarDays className="size-4" aria-hidden />
                       </button>
                       {!dueDate && (
-                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/60">
+                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/85">
                           Select date
                         </span>
                       )}

@@ -953,7 +953,7 @@ function StatusBadge({ status }: { status: UserStatus }) {
   const config: Record<UserStatus, { className: string; dot: string }> = {
     Active: { className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300", dot: "bg-emerald-500" },
     Pending: { className: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300", dot: "bg-sky-500" },
-    Inactive: { className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300", dot: "bg-slate-400" },
+    Inactive: { className: "bg-slate-100 text-slate-600 dark:bg-[var(--muted)] dark:text-[var(--secondary-foreground)]", dot: "bg-slate-400" },
     Locked: { className: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300", dot: "bg-red-500" },
     Disabled: { className: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300", dot: "bg-amber-500" },
   };

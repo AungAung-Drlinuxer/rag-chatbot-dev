@@ -63,16 +63,16 @@ function CodeBlock({
   const lang = /language-([\w+#-]+)/.exec(className || "")?.[1];
 
   return (
-    <div className="group/code relative my-2.5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/70">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-100/70 px-2.5 py-1 dark:border-slate-800 dark:bg-slate-800/50">
-        <span className="font-mono text-3xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+    <div className="group/code relative my-2.5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-[var(--border)] dark:bg-[var(--background)]">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-100/70 px-2.5 py-1 dark:border-[var(--border)] dark:bg-[var(--muted)]">
+        <span className="font-mono text-3xs uppercase tracking-wider text-slate-500 dark:text-[var(--muted-foreground)]">
           {lang || "code"}
         </span>
         <button
           type="button"
           onClick={copy}
           aria-label="Copy code"
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-[var(--muted-foreground)] dark:hover:bg-[var(--muted)] dark:hover:text-slate-100"
         >
           {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
           {copied ? "Copied" : "Copy"}
@@ -80,7 +80,7 @@ function CodeBlock({
       </div>
       <pre
         ref={ref}
-        className={`overflow-x-auto px-3 py-2.5 font-mono ${compact ? "text-2xs" : "text-xs"} leading-relaxed text-slate-800 dark:text-slate-100`}
+        className={`overflow-x-auto px-3 py-2.5 font-mono ${compact ? "text-2xs" : "text-xs"} leading-relaxed text-slate-800 dark:text-[var(--foreground)]`}
         {...rest}
       >
         {children}
@@ -98,7 +98,7 @@ function CodeBlock({
  */
 function Table({ children, ...rest }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="md-table-wrap table-scroll my-3 max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 dark:border-slate-800">
+    <div className="md-table-wrap table-scroll my-3 max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-slate-200 dark:border-[var(--border)]">
       <table {...rest}>{children as ReactNode}</table>
     </div>
   );

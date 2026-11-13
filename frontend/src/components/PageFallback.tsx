@@ -18,7 +18,7 @@ export function PageFallback() {
       aria-live="polite"
       aria-label="Loading page"
     >
-      <Loader2 className="size-5 animate-spin text-slate-400 dark:text-slate-500" />
+      <Loader2 className="size-5 animate-spin text-slate-400 dark:text-[var(--muted-foreground)]" />
       <span className="sr-only">Loading…</span>
     </div>
   );

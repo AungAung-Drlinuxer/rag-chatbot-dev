@@ -12,13 +12,13 @@ import {
 } from "lucide-react";
 
 const DOMAIN_ICONS: Record<string, { icon: any; color: string; bg: string }> = {
-  database: { icon: Database, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/40" },
+  database: { icon: Database, color: "text-blue-600", bg: "bg-blue-50 dark:bg-[var(--accent)]" },
   network: { icon: Network, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/40" },
   security: { icon: Shield, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/40" },
-  server: { icon: Server, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/40" },
+  server: { icon: Server, color: "text-blue-600 dark:text-[var(--accent-foreground)]", bg: "bg-blue-50 dark:bg-[var(--accent)]" },
   kubernetes: { icon: Layers, color: "text-sky-600", bg: "bg-sky-50 dark:bg-sky-950/40" },
   help_desk: { icon: HelpCircle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/40" },
-  general: { icon: Globe, color: "text-slate-600", bg: "bg-slate-100 dark:bg-slate-800" },
+  general: { icon: Globe, color: "text-slate-600", bg: "bg-slate-100 dark:bg-[var(--muted)]" },
 };
 
 const SUGGESTIONS = [
@@ -71,7 +71,7 @@ export function EmptyChat({ onSuggestion, userName }: { onSuggestion: (question:
         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
           {greeting} 👋
         </h1>
-        <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+        <p className="mx-auto mt-1.5 max-w-md text-xs text-slate-500 dark:text-[var(--muted-foreground)] sm:text-sm">
           Ask any IT question — answers are grounded in your internal knowledge base.
         </p>
       </div>
@@ -86,19 +86,19 @@ export function EmptyChat({ onSuggestion, userName }: { onSuggestion: (question:
               key={s.title}
               type="button"
               onClick={() => onSuggestion(s.question)}
-              className="group flex items-start gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 text-left shadow-xs transition hover:border-blue-400 hover:bg-slate-50/70 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
+              className="group flex items-start gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 text-left shadow-xs transition hover:border-blue-400 hover:bg-slate-50/70 hover:shadow-sm dark:border-[var(--border)] dark:bg-[var(--background)] dark:hover:border-slate-700 dark:hover:bg-[var(--muted)]"
             >
               <div className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl ${meta.bg}`}>
                 <Icon className={`size-4 ${meta.color}`} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400">
+                  <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 dark:text-[var(--foreground)] dark:group-hover:text-blue-400">
                     {s.title}
                   </span>
                   <ArrowRight className="size-3.5 shrink-0 text-slate-300 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100 dark:text-slate-600" />
                 </div>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-[var(--muted-foreground)]">
                   {s.desc}
                 </p>
               </div>

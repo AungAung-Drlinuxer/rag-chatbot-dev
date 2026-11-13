@@ -360,7 +360,7 @@ export function DonutChart({ stats }: { stats: Record<string, number> | null }) 
   // v1.5.3 — no conversations yet → calm empty state instead of a 0% donut
   if (total === 0) {
     return (
-      <div className="flex size-44 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-800">
+      <div className="flex size-44 flex-col items-center justify-center gap-1 rounded-full border-2 border-dashed border-slate-200 dark:border-[var(--border)]">
         <span className="text-2xl font-semibold text-muted-foreground">—</span>
         <span className="text-2xs text-muted-foreground">No data yet</span>
       </div>
