@@ -17,7 +17,7 @@ import {
 
 import { getSmtpSettings, putSmtpSettings, sendTestEmail } from "@/features/settings/api";
 import {
-  BTN_GHOST, BTN_PRIMARY, Eyebrow, Field, FieldGrid, INPUT, Panel, Pill, Row,
+  BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, Panel, Pill, Row,
 } from "./SettingsKit";
 
 type Form = {
@@ -29,9 +29,6 @@ export function EmailServerSettings() {
   const [form, setForm] = useState<Form>({
     host: "", port: 587, username: "", password: "", from: "",
     use_tls: true, enabled: true,
-  });
-  const [alerts, setAlerts] = useState<Record<string, boolean>>({
-    approval_request: true, ticket_created: true, ticket_status_change: true,
   });
   const [passwordSet, setPasswordSet] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,8 +61,6 @@ export function EmailServerSettings() {
           from: "", use_tls: s.use_tls !== false,
           enabled: s.enabled !== false,
         });
-        if (s.alerts && typeof s.alerts === "object")
-          setAlerts({ approval_request: true, ticket_created: true, ticket_status_change: true, ...s.alerts });
         setPasswordSet(!!s.password_set);
       })
       .catch(() => setError("Failed to load mail settings"))
@@ -82,7 +77,6 @@ export function EmailServerSettings() {
     try {
       const body: Record<string, unknown> = {
         port: Number(form.port) || 587, use_tls: form.use_tls, enabled: form.enabled,
-        alerts,
       };
       // Only send fields the admin actually typed; blank keeps the stored value.
       const MASK_CHARS = "•";
@@ -277,25 +271,17 @@ export function EmailServerSettings() {
         </Panel>
 
         <Panel
-          icon={<AlertCircle className="size-4" />}
-          title="Alert emails"
-          description="Which events send mail. Each one is independent of the master switch above."
+          icon={<Info className="size-4" />}
+          title="Sender notes"
+          description="Gmail: use a 16-character App Password, not the account password."
         >
-          <Row title="Escalation awaiting approval" hint="Sent to administrators when a human-in-the-loop approval is requested.">
-            <Switch checked={!!alerts.approval_request} onChange={(v) => setAlerts({ ...alerts, approval_request: v })} label="Escalation awaiting approval" />
-          </Row>
-          <Row title="Ticket created" hint="Sent to the requester when a Jira ticket is opened.">
-            <Switch checked={!!alerts.ticket_created} onChange={(v) => setAlerts({ ...alerts, ticket_created: v })} label="Ticket created" />
-          </Row>
-          <Row title="Ticket status changed" hint="Sent when a ticket moves (open → pending → resolved…).">
-            <Switch checked={!!alerts.ticket_status_change} onChange={(v) => setAlerts({ ...alerts, ticket_status_change: v })} label="Ticket status changed" />
-          </Row>
-          <div className="border-t border-[var(--border)] px-5 py-3">
-            <Eyebrow hint="Gmail: use a 16-character App Password, not the account password">Sender notes</Eyebrow>
+          <div className="px-5 py-3">
             <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 size-3 shrink-0" />
-              Gmail requires 2-Step Verification and an App Password (Google Account → Security → App passwords).
-              Host smtp.gmail.com, port 587, TLS on.
+              Gmail requires 2-Step Verification and an App Password (Google Account → Security →
+              App passwords). Host smtp.gmail.com, port 587, TLS on. Which events actually send
+              mail is set in <b className="font-semibold text-foreground">Notifications</b>, next to
+              the bell preferences, so there is one list of events instead of two.
             </p>
           </div>
         </Panel>
@@ -312,7 +298,6 @@ export function EmailServerSettings() {
               ["Encryption", form.use_tls ? "STARTTLS" : "None"],
               ["Sender", form.from || (smtpConfigured("from_address") ? "stored" : "not set")],
               ["Alerts", form.enabled ? "On" : "Off"],
-              ["Alerts wired", `${Object.values(alerts).filter(Boolean).length} of 3 events`],
             ].map(([k, v]) => (
               <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
                 <dt className="shrink-0 text-muted-foreground">{k}</dt>
