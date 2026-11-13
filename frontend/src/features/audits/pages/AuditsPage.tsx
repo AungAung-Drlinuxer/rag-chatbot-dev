@@ -304,11 +304,6 @@ export default function AuditsPage() {
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length);
 
-  const actionCounts = useMemo(() => {
-    const acc: Record<string, number> = {};
-    for (const r of rows) acc[r.action] = (acc[r.action] ?? 0) + 1;
-    return Object.entries(acc).sort((a, b) => b[1] - a[1]);
-  }, [rows]);
 
   return (
     <PageShell>
@@ -370,7 +365,6 @@ export default function AuditsPage() {
           />
         </div>
 
-        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0">
         <section data-slot="card" className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
@@ -650,54 +644,6 @@ export default function AuditsPage() {
           </span>
           <span>Newest first · server time rendered in your locale</span>
         </p>
-        </div>
-
-        {/* Rail: what the stream is made of, so a spike is readable without scanning rows. */}
-        <aside className="space-y-4 xl:sticky xl:top-6">
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">By action</h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Across the {rows.length.toLocaleString()} loaded events.</p>
-            <div className="mt-3 space-y-2.5">
-              {actionCounts.slice(0, 7).map(([name, n]) => {
-                const pct = rows.length ? Math.round((n / rows.length) * 100) : 0;
-                return (
-                  <div key={name}>
-                    <div className="flex items-baseline justify-between gap-2 text-[11px]">
-                      <span className="min-w-0 truncate text-muted-foreground" title={name}>{name}</span>
-                      <span className="font-medium tabular-nums">{n}</span>
-                    </div>
-                    <div className="mt-1 h-1 overflow-hidden rounded-full bg-[var(--muted)]">
-                      <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-              {actionCounts.length === 0 && <p className="text-[11px] text-muted-foreground">No events loaded.</p>}
-            </div>
-          </section>
-
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">By result</h2>
-            <dl className="mt-3 space-y-2">
-              {(["answer", "caution", "none"] as const).map((key) => (
-                <div key={key} className="flex items-baseline justify-between gap-3 text-[11px]">
-                  <dt className="text-muted-foreground">
-                    {key === "answer" ? "Answered" : key === "caution" ? "Low confidence" : "No answer"}
-                  </dt>
-                  <dd className="font-medium tabular-nums">{rows.filter((r) => resultOf(r) === key).length}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-
-          <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-            <h2 className="text-sm font-semibold">What is recorded</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Sign-ins, domain and user changes, knowledge edits, tickets and assistant answers —
-              written by the backend, never edited from this page.
-            </p>
-          </section>
-        </aside>
         </div>
       </div>
     </PageShell>
