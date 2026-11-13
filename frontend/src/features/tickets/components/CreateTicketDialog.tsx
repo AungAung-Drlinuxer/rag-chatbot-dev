@@ -274,7 +274,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
       <DialogContent size="editor">
         {/* ---- header: what this is, and where it lands ---- */}
         <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pr-14 pt-5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 text-white shadow-lg shadow-violet-950/30">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-lg shadow-black/25">
             <TicketIcon className="size-5" aria-hidden />
           </span>
 
@@ -627,7 +627,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             type="button"
             onClick={submit}
             disabled={creating}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-violet-800 px-4 text-xs font-semibold text-white shadow-lg shadow-violet-950/25 transition hover:from-violet-500 hover:to-violet-700 active:scale-[0.99] disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] px-4 text-xs font-semibold text-white shadow-lg shadow-black/25 transition hover:opacity-95 active:scale-[0.99] disabled:opacity-60"
           >
             <Send className="size-3.5" aria-hidden />
             {creating ? "Creating…" : "Create ticket"}

@@ -360,7 +360,7 @@ export default function PageSidebar({
                         title={c.title || "Untitled chat"}
                       >
                         <span className="flex items-center gap-1.5 truncate">
-                          {c.is_pinned && <Pin className="size-3 shrink-0 text-violet-200 rotate-45" />}
+                          {c.is_pinned && <Pin className="size-3 shrink-0 text-[var(--sidebar-active-text)] rotate-45" />}
                           <span className="truncate">{c.title || "Untitled chat"}</span>
                           {(_dupes.get((c.title || "Untitled chat").trim().toLowerCase()) ?? 1) > 1 && (
                             <span
