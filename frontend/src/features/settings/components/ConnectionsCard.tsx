@@ -243,7 +243,8 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
         <p className="text-2xs text-muted-foreground">Loading sites…</p>
       ) : rows.length === 0 ? (
         <p className="text-2xs text-muted-foreground">
-          No site configured yet — the fields below still work as the single default site.
+          No site configured yet. Add one with <b className="font-semibold text-foreground">Add site</b> — nothing
+          is read from or written to {isConf ? "Confluence" : "Jira"} until a site exists.
         </p>
       ) : (
         <ul className="space-y-1.5">

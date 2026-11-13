@@ -471,6 +471,11 @@ function ProviderEditor({ provider, onConfigured }: {
     );
   }
 
+  /* Confluence and Jira are configured per site, not per provider: the single-site credential
+     form is the legacy path, and showing both invites the admin to fill in the wrong one. */
+  const multiSiteProvider: "confluence" | "jira" | null =
+    provider.key === "confluence" || provider.key === "jira" ? provider.key : null;
+  const multiSite = multiSiteProvider !== null;
   const groups = GROUP_ORDER
     .map((g) => ({ group: g, fields: provider.fields.filter((f) => groupOf(f.key) === g) }))
     .filter((x) => x.fields.length > 0);
@@ -502,8 +507,8 @@ function ProviderEditor({ provider, onConfigured }: {
         </a>
       </header>
 
-      {/* write-only note — one quiet line, not a second banner */}
-      <p className="flex items-start gap-1.5 border-b border-[var(--border)] bg-muted/20 px-5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+      {/* write-only note — one quiet line, not a second banner (the single-site form only) */}
+      <p className={`${multiSite ? "hidden " : ""}flex items-start gap-1.5 border-b border-[var(--border)] bg-muted/20 px-5 py-2 text-[11px] leading-relaxed text-muted-foreground`}>
         <ShieldCheck className="mt-0.5 size-3 shrink-0 text-[var(--ok)]" aria-hidden />
         <span>
           <b className="font-semibold text-foreground">Write-only credentials.</b> Values are stored server-side and never returned —
@@ -512,8 +517,8 @@ function ProviderEditor({ provider, onConfigured }: {
         </span>
       </p>
 
-      {/* fields */}
-      <div className="space-y-5 px-5 py-4">
+      {/* fields — single-site providers only; Confluence/Jira configure per site below */}
+      <div className={`space-y-5 px-5 py-4${multiSite ? " hidden" : ""}`}>
         {loading ? (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading stored configuration…
@@ -536,14 +541,34 @@ function ProviderEditor({ provider, onConfigured }: {
         )}
       </div>
 
-      {(provider.key === "confluence" || provider.key === "jira") && (
+      {multiSite && (
         <div className="border-t border-[var(--border)] px-5 py-3">
-          <ConnectionsCard provider={provider.key} />
+          {/* An install that predates multi-site still has credentials in the old row. Those
+              are no longer editable above, so offer the only thing left to do with them:
+              revoke. */}
+          {fieldsSet.filter((f) => f !== "connections").length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2.5 py-1.5">
+              <Lock className="size-3 shrink-0 text-[var(--warn)]" />
+              <span className="text-2xs text-foreground">
+                Legacy single-site credentials are still stored for this provider.
+              </span>
+              <button
+                type="button"
+                onClick={clear}
+                disabled={clearing}
+                className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--danger)]/40 px-2 py-0.5 text-2xs font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10 disabled:opacity-50"
+              >
+                {clearing ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+                Remove legacy config
+              </button>
+            </div>
+          )}
+          <ConnectionsCard provider={multiSiteProvider!} />
         </div>
       )}
 
-      {/* actions */}
-      <footer className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] px-5 py-3">
+      {/* actions — Save/Test/Clear belong to the single-site form */}
+      <footer className={`${multiSite ? "hidden " : ""}flex flex-wrap items-center gap-2 border-t border-[var(--border)] px-5 py-3`}>
         <button
           onClick={save}
           disabled={saving}
