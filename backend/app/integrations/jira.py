@@ -114,6 +114,22 @@ def _jira_cfg() -> dict:
             }
     except Exception as exc:
         logger.debug("%s suppressed: %s", type(exc).__name__, exc)
+
+    # Nothing usable in the legacy row (the normal state once sites took over): fall back to the
+    # first active site so every helper — comments, transitions, field updates, attachments,
+    # status reads — keeps working without each call site remembering to bind a connection.
+    # Without this, "mark as Done" saved locally and then reported "Jira is not configured",
+    # which is how a ticket ended up resolved here and still open upstream.
+    if not (out.get("base_url") and out.get("email") and out.get("api_token")):
+        try:
+            from app.integrations.connections import effective_connections
+
+            conns = effective_connections("jira")
+            if conns:
+                out = _conn_cfg(conns[0])
+        except Exception as exc:  # noqa: BLE001 — a lookup failure must not break the caller
+            logger.debug("jira site fallback skipped: %s", exc)
+
     _JIRA_CFG_CACHE, _JIRA_CFG_AT = out, now
     return out
 

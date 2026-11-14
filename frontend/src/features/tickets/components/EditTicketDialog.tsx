@@ -317,7 +317,11 @@ export function EditTicketDialog({
            dialog stays open with the reason above the status field. */
         setStatusError(
           `Jira did not accept the move to “${statusMetaOf(targetStatus).label}”. ` +
-          "Its workflow only allows the transitions it offers for this issue — the details were saved, the status was not.",
+          // Two very different causes produced this one sentence before: a workflow that does
+          // not offer the transition, and a site that could not be reached at all. Blaming the
+          // workflow for a configuration failure sent an admin looking in the wrong place.
+          "Its workflow may not offer that transition for this issue, or the Jira site could not be reached. " +
+          "The details were saved; the status was not.",
         );
         return;
       }
