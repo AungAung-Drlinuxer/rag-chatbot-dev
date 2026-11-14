@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import {
   ArrowDown,
   Clock,
@@ -14,6 +13,7 @@ import {
 import { listAudits } from "@/features/audits/api";
 import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
+import { StatCard, StatRow } from "@/components/ui/stat-card";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -351,31 +351,38 @@ export default function AuditsPage() {
         />
 
         {/* summary cards — label left, icon right, big number, muted caption */}
-        <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
+        <div className="mb-5">
+          <StatRow>
+          <StatCard
+            tone="primary"
             icon={<Copy className="size-4" />}
             label="Total events in log"
+            unit="events"
             value={total.toLocaleString()}
             caption="Across all workspace activity"
           />
-          <SummaryCard
+          <StatCard
+            tone="info"
             icon={<Clock className="size-4" />}
             label="Today's events"
             value={today.toLocaleString()}
             caption={`${new Date().toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} · in loaded events`}
           />
-          <SummaryCard
+          <StatCard
+            tone="ok"
             icon={<UserPlus className="size-4" />}
             label="Distinct users"
             value={users.toLocaleString()}
             caption="In loaded events"
           />
-          <SummaryCard
+          <StatCard
+            tone="warn"
             icon={<ListFilter className="size-4" />}
             label="In this range"
             value={filtered.length.toLocaleString()}
             caption={fromDate || toDate ? `${fromDate || "…"} → ${toDate || "…"}` : "No date limit applied"}
           />
+        </StatRow>
         </div>
 
         <div className="min-w-0">
@@ -452,7 +459,7 @@ export default function AuditsPage() {
             </button>
           </div>
 
-          <div className="table-scroll table-viewport hidden md:block">
+          <div className="table-scroll hidden md:block">
             <table className="w-full table-fixed text-xs">
               <colgroup>
                 <col className="w-[15%]" /><col className="w-[13%]" /><col className="w-[15%]" />
@@ -666,31 +673,5 @@ export default function AuditsPage() {
         </div>
       </div>
     </PageShell>
-  );
-}
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-  caption,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  caption: string;
-}) {
-  return (
-    <div data-slot="card" className="h-full rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>{icon}</span>
-      </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums">{value}</span>
-        <span className="text-2xs text-muted-foreground">events</span>
-      </div>
-      <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
-    </div>
   );
 }

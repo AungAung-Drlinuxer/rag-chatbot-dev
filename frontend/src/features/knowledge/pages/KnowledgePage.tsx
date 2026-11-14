@@ -1,3 +1,4 @@
+import { StatCard, StatRow } from "@/components/ui/stat-card";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -273,34 +274,6 @@ function relDuration(iso?: string | null): { value: string; suffix: string } {
 }
 
 /** One figure per card — label left, icon right, big number, muted caption. */
-function StatCard({
-  icon,
-  label,
-  value,
-  suffix,
-  caption,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  suffix?: string;
-  caption: string;
-}) {
-  return (
-    <div data-slot="card" className="stat-card stat-card--accent flex flex-col p-5">
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <span className="text-[var(--primary)]">{icon}</span>
-      </div>
-      <div className="mt-2.5 flex items-baseline gap-1 text-3xl font-semibold tracking-tight text-foreground">
-        {value}
-        {suffix && <span className="text-sm font-medium text-muted-foreground">{suffix}</span>}
-      </div>
-      <p className="mt-1.5 text-2xs leading-tight text-muted-foreground">{caption}</p>
-    </div>
-  );
-}
-
 export default function Knowledge({ role, onToast }: Props) {
   // v1.1.1 — domain_manager merged into knowledge (single Knowledge Manager role)
   const canManageDomains = role === "admin" || role === "knowledge" || role === "domain_manager";
@@ -733,30 +706,37 @@ export default function Knowledge({ role, onToast }: Props) {
             Each value is counted from a value the page already holds: the KB size from
             the API's COUNT(*), the domain count from the domain list, the source count
             from the provider table, and the sync age from /sync-status. */}
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatRow>
           <StatCard
+            tone="primary"
             icon={<BookOpen className="size-4" />}
             label="Articles"
+            unit="articles"
             value={kbTotal != null ? kbTotal.toLocaleString() : "—"}
             caption="In your knowledge base"
           />
           <StatCard
+            tone="ok"
             icon={<Layers className="size-4" />}
             label="Domains"
+            unit="domains"
             value={domains ? domains.length.toLocaleString() : "—"}
             caption="Organized by expertise"
           />
           <StatCard
+            tone="info"
             icon={<Database className="size-4" />}
             label="Sources"
+            unit="providers"
             value={sources != null ? sources.length.toLocaleString() : "—"}
             caption="With indexed articles"
           />
           <StatCard
+            tone={status?.state === "error" ? "danger" : status?.state === "running" ? "info" : "warn"}
             icon={<Clock3 className="size-4" />}
             label="Last sync"
             value={status?.state === "running" ? "Syncing" : lastSync.value}
-            suffix={status?.state === "running" ? "…" : lastSync.suffix}
+            unit={status?.state === "running" ? "…" : lastSync.suffix}
             caption={
               status?.state === "running"
                 ? `Started by ${status.started_by ?? "scheduler"}`
@@ -765,7 +745,7 @@ export default function Knowledge({ role, onToast }: Props) {
                   : `Runs every ${status?.beat_interval_minutes ?? 30} min`
             }
           />
-        </section>
+        </StatRow>
 
         {/* REVIEW BAND
             P1#10 — surface the articles no domain claimed. After the LLM pass this is

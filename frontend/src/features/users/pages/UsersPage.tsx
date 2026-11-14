@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 
+import { StatCard, StatRow } from "@/components/ui/stat-card";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
@@ -511,17 +512,17 @@ export default function Users() {
         <main className="grid items-start gap-5">
         <div className="min-w-0 space-y-4">
         {/* summary cards — label left, icon right, big number, muted caption */}
-        <div className="kpi-row grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard tone="primary" icon={<UsersIcon className="size-4" />} label="Total users"
+        <StatRow>
+          <StatCard tone="primary" icon={<UsersIcon className="size-4" />} label="Total users" unit={totalUsers === 1 ? "user" : "users"}
             value={totalUsers} caption="Members in this workspace" />
-          <SummaryCard tone="ok" icon={<UserCheck className="size-4" />} label="Active users"
+          <StatCard tone="ok" icon={<UserCheck className="size-4" />} label="Active users" unit="accounts"
             value={activeUsers} caption="Enabled accounts" />
-          <SummaryCard tone="info" icon={<Shield className="size-4" />} label="Administrators"
+          <StatCard tone="info" icon={<Shield className="size-4" />} label="Administrators" unit={adminUsers === 1 ? "admin" : "admins"}
             value={adminUsers} caption="Full workspace control" />
-          <SummaryCard tone="danger" icon={<UserX className="size-4" />} label="Inactive"
+          <StatCard tone="danger" icon={<UserX className="size-4" />} label="Inactive" unit={inactiveUsers === 1 ? "account" : "accounts"}
             value={inactiveUsers}
             caption={lockedUsers > 0 ? `Disabled or pending · ${lockedUsers} locked` : "Disabled, locked or pending"} />
-        </div>
+        </StatRow>
 
         <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 pt-4">
@@ -751,37 +752,6 @@ export default function Users() {
 /* ============================================================
    SUMMARY CARD
 ============================================================ */
-
-type CardTone = "primary" | "ok" | "info" | "danger";
-
-/** Same edge + icon-tile pairing the Tickets, Overview and Domains cards use. */
-const CARD_TONES: Record<CardTone, { edge: string; tile: string }> = {
-  primary: { edge: "stat-card--accent", tile: "bg-[var(--accent-soft)] text-[var(--primary)]" },
-  ok: { edge: "stat-card--ok", tile: "bg-[var(--ok)]/12 text-[var(--ok)]" },
-  info: { edge: "stat-card--info", tile: "bg-[var(--accent-blue)]/12 text-[var(--accent-blue)]" },
-  danger: { edge: "stat-card--danger", tile: "bg-[var(--danger)]/12 text-[var(--danger)]" },
-};
-
-function SummaryCard({ tone, icon, label, value, caption }: {
-  tone: CardTone; icon: ReactNode; label: string; value: number; caption: string;
-}) {
-  const t = CARD_TONES[tone];
-  return (
-    <div data-slot="summary-card" className={["stat-card h-full px-4 py-3.5 sm:px-5", t.edge].join(" ")}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className={["grid size-7 shrink-0 place-items-center rounded-lg", t.tile].join(" ")} aria-hidden>
-          {icon}
-        </span>
-      </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums">{value}</span>
-        <span className="text-2xs text-muted-foreground">{value === 1 ? "user" : "users"}</span>
-      </div>
-      <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">{caption}</p>
-    </div>
-  );
-}
 
 /* ============================================================
    TABLE HEADER

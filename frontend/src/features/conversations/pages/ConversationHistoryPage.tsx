@@ -27,6 +27,7 @@ import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/p
 import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { StatCard, StatRow } from "@/components/ui/stat-card";
 
 /**
  * ConversationHistory — v0.21.75/79, restyled to the workspace mockup.
@@ -137,33 +138,6 @@ function PagerButton({ label, active, disabled, onClick }: {
     >
       {label}
     </button>
-  );
-}
-
-function StatCard({
-  icon,
-  value,
-  title,
-  caption,
-  loading,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  title: string;
-  caption: string;
-  loading: boolean;
-}) {
-  return (
-    <div data-slot="summary-tile" className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-card px-4 py-3.5 shadow-xs sm:px-5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
-        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent-foreground)]" aria-hidden>{icon}</span>
-      </div>
-      <div className="mt-2 text-3xl font-semibold leading-none tracking-tight tabular-nums">
-        {loading ? <div className="h-8 w-14 animate-pulse rounded bg-muted" /> : value}
-      </div>
-      <p className="mt-1.5 text-2xs leading-tight text-muted-foreground">{caption}</p>
-    </div>
   );
 }
 
@@ -403,36 +377,41 @@ export default function ConversationHistoryPage() {
       />
 
       <main className="space-y-4">
-        <section className="grid auto-rows-fr gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatRow>
           <StatCard
+            tone="primary"
             icon={<LayoutGrid className="size-4" />}
             value={String(convs.length)}
-            title="Conversations"
+            label="Conversations"
+            unit="chats"
             caption="Across your workspace"
             loading={loading}
           />
           <StatCard
+            tone="info"
             icon={<List className="size-4" />}
             value={String(totalMsgs)}
-            title="Total messages"
+            label="Total messages"
             caption="User and assistant messages"
             loading={loading}
           />
           <StatCard
+            tone="ok"
             icon={<Users className="size-4" />}
             value={String(activeUsers)}
-            title="Active users"
+            label="Active users"
             caption="Distinct users in this result"
             loading={loading}
           />
           <StatCard
+            tone="warn"
             icon={<MessageSquare className="size-4" />}
             value={convs.length ? (totalMsgs / convs.length).toFixed(1) : "0"}
-            title="Avg messages"
+            label="Avg messages"
             caption="Per conversation in this result"
             loading={loading}
           />
-        </section>
+        </StatRow>
 
         <div className="min-w-0">
           {/* List table — USER · CONVERSATION · MSGS · LAST ACTIVITY, as in the mockup. */}
@@ -505,7 +484,7 @@ export default function ConversationHistoryPage() {
           </button>
             </div>
 
-            <div className="table-scroll table-viewport hidden md:block">
+            <div className="table-scroll hidden md:block">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">
