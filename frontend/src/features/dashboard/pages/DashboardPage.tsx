@@ -341,6 +341,7 @@ export default function Dashboard({ role, perms }: Props) {
             name: x.name,
             status: (x.status === "Healthy" ? "Healthy" : "Down") as HealthItem["status"],
             detail: x.detail ?? null,
+            meta: x.meta ?? null,
             latency_ms: x.latency_ms ?? null,
             icon: healthIcon(x.key),
           })));

@@ -494,6 +494,23 @@ def _secret_present(integration_key: str, *field_names: str) -> bool:
     return any(str(cfg.get(fn) or "").strip() for fn in field_names)
 
 
+def _site_count(provider: str) -> int:
+    """Per-site rows for Confluence/Jira.
+
+    Credentials for these two live in `integration_connections`, one row per site; the legacy
+    `system_settings` row is often empty on a multi-site install. A health panel that only looks
+    at the legacy row paints "Confluence sync / Jira — Down" on a working deployment, which is
+    exactly what it did here.
+    """
+    try:
+        rows = _rows(
+            "SELECT count(*) AS n FROM integration_connections "
+            "WHERE provider = :p AND active IS NOT FALSE", {"p": provider})
+        return int(rows[0]["n"] or 0)
+    except Exception:
+        return 0
+
+
 @router.get("/dashboard/health")
 def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     """Real dependency checks for the dashboard health panel.
@@ -507,7 +524,7 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     services: list[dict] = []
 
     def add(key: str, name: str, ok: bool, latency_ms: int | None = None,
-            detail: str | None = None):
+            detail: str | None = None, meta: str | None = None):
         services.append(
             {
                 "key": key,
@@ -517,6 +534,8 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
                 # #12 — first line of the failure reason so the panel can explain
                 # WHY a dependency is down instead of only colouring it red.
                 "detail": None if ok else (detail or None),
+                # How the provider is configured when it is not the legacy row ("1 site").
+                "meta": None if ok and not meta else meta,
             }
         )
 
@@ -562,13 +581,19 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     add("llm", "Models Provider", llm_ok, detail=None if llm_ok else "no API key configured")
 
     # Confluence integration — DB token wins, env fallback
-    conf_ok = _secret_present("confluence", "api_token") or bool(SETTINGS.confluence_token)
+    conf_sites = _site_count("confluence")
+    conf_ok = (_secret_present("confluence", "api_token") or bool(SETTINGS.confluence_token)
+               or conf_sites > 0)
     add("confluence", "Confluence sync", conf_ok,
-        detail=None if conf_ok else "no token configured")
+        detail=None if conf_ok else "no token configured",
+        meta=(f"{conf_sites} site{'s' if conf_sites != 1 else ''}") if conf_sites else None)
 
     # Jira integration — same merged-config logic
-    jira_ok = _secret_present("jira", "api_token") or bool(SETTINGS.jira_token)
-    add("jira", "Jira", jira_ok, detail=None if jira_ok else "no token configured")
+    jira_sites = _site_count("jira")
+    jira_ok = (_secret_present("jira", "api_token") or bool(SETTINGS.jira_token)
+               or jira_sites > 0)
+    add("jira", "Jira", jira_ok, detail=None if jira_ok else "no token configured",
+        meta=(f"{jira_sites} site{'s' if jira_sites != 1 else ''}") if jira_sites else None)
 
     # LDAP (config presence; a real bind test is too expensive for a dashboard poll)
     ldap_cfg = _integration_cfg("ldap")

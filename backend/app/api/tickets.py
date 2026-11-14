@@ -141,12 +141,18 @@ def list_ticket_destinations(user: str = Depends(get_current_user)) -> dict:
     Jira is the only destination this deployment raises tickets in. The endpoint stays
     (the UI reads it to know whether to enable "Create ticket") but it can no longer
     advertise a connector the product does not run."""
+    from app.integrations.connections import effective_connections
     from app.integrations.jira import _jira_cfg
 
+    # A site row is the configuration that actually raises tickets; the legacy row is only the
+    # fallback. Reading the legacy row alone told the create/edit dialogs "Jira offline" while
+    # the same dialog successfully created a ticket in Jira.
     j = _jira_cfg()
+    legacy = bool(j.get("base_url") and j.get("email") and j.get("api_token"))
+    sites = len(effective_connections("jira"))
     return {"destinations": [
-        {"key": "jira", "label": "Jira",
-         "configured": bool(j.get("base_url") and j.get("email") and j.get("api_token"))},
+        {"key": "jira", "label": "Jira", "configured": legacy or sites > 0,
+         "sites": sites},
     ]}
 
 

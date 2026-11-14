@@ -294,6 +294,8 @@ single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထာ
 | Settings ထဲ “Finish setting up” မှာ “No document source connected” / “Jira not connected” | `/api/setup/readiness` က legacy config ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်တယ် · `199 articles · 8 domains · 1 site` |
 | Tickets → “Sync from Jira” → `No tickets returned` | `fetch_all_tickets()` က connection မ bind ပဲ `_jira_cfg()` ဖတ်တယ် | site တစ်ခုချင်း bind ပြီး ပေါင်းတယ် (`updated 12`) |
 | Knowledge → Sync → 409 “already running” (ထာဝရ) | deploy က run အလယ်မှာ pod ကို လဲလိုက်တော့ `kb_sync_run` marker က `running` ပဲ ကျန်တယ် | 30 မိနစ်ကျော်ရင် `stale` လို့ သတ်မှတ်ပြီး sync အသစ် ခွင့်ပြုတယ် |
+| Overview ရဲ့ SERVICE STATUS မှာ “Confluence sync” / “Jira” ကို အနီ (Down) | `/api/dashboard/health` က legacy token ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်၊ healthy row မှာ “1 site” ပြထားတယ် |
+| Create/Edit ticket dialog မှာ “Jira offline” ပေမယ့် ticket က Jira မှာ တကယ်ရောက်တယ် | `/api/ticket-destinations` က legacy config ဖတ်တယ် | `effective_connections("jira")` ပါ ထည့်စစ်တယ် → “Connected to Jira” / “Jira synced” |
 | Test က “1 pages visible” | `/rest/api/content` ရဲ့ `size` က response row အရေအတွက် (ငါတို့ 1 ခုပဲ တောင်းတယ်) | space စာရင်း ဖတ်ပြီး “3 spaces visible · not listed: …” |
 
 ဒါကြောင့် “connected လား” ဆိုတာကို **Test** ခလုတ် (site တစ်ခုချင်း၊ အဲဒီ site ရဲ့ token နဲ့)

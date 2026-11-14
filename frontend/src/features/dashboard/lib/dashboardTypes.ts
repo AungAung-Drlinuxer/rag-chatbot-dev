@@ -36,6 +36,8 @@ export type Domain = {
 };
 
 export type HealthItem = {
+  /** Optional qualifier shown under a healthy row, e.g. "1 site" for a per-site integration. */
+  meta?: string | null;
   /** #12 — stable backend key (postgres/redis/ollama/llm/jira/...) for the icon */
   key?: string;
   name: string;
