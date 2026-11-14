@@ -54,6 +54,9 @@ export function DataRetentionSettings() {
   const [totals, setTotals] = useState<Counts | null>(null);
   const [oldest, setOldest] = useState<{ conversations?: string | null; audit?: string | null }>({});
   const [lastRun, setLastRun] = useState<{ at?: string; removed?: Record<string, number> } | null>(null);
+  /* The time comes from the server: the crontab and this label are one decision, and a hard-coded
+     "04:30 UTC" is how the page ended up promising a schedule the worker no longer ran. */
+  const [schedule, setSchedule] = useState("00:00 Singapore (16:00 UTC)");
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -70,6 +73,7 @@ export function DataRetentionSettings() {
       setTotals(j.totals);
       setOldest(j.oldest ?? {});
       setLastRun(j.last_run);
+      if (j.schedule?.label) setSchedule(j.schedule.label);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load the retention policy");
@@ -93,7 +97,7 @@ export function DataRetentionSettings() {
       setPolicy(j.policy);
       setPreview(j.preview);
       setTotals(j.totals);
-      setNotice({ ok: true, message: "Saved. The nightly job applies this at 04:30 UTC." });
+      setNotice({ ok: true, message: `Saved. The nightly job applies this at ${schedule}.` });
     } catch (e) {
       setNotice({ ok: false, message: e instanceof Error ? e.message : "Could not save" });
     } finally {
@@ -158,8 +162,8 @@ export function DataRetentionSettings() {
       <Panel
         icon={<Clock3 className="size-4" />}
         title="Retention windows"
-        description="How long each history is kept. The nightly job removes anything older at 04:30 UTC."
-        actions={<Pill tone="muted"><Clock3 className="size-3" /> Nightly 04:30 UTC</Pill>}
+        description={`How long each history is kept. The nightly job removes anything older at ${schedule}.`}
+        actions={<Pill tone="muted"><Clock3 className="size-3" /> Nightly {schedule}</Pill>}
       >
         <Row
           title="Conversation history"

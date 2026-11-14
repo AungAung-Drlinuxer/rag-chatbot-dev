@@ -17,6 +17,8 @@ celery_app = Celery(
 celery_app.conf.broker_transport_options = transport_options()
 celery_app.conf.result_backend_transport_options = transport_options()
 
+from app.retention import NIGHTLY_UTC_HOUR  # single source for the schedule label + crontab
+
 celery_app.conf.beat_schedule = {
     "sync-kb": {"task": "workers.sync_tasks.sync_kb", "schedule": crontab(minute="*/30")},
     # 03:15 UTC — after the 19:30 nightly database backup, before the working day. Cheap:
@@ -25,10 +27,11 @@ celery_app.conf.beat_schedule = {
     # 04:10 UTC — after the KB sync, fill only the blanks in newly created domains.
     "backfill-domain-profiles": {"task": "workers.sync_tasks.backfill_domain_profiles",
                                  "schedule": crontab(hour="4", minute="10")},
-    # 04:30 UTC — its own slot: deleting user data must not share a worker moment with the
-    # KB sync, and the log line stays attributable.
+    # 00:00 Asia/Singapore = 16:00 UTC (Singapore has no DST, so this never drifts). Its own
+    # slot: deleting user data must not share a worker moment with the KB sync, and the log
+    # line stays attributable.
     "retention-purge": {"task": "workers.retention_tasks.purge_expired",
-                        "schedule": crontab(hour="4", minute="30")},
+                        "schedule": crontab(hour=str(NIGHTLY_UTC_HOUR), minute="0")},
 }
 celery_app.conf.timezone = "UTC"
 celery_app.conf.task_serializer = "json"

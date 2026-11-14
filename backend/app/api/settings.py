@@ -345,7 +345,7 @@ def _reload_after_change(key: str) -> None:
 
 @router.get("/settings/retention")
 def get_retention(user: str = Depends(require_role("admin"))) -> dict:
-    from app.retention import ALLOWED_DAYS, get_policy, last_run, scope_counts
+    from app.retention import ALLOWED_DAYS, NIGHTLY_LABEL, NIGHTLY_UTC_HOUR, get_policy, last_run, scope_counts
 
     from app.retention import oldest, totals
 
@@ -357,6 +357,7 @@ def get_retention(user: str = Depends(require_role("admin"))) -> dict:
         "oldest": {k: (v.isoformat() if v else None) for k, v in oldest().items()},
         "last_run": last_run(),
         "allowed_days": sorted(ALLOWED_DAYS),
+        "schedule": {"hour_utc": NIGHTLY_UTC_HOUR, "label": NIGHTLY_LABEL},
     }
 
 

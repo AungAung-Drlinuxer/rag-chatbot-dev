@@ -1,4 +1,4 @@
-"""Celery task — nightly retention purge (04:30 UTC).
+"""Celery task — nightly retention purge (00:00 Asia/Singapore, 16:00 UTC).
 
 Kept separate from the KB sync: retention deletes user data, so it gets its own schedule
 and its own log line, and a failure here can never take the knowledge base down with it.
