@@ -1,8 +1,8 @@
 import {
   Filter,
   GitCompareArrows,
+  Send,
   Loader2,
-  Plus,
   Ticket as TicketIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -538,8 +538,15 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-[var(--border)]" />
               </>
             )}
-            <Button size="sm" className="rounded-lg" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-1.5 size-4" />
+            {/* Pill, not a rounded rectangle: the primary action should not look like the two
+                secondary ones beside it. Vertical violet gradient (top lighter), the paper plane
+                pointing up-right, and a shadow tinted with the brand instead of black. */}
+            <Button
+              size="sm"
+              className="create-ticket-btn px-4 hover:opacity-95"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Send className="mr-2 size-4" />
               Create ticket
             </Button>
           </div>
