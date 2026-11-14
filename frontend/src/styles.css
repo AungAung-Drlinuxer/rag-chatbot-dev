@@ -183,6 +183,9 @@
   --bg: var(--background); --surface: var(--card); --surface-2: var(--muted); --text: var(--foreground);
   --text-muted: var(--muted-foreground); --accent-2: #7C3AED; --accent-soft: #F5F3FF;
   --ok: #16a34a; --warn: #d97706; --danger: #dc2626;
+  /* Blue is the fourth status hue (informational); define it here too, or light mode silently
+     renders `text-[var(--accent-blue)]` as inherited text. */
+  --accent-blue: #2563eb; --lavender: #7c3aed;
   /* Brand gradient: violet in light, blue→slate in dark. Buttons and hero headers read
      these instead of hard-coded from-violet-600, so the theme can actually change. */
   --brand-grad-from: #7c3aed; --brand-grad-to: #5b21b6;
@@ -200,7 +203,7 @@
   --popover: #222236; --popover-foreground: #EDEAF4;
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
-  --accent-blue: #3B82F6; --lavender: #A78BFA;
+  --accent-blue: #60A5FA; --lavender: #A78BFA;
   --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
@@ -669,7 +672,7 @@ input:focus, select:focus, textarea:focus {
   --popover: #222236; --popover-foreground: #EDEAF4;
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
-  --accent-blue: #3B82F6; --lavender: #A78BFA;
+  --accent-blue: #60A5FA; --lavender: #A78BFA;
   --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
@@ -1105,7 +1108,7 @@ input:focus, select:focus, textarea:focus {
   --popover: #222236; --popover-foreground: #EDEAF4;
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
-  --accent-blue: #3B82F6; --lavender: #A78BFA;
+  --accent-blue: #60A5FA; --lavender: #A78BFA;
   --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
@@ -1958,7 +1961,7 @@ table tbody tr {
 .stat-card--ok { --stat-accent: var(--ok); }
 .stat-card--warn { --stat-accent: var(--warn); }
 .stat-card--danger { --stat-accent: var(--danger); }
-.stat-card--info { --stat-accent: var(--primary); }
+.stat-card--info { --stat-accent: var(--accent-blue, var(--primary)); }
 .stat-card--muted { --stat-accent: var(--muted-foreground); }
 }
 
@@ -1984,7 +1987,7 @@ table tbody tr {
   --popover: #222236; --popover-foreground: #EDEAF4;
   --primary: #8B5CF6; --primary-foreground: #FFFFFF;
   --secondary: #6366F1; --secondary-foreground: #FFFFFF;
-  --accent-blue: #3B82F6; --lavender: #A78BFA;
+  --accent-blue: #60A5FA; --lavender: #A78BFA;
   --muted: #262238; --muted-foreground: #B4AEC9; --text-muted: #B4AEC9;
   --accent: rgba(139,92,246,.16); --accent-soft: rgba(139,92,246,.16);
   --accent-foreground: #C4B5FD; --accent-2: #8B5CF6;
