@@ -141,3 +141,18 @@ Copy is now one voice across the queues:
 "`N` loaded, but none match" when a filter hides the list, and the same `Reset filters` action in
 every one of them (previously Users said "No users found" with no count, Tickets "No tickets
 found", Audit log said two different things on desktop and mobile).
+
+### Unsaved edits are guarded (2026-11-13, `dev-1.11.98`)
+
+Preferences has a save rail, so leaving mid-edit used to discard work silently. All three exits
+now ask the same question through the router:
+
+- **Tab switch** inside Settings — `Leave without saving?` with Cancel / Discard changes.
+- **Any navigation** (rail, sidebar, palette, keyboard) — `useHashNav` consults a guard registered
+  by the page (`registerNavGuard`), so the dialog appears after the click, not after the page is
+  already gone; Cancel restores the previous hash.
+- **Refresh / tab close** — `beforeunload`, the one place the browser's own prompt is correct.
+
+Verified live: toggling a preference enabled Save, clicking Integrations raised the dialog, Cancel
+kept the page and the edit, and the sidebar's Tickets link raised it again — Discard then navigated
+and `show_token_usage` was still `true` on the server, i.e. nothing was written.

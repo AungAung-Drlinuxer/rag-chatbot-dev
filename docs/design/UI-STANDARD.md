@@ -136,7 +136,7 @@ not match an archetype is either a new archetype (add it here) or a mistake.
 | --- | --- | --- | --- |
 | **List / queue** | header → filters → table → pager | sortable headers with `aria-sort`, sticky header, pager with totals, mobile card list, two empty states (none at all / none matching) | Tickets, Users, Audit log, Conversations, Knowledge |
 | **Detail** | header (back) → summary → tabs or sections → activity | back to the list, one primary action, related objects linked, unsaved-changes guard | Ticket detail panel |
-| **Settings** | rail/picker → section cards → save rail | section in the URL, per-section save, danger zone last, loading gate before controls | Settings |
+| **Settings** | rail/picker → section cards → save rail | section in the URL, per-section save, loading gate before controls, **unsaved-changes guard** on every way out (tab, sidebar, refresh), danger zone last | Settings |
 | **Dashboard** | panel grid, viewport-locked | time range in the URL, per-panel empty state, layout that survives a reload | Overview |
 | **Editor / wizard** | one column (or stepper) → sticky submit | inline validation, discard confirmation, dialog tier by complexity (960/560/420) | Create/Edit ticket, Add site |
 | **Conversation surface** | full height, composer pinned | message list, composer, context panel, no page header | Chat |

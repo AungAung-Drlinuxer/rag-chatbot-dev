@@ -12,10 +12,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { IntegrationLogo } from "../components/IntegrationLogo";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageShell, PageHeader, ErrorState } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSectionParam } from "@/features/settings/useSectionParam";
+import { useConfirm } from "@/components/ui/confirm";
+import { registerNavGuard } from "@/app/router";
 import { Panel, Row, Segmented } from "../components/SettingsKit";
 
 import { dashHealth } from "@/features/dashboard/api";
@@ -331,6 +333,7 @@ export default function Settings({ role }: { role?: string }) {
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { confirm, dialog: leaveDialog } = useConfirm();
   /* Loading is a state the reader can see: before the fetch lands the controls used to show
      defaults (Light, 16px, everything on) that looked exactly like stored values, and Save was
      live — one click wrote those defaults over the account's real settings. */
@@ -353,10 +356,47 @@ export default function Settings({ role }: { role?: string }) {
     show_token_usage: showTokenUsage,
     markdown_rendering: markdownRendering,
   };
+  /* Unsaved edits must not disappear because a navigation happened to pass through. The
+     guard is registered with the router (every nav goes through it) and with the browser
+     (a refresh or a closed tab), and the in-page tab switch asks the same question. */
+  const dirtyRef = useRef(false);
+  const confirmRef = useRef(confirm);
+  confirmRef.current = confirm;
+
+  async function askToLeave(): Promise<boolean> {
+    if (!dirtyRef.current) return true;
+    return confirmRef.current({
+      title: "Leave without saving?",
+      description:
+        "You have preference changes that have not been saved. Leaving now discards them — " +
+        "the stored settings stay as they were.",
+      confirmLabel: "Discard changes",
+      destructive: true,
+    });
+  }
+
   const dirty = baseline !== null && (
     JSON.stringify(currentValues) !== JSON.stringify(baseline)
     || (isAdmin && brandName !== brandBaseline)
   );
+
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+
+  useEffect(() => {
+    /* askToLeave only reads refs, so one registration lasts the life of the page. */
+    registerNavGuard(askToLeave);
+    return () => registerNavGuard(null);
+  }, []);
+
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   // The API returns a flat preference object (older servers may wrap it).
   useEffect(() => {
@@ -502,6 +542,7 @@ export default function Settings({ role }: { role?: string }) {
 
   return (
     <PageShell>
+      {leaveDialog}
       <div className="flex min-h-full flex-col">
         <PageHeader
           breadcrumbs={["Workspace", "Settings"]}
@@ -519,7 +560,7 @@ export default function Settings({ role }: { role?: string }) {
           <SettingsRail
             visible={visibleItems}
             active={active}
-            onSelect={setActive}
+            onSelect={(id) => { void (async () => { if (await askToLeave()) { discardChanges(); setActive(id); } })(); }}
             environment={environment}
             roleLabel={roleLabel}
           />
