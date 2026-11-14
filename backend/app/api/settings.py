@@ -504,7 +504,28 @@ def test_connection_endpoint(cid: int, user: str = Depends(require_role("admin")
         ok = r.status_code in (200, 201)
         detail = "" if ok else r.text[:200]
         if ok and conn["provider"] == "confluence":
-            detail = f"{r.json().get('size', 0) if r.headers.get('content-type','').startswith('application/json') else 0} pages visible"
+            # `size` on /rest/api/content is how many rows this response carried (we ask for
+            # one), not how much the account can see — the old text therefore read
+            # "1 pages visible" on a perfectly connected site. Spaces are the honest unit:
+            # they are what the sync walks, and a configured key missing from the list is the
+            # failure an admin actually needs to be told about.
+            try:
+                sp_url = (f"https://api.atlassian.com/ex/confluence/{conn['cloud_id']}/wiki/rest/api/space"
+                          if conn.get("cloud_id") else f"{base}/rest/api/space")
+                sp_headers = ({"Authorization": f"Bearer {conn.get('api_token') or ''}"}
+                              if conn.get("cloud_id") else None)
+                sp = httpx.get(sp_url, params={"limit": 100},
+                               headers=sp_headers,
+                               auth=None if sp_headers else (conn.get("email") or "", conn.get("api_token") or ""),
+                               timeout=15)
+                keys = [str(x.get("key") or "") for x in sp.json().get("results", [])] if sp.status_code == 200 else []
+                wanted = [str(x).strip() for x in (conn.get("spaces") or []) if str(x).strip()]
+                missing = [w for w in wanted if w not in keys]
+                detail = (f"{len(keys)} space{'s' if len(keys) != 1 else ''} visible"
+                          + (f" · not listed: {', '.join(missing)}" if missing else "")
+                          if keys else "connected (space list not readable)")
+            except Exception:
+                detail = "connected"
         return {"ok": ok, "status": r.status_code, "detail": detail}
     except Exception as exc:
         return {"ok": False, "status": None, "detail": f"{type(exc).__name__}: {exc}"[:300]}

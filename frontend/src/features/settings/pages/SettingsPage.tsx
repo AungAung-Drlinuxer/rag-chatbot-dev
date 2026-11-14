@@ -918,9 +918,9 @@ function IntegrationStatusCards() {
 
   const cards = [
     { key: "confluence", name: "Confluence", desc: "Knowledge base and documentation source.",
-      detail: cfg.confluence?.base_url ? `URL: ${cfg.confluence.base_url}` : "URL: (configured in Confluence tab)" },
+      detail: cfg.confluence?.base_url ? `URL: ${cfg.confluence.base_url}` : "Credentials stored per site — open the Confluence panel" },
     { key: "jira", name: "Jira", desc: "Issue tracking and ticket management.",
-      detail: cfg.jira?.base_url ? `URL: ${cfg.jira.base_url}` : "URL: (configured)" },
+      detail: cfg.jira?.base_url ? `URL: ${cfg.jira.base_url}` : "Credentials stored per site — open the Jira panel" },
     { key: "ldap", name: "LDAP / Active Directory", desc: "User authentication and group synchronization.",
       detail: cfg.ldap?.host ? `Server: ${cfg.ldap.host}:${cfg.ldap.port ?? 389}` : "Server: 10.10.10.10" },
     // The model provider's status lives in the AI service section now — it shows the

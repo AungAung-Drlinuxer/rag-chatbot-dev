@@ -282,3 +282,19 @@ create မ လုပ်၊ update ပဲ လုပ်တယ်။ Jira status �
 - Jira custom required field mapping (JSM request type ကနေ ဖြေရှင်းရ)
 - Jira panel ထဲက service desk / request type ကို dropdown နဲ့ ရွေးတာ (အခု JSON field)
 - Scheduled sync (manual ပဲ)
+
+## “Configured ဖြစ်ပေမယ့် not connected” ဆိုတဲ့ အခြေအနေ
+
+Confluence/Jira ကို **site တစ်ခုချင်း** (`integration_connections`) သိမ်းတယ်။ Legacy
+single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထားတဲ့ install တစ်ခုမှာ
+အောက်ပါ သုံးနေရာက legacy row ကို ဖတ်နေရင် “not connected” လို့ မှားပြပါတယ်။
+
+| လက္ခဏာ | အကြောင်းရင်း | ပြင်ထားတာ |
+|---|---|---|
+| Settings ထဲ “Finish setting up” မှာ “No document source connected” / “Jira not connected” | `/api/setup/readiness` က legacy config ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်တယ် · `199 articles · 8 domains · 1 site` |
+| Tickets → “Sync from Jira” → `No tickets returned` | `fetch_all_tickets()` က connection မ bind ပဲ `_jira_cfg()` ဖတ်တယ် | site တစ်ခုချင်း bind ပြီး ပေါင်းတယ် (`updated 12`) |
+| Knowledge → Sync → 409 “already running” (ထာဝရ) | deploy က run အလယ်မှာ pod ကို လဲလိုက်တော့ `kb_sync_run` marker က `running` ပဲ ကျန်တယ် | 30 မိနစ်ကျော်ရင် `stale` လို့ သတ်မှတ်ပြီး sync အသစ် ခွင့်ပြုတယ် |
+| Test က “1 pages visible” | `/rest/api/content` ရဲ့ `size` က response row အရေအတွက် (ငါတို့ 1 ခုပဲ တောင်းတယ်) | space စာရင်း ဖတ်ပြီး “3 spaces visible · not listed: …” |
+
+ဒါကြောင့် “connected လား” ဆိုတာကို **Test** ခလုတ် (site တစ်ခုချင်း၊ အဲဒီ site ရဲ့ token နဲ့)
+နဲ့ `Finish setting up` က ပြောတယ် — catalogue က “In use” ဆိုတာနဲ့ မတူနိုင်ပါဘူး။

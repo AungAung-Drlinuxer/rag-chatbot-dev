@@ -50,6 +50,21 @@ def _database(s) -> dict:
             "ok": tables >= REQUIRED_TABLES and vector is not None}
 
 
+def _sites(s, provider: str) -> int:
+    """How many per-site rows exist for a provider.
+
+    Confluence and Jira are configured per site (`integration_connections`), not in the single
+    legacy `system_settings` row. A readiness check that only reads the legacy row reports
+    "not connected" on a working multi-site install — the exact mistake the catalogue had.
+    """
+    try:
+        return int(s.execute(text(
+            "SELECT count(*) FROM integration_connections WHERE provider = :p"),
+            {"p": provider}).scalar() or 0)
+    except Exception:
+        return 0
+
+
 def _knowledge(s) -> dict:
     cfg = _settings(s, "confluence")
     articles = int(s.execute(text("SELECT count(*) FROM kb_meta")).scalar() or 0)
@@ -67,8 +82,10 @@ def _knowledge(s) -> dict:
     spaces = cfg.get("space_keys") or cfg.get("spaces") or ""
     if isinstance(spaces, str):
         spaces = [x for x in spaces.replace("\n", ",").split(",") if x.strip()]
+    sites = _sites(s, "confluence")
     return {
-        "confluence_configured": _has(cfg, "base_url", "api_token", "email"),
+        "confluence_configured": _has(cfg, "base_url", "api_token", "email") or sites > 0,
+        "sites": sites,
         "spaces": [str(x).strip() for x in spaces if str(x).strip()],
         "articles": articles,
         "domains": domains,
@@ -88,8 +105,10 @@ def _integrations(s) -> dict:
         sso_ready = bool(_sso_enabled())
     except Exception:
         sso_ready = _has(sso, "issuer", "realm", "client_id", "redirect_uri")
+    jira_sites = _sites(s, "jira")
     return {
-        "jira": {"configured": _has(jira, "base_url", "api_token", "email"),
+        "jira": {"configured": _has(jira, "base_url", "api_token", "email") or jira_sites > 0,
+                 "sites": jira_sites,
                  "project": jira.get("project_key") or jira.get("project")},
         "ldap": {"configured": _has(ldap, "host", "base_dn", "bind_dn")},
         # The redirect URI is part of "ready": Keycloak rejects the login flow without it,
@@ -136,7 +155,9 @@ def setup_readiness(user: str = Depends(get_current_user)) -> dict:
                 "key": "knowledge",
                 "label": "Knowledge base",
                 "status": "done",
-                "detail": f"{kb['articles']} articles · {kb['domains']} domains",
+                "detail": (f"{kb['articles']} articles · {kb['domains']} domains"
+                           + (f" · {kb['sites']} site{'s' if kb['sites'] != 1 else ''}"
+                              if kb["sites"] else "")),
                 "hint": "",
             })
         else:
@@ -144,7 +165,9 @@ def setup_readiness(user: str = Depends(get_current_user)) -> dict:
                 "key": "knowledge",
                 "label": "Knowledge base",
                 "status": "todo",
-                "detail": "Confluence connected, nothing indexed yet",
+                "detail": (f"Confluence connected ({kb['sites']} site{'s' if kb['sites'] != 1 else ''}), "
+                           "nothing indexed yet" if kb["sites"] else
+                           "Confluence connected, nothing indexed yet"),
                 "hint": "Open Knowledge and press Sync — or wait for the sync queued by saving credentials",
             })
     else:
@@ -160,7 +183,10 @@ def setup_readiness(user: str = Depends(get_current_user)) -> dict:
         "key": "ticketing",
         "label": "Ticketing",
         "status": "done" if integrations["jira"]["configured"] else "todo",
-        "detail": ("Jira connected" if integrations["jira"]["configured"]
+        "detail": ((f"Jira connected · {integrations['jira']['sites']} site"
+                    f"{'s' if integrations['jira']['sites'] != 1 else ''}"
+                    if integrations["jira"]["sites"] else "Jira connected")
+                   if integrations["jira"]["configured"]
                    else "Jira not connected — the Tickets page reads the local table only"),
         "hint": "" if integrations["jira"]["configured"] else
                 "Add Jira base URL, account email and API token",

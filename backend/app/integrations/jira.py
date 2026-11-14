@@ -404,7 +404,39 @@ from app.integrations.ticket_status import (
 # v1.6.8 — Jira -> platform ticket sync (pull)
 # ---------------------------------------------------------------------------
 def fetch_all_tickets(max_results: int = 200) -> list[dict]:
-    """Pull tickets from Jira so the Tickets board mirrors upstream.
+    """Pull tickets from every configured Jira site.
+
+    Jira is configured per site (`integration_connections`); the legacy single row in
+    `system_settings` is empty on a multi-site install. Reading `_jira_cfg()` without binding a
+    connection therefore returned nothing and the sync reported "No tickets returned" on a site
+    that answers `project = ITHD` with issues. Each site is fetched under its own connection and
+    the results are merged, the same way Confluence sync walks its rows.
+    """
+    from app.integrations.connections import effective_connections
+
+    conns = effective_connections("jira")
+    if not conns:
+        return _fetch_one_site(max_results)
+
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for conn in conns:
+        with use_connection(conn):
+            try:
+                rows = _fetch_one_site(max_results)
+            except Exception as exc:  # one bad site must not hide the others
+                logger.warning("jira fetch failed for site %s: %s", conn.get("label"), exc)
+                continue
+        for t in rows:
+            if t["ticket_id"] in seen:
+                continue
+            seen.add(t["ticket_id"])
+            merged.append(t)
+    return merged[:max_results]
+
+
+def _fetch_one_site(max_results: int = 200) -> list[dict]:
+    """Pull tickets from the connection currently bound by `use_connection`.
 
     Strategy:
       1. JSM: GET /rest/servicedeskapi/request?limit=... (customer requests)

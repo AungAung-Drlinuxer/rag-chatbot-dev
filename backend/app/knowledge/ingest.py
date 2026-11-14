@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import threading
 import time
 from datetime import UTC, datetime
@@ -261,15 +262,31 @@ class SyncBusy(RuntimeError):
     """A sync is already running (beat schedule or another request)."""
 
 
+# A "running" marker older than this cannot belong to a live run: the process that wrote it is
+# gone (a deploy rolled the pod, a worker was OOM-killed), so the marker would otherwise say
+# "sync in progress" forever and block every later sync with 409.
+# 30 minutes — the beat interval. A marker older than one schedule tick cannot belong to a live
+# run: beat would have skipped its own slot otherwise. Tunable for a very large estate.
+_STALE_AFTER = float(os.environ.get("KB_SYNC_STALE_SECONDS", "1800"))
+
+
 def sync_state() -> dict:
-    """The live run marker: running / done / error, with when and by whom."""
+    """The live run marker: running / done / error / stale, with when and by whom."""
     try:
         from app.persistence.models import RuntimeKv
 
         with SessionLocal() as s:
             kv = s.get(RuntimeKv, "kb_sync_run")
             if kv and kv.value:
-                return json.loads(kv.value) if isinstance(kv.value, str) else kv.value
+                run = json.loads(kv.value) if isinstance(kv.value, str) else kv.value
+                if isinstance(run, dict) and run.get("state") == "running":
+                    started = float(run.get("started_at") or 0)
+                    if started and (time.time() - started) > _STALE_AFTER:
+                        # Report it honestly instead of pretending a run is in flight; the next
+                        # sync is allowed and will replace this marker.
+                        return {**run, "state": "stale", "stale": True,
+                                "stale_after_seconds": int(_STALE_AFTER)}
+                return run
     except Exception as exc:  # noqa: BLE001
         logger.warning("sync state unreadable: %s", exc)
     return {"state": "idle"}
