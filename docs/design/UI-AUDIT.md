@@ -90,24 +90,23 @@ current shape.
 - Per-page performance numbers on a real device; the budgets in the standard are targets, not
   measurements.
 
-## Settings, checked live (2026-11-13, `dev-1.11.93`)
+## Settings, checked live (2026-11-13, `dev-1.11.95`)
 
-Clause-by-clause, because this page is the one admins live in:
+The page failed four clauses when it was first scored. All four were fixed the same day; this is
+the state after the fix, verified on the dev cluster.
 
 | Clause | Verdict | Evidence |
 | --- | --- | --- |
 | 1 Header | ✅ | `h1 "Settings"`, purpose line, breadcrumb Workspace → Settings; the header action is a role badge, not a second primary |
-| 2 Spacing / type | ⚠️ | padding and gaps sit on the 4/16 scale; hint text is `text-[11px]` in 8 places, below the 12px meta floor |
-| 3 Four states | ✗ | no `Skeleton` anywhere in `features/settings`; with `/api/settings*` blocked the page renders Theme: Light, 16px, all toggles on, and a single red "Failed to fetch." line under Discard — no retry, Save still enabled |
+| 2 Spacing / type | ✅ | padding and gaps on the 4/16 scale; hint text is `text-xs` (13px) — measured in the browser, was `text-[11px]` |
+| 3 Four states | ✅ | `PrefsSkeleton` (`aria-busy`, `aria-label="Loading your preferences"`) while the fetch is in flight; `ErrorState` + **Try again** on failure; the preference controls are not rendered at all until the stored values arrive, so Save cannot write defaults. Verified by blocking `/api/settings` (error) and by adding 2.5s of latency (skeleton) |
 | 4 Table | n/a | no table on this page |
-| 5 Forms | ✅ | `Field` puts the label above the control and the hint below (`SettingsKit.tsx:94`); per-field validation errors are not supported, only section-level notices |
-| 6 Destructive | ⚠️ | `window.confirm` at `AiServiceSettings.tsx:205`, `ConnectionsCard.tsx:180`, `IntegrationsConfig.tsx:353` |
-| 7 A11y | ✅ | `nav aria-label="Settings sections"` (+ compact variant), `role="switch"` + `aria-checked` on toggles, 38 `aria-label`s, global `:focus-visible` |
-| 8 Responsive | ⚠️ | 375 and 1024 both measure 0 horizontal overflow and the aside folds under at `xl`; but the compact rail is a 1703px scroll strip in a 343px viewport, so 3 of 5 sections sit off-screen with no affordance |
-| 9 URL state | ✗ | section selection is `useState("general")` (`SettingsPage.tsx:262`); switching to Data retention leaves `location.hash` at `#/settings` |
+| 5 Forms | ✅ | `Field` puts the label above the control and the hint below (`SettingsKit.tsx:94`) |
+| 6 Destructive | ✅ | `window.confirm` replaced by `useConfirm()` (`components/ui/confirm.tsx`) in `AiServiceSettings`, `ConnectionsCard`, `IntegrationsConfig`; "Remove site" names the site, explains what is kept, and Cancel leaves it alone — verified live on a temporary Jira site |
+| 7 A11y | ✅ | `nav aria-label="Settings sections"`, mobile `select` with its own label, `role="switch"` + `aria-checked`, 38 `aria-label`s, global `:focus-visible` |
+| 8 Responsive | ✅ | 375 and 1024 measure 0 horizontal overflow; below `lg` the rail becomes a native picker (5 options, 56px tall) instead of a 1703px strip in a 343px viewport; the aside folds under at `xl` |
+| 9 URL state | ✅ | section is `#/settings?tab=<id>` (`useSectionParam`); clicking Data retention rewrites the hash and a reload reopens that tab; an admin-only tab opened by a non-admin falls back to Preferences |
 | 10 Perf | ✅ | lazy route; sections mount with the page, which is fine at this size |
 
-Score: **5 pass, 2 partial, 2 fail, 1 n/a.** To make the page conform: section in the URL, a real
-loading gate (disable Save until loaded) plus `ErrorState` with retry, the three `window.confirm`s
-replaced by the shared dialog, a mobile section picker that does not hide sections behind a swipe,
-and 11px hints raised to 12px.
+Score: **9 pass, 1 n/a.** The section is shareable, the page cannot save a value the user never
+saw, and every destructive action goes through the same dialog as the rest of the app.

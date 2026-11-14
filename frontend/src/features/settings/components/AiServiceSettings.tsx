@@ -23,6 +23,7 @@ import {
   deleteIntegrationSettings, getIntegrationSettings, getLlmModels, getRuntime,
   putIntegrationSettings, putRuntime, testIntegration,
 } from "@/features/settings/api";
+import { useConfirm } from "@/components/ui/confirm";
 import { LLM_PRESETS, presetFor, providerLabel } from "../llmProviders";
 import { IntegrationLogo } from "./IntegrationLogo";
 import {
@@ -62,6 +63,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
   const [testing, setTesting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [msg, setMsg] = useState<Msg>(null);
+  const { confirm, dialog } = useConfirm();
 
   const tokenSet = secretFields.includes("api_key");
   const preset = presetFor(form.provider || provider);
@@ -202,11 +204,15 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
   }
 
   async function clear() {
-    if (!window.confirm(
-      "Remove the stored provider credentials?\n\n" +
-      "The key is write-only, so this is the only way to revoke it. The assistant stops " +
-      "answering until a new key is saved."
-    )) return;
+    const ok = await confirm({
+      title: "Revoke the stored provider credentials?",
+      description:
+        "The key is write-only, so revoking is the only way to remove it. The assistant stops " +
+        "answering until a new key is saved.",
+      confirmLabel: "Revoke",
+      destructive: true,
+    });
+    if (!ok) return;
     setClearing(true);
     setMsg(null);
     try {
@@ -266,6 +272,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      {dialog}
       <div className="space-y-5">
         {/* ---- status ------------------------------------------------------------- */}
         <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">

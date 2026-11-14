@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { ConnectionsCard } from "@/features/settings/components/ConnectionsCard";
+import { useConfirm } from "@/components/ui/confirm";
 import {
   deleteIntegrationSettings, getIntegrationSettings, getMySettings, listConnections, putIntegrationSettings, testIntegration, updateMySettings,
 } from "@/features/settings/api";
@@ -267,6 +268,7 @@ function ProviderEditor({ provider, onConfigured }: {
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { confirm, dialog } = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -350,11 +352,15 @@ function ProviderEditor({ provider, onConfigured }: {
   }
 
   async function clear() {
-    if (!window.confirm(
-      `Remove the stored ${provider.name} configuration?\n\n` +
-      "Credentials are write-only, so this is the only way to revoke them. " +
-      "The integration stops working until it is configured again."
-    )) return;
+    const ok = await confirm({
+      title: `Remove the stored ${provider.name} configuration?`,
+      description:
+        "Credentials are write-only, so revoking them is the only way to remove them. " +
+        "The integration stops working until it is configured again.",
+      confirmLabel: "Remove configuration",
+      destructive: true,
+    });
+    if (!ok) return;
     setClearing(true);
     setResult(null);
     try {
@@ -483,6 +489,7 @@ function ProviderEditor({ provider, onConfigured }: {
 
   return (
     <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card text-card-foreground shadow-xs">
+      {dialog}
       {/* header */}
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
         <div className="flex min-w-0 items-start gap-3">

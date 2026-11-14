@@ -120,6 +120,9 @@ async function click(el: Element | undefined | null) {
 beforeEach(() => {
   vi.clearAllMocks();
   happyPath();
+  /* The open section now lives in the URL, so it outlives a test: without this reset the
+     next mount opens whichever tab the previous test clicked. */
+  window.history.replaceState(null, "", "#/settings");
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-compact");
   document.documentElement.classList.remove("animations-off");

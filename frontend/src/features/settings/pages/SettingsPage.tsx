@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import { IntegrationLogo } from "../components/IntegrationLogo";
 import { useEffect, useState } from "react";
-import { PageShell, PageHeader } from "@/components/ui/page";
+import { PageShell, PageHeader, ErrorState } from "@/components/ui/page";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSectionParam } from "@/features/settings/useSectionParam";
 import { Panel, Row, Segmented } from "../components/SettingsKit";
 
 import { dashHealth } from "@/features/dashboard/api";
@@ -77,6 +79,8 @@ function ToggleRow({ checked, onChange, title, description }: {
  * this app has no settings behind Extensions / Developer / Plugins, and an empty
  * page is worse than an absent one. The service-status block lives inside
  * Integrations. */
+const SECTION_IDS = ["general", "integrations", "skills", "notifications", "retention"] as const;
+
 const SETTINGS_NAV: { group: string; items: { id: string; label: string; icon: React.ReactNode }[] }[] = [
   {
     group: "Workspace",
@@ -209,16 +213,59 @@ function SettingsRail({ visible, active, onSelect, environment, roleLabel }: {
         </div>
       </aside>
 
-      {/* Phone / tablet: the same groups, one scrolling row */}
-      <div className="sticky top-0 z-20 -mx-1 overflow-x-auto border-b border-[var(--border)] bg-background/85 py-1.5 backdrop-blur lg:hidden">
-        <nav aria-label="Settings sections (compact)" className="flex items-center gap-1.5 px-1">
-          {visible.map((it) => {
-            const full = SETTINGS_NAV.flatMap((g) => g.items).find((i) => i.id === it.id)!;
-            return item(full, true);
-          })}
-        </nav>
+      {/* Phone / tablet: one native picker.
+          A scrolling strip put three of five sections off the right edge with nothing to say
+          they were there; wrapping chips fixed the hiding but stacked five rows of sticky
+          chrome on top of a 812px screen. A select is one row, reaches every section, works
+          with a screen reader and with the OS picker. */}
+      <div className="sticky top-0 z-20 -mx-1 border-b border-[var(--border)] bg-background/85 px-1 py-2 backdrop-blur lg:hidden">
+        <label htmlFor="settings-section" className="sr-only">Settings section</label>
+        <select
+          id="settings-section"
+          value={active}
+          onChange={(e) => onSelect(e.target.value)}
+          className="w-full appearance-none rounded-xl border border-[var(--border)] bg-card px-3 py-2 text-sm font-medium text-foreground outline-none focus-visible:border-[var(--primary)]"
+          aria-label="Settings section"
+        >
+          {SETTINGS_NAV.map((g) => (
+            <optgroup key={g.group} label={g.group}>
+              {g.items.filter((it) => visible.some((v) => v.id === it.id)).map((it) => (
+                <option key={it.id} value={it.id}>{it.label}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
     </>
+  );
+}
+
+/* Shape of the real page — two cards of fields — so the layout does not jump when the fetch
+   lands. Not a spinner: the reader sees where the controls will be. */
+function PrefsSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading your preferences">
+      {[0, 1].map((card) => (
+        <div key={card} className="rounded-2xl border border-[var(--border)] bg-card">
+          <div className="flex items-start gap-3 border-b border-[var(--border)] px-5 py-4">
+            <Skeleton className="mt-0.5 size-4 rounded" />
+            <div className="space-y-2">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-64 max-w-full" />
+            </div>
+          </div>
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 last:border-0">
+              <div className="space-y-2">
+                <Skeleton className="h-3.5 w-36" />
+                <Skeleton className="h-3 w-56 max-w-full" />
+              </div>
+              <Skeleton className="h-6 w-11 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -258,8 +305,9 @@ type PrefValues = {
 ============================================================ */
 
 export default function Settings({ role }: { role?: string }) {
-  // v1.6.75 — which settings tab is open.
-  const [active, setActive] = useState("general");
+  /* The open section is part of the address (`#/settings?tab=retention`), so a refresh or a
+     pasted link lands where it says. */
+  const [active, setActive] = useSectionParam(SECTION_IDS, "general", "settings");
   // v0.21.90 — role gating: user/IT Support/Knowledge Manager only see Preferences,
   // AI Assistant, Notifications. Integrations + Mail are admin-only.
   const isAdmin = role === "admin";
@@ -283,6 +331,12 @@ export default function Settings({ role }: { role?: string }) {
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  /* Loading is a state the reader can see: before the fetch lands the controls used to show
+     defaults (Light, 16px, everything on) that looked exactly like stored values, and Save was
+     live — one click wrote those defaults over the account's real settings. */
+  const [prefsState, setPrefsState] = useState<"loading" | "ready" | "error">("loading");
+  const [prefsError, setPrefsError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // v1.6.90 — the last values known to be stored server-side. `dirty` is derived by
   // comparing the live form to this baseline, so the sticky footer can tell the truth
@@ -337,8 +391,13 @@ export default function Settings({ role }: { role?: string }) {
           markdown_rendering: mdRender,
         });
         applyThemeNow(dark, dense, anim, fontSize);
+        setPrefsState("ready");
       })
-      .catch((e) => { if (mounted) setSaveError(e?.message || "Could not load saved settings"); });
+      .catch((e) => {
+        if (!mounted) return;
+        setPrefsState("error");
+        setPrefsError(e?.message || "Could not load saved settings");
+      });
 
     // The brand name is part of this form for an administrator, so it loads with it.
     if (isAdmin) {
@@ -347,7 +406,13 @@ export default function Settings({ role }: { role?: string }) {
         .catch(() => {});
     }
     return () => { mounted = false; };
-  }, []);
+  }, [reloadKey]);
+
+  function retryPrefs() {
+    setPrefsState("loading");
+    setPrefsError(null);
+    setReloadKey((k) => k + 1);
+  }
 
   async function saveSettings() {
     setSaving(true); setSaveError(null);
@@ -415,6 +480,15 @@ export default function Settings({ role }: { role?: string }) {
     setSaveError(null);
   }
 
+  /* A deep link can name a section this role cannot see (an IT-support user opening an
+     administrator's `?tab=retention`). Land on Preferences rather than an empty page. */
+  useEffect(() => {
+    const allowed = SETTINGS_NAV.flatMap((g) => g.items)
+      .filter((item) => isAdmin || item.id === "general" || item.id === "notifications")
+      .map((item) => item.id);
+    if (!allowed.includes(active)) setActive("general");
+  }, [active, isAdmin, setActive]);
+
   const visibleItems = SETTINGS_NAV
     .flatMap((group) => group.items)
     // Everyone gets their own notification preferences; the rest is administrator work.
@@ -455,7 +529,23 @@ export default function Settings({ role }: { role?: string }) {
           <main className="flex min-w-0 flex-1 items-start gap-8">
             <div className="min-w-0 flex-1 space-y-4">
 
-            {active === "general" && (
+            {/* The form is only shown once the stored values are known: painting defaults in
+                the meantime is how a user ends up saving Light/16px over their real settings. */}
+            {active === "general" && prefsState === "loading" && <PrefsSkeleton />}
+            {active === "general" && prefsState === "error" && (
+              <div className="rounded-2xl border border-[var(--border)] bg-card">
+                <ErrorState
+                  title="Could not load your preferences"
+                  detail={prefsError}
+                  onRetry={retryPrefs}
+                />
+                <p className="px-5 pb-4 text-xs text-muted-foreground">
+                  Nothing has been changed on this account. The controls stay hidden until the
+                  stored values load, so a save cannot overwrite them with defaults.
+                </p>
+              </div>
+            )}
+            {active === "general" && prefsState === "ready" && (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-4">
             {/* ---- Answers: every control here changes how a message is rendered. ---- */}
@@ -592,7 +682,7 @@ export default function Settings({ role }: { role?: string }) {
               <aside className="space-y-4 xl:sticky xl:top-6">
                 <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Your setup</h2>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">What the interface uses right now.</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">What the interface uses right now.</p>
                   <dl className="mt-3 space-y-2.5">
                     {[
                       ["Theme", darkMode ? "Dark" : "Light"],
@@ -603,7 +693,7 @@ export default function Settings({ role }: { role?: string }) {
                       ["Token usage", showTokenUsage ? "Shown" : "Hidden"],
                       ["Markdown", markdownRendering ? "Formatted" : "Plain"],
                     ].map(([k, v]) => (
-                      <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
+                      <div key={k} className="flex items-baseline justify-between gap-3 text-xs">
                         <dt className="shrink-0 text-muted-foreground">{k}</dt>
                         <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
                       </div>
@@ -613,7 +703,7 @@ export default function Settings({ role }: { role?: string }) {
 
                 <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">Save</h2>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                     Theme, density and motion apply as you change them, but they are stored for this
                     account only when you save.
                   </p>
@@ -621,7 +711,7 @@ export default function Settings({ role }: { role?: string }) {
                   <button
                     type="button"
                     onClick={saveSettings}
-                    disabled={saving}
+                    disabled={saving || prefsState !== "ready" || !dirty}
                     className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                   >
                     <Save className="size-3.5" aria-hidden />
@@ -637,7 +727,7 @@ export default function Settings({ role }: { role?: string }) {
                     Discard changes
                   </button>
 
-                  <div className="mt-3 text-[11px]" aria-live="polite">
+                  <div className="mt-3 text-xs" aria-live="polite">
                     {saving ? (
                       <span className="text-muted-foreground">Saving…</span>
                     ) : saved ? (
@@ -690,7 +780,7 @@ export default function Settings({ role }: { role?: string }) {
 
                 <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                   <h2 className="text-sm font-semibold">How this works</h2>
-                  <ul className="mt-2 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+                  <ul className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
                     <li className="flex gap-1.5">
                       <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
                       Switching a provider on only reveals its panel — nothing connects until you save its fields.
@@ -778,7 +868,7 @@ function IntegrationStatusCards() {
     if (!s) return null;
     const ok = /healthy|ok|up/i.test(s);
     return (
-      <span className={["inline-flex items-center gap-1 text-[11px] font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
+      <span className={["inline-flex items-center gap-1 text-xs font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
         <span className={["size-1.5 rounded-full", ok ? "bg-[var(--ok)]" : "bg-[var(--danger)]"].join(" ")} />
         {ok ? "Connected" : s}
       </span>
@@ -815,10 +905,10 @@ function IntegrationStatusCards() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[11px] font-semibold">{c.name}</span>
+              <span className="truncate text-xs font-semibold">{c.name}</span>
               {chip(c.key)}
             </div>
-            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground" title={c.detail}>
+            <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground" title={c.detail}>
               {c.detail}
             </p>
           </div>

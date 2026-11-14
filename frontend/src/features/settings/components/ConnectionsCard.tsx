@@ -10,6 +10,7 @@ import {
   updateConnection,
   type Connection,
 } from "@/features/settings/api";
+import { useConfirm } from "@/components/ui/confirm";
 import { IntegrationLogo } from "./IntegrationLogo";
 
 /**
@@ -27,6 +28,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   /* Add-site takes as many rows as you need: an estate often has several Jira projects or
      Confluence sites to enter in one sitting, and one modal per site turns that into a chore. */
   const [extra, setExtra] = useState<Record<string, string>[]>([]);
+  const { confirm, dialog } = useConfirm();
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
@@ -177,7 +179,15 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   }
 
   async function remove(c: Connection) {
-    if (!window.confirm(`Remove the ${c.label} site? Articles already synced stay in the knowledge base.`)) return;
+    const ok = await confirm({
+      title: `Remove ${c.label}?`,
+      description:
+        "This site stops being searched and synced. Articles already in the knowledge base stay " +
+        "there, and the write-only token stored for this site is discarded.",
+      confirmLabel: "Remove site",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusyId(c.id);
     try {
       await deleteConnection(c.id, c.label);
@@ -195,6 +205,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-muted/20 p-3.5">
+      {dialog}
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <IntegrationLogo providerKey={provider} name={provider} size="sm" className="size-4" />
         <h4 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
