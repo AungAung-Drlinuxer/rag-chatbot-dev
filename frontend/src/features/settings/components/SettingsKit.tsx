@@ -33,13 +33,17 @@ export const BTN_DANGER =
   "font-medium text-[var(--danger)] transition hover:bg-[var(--danger)]/10 disabled:opacity-50";
 
 /** Panel: one decision group. `actions` sits top-right (badges, links, buttons). */
-export function Panel({ icon, title, description, actions, children, className = "" }: {
+export function Panel({ icon, title, description, actions, children, className = "", padded = false }: {
   icon?: ReactNode;
   title: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Wrap loose content in the standard body padding. Rows/fields already carry their own
+   *  `px-5`, so this is for panels whose children are not Rows — otherwise the text sits
+   *  against the card border. */
+  padded?: boolean;
 }) {
   return (
     <section
@@ -64,7 +68,7 @@ export function Panel({ icon, title, description, actions, children, className =
         </div>
         {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
-      {children}
+      {padded ? <div className="space-y-4 px-5 py-4">{children}</div> : children}
     </section>
   );
 }

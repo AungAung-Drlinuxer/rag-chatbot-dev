@@ -350,6 +350,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           icon={<KeyRound className="size-4" />}
           title="Provider & credentials"
           description="Which service generates the answers, and the key it authenticates with."
+          padded
         >
           <FieldGrid>
             <Field label="AI provider" hint={preset.note}>
@@ -422,6 +423,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           title="Model"
           description="Picked from the provider's live catalogue — or typed by id if it is not listed."
           actions={models.length ? <Pill tone="muted">{models.length} detected</Pill> : undefined}
+          padded
         >
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[200px] flex-1">
@@ -510,6 +512,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
           icon={<Gauge className="size-4" />}
           title="Retrieval & answer behaviour"
           description="Shared backend settings — they change the assistant for everyone once saved."
+          padded
         >
           <div>
             <div className="flex items-baseline justify-between gap-3">
