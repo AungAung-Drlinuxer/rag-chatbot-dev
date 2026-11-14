@@ -663,13 +663,6 @@ export default function AuditsPage() {
           </div>
         </section>
 
-        <p className="mt-3 flex flex-wrap justify-between gap-3 px-1 text-2xs text-muted-foreground">
-          <span>
-            Loaded {rows.length.toLocaleString()} of {total.toLocaleString()} events from{" "}
-            <code className="font-mono">audit_log</code> · filters apply to loaded rows.
-          </span>
-          <span>Newest first · server time rendered in your locale</span>
-        </p>
         </div>
       </div>
     </PageShell>

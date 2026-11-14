@@ -675,7 +675,7 @@ const riskBadgeStyle = (risk: string) => {
 };
 
 function GuardrailEvents({ panel, title }: PanelBodyProps) {
-  const { guardrailEvents, guardrailDenied, usage, win, rangeLabel } = useDashboardData();
+  const { guardrailEvents, guardrailDenied, usage } = useDashboardData();
   const limit = Math.max(1, Math.min(panel.options.limit ?? 10, 25));
   const rows = guardrailEvents.slice(0, limit);
   const [open, setOpen] = useState<(typeof guardrailEvents)[number] | null>(null);
@@ -759,17 +759,6 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
         </table>
       </div>
 
-      <div className="mt-auto flex flex-wrap items-center justify-between border-t border-[var(--border)] px-4 py-2 text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span>{win.kind === "custom" ? rangeLabel : "Last 7 days"}</span>
-          <span>•</span>
-          <span>Last updated: {new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} (0s ago)</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-foreground/80">
-          <span className="size-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" aria-hidden />
-          <span>8 panels · live data feed streaming</span>
-        </div>
-      </div>
 
       {open && (
         <Dialog open onOpenChange={(next) => { if (!next) setOpen(null); }}>

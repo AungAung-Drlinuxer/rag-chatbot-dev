@@ -1303,14 +1303,6 @@ export default function Knowledge({ role, onToast }: Props) {
           ) : null}
         </section>
 
-        {/* Where the numbers above come from. Stated plainly so a count is never read as a
-            guess: the total is the API's COUNT(*), not the rows on this page. */}
-        <p className="text-2xs leading-relaxed text-muted-foreground">
-          Counts are read from the Knowledge Base Articles index — the total is a COUNT(*)
-          over the whole filtered set, not just the rows on this page. Domain counts come
-          from each domain's article list, and the source options come from the connected
-          content providers.
-        </p>
       </main>
 
       {/* Details dialog — the title cell opens it. It shows only the fields the list row

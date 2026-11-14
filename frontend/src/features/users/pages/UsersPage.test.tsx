@@ -179,7 +179,7 @@ describe("UsersPage — loading and the directory table", () => {
     expect(text).toContain("Locked");
     // 10 active, 1 inactive, 1 locked, 12 total.
     expect(text).toContain("10");
-    expect(text).toContain("Require admin action");
+    expect(text).toContain("admin action required");
   });
 });
 

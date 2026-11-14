@@ -136,8 +136,6 @@ afterEach(async () => {
   container = null;
 });
 
-const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
-
 describe("DashboardPage — data rendering", () => {
   it("renders the KPI figures straight from /stats, not placeholders", async () => {
     const el = await mount("admin");
@@ -256,18 +254,13 @@ describe("DashboardPage — data rendering", () => {
     expect(user.textContent).toContain("User");
   });
 
-  it("names the window the backend ACTUALLY reported in the footer", async () => {
-    // With a start/end echo, the footer shows the range — so "Last 7 days" appears only
-    // on the picker button.
-    const echoed = (await mount("admin")).textContent!;
-    // The footer names the echoed range; the usage panels also print the range label, so the
-    // assertion is on the footer's rendered dates rather than on a phrase count.
-    expect(echoed).toContain("Jan 01, 2026 → Jan 07, 2026");
-
-    // Without the echo the footer falls back to the requested preset.
-    m.dashConversations.mockResolvedValue({ series: [{ day: "Mon", total: 5, resolved: 4, escalated: 1 }], start: undefined, end: undefined });
-    const fallback = (await mount("admin")).textContent!;
-    expect(count(fallback, "Last 7 days")).toBeGreaterThanOrEqual(1);
+  it("carries no page footer — the window is the picker's job", async () => {
+    // The strip under the board used to repeat the range, a "Last updated" timestamp that only
+    // moved when the page did, and a panel count. The picker and the panels already say all of
+    // it, and a clock that says "0s ago" forever is worse than none.
+    const page = (await mount("admin")).textContent!;
+    expect(page).not.toContain("Last updated:");
+    expect(page).not.toContain("panels · live data");
   });
 });
 

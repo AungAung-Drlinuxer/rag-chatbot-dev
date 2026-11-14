@@ -140,7 +140,8 @@ describe("KnowledgePage — header, results and rows", () => {
   it("renders the page header and the real KB total from COUNT(*)", async () => {
     const el = await mount("admin");
     const text = el.textContent!;
-    expect(text).toContain("Knowledge Base Articles");
+    // The page header, not the old footer explainer that used to repeat the index's name.
+    expect(text).toContain("Knowledge base");
     expect(text).toContain("Administrator");
     // kbTotal (3) is the API's COUNT(*), not the loaded page size (1).
     expect(text).toContain("3 articles in the knowledge base");

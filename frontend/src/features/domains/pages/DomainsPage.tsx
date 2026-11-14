@@ -324,10 +324,6 @@ export default function DomainsPage({
           )}
         </section>
 
-        <p className="text-2xs leading-relaxed text-muted-foreground">
-          Edits and keyword tests run against the live classifier configuration. Renaming a
-          domain key cascades to its knowledge base articles and vectors.
-        </p>
       </main>
 
       {/* Test keywords — a local preview of the keyword rules, no backend round-trip. */}

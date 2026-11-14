@@ -200,7 +200,6 @@ export default function Dashboard({ role, perms }: Props) {
     : role === "knowledge" || role === "domain_manager" ? "Knowledge Manager"
     : "User";
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
   // The COMMITTED reporting window is the state. The picker's controls are only ways to
   // set it, so opening the picker — or typing half a range — cannot change what is reported.
   const [win, setWin] = useState<ReportWindow>({ kind: "preset", days: 7 });
@@ -210,7 +209,6 @@ export default function Dashboard({ role, perms }: Props) {
   const [rangeOpen, setRangeOpen] = useState(false);
   // What the backend actually reported, so the footer names the real window rather than
   // repeating the request (the backend clamps a span it considers too long).
-  const [windowEcho, setWindowEcho] = useState<{ start: string; end: string } | null>(null);
 
   // Real API data
   const [stats, setStats] = useState<any>(null);
@@ -310,7 +308,6 @@ export default function Dashboard({ role, perms }: Props) {
         else setGateTrend([]);
         if (c?.series?.length) setSeries(c.series);
         else setSeries([]);
-        if (c?.start && c?.end) setWindowEcho({ start: c.start, end: c.end });
         setDomainsLive(
           d?.domains?.length
             ? d.domains.map((x: { name: string; count: number; percentage: number }) => ({
@@ -390,7 +387,6 @@ export default function Dashboard({ role, perms }: Props) {
       } finally {
         if (mounted) {
           setLoading(false);
-          setLastUpdated(new Date());
         }
       }
     }
@@ -401,7 +397,6 @@ export default function Dashboard({ role, perms }: Props) {
 
   function refreshDashboard() {
     setLoading(true);
-    setLastUpdated(new Date());
     setRefreshTick((v) => v + 1);
   }
 
@@ -732,36 +727,6 @@ export default function Dashboard({ role, perms }: Props) {
         )}
       </main>
 
-      {/* ---------------- FOOTER ---------------- */}
-      <div className="flex shrink-0 flex-col items-center justify-center gap-2 text-3xs text-muted-foreground sm:flex-row">
-        <span title={windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}>
-          {windowEcho ? `${shortDate(windowEcho.start)} → ${shortDate(windowEcho.end)}` : rangeLabel}
-        </span>
-        <span className="hidden sm:block">|</span>
-        <span title={lastUpdated.toLocaleString()}>
-          Last updated:{" "}
-          {lastUpdated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-          <span className="ml-1 opacity-70">
-            ({(() => {
-              const secs = Math.max(0, Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
-              if (secs < 60) return `${secs}s ago`;
-              const mins = Math.floor(secs / 60);
-              return mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`;
-            })()})
-          </span>
-        </span>
-        <span className="hidden sm:block">|</span>
-        <span>{panels.length} panels · live data</span>
-        <button
-          type="button"
-          onClick={refreshDashboard}
-          title="Refresh now"
-          aria-label="Refresh dashboard"
-          className="rounded p-0.5 transition hover:text-[var(--accent-foreground)]"
-        >
-          <RefreshCw className={["size-3", loading ? "animate-spin" : ""].join(" ")} />
-        </button>
-      </div>
 
       </div>
     </PageShell>

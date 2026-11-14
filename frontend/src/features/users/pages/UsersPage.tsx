@@ -704,21 +704,12 @@ export default function Users() {
           )}
         </section>
 
-        <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 px-1 text-2xs text-muted-foreground">
-          <span>
-            Counts are computed from the {totalUsers} member{totalUsers === 1 ? "" : "s"} returned by{" "}
-            <code className="font-mono">/api/users</code> — no separate totals are fetched.
-            {lockedUsers > 0 && (
-              <span className="text-[var(--warn)]">
-                {" "}{lockedUsers} locked account{lockedUsers === 1 ? "" : "s"} — Require admin action.
-              </span>
-            )}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-3 inline" />
-            Directory (AD) accounts are read from LDAP; only local accounts can have their password set here.
-          </span>
-        </p>
+        {/* Only the line that needs action survives: locked accounts are invisible otherwise. */}
+        {lockedUsers > 0 && (
+          <p className="px-1 text-2xs text-[var(--warn)]">
+            {lockedUsers} locked account{lockedUsers === 1 ? "" : "s"} — admin action required.
+          </p>
+        )}
         </div>
 
         </main>
