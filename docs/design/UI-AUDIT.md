@@ -14,7 +14,7 @@ Legend: ✅ meets the clause · ⚠️ partial or not proven · ✗ missing · n
 | 1 Header (h1 + purpose + one primary) | n/a | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 2 Spacing / type scale | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 3 Four states | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✗ |
-| 4 Table quality | n/a | n/a | ⚠️ | ✅ | n/a | ⚠️ | ⚠️ | ⚠️ | n/a |
+| 4 Table quality | n/a | n/a | ⚠️ | ✅ | n/a | ✅ | ⚠️ | ✅ | n/a |
 | 5 Forms | ✅ | n/a | ✅ | ✅ | ✅ | ✅ | n/a | n/a | ✅ |
 | 6 Destructive safety | n/a | n/a | ⚠️ | ⚠️ | ⚠️ | ✅ | n/a | n/a | ⚠️ |
 | 7 Accessibility / keyboard | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
@@ -41,10 +41,13 @@ service do this well; Preferences and Retention assume their fetch succeeds). Th
 `EmptyState`/`ErrorState` at the page level, so a failed settings fetch paints defaults that look
 like real values — the most dangerous kind of wrong answer on a settings page.
 
-**Tables are uneven.** Tickets is the reference: sticky header, `aria-sort` on every sortable
-`<th>`, 40px rows, a pager, and a card list under `md` (`TicketTable.tsx:111`, `:274`). Users and
-Audit log render `<table>` without a sticky header and without a mobile alternative; Knowledge
-has both but no column chooser. Domains has no table at all (cards), which is fine — but it also
+**Tables are uneven.** Tickets is the reference for sorting and mobility: `aria-sort` on every
+sortable `<th>`, 40px rows, a pager, and a card list under `md` (`TicketTable.tsx:111`, `:274`).
+Users and Audit log both had a card list but no column sorting; and none of the three actually
+had a sticky header, because the wrapper was `overflow-x-auto` — a sticky `<thead>` only sticks
+when its nearest scroll container scrolls vertically. `.table-viewport` now gives Users and Audit
+log a capped, vertically scrolling box (and the header with it); Tickets keeps its board layout
+and still does not stick. Domains has no table at all (cards), which is fine — but it also
 has no `sticky` and no mobile block, so its card grid relies on default wrapping.
 
 **Destructive actions use three different patterns.** Users builds a dialog; Settings calls the
@@ -110,3 +113,25 @@ the state after the fix, verified on the dev cluster.
 
 Score: **9 pass, 1 n/a.** The section is shareable, the page cannot save a value the user never
 saw, and every destructive action goes through the same dialog as the rest of the app.
+
+## Page → archetype
+
+Where each page sits in the seven shapes from `UI-STANDARD.md`, and what it still owes.
+
+| Page | Archetype | State |
+| --- | --- | --- |
+| Tickets | List / queue (two-pane) | ✅ reference implementation |
+| Users | List / queue | ✅ sortable headers with `aria-sort`, sticky header via `.table-viewport`, card list under `md`; column chooser still missing |
+| Audit log | List / queue (chronological) | ✅ sticky header, card list, reset-filter action; no column sorting **by design** |
+| Conversations | List / queue (chronological) | ⚠️ card list yes; no sticky header, filters report nothing about how many are loaded |
+| Knowledge | List / queue | ⚠️ sticky header and paging, no column chooser, reason text is generic |
+| Settings | Settings | ✅ rail/picker, section in the URL, loading gate, danger zone last |
+| Overview | Dashboard | ⚠️ panels rearrange and survive reload; time range is not in the URL |
+| Chat | Conversation surface | ✅ by exception — full height, composer pinned |
+| Sign in / SSO | Auth | ✅ centred card, SSO first |
+
+Copy is now one voice across the queues:
+**"No <object> yet"** when the source is empty, **"No <object> match these filters"** plus
+"`N` loaded, but none match" when a filter hides the list, and the same `Reset filters` action in
+every one of them (previously Users said "No users found" with no count, Tickets "No tickets
+found", Audit log said two different things on desktop and mobile).

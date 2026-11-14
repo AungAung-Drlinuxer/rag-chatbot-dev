@@ -1581,6 +1581,29 @@ code, pre, .mono { font-family: var(--mono); }
    A wide table on a narrow window is fine; a wide table with no hint that it
    scrolls is a trap. These gradients only appear while there is more to the
    left or right, using the classic local/scroll background pair. */
+/* A table viewport that actually scrolls: a sticky <thead> only sticks when its nearest
+   scroll container scrolls vertically, and the list wrappers had overflow-x only. Capping the
+   height makes the header stay put while the rows move, which is the whole point of the rule
+   in docs/design/UI-STANDARD.md. */
+.table-viewport {
+  max-height: min(64dvh, 680px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.table-viewport thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--card);
+}
+.table-viewport thead th::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: var(--border);
+}
+
 .table-scroll {
   background:
     linear-gradient(to right, var(--card) 40%, transparent) left center / 28px 100% no-repeat local,

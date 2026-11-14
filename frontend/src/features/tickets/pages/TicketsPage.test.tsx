@@ -205,8 +205,8 @@ describe("TicketsPage — empty vs error vs filtered-to-nothing", () => {
     const el = await mount("admin");
     const search = el.querySelector('input[aria-label="Search tickets"]') as HTMLInputElement;
     await typeInto(search, "zzz-no-such-ticket");
-    expect(el.textContent).toContain("No tickets found");
-    expect(el.textContent).toContain("Try changing your search or filter criteria");
+    expect(el.textContent).toContain("No tickets match these filters");
+    expect(el.textContent).toContain("none match the current search or filters");
 
     const clear = button(el, "Clear filters");
     expect(clear).toBeTruthy();
@@ -219,7 +219,7 @@ describe("TicketsPage — empty vs error vs filtered-to-nothing", () => {
     const el = await mount("admin");
     expect(el.textContent).toContain("Could not load tickets");
     expect(el.textContent).toContain("tickets 500");
-    expect(el.textContent).not.toContain("No tickets found");
+    expect(el.textContent).not.toContain("No tickets match these filters");
     expect(el.textContent).not.toContain("No tickets yet");
     expect(button(el, "Try again")).toBeTruthy();
   });

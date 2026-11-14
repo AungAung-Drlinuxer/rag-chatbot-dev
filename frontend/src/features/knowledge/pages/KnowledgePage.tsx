@@ -1120,7 +1120,7 @@ export default function Knowledge({ role, onToast }: Props) {
                       ) : (
                         <EmptyState
                           icon={<SearchX className="size-5" />}
-                          title="No articles match this filter"
+                          title="No articles match these filters"
                           description={kbTotal && kbTotal > 0 ? `${kbTotal} article${kbTotal === 1 ? "" : "s"} in the knowledge base, but none match the current filters.` : "No articles match the current filters."}
                           actionLabel="Clear filters"
                           onAction={() => { resetAll(); }}

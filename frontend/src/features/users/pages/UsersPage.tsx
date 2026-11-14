@@ -218,6 +218,10 @@ export default function Users() {
 
   /* v0.21.80 — responsive pagination (real, not decorative) */
   const [page, setPage] = useState(1);
+  /* Sorting was missing here while Tickets had it. Same contract: click a header, the list
+     sorts, `aria-sort` says which way, and the choice survives until another column is picked. */
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   /* Ten per page, fixed: the same unit as Conversations and the Audit log. A page-size
      selector made three lists that could not be compared page for page. */
   const perPage = 10;
@@ -357,10 +361,37 @@ export default function Users() {
   }
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / perPage));
+  const sortedUsers = useMemo(() => {
+    const rows = [...filteredUsers];
+    const factor = sortDir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      const pick = (u: any) =>
+        sortKey === "name" ? u.name
+        : sortKey === "role" ? u.role
+        : sortKey === "status" ? u.status
+        : sortKey === "department" ? u.department
+        : u.last_login ?? "";
+      const av = String(pick(a) ?? "").toLowerCase();
+      const bv = String(pick(b) ?? "").toLowerCase();
+      return av.localeCompare(bv) * factor;
+    });
+    return rows;
+  }, [filteredUsers, sortKey, sortDir]);
+
   const pagedUsers = useMemo(
-    () => filteredUsers.slice((page - 1) * perPage, page * perPage),
-    [filteredUsers, page, perPage]
+    () => sortedUsers.slice((page - 1) * perPage, page * perPage),
+    [sortedUsers, page, perPage]
   );
+
+  function toggleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
   useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, departmentFilter]);
 
   const hasFilters = Boolean(search || statusFilter !== "All" || roleFilter !== "All" || departmentFilter !== "All");
@@ -547,7 +578,7 @@ export default function Users() {
             </button>
           </div>
 
-          <div className="table-scroll hidden overflow-x-auto md:block">
+          <div className="table-scroll table-viewport hidden md:block">
             {/* Fixed layout: the table obeys the panel instead of the panel obeying the
                 longest email it happens to hold (that is what forced a sideways scroll). */}
             <table className="w-full table-fixed text-xs">
@@ -563,12 +594,12 @@ export default function Users() {
               </colgroup>
               <thead className="bg-[var(--muted)]/40">
                 <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
-                  <Th>User</Th>
+                  <Th sortKey="name" active={sortKey === "name"} dir={sortDir} onSort={toggleSort}>User</Th>
                   <Th>Type</Th>
-                  <Th className="hidden lg:table-cell">Department</Th>
-                  <Th>Role</Th>
-                  <Th>Status</Th>
-                  <Th className="hidden 2xl:table-cell">Last login</Th>
+                  <Th className="hidden lg:table-cell" sortKey="department" active={sortKey === "department"} dir={sortDir} onSort={toggleSort}>Department</Th>
+                  <Th sortKey="role" active={sortKey === "role"} dir={sortDir} onSort={toggleSort}>Role</Th>
+                  <Th sortKey="status" active={sortKey === "status"} dir={sortDir} onSort={toggleSort}>Status</Th>
+                  <Th className="hidden 2xl:table-cell" sortKey="last_login" active={sortKey === "last_login"} dir={sortDir} onSort={toggleSort}>Last login</Th>
                   <Th className="hidden min-[1800px]:table-cell">Joined</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
@@ -614,8 +645,8 @@ export default function Users() {
                       ) : (
                         <EmptyState
                           icon={<SearchX className="size-5" />}
-                          title="No users found"
-                          description="Try changing your search or filters."
+                          title="No users match these filters"
+                          description={`${users.length} member${users.length === 1 ? "" : "s"} loaded, but none match the current search or filters.`}
                           actionLabel="Clear filters"
                           onAction={resetFilters}
                         />
@@ -754,10 +785,32 @@ function SummaryCard({ icon, label, value, caption }: {
    TABLE HEADER
 ============================================================ */
 
-function Th({ children, className = "" }: { children: ReactNode; className?: string }) {
+type SortKey = "name" | "role" | "status" | "department" | "last_login";
+
+/** Sortable header. `aria-sort` is what a screen reader announces, and the arrow is what a
+ *  sighted user sees — one state, two audiences, so they cannot disagree (Tickets table). */
+function Th({ children, className = "", sortKey, active, dir, onSort }: {
+  children: ReactNode; className?: string; sortKey?: SortKey; active?: boolean; dir?: "asc" | "desc";
+  onSort?: (key: SortKey) => void;
+}) {
+  const sortable = Boolean(sortKey && onSort);
   return (
-    <th className={["border-y border-[var(--border)] px-5 py-3 text-left text-2xs font-semibold uppercase tracking-wide text-muted-foreground", className].join(" ")}>
-      {children}
+    <th
+      aria-sort={sortable && active ? (dir === "asc" ? "ascending" : "descending") : undefined}
+      className={["border-y border-[var(--border)] px-5 py-3 text-left text-2xs font-semibold uppercase tracking-wide text-muted-foreground", className].join(" ")}
+    >
+      {sortable ? (
+        <button
+          type="button"
+          onClick={() => onSort!(sortKey!)}
+          className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-foreground"
+        >
+          {children}
+          <span aria-hidden className="text-[9px]">{active ? (dir === "asc" ? "▲" : "▼") : "↕"}</span>
+        </button>
+      ) : (
+        children
+      )}
     </th>
   );
 }

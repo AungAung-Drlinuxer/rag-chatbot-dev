@@ -198,7 +198,7 @@ describe("KnowledgePage — empty, no-match and error", () => {
     m.listArticles.mockResolvedValue({ articles: [], total: 229 });
     const el = await mount("admin");
     const text = el.textContent!;
-    expect(text).toContain("No articles match this filter");
+    expect(text).toContain("No articles match these filters");
     expect(text).toContain("229 articles in the knowledge base, but none match the current filters.");
     expect(button(el, "Clear filters")).toBeTruthy();
   });

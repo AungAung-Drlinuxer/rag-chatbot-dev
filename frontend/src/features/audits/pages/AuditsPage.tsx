@@ -439,7 +439,7 @@ export default function AuditsPage() {
             </button>
           </div>
 
-          <div className="table-scroll hidden overflow-auto md:block">
+          <div className="table-scroll table-viewport hidden md:block">
             <table className="w-full table-fixed text-xs">
               <colgroup>
                 <col className="w-[15%]" /><col className="w-[13%]" /><col className="w-[15%]" />
@@ -604,7 +604,7 @@ export default function AuditsPage() {
                   <EmptyState icon={<ScrollText className="size-5" />} title="No audit events yet"
                     description="Administrative actions — sign-ins, permission changes, knowledge edits and approvals — are recorded here as they happen." />
                 ) : (
-                  <EmptyState icon={<SearchX className="size-5" />} title="No matching events"
+                  <EmptyState icon={<SearchX className="size-5" />} title="No events match these filters"
                     description="Try a wider time range or clear the filters." actionLabel="Reset filters" onAction={resetFilters} />
                 )}
               </div>

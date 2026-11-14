@@ -126,6 +126,32 @@ regardless of how good it looks when the data arrives.
 
 ---
 
+## 10. Page archetypes
+
+One design system, seven page shapes. The style never varies; the layout varies **only** because
+the content is a different kind of thing, and it varies the same way every time. A page that does
+not match an archetype is either a new archetype (add it here) or a mistake.
+
+| Archetype | Skeleton | Mandatory parts | In this app |
+| --- | --- | --- | --- |
+| **List / queue** | header → filters → table → pager | sortable headers with `aria-sort`, sticky header, pager with totals, mobile card list, two empty states (none at all / none matching) | Tickets, Users, Audit log, Conversations, Knowledge |
+| **Detail** | header (back) → summary → tabs or sections → activity | back to the list, one primary action, related objects linked, unsaved-changes guard | Ticket detail panel |
+| **Settings** | rail/picker → section cards → save rail | section in the URL, per-section save, danger zone last, loading gate before controls | Settings |
+| **Dashboard** | panel grid, viewport-locked | time range in the URL, per-panel empty state, layout that survives a reload | Overview |
+| **Editor / wizard** | one column (or stepper) → sticky submit | inline validation, discard confirmation, dialog tier by complexity (960/560/420) | Create/Edit ticket, Add site |
+| **Conversation surface** | full height, composer pinned | message list, composer, context panel, no page header | Chat |
+| **Auth** | centred card, no nav | SSO first, inline error, no marketing chrome | Sign in / SSO |
+
+Rules that apply to every archetype: the clauses above, `PageShell` as the root, and the same
+`EmptyState` / `ErrorState` components — an archetype decides **where** things go, never how they
+look.
+
+Sorting is the one place where an archetype may legitimately differ: a chronological log (Audit
+log, Conversations) is sorted by time and offers no column sorting, because "sort the audit trail
+by action" is not a question anyone asks. A directory (Users) and a queue (Tickets) must sort.
+
+---
+
 ## Review checklist
 
 Copy into a PR description and tick what the change proves:

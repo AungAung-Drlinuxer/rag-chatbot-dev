@@ -611,11 +611,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
             ) : filteredTickets.length === 0 ? (
               <EmptyState
                 icon={<Filter className="size-5" />}
-                title={tickets.length === 0 ? "No tickets yet" : "No tickets found"}
+                title={tickets.length === 0 ? "No tickets yet" : "No tickets match these filters"}
                 description={
                   tickets.length === 0
                     ? "Nothing has been synced from Jira yet. Use Sync Jira above, or check the integration in Settings → Integrations."
-                    : "Try changing your search or filter criteria."
+                    : `${tickets.length} ticket${tickets.length === 1 ? "" : "s"} loaded, but none match the current search or filters.`
                 }
                 actionLabel={tickets.length === 0 ? undefined : "Clear filters"}
                 onAction={tickets.length === 0 ? undefined : resetFilters}
