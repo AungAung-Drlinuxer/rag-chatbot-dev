@@ -62,6 +62,8 @@ type Props = {
   onDeleteAttachment: (id: number) => void;
   /** Post a note to the issue from the Activity tab's composer. */
   onAddComment?: (body: string, internal: boolean) => void | Promise<void>;
+  /** Retry a comment Jira never accepted (`jira_synced === false`). */
+  onSyncComment?: (id: number) => void;
   onToast?: (msg: string, tone?: "ok" | "err") => void;
 };
 
@@ -78,6 +80,7 @@ export function EditTicketDialog({
   onAddAttachment,
   onDeleteAttachment,
   onAddComment,
+  onSyncComment,
   onToast,
 }: Props) {
   // Details
@@ -175,6 +178,9 @@ export function EditTicketDialog({
     at: string | null;
     text: string;
     body?: string;
+    /** Set for comment/note entries so a local-only one can be retried in place. */
+    commentId?: number;
+    localOnly?: boolean;
     file?: { name: string; size: number; url: string };
   };
 
@@ -185,9 +191,9 @@ export function EditTicketDialog({
         return { key: `c${c.id}`, kind: "change", author: c.author || "System", at: c.created_at ?? null, text: c.body };
       }
       if (k === "note" || k === "internal") {
-        return { key: `c${c.id}`, kind: "note", author: c.author || "System", at: c.created_at ?? null, text: "Internal note", body: c.body };
+        return { key: `c${c.id}`, kind: "note", author: c.author || "System", at: c.created_at ?? null, text: "Internal note", body: c.body, commentId: c.id, localOnly: c.jira_synced === false };
       }
-      return { key: `c${c.id}`, kind: "comment", author: c.author || "System", at: c.created_at ?? null, text: "Commented", body: c.body };
+      return { key: `c${c.id}`, kind: "comment", author: c.author || "System", at: c.created_at ?? null, text: "Commented", body: c.body, commentId: c.id, localOnly: c.jira_synced === false };
     }),
     ...attachments.map((a): Entry => ({
       key: `a${a.id}`,
@@ -801,6 +807,25 @@ export function EditTicketDialog({
                                   <>
                                     <p className="mt-0.5 text-xs text-muted-foreground">{e.text}</p>
                                     {e.body && <p className="mt-0.5 text-xs leading-5 text-foreground">{e.body}</p>}
+                                    {/* Written here, never accepted by Jira — the row knows,
+                                        so say it instead of leaving two identical-looking
+                                        comments with different fates. */}
+                                    {e.localOnly && (
+                                      <p className="mt-1 flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full border border-[var(--warn)]/50 bg-[var(--warn)]/12 px-1.5 py-0.5 text-[10px] font-medium text-[var(--warn)]">
+                                          Local only
+                                        </span>
+                                        {onSyncComment && e.commentId != null && (
+                                          <button
+                                            type="button"
+                                            onClick={() => onSyncComment(e.commentId!)}
+                                            className="text-[11px] underline underline-offset-2 hover:text-foreground"
+                                          >
+                                            Send to Jira
+                                          </button>
+                                        )}
+                                      </p>
+                                    )}
                                     {e.kind === "created" && (
                                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                                         Category: {ticket.category || "General"} · Priority: {priorityMetaOf(ticket.priority).label}

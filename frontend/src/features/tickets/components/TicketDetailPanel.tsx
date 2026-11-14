@@ -69,6 +69,7 @@ export function TicketDetailPanel({
   assignable,
   onDeleteAttachment,
   onAddComment,
+  onSyncComment,
   onAddAttachment,
   onOpenEdit,
   className = "",
@@ -87,6 +88,8 @@ export function TicketDetailPanel({
   assignable: Assignable[];
   onDeleteAttachment: (id: number) => void;
   onAddComment: (body: string) => void;
+  /** Retry one comment Jira never accepted (`jira_synced === false`). */
+  onSyncComment?: (id: number) => void;
   onAddAttachment: (file: File) => void;
   onOpenEdit?: () => void;
   className?: string;
@@ -555,7 +558,28 @@ export function TicketDetailPanel({
                   {c.kind === "comment" ? `${c.author ?? "user"} commented` : `Updated by ${c.author ?? "user"}`}
                 </p>
                 <p className="whitespace-pre-wrap text-[11.5px] leading-5 text-muted-foreground">{c.body}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                  <p className="text-[11px] text-muted-foreground/70">{relTime(c.created_at ?? "")}</p>
+                  {/* A comment that never reached Jira used to look exactly like one that did:
+                      the only trace was a toast. The row keeps the answer, so say it here and
+                      offer the retry. */}
+                  {c.jira_synced === false && (
+                    <>
+                      <span className="rounded-full border border-[var(--warn)]/50 bg-[var(--warn)]/12 px-1.5 py-0.5 text-[10px] font-medium text-[var(--warn)]">
+                        Local only
+                      </span>
+                      {onSyncComment && (
+                        <button
+                          type="button"
+                          onClick={() => onSyncComment(c.id)}
+                          className="text-[11px] underline underline-offset-2 hover:text-foreground"
+                        >
+                          Send to Jira
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </li>
             ))}
           </ol>

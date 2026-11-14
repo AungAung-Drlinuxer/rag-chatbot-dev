@@ -94,6 +94,9 @@ class TicketComment(Base):
     author: Mapped[str | None] = mapped_column(String(64))
     body: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(String(16), default="comment")  # comment|status|assignee|edit
+    #: True only once Jira accepted it. NULL means "never attempted / not applicable" — the
+    #: state every comment written before sites were configured is in.
+    jira_synced: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

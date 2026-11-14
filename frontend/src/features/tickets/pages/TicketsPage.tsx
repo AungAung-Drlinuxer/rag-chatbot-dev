@@ -17,6 +17,7 @@ import {
   syncJiraTickets,
   reconcileJiraTickets,
   ticketAddComment,
+  ticketSyncComment,
   deleteTicketAttachment,
   ticketAttachmentAdd,
   ticketAttachments,
@@ -330,6 +331,18 @@ export default function Tickets({ role, userName, onToast }: Props) {
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Save failed — nothing was changed", "err");
       return false;
+    }
+  }
+
+  /** Retry a single comment Jira never took. The pill only appears on `jira_synced === false`. */
+  async function handleSyncComment(commentId: number) {
+    if (!selected) return;
+    try {
+      await ticketSyncComment(selected.id, commentId);
+      setComments((prev) => prev.map((c) => (c.id === commentId ? { ...c, jira_synced: true } : c)));
+      onToast("Comment sent to Jira");
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : "Jira refused the comment", "err");
     }
   }
 
@@ -699,6 +712,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
         onAddAttachment={handleAddAttachment}
         onDeleteAttachment={handleDeleteAttachment}
         onAddComment={handleAddComment}
+        onSyncComment={handleSyncComment}
         onToast={onToast}
       />
 

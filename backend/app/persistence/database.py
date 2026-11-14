@@ -125,6 +125,8 @@ def init_db() -> None:
     # first ingest) must not abort the rest of the plan.
     _migrations = [
         ("chat_messages.meta", "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS meta TEXT"),
+        ("ticket_comments.jira_synced",
+         "ALTER TABLE ticket_comments ADD COLUMN IF NOT EXISTS jira_synced BOOLEAN"),
         ("kb_meta.body", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS body TEXT"),
         ("kb_meta.updated_by", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS updated_by VARCHAR(64)"),
         ("jira_tickets.subject", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(200)"),

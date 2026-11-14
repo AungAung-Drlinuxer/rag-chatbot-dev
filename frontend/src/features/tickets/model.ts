@@ -15,7 +15,15 @@ export type Ticket = {
   updated_at: string;
 };
 
-export type Comment = { id: number; author?: string | null; body: string; kind: string; created_at?: string | null };
+export type Comment = {
+  id: number;
+  author?: string | null;
+  body: string;
+  kind: string;
+  /** true once Jira accepted it; false means it exists only in this app; null/absent = legacy. */
+  jira_synced?: boolean | null;
+  created_at?: string | null;
+};
 export type Assignable = {
   username: string;
   email: string | null;

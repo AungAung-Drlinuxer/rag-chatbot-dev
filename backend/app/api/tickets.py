@@ -597,13 +597,14 @@ def ticket_comments(ticket_ref: str, user: str = Depends(get_current_user)) -> d
         from sqlalchemy import text as _t
 
         rows = s.execute(
-            _t("SELECT id, author, body, kind, created_at FROM ticket_comments "
+            _t("SELECT id, author, body, kind, jira_synced, created_at FROM ticket_comments "
                "WHERE ticket_id = :tid ORDER BY created_at ASC"),
             {"tid": row.id},
         ).mappings().all()
     return {"comments": [
         {"id": r["id"], "author": r["author"], "body": r["body"],
          "kind": r["kind"],
+         "jira_synced": r["jira_synced"],
          "created_at": r["created_at"].isoformat() if r["created_at"] else None}
         for r in rows
     ], "synced_status": synced}
@@ -633,12 +634,129 @@ def ticket_comment_add(ticket_ref: str, req: CommentRequest,
     with SessionLocal() as s:
         from app.persistence.models import TicketComment
 
-        c = TicketComment(ticket_id=row.id, author=user, body=req.body[:4000], kind=kind)
+        c = TicketComment(ticket_id=row.id, author=user, body=req.body[:4000], kind=kind,
+                          jira_synced=jira_synced)
         s.add(c)
         s.commit()
         return {"id": c.id, "author": user, "body": c.body, "kind": c.kind,
                 "jira_synced": jira_synced,
                 "created_at": c.created_at.isoformat() if c.created_at else None}
+
+
+@router.post("/tickets/{ticket_ref}/comments/{comment_id}/sync")
+def ticket_comment_sync(ticket_ref: str, comment_id: int,
+                        user: str = Depends(get_current_user)) -> dict:
+    """Re-push one stored comment that never reached Jira.
+
+    Comments written while the Jira site was unreachable were kept locally and lost the fact
+    that upstream had never seen them, so the only record was a toast nobody kept. The row now
+    carries `jira_synced`, and this is the retry behind the "Send" affordance on a local-only
+    comment.
+    """
+    from app.integrations.jira import add_comment
+    from app.persistence.models import TicketComment
+
+    row = _resolve_ticket(ticket_ref, user)
+    if row is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="ticket not found")
+    if not getattr(row, "jira_key", None):
+        raise HTTPException(status_code=400, detail="this ticket has no Jira issue to comment on")
+
+    with SessionLocal() as s:
+        c = s.get(TicketComment, comment_id)
+        if c is None or c.ticket_id != row.id:
+            raise HTTPException(status_code=404, detail="comment not found")
+        body, internal = c.body, c.kind == "note"
+
+    posted = add_comment(row.jira_key, body, internal=internal)
+    ok = bool(posted.get("ok"))
+    with SessionLocal() as s:
+        c = s.get(TicketComment, comment_id)
+        if c is not None:
+            c.jira_synced = ok
+            s.add(c)
+            s.commit()
+    if not ok:
+        raise HTTPException(status_code=http_status.HTTP_409_CONFLICT,
+                            detail=f"Jira refused the comment: {posted.get('detail')}")
+    from app.observability.audit import audit
+
+    audit("comment_sync", user, detail=f"{ticket_ref}#{comment_id}")
+    return {"ok": True, "id": comment_id, "jira_synced": True}
+
+
+@router.post("/ticket-comments/sync-pending")
+def ticket_comments_sync_pending(user: str = Depends(require_role("admin"))) -> dict:
+    """Push every comment that was written but never accepted by Jira.
+
+    Bodies already present on the issue are skipped by exact text, so running this twice does
+    not duplicate anything — it is a repair, not a re-send.
+    """
+    from app.integrations.jira import add_comment, jira_get
+    from app.persistence.models import TicketComment
+
+    def flatten(node) -> str:
+        if isinstance(node, str):
+            return node
+        if isinstance(node, dict):
+            if node.get("type") == "text":
+                return node.get("text", "")
+            return "".join(flatten(c) for c in (node.get("content") or []))
+        if isinstance(node, list):
+            return "".join(flatten(c) for c in node)
+        return ""
+
+    pushed = skipped = failed = 0
+    details: list[str] = []
+    with SessionLocal() as s:
+        rows = s.execute(text(
+            "SELECT c.id, c.body, c.kind, t.jira_key FROM ticket_comments c "
+            "JOIN jira_tickets t ON t.id = c.ticket_id "
+            "WHERE t.jira_key IS NOT NULL AND c.kind IN ('comment','note') "
+            "AND c.jira_synced IS NOT TRUE ORDER BY c.id")).fetchall()
+
+    seen_cache: dict[str, set[str]] = {}
+    for cid, body, kind, jira_key in rows:
+        if jira_key not in seen_cache:
+            try:
+                payload = jira_get(f"/rest/api/3/issue/{jira_key}/comment")
+                seen_cache[jira_key] = {flatten(c.get("body")).strip()
+                                        for c in payload.get("comments", [])}
+            except Exception:
+                seen_cache[jira_key] = set()
+        text_body = (body or "").strip()
+        if not text_body:
+            continue
+        if text_body in seen_cache[jira_key]:
+            with SessionLocal() as s:
+                c = s.get(TicketComment, cid)
+                if c is not None:
+                    c.jira_synced = True
+                    s.add(c)
+                    s.commit()
+            skipped += 1
+            continue
+        posted = add_comment(jira_key, text_body, internal=(kind == "note"))
+        ok = bool(posted.get("ok"))
+        with SessionLocal() as s:
+            c = s.get(TicketComment, cid)
+            if c is not None:
+                c.jira_synced = ok
+                s.add(c)
+                s.commit()
+        if ok:
+            pushed += 1
+            seen_cache[jira_key].add(text_body)
+        else:
+            failed += 1
+            details.append(f"{jira_key}#{cid}: {posted.get('detail')}"[:200])
+
+    from app.observability.audit import audit
+
+    audit("comment_sync_all", user,
+          detail=f"pushed={pushed} skipped={skipped} failed={failed}")
+    return {"ok": True, "pushed": pushed, "skipped": skipped, "failed": failed,
+            "errors": details[:10]}
 
 
 class TicketUpdateRequest(BaseModel):

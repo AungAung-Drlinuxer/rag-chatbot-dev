@@ -296,7 +296,18 @@ single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထာ
 | Knowledge → Sync → 409 “already running” (ထာဝရ) | deploy က run အလယ်မှာ pod ကို လဲလိုက်တော့ `kb_sync_run` marker က `running` ပဲ ကျန်တယ် | 30 မိနစ်ကျော်ရင် `stale` လို့ သတ်မှတ်ပြီး sync အသစ် ခွင့်ပြုတယ် |
 | Overview ရဲ့ SERVICE STATUS မှာ “Confluence sync” / “Jira” ကို အနီ (Down) | `/api/dashboard/health` က legacy token ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်၊ healthy row မှာ “1 site” ပြထားတယ် |
 | Create/Edit ticket dialog မှာ “Jira offline” ပေမယ့် ticket က Jira မှာ တကယ်ရောက်တယ် | `/api/ticket-destinations` က legacy config ဖတ်တယ် | `effective_connections("jira")` ပါ ထည့်စစ်တယ် → “Connected to Jira” / “Jira synced” |
+| Comment ကို app မှာ ရေးပြီး Jira ticket မှာ မပေါ် | `add_comment()` က legacy config ဖတ်တယ် → “Jira is not configured”, toast တစ်ခုပဲ ကျန် | site fallback (dev-1.0.114) + `ticket_comments.jira_synced` → “Local only” pill + “Send to Jira” + admin repair endpoint |
 | Test က “1 pages visible” | `/rest/api/content` ရဲ့ `size` က response row အရေအတွက် (ငါတို့ 1 ခုပဲ တောင်းတယ်) | space စာရင်း ဖတ်ပြီး “3 spaces visible · not listed: …” |
 
 ဒါကြောင့် “connected လား” ဆိုတာကို **Test** ခလုတ် (site တစ်ခုချင်း၊ အဲဒီ site ရဲ့ token နဲ့)
 နဲ့ `Finish setting up` က ပြောတယ် — catalogue က “In use” ဆိုတာနဲ့ မတူနိုင်ပါဘူး။
+
+### Comment တစ်ခု Jira မရောက်ရင် ဘယ်လို သိ/ပြင်မလဲ
+
+- `ticket_comments.jira_synced` က **true / false / null** — false ဆိုတာ “ဒီ app မှာပဲ ရှိတယ်”။
+- Ticket → Edit → **Activity** မှာ အဲဒီ comment အောက် **“Local only”** pill + **“Send to Jira”** ပေါ်တယ်။
+- ခုနက တစ်ခုချင်း မဟုတ်ဘဲ အားလုံး ပြန်တင်ချင်ရင် `POST /api/ticket-comments/sync-pending` (admin) —
+  body တူတာကို ကျော်တာမို့ နှစ်ခါ run လည်း duplicate မဖြစ်ဘူး။
+- Internal note က Jira မှာ role visibility နဲ့ ရောက်တယ်။ API account က “Service Desk Team”
+  role ထဲ မပါရင် Jira က “Administrators” ကို ရွေးတယ် — အဲဒါကို Jira admin side မှာ ဖြည့်ရမယ်
+  (code မဟုတ်)။

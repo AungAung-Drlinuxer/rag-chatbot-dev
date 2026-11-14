@@ -139,6 +139,28 @@ export async function ticketAddComment(ref: string, body: string, internal = fal
   return r.json();
 }
 
+/** Re-push one comment that Jira never accepted (the row carries jira_synced=false). */
+export async function ticketSyncComment(ref: string, commentId: number) {
+  const r = await apiFetch(`${BASE}/api/tickets/${ref}/comments/${commentId}/sync`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  const body = await r.json().catch(() => ({} as { detail?: string }));
+  if (!r.ok) throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  return body as { ok: boolean; jira_synced: boolean };
+}
+
+/** Repair every comment Jira never accepted (admin). Idempotent: known bodies are skipped. */
+export async function ticketSyncPendingComments() {
+  const r = await apiFetch(`${BASE}/api/ticket-comments/sync-pending`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  const body = await r.json().catch(() => ({} as { detail?: string }));
+  if (!r.ok) throw new Error((body as { detail?: string })?.detail || `HTTP ${r.status}`);
+  return body as { ok: boolean; pushed: number; skipped: number; failed: number };
+}
+
 export type CategoryAssignee = {
   username: string;
   email?: string | null;
