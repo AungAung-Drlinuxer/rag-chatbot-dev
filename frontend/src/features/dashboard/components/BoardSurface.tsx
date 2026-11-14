@@ -279,7 +279,12 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
             style={style}
             onPointerDown={(e) => begin(e, panel.id, "move", true)}
           >
-            <div className="board-surface__body">{children(panel.id)}</div>
+            {/* The body is the panel. A fill wrapper makes the panel's own card take the full
+                height, so a taller panel grows its chart instead of leaving a white gap, and a
+                panel too short for its content scrolls that content instead of cutting it. */}
+            <div className="board-surface__body">
+              <div className="board-surface__fill">{children(panel.id)}</div>
+            </div>
             {editing && (
               <>
                 <span

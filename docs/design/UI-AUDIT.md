@@ -192,3 +192,28 @@ filtered-empty state shows the loaded count and Clear filters exactly as the des
 `useUrlParams` was also corrected while doing this: it read the hash back after every set, so a
 page rendered without a hash (tests, embedded views) silently dropped filters. State is the source
 of truth now and the hash mirrors it, writing only when a hash exists.
+
+## Overview board: content is the panel (2026-11-15, `dev-1.11.125`)
+
+The board had the *frame* right — pixel-follow drag, dashed ghost, no gravity, `pushDownRects` on
+commit — but the panel body and the content inside it disagreed about how tall a panel was. Measured
+at 1440×1400 on the default layout: `trend` 296px tall held 328px of content, `health` 258px held
+327, `guardrails` 296px held 396. `overflow: hidden` meant those rows were **cut**, not scrolled;
+`tokens` went the other way and left 108px of empty card.
+
+- `.board-surface__fill` makes each panel's card own the whole rectangle (`flex: 1`, `min-height: 0`).
+- The measured chart box no longer includes the plot: `svg.h-full` is absolutely placed inside it, so
+  a taller panel grows the drawing instead of letterboxing it at the old aspect ratio.
+- `MAX_CHART_HEIGHT` 320 → 3600 (the largest panel the grid allows is 120 rows), floor 120px.
+- A panel smaller than its content now scrolls that content (`overflow: hidden auto`) instead of
+  clipping a table mid-row.
+- Gravity is opt-in and Grafana-style: **Compact** compacts at commit, never mid-drag.
+- **Fit width** widens each panel to its neighbour on the same rows, closing drag-created holes
+  without touching height or order.
+- Invariants are tested over 40 generated layouts: `pushDownRects`, `compactRects` (idempotent) and
+  `fitWidth` never overlap and never leave the 12-column grid.
+
+Verified live: 8/8 panels report `card height == panel height` and `body scrollHeight ==
+clientHeight`; `trend` at 20 rows draws a 632-unit viewBox (was capped at 320); Compact lifted
+`guardrails` from 1649 to 1515 with 0 overlaps; Fit width closed a 2-column hole; 390px viewport has
+0 horizontal overflow and 4 stacked panels.

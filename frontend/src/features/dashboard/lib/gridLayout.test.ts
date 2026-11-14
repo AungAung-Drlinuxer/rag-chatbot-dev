@@ -7,6 +7,8 @@ import {
   MIN_W,
   compactRects,
   defaultRects,
+  fitWidth,
+  hasOverlap,
   layoutItems,
   pushDownRects,
   sanitiseRects,
@@ -164,5 +166,77 @@ describe("spanPercent", () => {
     expect(spanPercent(6)).toBe("50%");
     expect(spanPercent(12)).toBe("100%");
     expect(spanPercent(99)).toBe("100%");
+  });
+});
+
+/* The invariant the whole board rests on: whatever a drag, a resize, a compaction or a
+   fit-to-width does, two panels never occupy the same cell and nothing leaves the grid. These
+   run over generated layouts rather than one hand-written case, because the bug class is
+   "a combination nobody tried". */
+describe("board invariants", () => {
+  const withinBounds = (rects: Record<string, { x: number; y: number; w: number; h: number }>) =>
+    Object.values(rects).every(
+      (r) => r.x >= 0 && r.x + r.w <= GRID_COLS && r.y >= 0 && r.w >= MIN_W && r.h >= MIN_H && r.h <= MAX_H,
+    );
+
+  function pseudo(seed: number) {
+    let state = seed;
+    return () => {
+      state = (state * 1103515245 + 12345) % 2 ** 31;
+      return state / 2 ** 31;
+    };
+  }
+
+  const layouts = Array.from({ length: 40 }, (_, seed) => {
+    const rand = pseudo(seed + 1);
+    const out: Record<string, { x: number; y: number; w: number; h: number }> = {};
+    for (let i = 0; i < 8; i += 1) {
+      const w = MIN_W + Math.floor(rand() * (GRID_COLS - MIN_W + 1));
+      out[`p${i}`] = {
+        x: Math.floor(rand() * (GRID_COLS - w + 1)),
+        y: Math.floor(rand() * 20),
+        w,
+        h: MIN_H + Math.floor(rand() * 10),
+      };
+    }
+    return out;
+  });
+
+  it("pushDownRects never leaves an overlap or a panel outside the grid", () => {
+    for (const layout of layouts) {
+      const out = pushDownRects(layout);
+      expect(hasOverlap(out)).toBe(false);
+      expect(withinBounds(out)).toBe(true);
+    }
+  });
+
+  it("compactRects never leaves an overlap, and compacting twice changes nothing", () => {
+    for (const layout of layouts) {
+      const once = compactRects(layout);
+      expect(hasOverlap(once)).toBe(false);
+      expect(withinBounds(once)).toBe(true);
+      expect(compactRects(once)).toEqual(once);
+    }
+  });
+
+  it("fitWidth closes horizontal holes without moving anything vertically", () => {
+    for (const layout of layouts) {
+      /* A generated board may already overlap; fitWidth repairs that first, so "nothing moves"
+         is measured against the repaired board, not the illegal input. */
+      const base = hasOverlap(layout) ? pushDownRects(layout) : layout;
+      const out = fitWidth(layout);
+      expect(hasOverlap(out)).toBe(false);
+      expect(withinBounds(out)).toBe(true);
+      for (const id of Object.keys(base)) {
+        expect(out[id].y).toBe(base[id].y);
+        expect(out[id].h).toBe(base[id].h);
+        expect(out[id].x).toBe(base[id].x);
+      }
+    }
+  });
+
+  it("hasOverlap reports the truth on a known pair", () => {
+    expect(hasOverlap({ a: { x: 0, y: 0, w: 6, h: 4 }, b: { x: 3, y: 2, w: 6, h: 4 } })).toBe(true);
+    expect(hasOverlap({ a: { x: 0, y: 0, w: 6, h: 4 }, b: { x: 6, y: 0, w: 6, h: 4 } })).toBe(false);
   });
 });

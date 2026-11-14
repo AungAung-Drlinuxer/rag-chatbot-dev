@@ -153,6 +153,59 @@ export function pushDownRects(rects: PanelRects, anchor?: string): PanelRects {
   return placed;
 }
 
+/**
+ * Widen every panel to the right until it meets a neighbour or the grid edge.
+ *
+ * The user-facing name is "Fit to width": after someone drags a panel narrower, the row keeps a
+ * hole that no drag can fill without moving everything else. This closes those holes in place —
+ * heights, order and vertical gaps are untouched, so nothing the user arranged moves.
+ */
+export function fitWidth(rects: PanelRects): PanelRects {
+  /* Widening assumes the starting board is already legal; a stored layout that was damaged (or a
+     caller that hand-built one) is repaired first so a hole-filling pass can never create an
+     overlap. */
+  const base = hasOverlap(rects) ? pushDownRects(rects) : rects;
+  const out: PanelRects = {};
+  const ids = Object.keys(base).sort(
+    (a, b) => base[a].y - base[b].y || base[a].x - base[b].x,
+  );
+  for (const id of ids) {
+    const r = { ...base[id] };
+    /* The nearest panel that shares a row band with this one and starts to its right. */
+    let right = GRID_COLS;
+    for (const otherId of ids) {
+      if (otherId === id) continue;
+      const o = base[otherId];
+      if (o.x <= r.x) continue;
+      if (o.y >= r.y + r.h || r.y >= o.y + o.h) continue;
+      right = Math.min(right, o.x);
+    }
+    r.w = clamp(right - r.x, MIN_W, GRID_COLS - r.x);
+    out[id] = r;
+  }
+  return out;
+}
+
+/** True when any two rectangles overlap — the invariant every layout operation must preserve. */
+export function hasOverlap(rects: PanelRects): boolean {
+  const ids = Object.keys(rects);
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) {
+      const a = rects[ids[i]];
+      const b = rects[ids[j]];
+      if (
+        a.x < b.x + b.w &&
+        b.x < a.x + a.w &&
+        a.y < b.y + b.h &&
+        b.y < a.y + a.h
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function collides(rect: PanelRect, placed: PanelRects): boolean {
   return Object.values(placed).some(
     (other) =>

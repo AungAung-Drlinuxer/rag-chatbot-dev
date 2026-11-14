@@ -12,13 +12,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { clearBoardLayout, getBoardLayout, saveBoardLayout } from "@/features/dashboard/api";
 import {
+  compactRects,
   defaultRects,
+  fitWidth as fitWidthRects,
   sanitiseRects,
   type PanelLike,
   type PanelRects,
 } from "@/features/dashboard/lib/gridLayout";
 
 const STORAGE_PREFIX = "ith:board-grid:v2:";
+const COMPACT_KEY = "ith:board-compact:v1:";
 
 type Snapshot = { rects: PanelRects; savedAt: string | null };
 
@@ -59,6 +62,11 @@ function print(rects: PanelRects): string {
 export type GridLayoutApi = {
   rects: PanelRects;
   editing: boolean;
+  /** Grafana's vertical gravity: panels rise into the gaps above them after every drop. */
+  compact: boolean;
+  setCompact: (value: boolean) => void;
+  /** Close horizontal holes by widening panels to the next neighbour on their own rows. */
+  fitWidth: () => void;
   beginEdit: () => void;
   /** Leave the arrange mode without keeping anything moved since it started. */
   cancelEdit: () => void;
@@ -91,10 +99,43 @@ export function useGridLayout(
   const [savedPrint, setSavedPrint] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [compact, setCompactState] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(COMPACT_KEY + key) === "1";
+    } catch {
+      return false;
+    }
+  });
   /* The arrangement as it was when the mode opened: Cancel puts it back, which is the
      difference between "try a layout" and "commit to a layout". */
   const editStart = useRef<PanelRects | null>(null);
   const [saving, setSaving] = useState(false);
+  const compactRef = useRef(compact);
+  compactRef.current = compact;
+
+  const setCompact = useCallback((value: boolean) => {
+    setCompactState(value);
+    try {
+      window.localStorage.setItem(COMPACT_KEY + key, value ? "1" : "0");
+    } catch {
+      /* private mode: the preference lives for this session */
+    }
+    if (!value) return;
+    /* Switching gravity on tidies the board immediately — otherwise the toggle looks inert
+       until the next drag. It edits the draft, like a drag does: Save view is still the moment
+       the arrangement becomes permanent. */
+    const next = compactRects(rectsRef.current);
+    rectsRef.current = next;
+    setRects(next);
+    setSaved(false);
+  }, [key]);
+
+  const fitWidth = useCallback(() => {
+    const next = fitWidthRects(rectsRef.current);
+    rectsRef.current = next;
+    setRects(next);
+    setSaved(false);
+  }, []);
   const [saved, setSaved] = useState(false);
   const alive = useRef(true);
 
@@ -159,7 +200,10 @@ export function useGridLayout(
 
   /* Only a geometry that differs from what is on screen is accepted, so a stray commit does
      not mark the view dirty and cannot loop back into the surface. */
-  const commit = useCallback((next: PanelRects) => {
+  const commit = useCallback((incoming: PanelRects) => {
+    /* Gravity, when the user asked for it: compaction happens at commit, never mid-drag, so
+       the board does not move under the pointer. */
+    const next = compactRef.current ? compactRects(incoming) : incoming;
     if (print(next) === print(rectsRef.current)) return;
     setRects(next);
     setSaved(false);
@@ -224,6 +268,9 @@ export function useGridLayout(
   return {
     rects,
     editing,
+    compact,
+    setCompact,
+    fitWidth,
     beginEdit,
     cancelEdit,
     setEditing: setEditingMode,

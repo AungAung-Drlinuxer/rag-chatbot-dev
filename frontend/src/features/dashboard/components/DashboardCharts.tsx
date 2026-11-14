@@ -79,8 +79,13 @@ export function Legend({
  * leftover room, so a taller panel would show the same 620×240 chart with empty space above and
  * below. Grafana redraws; so does this.
  */
-/** Ceiling for a measured chart; without it an auto-height card grows without bound. */
-export const MAX_CHART_HEIGHT = 320;
+/**
+ * Ceiling for a measured chart. It used to be 320 — the height of the *old* default panel — which
+ * meant dragging a panel taller left its plot stranded at 320px with dead space underneath. The
+ * ceiling now only exists to stop a runaway measurement from growing without bound (the largest
+ * panel the grid allows is 120 rows ≈ 3.6k px).
+ */
+export const MAX_CHART_HEIGHT = 3600;
 
 export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -94,7 +99,8 @@ export function useChartSize(fallbackWidth = 620, fallbackHeight = 240) {
       /* The board is content-sized now, so the container height is driven BY this chart.
          Measuring it back unclamped made the two feed each other (a 240px plot grew to
          9,000px). A ceiling breaks the loop; the panel scrolls the page, not itself. */
-      const h = Math.min(MAX_CHART_HEIGHT, Math.round(box.height));
+      /* The box is the panel's leftover height, so this is "chart = panel", not "chart ≤ 320". */
+      const h = Math.max(120, Math.min(MAX_CHART_HEIGHT, Math.round(box.height)));
       const w = Math.round(box.width);
       setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
     });

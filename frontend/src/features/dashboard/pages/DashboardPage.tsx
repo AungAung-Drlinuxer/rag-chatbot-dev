@@ -1,4 +1,7 @@
-import { Activity, CalendarDays, Check, ChevronDown, GripHorizontal, Home, LayoutGrid, RefreshCw, RotateCcw, Save, X } from "lucide-react";
+import {
+  Activity, CalendarDays, Check, ChevronDown, GripHorizontal, Home, LayoutGrid, MoveHorizontal,
+  RefreshCw, RotateCcw, Rows3, Save, X,
+} from "lucide-react";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 
 import { useEffect, useMemo, useState } from "react";
@@ -619,6 +622,29 @@ export default function Dashboard({ role, perms }: Props) {
               >
                 <X className="mr-2 size-3.5" />
                 Cancel
+              </Button>
+              {/* Arrange-mode tools: they change the draft, so they belong beside Cancel, not
+                  beside Save (where they only appeared once something was already dirty). */}
+              <Button
+                variant={board.compact ? "default" : "ghost"}
+                size="sm"
+                className="rounded-lg"
+                onClick={() => board.setCompact(!board.compact)}
+                title="Grafana-style gravity: panels rise into the gaps above them after a drop"
+                aria-pressed={board.compact}
+              >
+                <Rows3 className="mr-2 size-3.5" />
+                {board.compact ? "Compact on" : "Compact off"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-lg"
+                onClick={() => { board.fitWidth(); flash("Panels widened to close the gaps beside them"); }}
+                title="Widen every panel to its neighbour on the same rows"
+              >
+                <MoveHorizontal className="mr-2 size-3.5" />
+                Fit width
               </Button>
             </>
           ) : (
