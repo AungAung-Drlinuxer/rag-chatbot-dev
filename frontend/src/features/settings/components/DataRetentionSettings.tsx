@@ -132,6 +132,18 @@ export function DataRetentionSettings() {
       }`
     : "Calculating…";
 
+  /* "Nothing is due" is the state an admin is most likely to read as "broken": the button is
+     disabled and the counters are zero. Say WHY, with the date the first row becomes eligible. */
+  const oldestConv = oldest.conversations ? new Date(oldest.conversations) : null;
+  const firstEligible = (() => {
+    const days = policy?.conversations_days;
+    if (!oldestConv || !days) return null;
+    const d = new Date(oldestConv);
+    d.setDate(d.getDate() + days);
+    return d;
+  })();
+  const ageDays = oldestConv ? Math.floor((Date.now() - oldestConv.getTime()) / 86_400_000) : null;
+
   /* No policy yet means the fetch has not answered: show the shape of the page, not a
      "Keep forever" default that would look like the stored policy. */
   if (policy === null) {
@@ -218,6 +230,13 @@ export function DataRetentionSettings() {
             </button>
           </div>
         </Row>
+        {nothingToDelete && (
+          <p className="border-t border-[var(--border)] bg-[var(--ok)]/8 px-5 py-2.5 text-2xs leading-relaxed text-muted-foreground">
+            {oldestConv && ageDays !== null && policy?.conversations_days
+              ? `Nothing is older than ${policy.conversations_days} days yet — the oldest conversation is ${ageDays} day${ageDays === 1 ? "" : "s"} old (${oldestConv.toLocaleDateString()}), so it becomes eligible on ${firstEligible ? firstEligible.toLocaleDateString() : "—"}. The nightly job removes it then; the button stays disabled until there is something to delete.`
+              : "Nothing is past the window right now, so there is nothing to delete. The button enables as soon as a row crosses the window."}
+          </p>
+        )}
         {lastRun?.at && (
           <p className="border-t border-[var(--border)] px-5 py-2.5 text-2xs text-muted-foreground">
             Last run {new Date(lastRun.at).toLocaleString()}
