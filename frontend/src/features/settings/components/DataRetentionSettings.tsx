@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Clock3, DatabaseZap, Loader2, Play, Save, ShieldAlert } from "lucide-react";
 
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
-import { BTN_DANGER, BTN_PRIMARY, INPUT_MONO, Panel, Row, SectionProblem, SectionSkeleton } from "./SettingsKit";
+import { BTN_DANGER, BTN_PRIMARY, INPUT_MONO, Panel, Pill, Row, SectionProblem, SectionSkeleton } from "./SettingsKit";
 
 /**
  * Data retention for conversation history and the audit trail.
@@ -147,6 +147,7 @@ export function DataRetentionSettings() {
         icon={<Clock3 className="size-4" />}
         title="Retention windows"
         description="How long each history is kept. The nightly job removes anything older at 04:30 UTC."
+        actions={<Pill tone="muted"><Clock3 className="size-3" /> Nightly 04:30 UTC</Pill>}
       >
         <Row
           title="Conversation history"
@@ -190,6 +191,11 @@ export function DataRetentionSettings() {
         icon={<DatabaseZap className="size-4" />}
         title="Delete expired data now"
         description="The same deletion the nightly job performs, run on demand. Permanent — export a transcript first if it still matters."
+        actions={
+          nothingToDelete
+            ? <Pill tone="ok">Nothing due</Pill>
+            : <Pill tone="warn">{n(preview?.conversations)} conversations · {n(preview?.audit)} audit rows due</Pill>
+        }
       >
         <Row title="Confirm deletion" hint="Type DELETE to enable the button. Pinned conversations are never deleted.">
           <div className="flex items-center gap-2">
@@ -220,13 +226,12 @@ export function DataRetentionSettings() {
               : ""}
           </p>
         )}
+        <p className="flex items-start gap-1.5 border-t border-[var(--border)] bg-[var(--warn)]/8 px-5 py-2.5 text-2xs leading-relaxed text-muted-foreground">
+          <AlertTriangle className="mt-0.5 size-3 shrink-0 text-[var(--warn)]" />
+          Tickets are never deleted by retention; a ticket whose conversation is gone keeps its own
+          record but loses the link back to the chat.
+        </p>
       </Panel>
-
-      <p className="flex items-start gap-1.5 px-1 text-2xs leading-relaxed text-muted-foreground">
-        <AlertTriangle className="mt-0.5 size-3 shrink-0 text-[var(--warn)]" />
-        Tickets are never deleted by retention; a ticket whose conversation is gone keeps its own record
-        but loses the link back to the chat.
-      </p>
 
       {notice && (
         <p role="status" className={`flex items-center gap-1.5 px-1 text-2xs ${notice.ok ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>

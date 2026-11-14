@@ -41,7 +41,14 @@ export function PageShell({ children, fill = false }: { children: ReactNode; fil
         data-slot="page-content"
         className={[
           "mx-auto w-full max-w-[1400px]",
-          fill ? "flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-5" : "p-5 lg:p-8",
+          /* The floating assistant is `fixed bottom-5 right-5`; without reserved space it sits
+             on top of the last row of whatever page you are on (it covered a notification
+             switch in Settings). Reserve a gutter instead of hiding a control. */
+          fill
+            ? "flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-5"
+            /* xl keeps a gutter on the right for the floating assistant, so a control is never
+               underneath it; the bottom padding does the same for the last row. */
+            : "p-5 pb-24 lg:p-8 lg:pb-28 xl:pr-28",
         ].join(" ")}
       >
         {children}

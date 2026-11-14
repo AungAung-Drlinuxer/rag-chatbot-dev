@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSectionParam } from "@/features/settings/useSectionParam";
 import { useConfirm } from "@/components/ui/confirm";
 import { registerNavGuard } from "@/app/router";
-import { Panel, Row, Segmented } from "../components/SettingsKit";
+import { Panel, Pill, RailCard, Row, Segmented } from "../components/SettingsKit";
 
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
@@ -30,7 +30,7 @@ import { refreshBrandingCache } from "@/app/useBranding";
 import { apiFetch, authHeaders, BASE } from "@/shared/api/client";
 import { AiServiceSettings } from "../components/AiServiceSettings";
 import { EmailServerSettings } from "../components/EmailServerSettings";
-import { Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon, SlidersHorizontal } from "lucide-react";
 import {
   getMySettings, updateMySettings, getIntegrationSettings,
 } from "@/features/settings/api";
@@ -271,12 +271,13 @@ function PrefsSkeleton() {
   );
 }
 
-function SectionCard({ icon, title, description, children }: {
-  icon: React.ReactNode; iconTone?: string; title: string; description: string; children: React.ReactNode;
+function SectionCard({ icon, title, description, actions, children }: {
+  icon: React.ReactNode; iconTone?: string; title: string; description: string;
+  actions?: React.ReactNode; children: React.ReactNode;
 }) {
   // Delegates to the shared Panel so every section in Settings has one header anatomy.
   return (
-    <Panel icon={icon} title={title} description={description}>
+    <Panel icon={icon} title={title} description={description} actions={actions}>
       {children}
     </Panel>
   );
@@ -595,6 +596,7 @@ export default function Settings({ role }: { role?: string }) {
                 icon={<Bot className="size-4.5" />}
                 title="Chat"
                 description="Choose how answers appear in your desktop app."
+                actions={<Pill tone="muted">{chatFontSize}px</Pill>}
               >
                 <Row title="Chat font size" hint="Text size used throughout the conversation.">
                   <Segmented
@@ -631,6 +633,12 @@ export default function Settings({ role }: { role?: string }) {
                 icon={<Monitor className="size-4.5" />}
                 title="Appearance"
                 description="Customize how the application looks."
+                actions={
+                  <>
+                    <Pill tone="muted">{darkMode ? "Dark" : "Light"}</Pill>
+                    <Pill tone="muted">{compact ? "Compact" : "Comfortable"}</Pill>
+                  </>
+                }
               >
                 <div className="px-5 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -721,10 +729,12 @@ export default function Settings({ role }: { role?: string }) {
               {/* Rail: the settings in force right now, so the form below reads as a diff
                   against something visible rather than a wall of toggles. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
-                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-                  <h2 className="text-sm font-semibold">Your setup</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">What the interface uses right now.</p>
-                  <dl className="mt-3 space-y-2.5">
+                <RailCard
+                  icon={<SlidersHorizontal className="size-4" />}
+                  title="Your setup"
+                  description="What the interface uses right now."
+                >
+                  <dl className="space-y-2.5">
                     {[
                       ["Theme", darkMode ? "Dark" : "Light"],
                       ["Chat text", `${chatFontSize}px`],
@@ -740,15 +750,13 @@ export default function Settings({ role }: { role?: string }) {
                       </div>
                     ))}
                   </dl>
-                </section>
+                </RailCard>
 
-                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-                  <h2 className="text-sm font-semibold">Save</h2>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                    Theme, density and motion apply as you change them, but they are stored for this
-                    account only when you save.
-                  </p>
-
+                <RailCard
+                  icon={<Save className="size-4" />}
+                  title="Save"
+                  description="Theme, density and motion apply as you change them, but they are stored for this account only when you save."
+                >
                   <button
                     type="button"
                     onClick={saveSettings}
@@ -788,7 +796,7 @@ export default function Settings({ role }: { role?: string }) {
                       </span>
                     )}
                   </div>
-                </section>
+                </RailCard>
               </aside>
             </div>
             )}
@@ -844,14 +852,8 @@ export default function Settings({ role }: { role?: string }) {
                 role), the SMTP server below them is administrator-only. */}
             {active === "notifications" && (
               <>
-                <SectionCard
-                  icon={<BellRing className="size-4" />}
-                  iconTone="bg-amber-50 dark:bg-amber-950/40"
-                  title="Notifications"
-                  description="What the bell may tell you, how it sounds, and how to clear it."
-                >
-                  <NotificationSettings isAdmin={isAdmin} />
-                </SectionCard>
+                {/* Each block brings its own Panel: one header anatomy across the page. */}
+                <NotificationSettings isAdmin={isAdmin} />
                 {isAdmin && <EmailServerSettings />}
               </>
             )}

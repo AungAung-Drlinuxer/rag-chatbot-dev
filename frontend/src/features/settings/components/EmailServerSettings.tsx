@@ -11,13 +11,13 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import {
-  AlertCircle, Check, CheckCircle2, ExternalLink, Info, Loader2, Lock, Mail, Pencil,
-  Save, Send, ShieldCheck,
+  AlertCircle, Check, CheckCircle2, ExternalLink, Loader2, Lock, Mail, Pencil,
+  Save, Send,
 } from "lucide-react";
 
 import { getSmtpSettings, putSmtpSettings, sendTestEmail } from "@/features/settings/api";
 import {
-  BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, Panel, Pill, Row, SectionProblem, SectionSkeleton,
+  BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, Panel, Pill, RailCard, Row, SectionProblem, SectionSkeleton,
 } from "./SettingsKit";
 
 type Form = {
@@ -165,7 +165,6 @@ export function EmailServerSettings() {
     );
   }
 
-  const tlsOn = form.use_tls;
   const hostKnown = smtpConfigured("host") || !!form.host.trim();
 
   if (loading && !loadedOk) return <SectionSkeleton rows={4} label="Loading the mail server settings" />;
@@ -182,51 +181,51 @@ export function EmailServerSettings() {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-4">
-        {/* status hero */}
-        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-          <div className="flex flex-wrap items-start justify-between gap-4 px-5 pb-4 pt-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-                <Mail className="size-5" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold tracking-tight">Mail (SMTP)</h2>
-                  {form.enabled
-                    ? <Pill tone="ok"><CheckCircle2 className="size-3" /> Alerts on</Pill>
-                    : <Pill tone="muted">Alerts off</Pill>}
-                  {hostKnown
-                    ? <Pill tone="ok"><Lock className="size-3" /> Host stored</Pill>
-                    : <Pill tone="warn"><AlertCircle className="size-3" /> Host missing</Pill>}
-                </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Outgoing server for escalation and ticket notifications.
-                  {tlsOn ? " STARTTLS on." : " TLS off — credentials travel in clear text."}
-                </p>
+        {/* Status card: the same anatomy as an Integrations card — icon tile, one-line
+            purpose, state chips, and the three facts the strip used to repeat in the rail. */}
+        <Panel
+          icon={<Mail className="size-4" />}
+          title="Mail (SMTP)"
+          description="Outgoing server for escalation and ticket notifications."
+          actions={
+            <>
+              {form.enabled
+                ? <Pill tone="ok"><CheckCircle2 className="size-3" /> Alerts on</Pill>
+                : <Pill tone="muted">Alerts off</Pill>}
+              {hostKnown
+                ? <Pill tone="ok"><Lock className="size-3" /> Host stored</Pill>
+                : <Pill tone="warn"><AlertCircle className="size-3" /> Host missing</Pill>}
+            </>
+          }
+        >
+          <dl className="grid gap-x-6 gap-y-2 px-5 py-3.5 text-[11px] sm:grid-cols-3">
+            {[
+              ["Server", `${form.host || (smtpConfigured("host") ? "stored host" : "no host")}:${form.port || "—"}`],
+              ["Encryption", form.use_tls ? "STARTTLS" : "No TLS — credentials travel in clear text"],
+              ["Sender", form.from || (smtpConfigured("from_address") ? "stored" : "not set")],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-baseline justify-between gap-3 sm:block">
+                <dt className="shrink-0 text-muted-foreground">{k}</dt>
+                <dd className="min-w-0 truncate text-right font-medium text-foreground sm:mt-0.5 sm:text-left" title={v}>{v}</dd>
               </div>
-            </div>
+            ))}
+          </dl>
+        </Panel>
+
+        <Panel
+          icon={<Mail className="size-4" />}
+          title="Server & credentials"
+          description="Where mail is handed off, how the connection is secured, and who it authenticates as. Stored secrets are write-only."
+          actions={
             <a
               href="https://support.google.com/accounts/answer/185833"
               target="_blank"
               rel="noreferrer"
-              className={`shrink-0 ${BTN_GHOST}`}
+              className={BTN_GHOST}
             >
               App password help <ExternalLink className="size-3" />
             </a>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <ServerIcon /> {form.host || (smtpConfigured("host") ? "stored host" : "no host")}:{form.port || "—"}
-            </span>
-            <span className="inline-flex items-center gap-1"><ShieldCheck className="size-3" /> {form.use_tls ? "STARTTLS" : "no TLS"}</span>
-            <span className="ml-auto hidden sm:inline">{smtpSet.length} stored field{smtpSet.length === 1 ? "" : "s"}</span>
-          </div>
-        </section>
-
-        <Panel
-          icon={<Mail className="size-4" />}
-          title="Server"
-          description="Where mail is handed off, and how the connection is secured."
+          }
         >
           {loading ? (
             <p className="flex items-center gap-2 p-5 text-xs text-muted-foreground">
@@ -254,84 +253,44 @@ export function EmailServerSettings() {
               <Row title="Use TLS (STARTTLS)" hint="Recommended — encrypts the SMTP connection (port 587).">
                 <Switch checked={form.use_tls} onChange={(v) => setForm({ ...form, use_tls: v })} label="Use TLS" />
               </Row>
+            <div className="border-t border-[var(--border)]" />
+            <div className="space-y-3 p-5">
+              <FieldGrid>
+                {writeOnlyField("username", "Username", form.username, (v) => setForm({ ...form, username: v }), "you@gmail.com")}
+                <Field
+                  label="Password"
+                  badge={passwordSet ? <Pill tone="ok"><Lock className="size-3" /> saved — not retrievable</Pill> : undefined}
+                  hint="Leave blank to keep the stored password."
+                >
+                  <input
+                    className={INPUT}
+                    type="password"
+                    value={form.password}
+                    placeholder="16-character app password"
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    autoComplete="new-password"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    aria-label="Password"
+                  />
+                </Field>
+              </FieldGrid>
+              {writeOnlyField("from_address", "From address", form.from, (v) => setForm({ ...form, from: v }), "it-helpdesk@your-domain.com")}
+            </div>
             </>
           )}
         </Panel>
 
-        <Panel
-          icon={<ShieldCheck className="size-4" />}
-          title="Credentials & sender"
-          description="Write-only: stored server-side, never returned, and only replaced when you type a new value."
-        >
-          <div className="space-y-3 p-5">
-            <FieldGrid>
-              {writeOnlyField("username", "Username", form.username, (v) => setForm({ ...form, username: v }), "you@gmail.com")}
-              <Field
-                label="Password"
-                badge={passwordSet ? <Pill tone="ok"><Lock className="size-3" /> saved — not retrievable</Pill> : undefined}
-                hint="Leave blank to keep the stored password."
-              >
-                <input
-                  className={INPUT}
-                  type="password"
-                  value={form.password}
-                  placeholder="16-character app password"
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  autoComplete="new-password"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  aria-label="Password"
-                />
-              </Field>
-            </FieldGrid>
-            {writeOnlyField("from_address", "From address", form.from, (v) => setForm({ ...form, from: v }), "it-helpdesk@your-domain.com")}
-          </div>
-        </Panel>
-
-        <Panel
-          icon={<Info className="size-4" />}
-          title="Sender notes"
-          description="Gmail: use a 16-character App Password, not the account password."
-        >
-          <div className="px-5 py-3">
-            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-              <Info className="mt-0.5 size-3 shrink-0" />
-              Gmail requires 2-Step Verification and an App Password (Google Account → Security →
-              App passwords). Host smtp.gmail.com, port 587, TLS on. Which events actually send
-              mail is set in <b className="font-semibold text-foreground">Notifications</b>, next to
-              the bell preferences, so there is one list of events instead of two.
-            </p>
-          </div>
-        </Panel>
       </div>
 
-      {/* rail: what this server resolves to, and the two actions that prove it works */}
+      {/* rail: the two actions that prove the server works. The facts live in the status card. */}
       <aside className="space-y-4 xl:sticky xl:top-6">
-        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-          <h2 className="text-sm font-semibold">Delivery</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">How mail leaves this deployment.</p>
-          <dl className="mt-3 space-y-2.5">
-            {[
-              ["Server", `${form.host || (smtpConfigured("host") ? "stored" : "not set")}:${form.port || "—"}`],
-              ["Encryption", form.use_tls ? "STARTTLS" : "None"],
-              ["Sender", form.from || (smtpConfigured("from_address") ? "stored" : "not set")],
-              ["Alerts", form.enabled ? "On" : "Off"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
-                <dt className="shrink-0 text-muted-foreground">{k}</dt>
-                <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-          <h2 className="text-sm font-semibold">Send &amp; save</h2>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-            Save stores the write-only fields; the test proves the saved server actually delivers.
-          </p>
-
-          <Field label="Send a test email to" className="mt-3">
+        <RailCard
+          icon={<Send className="size-4" />}
+          title="Send & save"
+          description="Save stores the write-only fields; the test proves the server delivers."
+        >
+          <Field label="Send a test email to">
             <input
               className={INPUT}
               value={testTo}
@@ -342,7 +301,7 @@ export function EmailServerSettings() {
             />
           </Field>
 
-          <button onClick={sendTest} disabled={testing} className={`${BTN_GHOST} mt-2 w-full justify-center`}>
+          <button onClick={sendTest} disabled={testing} className={`${BTN_GHOST} mt-2.5 w-full justify-center`}>
             {testing ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
             {testing ? "Sending…" : "Send test"}
           </button>
@@ -369,19 +328,9 @@ export function EmailServerSettings() {
               </p>
             )}
           </div>
-        </section>
+        </RailCard>
       </aside>
     </div>
-  );
-}
-
-/** The SMTP chip in the status strip — same weight as the other tiny icons. */
-function ServerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3">
-      <rect x="3" y="4" width="18" height="7" rx="2" /><rect x="3" y="13" width="18" height="7" rx="2" />
-      <path d="M7 7.5h.01M7 16.5h.01" />
-    </svg>
   );
 }
 

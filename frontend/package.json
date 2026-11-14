@@ -1,6 +1,6 @@
 {
   "name": "it-help-chatbot-frontend",
-  "version": "dev-1.11.114",
+  "version": "dev-1.11.119",
   "private": true,
   "type": "module",
   "scripts": {

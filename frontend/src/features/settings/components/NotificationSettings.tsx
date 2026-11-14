@@ -10,7 +10,8 @@
  * takes effect after pressing a Save button at the bottom is the bug this page already had.
  */
 import { useEffect, useState } from "react";
-import { BellOff, Check, Loader2, Mail, Trash2 } from "lucide-react";
+import { BellOff, BellRing, Check, Loader2, Mail, Trash2 } from "lucide-react";
+import { Panel, Pill } from "./SettingsKit";
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
 import { getSmtpSettings, putSmtpSettings } from "@/features/settings/api";
 
@@ -19,9 +20,9 @@ import { getSmtpSettings, putSmtpSettings } from "@/features/settings/api";
    no way to tell which one was authoritative. They belong next to the bell switches: one event,
    two channels. */
 const EMAIL_EVENTS = [
-  { key: "approval_request", title: "Approval requests", hint: "Mail to administrators when an escalation waits for a decision." },
-  { key: "ticket_created", title: "Ticket created", hint: "Mail to the requester when a Jira ticket is opened." },
-  { key: "ticket_status_change", title: "Ticket status changed", hint: "Mail when a ticket moves (open → pending → resolved…)." },
+  { key: "approval_request", title: "Approval requests → admins", hint: "Mail to administrators when an escalation waits for a decision." },
+  { key: "ticket_created", title: "Ticket opened", hint: "Mail to the requester when a Jira ticket is created." },
+  { key: "ticket_status_change", title: "Ticket moved", hint: "Mail when a ticket changes state (open → pending → resolved…)." },
 ] as const;
 
 type EmailKey = (typeof EMAIL_EVENTS)[number]["key"];
@@ -187,10 +188,25 @@ export default function NotificationSettings({ isAdmin }: { isAdmin: boolean }) 
     }
   }
 
+  const visible = SWITCHES.filter((s) => !s.adminOnly || isAdmin);
+  const bellOn = visible.filter((s) => values[s.key]).length;
+  const mailOn = EMAIL_EVENTS.filter((e) => mail[e.key]).length;
+
   return (
-    <div className="divide-y divide-[var(--border)]">
-      <p className="px-5 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-        In the app — bell
+    <Panel
+      icon={<BellRing className="size-4" />}
+      title="Notifications"
+      description="One event, two channels. The bell is per account; sound is per device."
+      actions={
+        <>
+          <Pill tone={bellOn > 0 ? "ok" : "muted"}>{bellOn}/{visible.length} in app</Pill>
+          {isAdmin && <Pill tone={mailOn > 0 && mailReady ? "ok" : "muted"}>{mailOn}/{EMAIL_EVENTS.length} email</Pill>}
+        </>
+      }
+    >
+      <div className="divide-y divide-[var(--border)]">
+      <p className="flex items-center gap-1.5 px-5 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <BellRing className="size-3" /> In the app — bell
       </p>
       {SWITCHES.filter((s) => !s.adminOnly || isAdmin).map((s) => (
         <div key={s.key} className="flex items-start justify-between gap-4 px-5 py-4">
@@ -296,7 +312,7 @@ export default function NotificationSettings({ isAdmin }: { isAdmin: boolean }) 
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 px-5 py-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">Clear notifications</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -328,6 +344,7 @@ export default function NotificationSettings({ isAdmin }: { isAdmin: boolean }) 
           {error}
         </div>
       )}
-    </div>
+      </div>
+    </Panel>
   );
 }

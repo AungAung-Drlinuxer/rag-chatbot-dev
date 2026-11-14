@@ -62,9 +62,32 @@ export function Panel({ icon, title, description, actions, children, className =
             )}
           </div>
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+        {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
       {children}
+    </section>
+  );
+}
+
+/** RailCard: the same header anatomy in a 340px aside — icon tile, title, one line, actions. */
+export function RailCard({ icon, title, description, children }: {
+  icon: ReactNode;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card shadow-xs">
+      <header className="flex items-start gap-2.5 border-b border-[var(--border)] bg-muted/20 px-4 py-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)]">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+          {description && <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">{description}</p>}
+        </div>
+      </header>
+      <div className="p-4">{children}</div>
     </section>
   );
 }

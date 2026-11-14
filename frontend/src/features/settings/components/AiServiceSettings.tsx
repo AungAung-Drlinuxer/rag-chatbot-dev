@@ -15,8 +15,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle, CheckCircle2, ChevronDown, Gauge, Info, KeyRound, Layers, Loader2, Lock,
-  Pencil, RefreshCw, Save, Search, ShieldCheck, Sparkles, Trash2, XCircle,
+  AlertCircle, CheckCircle2, ChevronDown, ExternalLink, Gauge, Info, KeyRound, Layers, Loader2, Lock,
+  Pencil, RefreshCw, Save, Search, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, XCircle,
 } from "lucide-react";
 
 import {
@@ -27,7 +27,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { LLM_PRESETS, presetFor, providerLabel } from "../llmProviders";
 import { IntegrationLogo } from "./IntegrationLogo";
 import {
-  BTN_DANGER, BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, INPUT_MONO, Panel, Pill, Row,
+  BTN_DANGER, BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, INPUT_MONO, Panel, Pill, RailCard, Row,
   SectionProblem,
   SectionSkeleton,
 } from "./SettingsKit";
@@ -289,52 +289,64 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       {dialog}
       <div className="space-y-5">
-        {/* ---- status ------------------------------------------------------------- */}
-        <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-          <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.04] p-1.5 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
-                <IntegrationLogo providerKey={preset.id} name={providerLabel(provider)} size="md" />
+        {/* ---- status -------------------------------------------------------------
+            Same anatomy as an Integrations card: provider mark, name, state chips and the
+            one link that leaves the app. The numbers it used to bury in a strip are rows. */}
+        <Panel
+          icon={<IntegrationLogo providerKey={preset.id} name={providerLabel(provider)} size="sm" />}
+          title={providerLabel(provider)}
+          description="The service that writes answers, and what it currently has to work with."
+          actions={
+            <>
+              {tokenSet
+                ? <Pill tone="ok"><CheckCircle2 className="size-3" /> Key stored</Pill>
+                : <Pill tone="warn"><AlertCircle className="size-3" /> No API key</Pill>}
+              <a
+                href={preset.docs}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
+              >
+                Provider docs <ExternalLink className="size-3" />
+              </a>
+            </>
+          }
+        >
+          <div className="grid gap-x-6 gap-y-3 px-5 py-3.5 text-[11px] sm:grid-cols-2 xl:grid-cols-4">
+            {/* Model ids are long and are the one value here people copy — two lines, never
+                an ellipsis in the middle of a name. */}
+            <div className="min-w-0 sm:col-span-2 xl:col-span-2">
+              <span className="block text-muted-foreground">Model</span>
+              <span className="mt-0.5 block break-all font-mono leading-relaxed text-foreground" title={storedModel}>
+                {storedModel || "none selected"}
               </span>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold tracking-tight">{providerLabel(provider)}</h2>
-                  {tokenSet ? (
-                    <Pill tone="ok"><CheckCircle2 className="size-3" /> Key stored</Pill>
-                  ) : (
-                    <Pill tone="warn"><AlertCircle className="size-3" /> No API key</Pill>
-                  )}
-                </div>
-                <p className="mt-1 truncate font-mono text-xs text-foreground/80" title={storedModel}>
-                  {storedModel || "no model selected"}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  {models.length > 0
-                    ? `${models.length} model${models.length === 1 ? "" : "s"} detected`
-                    : tokenSet ? "detecting models…" : "add an API key to detect models"}
-                  {" · "}top {topK} chunks · {Math.round((Number(threshold) || 0.75) * 100)}% confidence gate
-                </p>
-              </div>
             </div>
-            <a
-              href={preset.docs}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-foreground transition hover:bg-muted"
-            >
-              Provider docs
-            </a>
+            <div>
+              <span className="block text-muted-foreground">Catalogue</span>
+              <span className="mt-0.5 block font-medium text-foreground">
+                {models.length > 0
+                  ? `${models.length} models detected`
+                  : tokenSet ? "detecting…" : "add a key to detect"}
+              </span>
+            </div>
+            <div>
+              <span className="block text-muted-foreground">Retrieval</span>
+              <span className="mt-0.5 block font-medium text-foreground">top {topK} chunks</span>
+            </div>
+            <div>
+              <span className="block text-muted-foreground">Confidence gate</span>
+              <span className="mt-0.5 block font-medium text-foreground">{Math.round((Number(threshold) || 0.75) * 100)}%</span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] bg-muted/25 px-5 py-2 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Layers className="size-3" /> {models.length || "—"} models</span>
-            <span className="inline-flex items-center gap-1"><Gauge className="size-3" /> gate {Math.round((Number(threshold) || 0.75) * 100)}%</span>
-            <span className="inline-flex items-center gap-1"><Search className="size-3" /> top-k {topK || "—"}</span>
-            {updatedAt && <span className="ml-auto hidden sm:inline">saved {new Date(updatedAt).toLocaleString()}</span>}
-          </div>
-        </section>
+          {updatedAt && (
+            <p className="border-t border-[var(--border)] bg-muted/20 px-5 py-2 text-2xs text-muted-foreground">
+              Last saved {new Date(updatedAt).toLocaleString()}
+            </p>
+          )}
+        </Panel>
 
         {/* ---- provider ----------------------------------------------------------- */}
-        <Section
+        <Panel
           icon={<KeyRound className="size-4" />}
           title="Provider & credentials"
           description="Which service generates the answers, and the key it authenticates with."
@@ -402,10 +414,10 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               Write-only: stored server-side and never returned. Leave blank to keep the current key.
             </p>
           </div>
-        </Section>
+        </Panel>
 
         {/* ---- model -------------------------------------------------------------- */}
-        <Section
+        <Panel
           icon={<Layers className="size-4" />}
           title="Model"
           description="Picked from the provider's live catalogue — or typed by id if it is not listed."
@@ -457,12 +469,19 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
 
-          <Field label="Model id" hint="Use this when the catalogue is unavailable or the model is brand new.">
+          <Field
+            label="Model id"
+            hint={
+              storedModel
+                ? `Currently saved: ${storedModel} — type to replace it.`
+                : "Use this when the catalogue is unavailable or the model is brand new."
+            }
+          >
             <input
               type="text"
               value={form.model || ""}
               onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-              placeholder={storedModel ? `saved: ${storedModel} — type to replace` : "or type a model id"}
+              placeholder={storedModel ? "Type a new model id to replace the saved one" : "or type a model id"}
               spellCheck={false}
               autoComplete="off"
               aria-label="Model id"
@@ -484,10 +503,10 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               {modelQuery && ` — ${filteredModels.length} match “${modelQuery}”`}
             </p>
           )}
-        </Section>
+        </Panel>
 
         {/* ---- retrieval ---------------------------------------------------------- */}
-        <Section
+        <Panel
           icon={<Gauge className="size-4" />}
           title="Retrieval & answer behaviour"
           description="Shared backend settings — they change the assistant for everyone once saved."
@@ -530,15 +549,17 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               className={`${INPUT} w-20 text-center tabular-nums`}
             />
           </div>
-        </Section>
+        </Panel>
       </div>
 
       {/* ---- rail: what this save will commit, and the actions --------------------- */}
       <aside className="space-y-5 xl:sticky xl:top-6">
-        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-          <h2 className="text-sm font-semibold">Effective configuration</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">What the assistant uses right now.</p>
-          <dl className="mt-3 space-y-2.5">
+        <RailCard
+          icon={<SlidersHorizontal className="size-4" />}
+          title="Effective configuration"
+          description="What the assistant uses right now."
+        >
+          <dl className="space-y-2.5">
             {[
               ["Provider", providerLabel(form.provider || provider)],
               ["Model", storedModel || "—"],
@@ -552,15 +573,14 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               </div>
             ))}
           </dl>
-        </section>
+        </RailCard>
 
-        <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-          <h2 className="text-sm font-semibold">Save</h2>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-            One save commits the provider fields and the retrieval knobs together.
-          </p>
-
-          <button type="button" onClick={save} disabled={saving} className={`${BTN_PRIMARY} mt-3 w-full justify-center`}>
+        <RailCard
+          icon={<Save className="size-4" />}
+          title="Save"
+          description="One save commits the provider fields and the retrieval knobs together."
+        >
+          <button type="button" onClick={save} disabled={saving} className={`${BTN_PRIMARY} w-full justify-center`}>
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
             Save AI settings
           </button>
@@ -596,7 +616,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               Remove stored credentials
             </button>
           )}
-        </section>
+        </RailCard>
       </aside>
     </div>
   );
@@ -610,40 +630,6 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
  * keystroke and unmounted the subtree: the first character was accepted, focus was thrown away,
  * and every character after it went nowhere. Hoisted here so their identity is stable.
  * ------------------------------------------------------------------------------------------- */
-
-function Section({
-  icon,
-  title,
-  description,
-  actions,
-  children,
-}: {
-  icon?: React.ReactNode;
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          {icon && (
-            <span className="mt-0.5 grid size-6 place-items-center rounded-md bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-              {icon}
-            </span>
-          )}
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-tight">{title}</h2>
-            {description && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
-          </div>
-        </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-      </header>
-      <div className="space-y-4 px-5 py-4">{children}</div>
-    </section>
-  );
-}
 
 type ValueInputProps = {
   field: string;
