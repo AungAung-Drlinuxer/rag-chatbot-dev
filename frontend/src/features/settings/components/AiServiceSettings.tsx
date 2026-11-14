@@ -358,7 +358,20 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               label="Base URL"
               badge={isConfigured("base_url") ? <Pill tone="ok"><Lock className="size-3" /> Configured</Pill> : undefined}
             >
-              <ValueInput field="base_url" placeholder="https://api.cline.bot/api/v1" />
+              <ValueInput
+                field="base_url"
+                placeholder="https://api.cline.bot/api/v1"
+                form={form}
+                setForm={setForm}
+                revealed={revealed}
+                setRevealed={setRevealed}
+                replacing={replacing}
+                setReplacing={setReplacing}
+                configured={isConfigured("base_url")}
+                secretField={isSecret("base_url")}
+                editable={editable("base_url")}
+                tokenSet={tokenSet}
+              />
             </Field>
           </FieldGrid>
 
@@ -368,7 +381,21 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
               icon={<KeyRound className="size-3" />}
               badge={tokenSet ? <Pill tone="ok"><Lock className="size-3" /> Saved — not retrievable</Pill> : undefined}
             >
-              <ValueInput field="api_key" placeholder="your provider API key" secret />
+              <ValueInput
+                field="api_key"
+                placeholder="your provider API key"
+                secret
+                form={form}
+                setForm={setForm}
+                revealed={revealed}
+                setRevealed={setRevealed}
+                replacing={replacing}
+                setReplacing={setReplacing}
+                configured={isConfigured("api_key")}
+                secretField={isSecret("api_key")}
+                editable={editable("api_key")}
+                tokenSet={tokenSet}
+              />
             </Field>
             <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-3 shrink-0 text-[var(--ok)]" />
@@ -434,8 +461,8 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
             <input
               type="text"
               value={form.model || ""}
-              onChange={(e) => setForm({ ...form, model: e.target.value })}
-              placeholder="or type a model id"
+              onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
+              placeholder={storedModel ? `saved: ${storedModel} — type to replace` : "or type a model id"}
               spellCheck={false}
               autoComplete="off"
               aria-label="Model id"
@@ -574,113 +601,151 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
     </div>
   );
 
-  /* ---------------------------------------------------------------- card shell */
+}
 
-  function Section({
-    icon,
-    title,
-    description,
-    actions,
-    children,
-  }: {
-    icon?: React.ReactNode;
-    title: string;
-    description?: string;
-    actions?: React.ReactNode;
-    children: React.ReactNode;
-  }) {
-    return (
-      <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
-          <div className="flex min-w-0 items-start gap-2.5">
-            {icon && (
-              <span className="mt-0.5 grid size-6 place-items-center rounded-md bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
-                {icon}
-              </span>
-            )}
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold leading-tight">{title}</h2>
-              {description && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
-            </div>
-          </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-        </header>
-        <div className="space-y-4 px-5 py-4">{children}</div>
-      </section>
-    );
-  }
 
-  /* ---------------------------------------------------------------- field helpers */
+/* ---------------------------------------------------------------------------------------------
+ * These two used to be declared *inside* the page component. A component declared in a render
+ * body gets a new function identity on every render, so React saw a different element type each
+ * keystroke and unmounted the subtree: the first character was accepted, focus was thrown away,
+ * and every character after it went nowhere. Hoisted here so their identity is stable.
+ * ------------------------------------------------------------------------------------------- */
 
-  /** A stored value is never rendered: show a mask and require Replace. */
-  function ValueInput({ field, placeholder, secret }: { field: string; placeholder: string; secret?: boolean }) {
-    const configured = isConfigured(field);
-    const isSec = secret || isSecret(field);
-    const show = !!revealed[field];
-
-    if (configured && !editable(field)) {
-      return (
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3">
-            <Lock className="size-3 shrink-0 text-muted-foreground" />
-            <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
-            <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setReplacing({ ...replacing, [field]: true })}
-            className={BTN_GHOST}
-            title="Enter a new value"
-          >
-            <Pencil className="size-3.5" /> Replace
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <div className="relative">
-          <input
-            type={isSec && !show ? "password" : "text"}
-            value={form[field] || ""}
-            onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-            placeholder={isSec && tokenSet ? "leave blank to keep current" : placeholder}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            data-1p-ignore
-            data-lpignore="true"
-            aria-label={field}
-            className={`${INPUT_MONO} pr-10 placeholder:font-sans`}
-          />
-          {isSec && (
-            <button
-              type="button"
-              aria-label={show ? `Hide ${field}` : `Reveal ${field}`}
-              onClick={() => setRevealed({ ...revealed, [field]: !show })}
-              className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
-            >
-              {show ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
+function Section({
+  icon,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-3.5">
+        <div className="flex min-w-0 items-start gap-2.5">
+          {icon && (
+            <span className="mt-0.5 grid size-6 place-items-center rounded-md bg-[var(--accent-soft)] text-[var(--accent-foreground)]">
+              {icon}
+            </span>
           )}
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold leading-tight">{title}</h2>
+            {description && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
+          </div>
         </div>
-        {configured && (
-          <button
-            type="button"
-            onClick={() => {
-              setReplacing({ ...replacing, [field]: false });
-              const n = { ...form }; delete n[field]; setForm(n);
-            }}
-            className="mt-1 text-2xs text-muted-foreground underline hover:text-foreground"
-          >
-            Keep the stored value
-          </button>
-        )}
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </header>
+      <div className="space-y-4 px-5 py-4">{children}</div>
+    </section>
+  );
+}
+
+type ValueInputProps = {
+  field: string;
+  placeholder: string;
+  secret?: boolean;
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  revealed: Record<string, boolean>;
+  setRevealed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  replacing: Record<string, boolean>;
+  setReplacing: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  configured: boolean;
+  secretField: boolean;
+  editable: boolean;
+  tokenSet: boolean;
+};
+
+/** A stored value is never rendered: show a mask and require Replace. */
+function ValueInput({
+  field,
+  placeholder,
+  secret,
+  form,
+  setForm,
+  revealed,
+  setRevealed,
+  replacing,
+  setReplacing,
+  configured,
+  secretField,
+  editable,
+  tokenSet,
+}: ValueInputProps) {
+  const isSec = secret || secretField;
+  const show = !!revealed[field];
+
+  if (configured && !editable) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3">
+          <Lock className="size-3 shrink-0 text-muted-foreground" />
+          <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
+          <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setReplacing({ ...replacing, [field]: true })}
+          className={BTN_GHOST}
+          title="Enter a new value"
+        >
+          <Pencil className="size-3.5" /> Replace
+        </button>
       </div>
     );
   }
+
+  return (
+    <div>
+      <div className="relative">
+        <input
+          type={isSec && !show ? "password" : "text"}
+          value={form[field] || ""}
+          onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+          placeholder={isSec && tokenSet ? "leave blank to keep current" : placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-1p-ignore
+          data-lpignore="true"
+          aria-label={field}
+          className={`${INPUT_MONO} pr-10 placeholder:font-sans`}
+        />
+        {isSec && (
+          <button
+            type="button"
+            aria-label={show ? `Hide ${field}` : `Reveal ${field}`}
+            onClick={() => setRevealed({ ...revealed, [field]: !show })}
+            className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+          >
+            {show ? <EyeOffIcon /> : <EyeIcon />}
+          </button>
+        )}
+      </div>
+      {configured && (
+        <button
+          type="button"
+          onClick={() => {
+            setReplacing({ ...replacing, [field]: false });
+            setForm((prev) => {
+              const n = { ...prev };
+              delete n[field];
+              return n;
+            });
+          }}
+          className="mt-1 text-2xs text-muted-foreground underline hover:text-foreground"
+        >
+          Keep the stored value
+        </button>
+      )}
+    </div>
+  );
 }
 
 /* Eye icons kept local so the import list above stays focused on the section's own verbs. */
