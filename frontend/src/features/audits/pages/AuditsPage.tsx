@@ -15,6 +15,7 @@ import { listAudits } from "@/features/audits/api";
 import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
+import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 
 /**
@@ -176,14 +177,24 @@ export default function AuditsPage() {
   const [actions, setActions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [q, setQ] = useState("");
-  const [filterAction, setFilterAction] = useState("");
-  const [filterResult, setFilterResult] = useState("");
-  const [page, setPage] = useState(1);
+  /* Every filter is address-bar state: "the failed sign-ins from Tuesday" is a link people
+     send, and a refresh must not throw the filters away. */
+  const [params, setParams] = useUrlParams(["q", "action", "result", "from", "to", "page", "dir"] as const);
+  const q = params.q;
+  const filterAction = params.action;
+  const filterResult = params.result;
+  const page = Math.max(1, Number(params.page) || 1);
+  const sortDir: "desc" | "asc" = params.dir === "asc" ? "asc" : "desc";
+  const setQ = (v: string) => setParams({ q: v, page: null });
+  const setFilterAction = (v: string) => setParams({ action: v, page: null });
+  const setFilterResult = (v: string) => setParams({ result: v, page: null });
+  const setPage = (v: number) => setParams({ page: v <= 1 ? null : String(v) });
   /* Time range, same control pair as Conversations: an audit question is almost always
      "what happened between X and Y", and the log can be far too long to scan. */
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const fromDate = params.from;
+  const toDate = params.to;
+  const setFromDate = (v: string) => setParams({ from: v, page: null });
+  const setToDate = (v: string) => setParams({ to: v, page: null });
 
   async function load() {
     setLoading(true);
@@ -230,9 +241,16 @@ export default function AuditsPage() {
   // last page (a blank table under a "3 / 2" pager), and it should not silently jump
   // the user back to page 1 either.
   const safePage = Math.min(page, pageCount);
+  /* A log is not a directory: sorting it by "action" answers nothing. What a reader does want
+     is either the newest event or the oldest one, so the Time column is the only sortable one —
+     and it says which way it is pointing through `aria-sort`. */
+  const ordered = useMemo(
+    () => (sortDir === "asc" ? [...filtered].reverse() : filtered),
+    [filtered, sortDir],
+  );
   const pageRows = useMemo(
-    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [filtered, safePage],
+    () => ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [ordered, safePage],
   );
 
   const today = useMemo(() => {
@@ -243,12 +261,7 @@ export default function AuditsPage() {
 
   const hasFilters = Boolean(q || filterAction || filterResult || fromDate || toDate);
   function resetFilters() {
-    setQ("");
-    setFilterAction("");
-    setFilterResult("");
-    setFromDate("");
-    setToDate("");
-    setPage(1);
+    setParams({ q: null, action: null, result: null, from: null, to: null, page: null });
   }
 
   /* The report is the *filtered* set, labelled like the table — a CSV of raw column names
@@ -447,7 +460,19 @@ export default function AuditsPage() {
               </colgroup>
               <thead className="sticky top-0 z-10 bg-[var(--muted)]/40">
                 <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
-                  <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">Time ↓</th>
+                  <th
+                    aria-sort={sortDir === "asc" ? "ascending" : "descending"}
+                    className="border-y border-[var(--border)] px-5 py-3 font-semibold"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setParams({ dir: sortDir === "desc" ? "asc" : "desc", page: null })}
+                      className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-foreground"
+                      title={sortDir === "desc" ? "Newest first" : "Oldest first"}
+                    >
+                      Time <span aria-hidden>{sortDir === "desc" ? "↓" : "↑"}</span>
+                    </button>
+                  </th>
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">Action</th>
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">User</th>
                   <th className="border-y border-[var(--border)] px-5 py-3 font-semibold">Domain</th>
@@ -605,7 +630,8 @@ export default function AuditsPage() {
                     description="Administrative actions — sign-ins, permission changes, knowledge edits and approvals — are recorded here as they happen." />
                 ) : (
                   <EmptyState icon={<SearchX className="size-5" />} title="No events match these filters"
-                    description="Try a wider time range or clear the filters." actionLabel="Reset filters" onAction={resetFilters} />
+                    description={`${rows.length} event${rows.length === 1 ? "" : "s"} loaded, but none match the current search or filters.`}
+                    actionLabel="Clear filters" onAction={resetFilters} />
                 )}
               </div>
             )}
@@ -626,12 +652,12 @@ export default function AuditsPage() {
               )}
             </span>
             <div className="flex items-center gap-1.5">
-              <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} />
+              <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage(Math.max(1, safePage - 1))} />
               {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
                 <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
               ))}
               {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
-              <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))} />
+              <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage(Math.min(pageCount, safePage + 1))} />
               <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
             </div>
           </div>

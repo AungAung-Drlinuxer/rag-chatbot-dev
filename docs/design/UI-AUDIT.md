@@ -19,7 +19,7 @@ Legend: ✅ meets the clause · ⚠️ partial or not proven · ✗ missing · n
 | 6 Destructive safety | n/a | n/a | ⚠️ | ⚠️ | ⚠️ | ✅ | n/a | n/a | ⚠️ |
 | 7 Accessibility / keyboard | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
 | 8 Responsive | ⚠️ | ⚠️ | ⚠️ | ✅ | ✗ | ✅ | ⚠️ | ⚠️ | ✅ |
-| 9 URL state | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| 9 URL state | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✅ | ✅ |
 | 10 Code-split / perf | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Clause 10 passes everywhere for the same reason: all nine routes are `lazyPage` imports in
@@ -128,7 +128,7 @@ Where each page sits in the seven shapes from `UI-STANDARD.md`, and what it stil
 | --- | --- | --- |
 | Tickets | List / queue (two-pane) | ✅ reference implementation |
 | Users | List / queue | ✅ sortable headers with `aria-sort`, sticky header via `.table-viewport`, card list under `md`; column chooser still missing |
-| Audit log | List / queue (chronological) | ✅ sticky header, card list, reset-filter action; no column sorting **by design** |
+| Audit log | List / queue (chronological) | ✅ sticky header, card list, sort direction on Time (`aria-sort`), every filter + page in the URL, one empty-state voice on both breakpoints; no multi-column sorting **by design** |
 | Conversations | List / queue (chronological) | ⚠️ card list yes; no sticky header, filters report nothing about how many are loaded |
 | Knowledge | List / queue | ⚠️ sticky header and paging, no column chooser, reason text is generic |
 | Settings | Settings | ✅ rail/picker, section in the URL, loading gate, danger zone last |
@@ -156,3 +156,22 @@ now ask the same question through the router:
 Verified live: toggling a preference enabled Save, clicking Integrations raised the dialog, Cancel
 kept the page and the edit, and the sidebar's Tickets link raised it again — Discard then navigated
 and `show_token_usage` was still `true` on the server, i.e. nothing was written.
+
+### Audit log, brought to the contract (2026-11-13, `dev-1.11.100`)
+
+What the page already had: sticky header, card list under `md`, pager with totals, skeleton rows,
+`ErrorState` with retry, and two distinct empty states.
+
+What it owed:
+
+- **Filters and page were `useState`.** `#/audits?q=admin&dir=asc&page=2` is now the address of a
+  view; a refresh keeps it and the link can be sent. `page=1` is omitted rather than written, so
+  the URL stays readable.
+- **The Time column claimed a sort it could not change** ("Time ↓" as text). It is a button now:
+  newest/oldest, `aria-sort` on the `<th>`, and the direction is part of the URL.
+- **The mobile empty state said something else** than the desktop one ("Try a wider time range"
+  with a Reset button vs. the count and "Clear filters"). Both breakpoints now say the same thing.
+
+Verified live: `?q=admin` survives a reload, flipping Time writes `dir=asc` and reverses the rows
+(from Nov 14 17:24 down to Nov 09 21:11), page 2 writes `?page=2` and page 1 removes it, and the
+375px check shows the count + "Clear filters" with 0 horizontal overflow.
