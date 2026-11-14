@@ -89,3 +89,25 @@ current shape.
 - The Overview board's drag/resize behaviour (verified separately in `315706d`).
 - Per-page performance numbers on a real device; the budgets in the standard are targets, not
   measurements.
+
+## Settings, checked live (2026-11-13, `dev-1.11.93`)
+
+Clause-by-clause, because this page is the one admins live in:
+
+| Clause | Verdict | Evidence |
+| --- | --- | --- |
+| 1 Header | ✅ | `h1 "Settings"`, purpose line, breadcrumb Workspace → Settings; the header action is a role badge, not a second primary |
+| 2 Spacing / type | ⚠️ | padding and gaps sit on the 4/16 scale; hint text is `text-[11px]` in 8 places, below the 12px meta floor |
+| 3 Four states | ✗ | no `Skeleton` anywhere in `features/settings`; with `/api/settings*` blocked the page renders Theme: Light, 16px, all toggles on, and a single red "Failed to fetch." line under Discard — no retry, Save still enabled |
+| 4 Table | n/a | no table on this page |
+| 5 Forms | ✅ | `Field` puts the label above the control and the hint below (`SettingsKit.tsx:94`); per-field validation errors are not supported, only section-level notices |
+| 6 Destructive | ⚠️ | `window.confirm` at `AiServiceSettings.tsx:205`, `ConnectionsCard.tsx:180`, `IntegrationsConfig.tsx:353` |
+| 7 A11y | ✅ | `nav aria-label="Settings sections"` (+ compact variant), `role="switch"` + `aria-checked` on toggles, 38 `aria-label`s, global `:focus-visible` |
+| 8 Responsive | ⚠️ | 375 and 1024 both measure 0 horizontal overflow and the aside folds under at `xl`; but the compact rail is a 1703px scroll strip in a 343px viewport, so 3 of 5 sections sit off-screen with no affordance |
+| 9 URL state | ✗ | section selection is `useState("general")` (`SettingsPage.tsx:262`); switching to Data retention leaves `location.hash` at `#/settings` |
+| 10 Perf | ✅ | lazy route; sections mount with the page, which is fine at this size |
+
+Score: **5 pass, 2 partial, 2 fail, 1 n/a.** To make the page conform: section in the URL, a real
+loading gate (disable Save until loaded) plus `ErrorState` with retry, the three `window.confirm`s
+replaced by the shared dialog, a mobile section picker that does not hide sections behind a swipe,
+and 11px hints raised to 12px.
