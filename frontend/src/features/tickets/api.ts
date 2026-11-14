@@ -21,9 +21,25 @@ export async function improveTicketDescription(text: string, subject = ""): Prom
   return String(d?.description ?? "");
 }
 
+/**
+ * The list answer is 60–170 ms, but the page unmounts on every route change, so coming back to
+ * Tickets re-showed a skeleton for rows the browser had painted seconds earlier. The last answer
+ * is kept in module memory so the page can paint synchronously; the fetch that follows is the
+ * revalidation and quietly replaces it.
+ */
+let ticketsCache: { at: number; tickets: unknown[] } | null = null;
+
+export function cachedTickets(): { at: number; tickets: unknown[] } | null {
+  return ticketsCache;
+}
+
 export async function listTickets(limit = 50) {
   const r = await apiFetch(`${BASE}/api/tickets?limit=${limit}`, { headers: authHeaders() });
-  return r.json();
+  const data = await r.json();
+  if (Array.isArray(data?.tickets)) {
+    ticketsCache = { at: Date.now(), tickets: data.tickets as unknown[] };
+  }
+  return data;
 }
 
 /** v1.6.9 — pull upstream tickets into the local mirror (admin/agent only). */

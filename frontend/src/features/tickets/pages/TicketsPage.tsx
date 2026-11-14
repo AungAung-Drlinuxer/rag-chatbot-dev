@@ -1,7 +1,8 @@
 import {
   Filter,
+  GitCompareArrows,
+  Loader2,
   Plus,
-  RefreshCw,
   Ticket as TicketIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +12,9 @@ import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/p
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
+  cachedTickets,
   listTicketDestinations,
   listTickets,
   syncJiraTickets,
@@ -64,7 +67,12 @@ const PAGE_SIZE = 10;
 export default function Tickets({ role, userName, onToast }: Props) {
   const canManage = role === "admin";
 
-  const [tickets, setTickets] = useState<Ticket[] | null>(null);
+  /* Painted from the last list we saw, when there is one: a skeleton for data the user was just
+     looking at reads as "slow", not as "loading". The mount fetch still runs and replaces it. */
+  const [tickets, setTickets] = useState<Ticket[] | null>(() => {
+    const cached = cachedTickets();
+    return cached ? (cached.tickets as Ticket[]) : null;
+  });
   const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [listBusy, setListBusy] = useState(false);
 
@@ -495,6 +503,8 @@ export default function Tickets({ role, userName, onToast }: Props) {
           <div className="flex items-center gap-2">
             {canManage && (
               <>
+                {/* The brand mark does the work "Sync Jira" used to do in words: Atlassian's own
+                    vector, never recoloured, on the same 16px baseline as every other icon here. */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -503,7 +513,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
                   onClick={syncTickets}
                   title="Import the latest issues from Jira"
                 >
-                  <RefreshCw className={`mr-2 size-3.5 ${syncBusy ? "animate-spin" : ""}`} />
+                  {syncBusy ? (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  ) : (
+                    <IntegrationLogo providerKey="jira" name="Jira" size="sm" className="mr-2 size-4" />
+                  )}
                   {syncBusy ? "Syncing…" : "Sync Jira"}
                 </Button>
                 <Button
@@ -514,9 +528,14 @@ export default function Tickets({ role, userName, onToast }: Props) {
                   onClick={reconcileTickets}
                   title="Check every ticket against Jira: remove issues deleted there, adopt changed statuses"
                 >
-                  <RefreshCw className={`mr-2 size-3.5 ${reconcileBusy ? "animate-spin" : ""}`} />
+                  {reconcileBusy ? (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  ) : (
+                    <GitCompareArrows className="mr-2 size-4 text-[var(--muted-foreground)]" />
+                  )}
                   {reconcileBusy ? "Reconciling…" : "Reconcile"}
                 </Button>
+                <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-[var(--border)]" />
               </>
             )}
             <Button size="sm" className="rounded-lg" onClick={() => setCreateOpen(true)}>

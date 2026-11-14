@@ -21,6 +21,8 @@ import { createRoot, type Root } from "react-dom/client";
 
 vi.mock("@/features/tickets/api", () => ({
   listTickets: vi.fn(),
+  /* No in-memory list in tests: every case starts from a cold page. */
+  cachedTickets: vi.fn(() => null),
   listTicketDestinations: vi.fn(),
   syncJiraTickets: vi.fn(),
   listActiveDomains: vi.fn(),
@@ -335,4 +337,20 @@ describe("TicketsPage — queue, edit dialog and create dialog", () => {
     expect(onToast).toHaveBeenCalledWith(expect.stringContaining("Ticket IT-99 created"), "ok");
   });
 
+});
+
+describe("TicketsPage — returning to the page", () => {
+  it("paints the rows from the in-memory list instead of a skeleton", async () => {
+    const cached = (ticketsApi as any).cachedTickets as ReturnType<typeof vi.fn>;
+    cached.mockReturnValue({
+      at: Date.now(),
+      tickets: [ticket({ id: "ITHD-90", subject: "Cached row", status: "open", priority: "high", requester: "ith@admin" })],
+    });
+    // the network is still in flight; the cached row is what the user should see
+    m.listTickets.mockReturnValue(new Promise(() => {}));
+    const el = await mount("admin");
+    expect(el.querySelectorAll("[data-slot='skeleton']").length).toBe(0);
+    expect(el.textContent).toContain("ITHD-90");
+    cached.mockReturnValue(null);
+  });
 });
