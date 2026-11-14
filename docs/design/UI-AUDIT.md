@@ -18,8 +18,8 @@ Legend: ✅ meets the clause · ⚠️ partial or not proven · ✗ missing · n
 | 5 Forms | ✅ | n/a | ✅ | ✅ | ✅ | ✅ | n/a | n/a | ✅ |
 | 6 Destructive safety | n/a | n/a | ⚠️ | ⚠️ | ⚠️ | ✅ | n/a | n/a | ⚠️ |
 | 7 Accessibility / keyboard | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
-| 8 Responsive | ⚠️ | ⚠️ | ⚠️ | ✅ | ✗ | ✅ | ⚠️ | ⚠️ | ✅ |
-| 9 URL state | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✅ | ✅ |
+| 8 Responsive | ⚠️ | ⚠️ | ⚠️ | ✅ | ✗ | ✅ | ✅ | ✅ | ✅ |
+| 9 URL state | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✅ | ✅ | ✅ |
 | 10 Code-split / perf | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Clause 10 passes everywhere for the same reason: all nine routes are `lazyPage` imports in
@@ -129,7 +129,7 @@ Where each page sits in the seven shapes from `UI-STANDARD.md`, and what it stil
 | Tickets | List / queue (two-pane) | ✅ reference implementation |
 | Users | List / queue | ✅ sortable headers with `aria-sort`, sticky header via `.table-viewport`, card list under `md`; column chooser still missing |
 | Audit log | List / queue (chronological) | ✅ sticky header, card list, sort direction on Time (`aria-sort`), every filter + page in the URL, one empty-state voice on both breakpoints; no multi-column sorting **by design** |
-| Conversations | List / queue (chronological) | ⚠️ card list yes; no sticky header, filters report nothing about how many are loaded |
+| Conversations | List / queue (chronological) | ✅ card list under `md`, sticky header via `.table-viewport`, filters + page in the URL, one empty-state voice on both breakpoints |
 | Knowledge | List / queue | ⚠️ sticky header and paging, no column chooser, reason text is generic |
 | Settings | Settings | ✅ rail/picker, section in the URL, loading gate, danger zone last |
 | Overview | Dashboard | ⚠️ panels rearrange and survive reload; time range is not in the URL |
@@ -175,3 +175,20 @@ What it owed:
 Verified live: `?q=admin` survives a reload, flipping Time writes `dir=asc` and reverses the rows
 (from Nov 14 17:24 down to Nov 09 21:11), page 2 writes `?page=2` and page 1 removes it, and the
 375px check shows the count + "Clear filters" with 0 horizontal overflow.
+
+### Conversations, brought to the contract (2026-11-13, `dev-1.11.101`)
+
+- The table sat in `overflow-auto` with no height, so its sticky `<thead>` had nothing to stick
+  to; `.table-viewport` fixes that the same way it did for Users and Audit log.
+- Filters (`q`, `user`, `from`, `to`, `page`) lived in `useState`. They are in the hash now, so a
+  refresh keeps them and "the VPN chats from Tuesday" can be sent as a link.
+- Below `md` the page was a table with two columns left over. It now renders the same rows as
+  cards (user avatar, title, messages, last activity), with the table hidden.
+
+Verified live: `?q=vpn` survives a reload and the footer reads "Showing 11 of 80 conversations
+(filtered)"; at 375px the table is `display:none` with 10 cards and 0 horizontal overflow; the
+filtered-empty state shows the loaded count and Clear filters exactly as the desktop one does.
+
+`useUrlParams` was also corrected while doing this: it read the hash back after every set, so a
+page rendered without a hash (tests, embedded views) silently dropped filters. State is the source
+of truth now and the hash mirrors it, writing only when a hash exists.

@@ -19,6 +19,7 @@ import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { listUsers } from "@/features/users/api";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
+import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -164,8 +165,13 @@ function StatCard({
 export default function ConversationHistoryPage() {
   const [convs, setConvs] = useState<Conv[]>([]);
   const [users, setUsers] = useState<string[]>([]);
-  const [filterUser, setFilterUser] = useState("");
-  const [q, setQ] = useState("");
+  /* A filtered conversation list is something people send to each other — "the VPN chats
+     from Tuesday" — so it lives in the address, like the audit log. */
+  const [params, setParams] = useUrlParams(["q", "user", "from", "to", "page"] as const);
+  const filterUser = params.user;
+  const q = params.q;
+  const setFilterUser = (v: string) => setParams({ user: v, page: null });
+  const setQ = (v: string) => setParams({ q: v, page: null });
   const [open, setOpen] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [openUser, setOpenUser] = useState("");
@@ -175,11 +181,14 @@ export default function ConversationHistoryPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   // v0.21.83 — audit date range + export actions moved into the detail panel
-  const [fromDate, setFromDate] = useState("");
   /* Ten per page, the same rhythm as Users — a conversation list is read page by page,
      not scrolled as one endless strip. */
-  const [page, setPage] = useState(1);
-  const [toDate, setToDate] = useState("");
+  const fromDate = params.from;
+  const toDate = params.to;
+  const page = Math.max(1, Number(params.page) || 1);
+  const setFromDate = (v: string) => setParams({ from: v, page: null });
+  const setToDate = (v: string) => setParams({ to: v, page: null });
+  const setPage = (v: number) => setParams({ page: v <= 1 ? null : String(v) });
 
   async function load() {
     setLoading(true);
@@ -458,7 +467,7 @@ export default function ConversationHistoryPage() {
           </button>
             </div>
 
-            <div className="table-scroll overflow-auto">
+            <div className="table-scroll table-viewport hidden md:block">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-[var(--muted)]/50 text-2xs uppercase tracking-wider text-muted-foreground">
@@ -546,13 +555,72 @@ export default function ConversationHistoryPage() {
                           title="No conversations match these filters"
                           description={`${convs.length} conversation${convs.length === 1 ? "" : "s"} loaded, but none match the current search or date range.`}
                           actionLabel="Clear filters"
-                          onAction={() => { setQ(""); setFromDate(""); setToDate(""); setFilterUser(""); }}
+                          onAction={() => setParams({ q: null, from: null, to: null, user: null, page: null })}
                         />
                       )}
                     </td></tr>
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Below md: the same rows as cards. Hiding the Msgs/Provider columns still left a
+                table squeezed onto a 375px screen; the list archetype's answer is a card list. */}
+            <div className="divide-y divide-[var(--border)] md:hidden">
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                <div key={"msk" + i} className="px-4 py-4">
+                  <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${55 + ((i * 13) % 35)}%` }} />
+                  <div className="mt-2 h-3 w-1/3 animate-pulse rounded bg-muted" />
+                </div>
+              ))}
+              {!loading && pageRows.map((c) => (
+                <button
+                  key={c.session_id}
+                  type="button"
+                  onClick={() => view(c)}
+                  className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition hover:bg-muted/40 focus-visible:bg-muted/40"
+                >
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-full text-2xs font-bold ${toneFor(c.username)}`}>
+                    {c.username.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block line-clamp-2 text-xs font-medium leading-snug text-foreground">
+                      {maskProfanity(c.title) || "(untitled conversation)"}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-2xs text-muted-foreground">
+                      <span className="truncate">{c.username}</span>
+                      <span aria-hidden>·</span>
+                      <span>{c.messages} msg</span>
+                      <span aria-hidden>·</span>
+                      <span className="whitespace-nowrap">{fmt(c.last_at)}</span>
+                    </span>
+                  </span>
+                </button>
+              ))}
+              {!loading && error && (
+                <div className="p-4">
+                  <ErrorState compact title="Could not load conversations" detail={error} onRetry={load} />
+                </div>
+              )}
+              {!loading && !error && shown.length === 0 && (
+                <div className="p-4">
+                  {convs.length === 0 ? (
+                    <EmptyState
+                      icon={<MessagesSquare className="size-5" />}
+                      title="No conversations yet"
+                      description="Chat sessions appear here once users start asking the assistant questions."
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={<SearchX className="size-5" />}
+                      title="No conversations match these filters"
+                      description={`${convs.length} conversation${convs.length === 1 ? "" : "s"} loaded, but none match the current search or date range.`}
+                      actionLabel="Clear filters"
+                      onAction={() => setParams({ q: null, from: null, to: null, user: null, page: null })}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* range + pager footer — the same footer as Users */}
@@ -562,12 +630,12 @@ export default function ConversationHistoryPage() {
                   Showing {rangeStart} to {rangeEnd} of {shown.length} conversations
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage((n) => Math.max(1, n - 1))} />
+                  <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage(Math.max(1, safePage - 1))} />
                   {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
                     <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
                   ))}
                   {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
-                  <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage((n) => Math.min(pageCount, n + 1))} />
+                  <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage(Math.min(pageCount, safePage + 1))} />
                   <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
                 </div>
               </div>
