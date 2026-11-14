@@ -114,6 +114,12 @@ the state after the fix, verified on the dev cluster.
 Score: **9 pass, 1 n/a.** The section is shareable, the page cannot save a value the user never
 saw, and every destructive action goes through the same dialog as the rest of the app.
 
+Every section now gates its own fetch, not just Preferences (`SectionSkeleton` while loading,
+`SectionProblem` + retry on failure, controls absent until loaded) — verified on the dev cluster by
+blocking `/api/settings/smtp` and `/api/settings/retention` (both showed the problem state, no
+form) and by adding 2.2s of latency to AI service and Integrations (both showed their skeleton),
+with retry recovering the retention section once the endpoint was reachable again.
+
 ## Page → archetype
 
 Where each page sits in the seven shapes from `UI-STANDARD.md`, and what it still owes.

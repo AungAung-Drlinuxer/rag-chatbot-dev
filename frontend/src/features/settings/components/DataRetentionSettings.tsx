@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Clock3, DatabaseZap, Loader2, Play, Save, ShieldAlert } from "lucide-react";
 
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
-import { BTN_DANGER, BTN_PRIMARY, INPUT_MONO, Panel, Row } from "./SettingsKit";
+import { BTN_DANGER, BTN_PRIMARY, INPUT_MONO, Panel, Row, SectionProblem, SectionSkeleton } from "./SettingsKit";
 
 /**
  * Data retention for conversation history and the audit trail.
@@ -132,6 +132,13 @@ export function DataRetentionSettings() {
       }`
     : "Calculating…";
 
+  /* No policy yet means the fetch has not answered: show the shape of the page, not a
+     "Keep forever" default that would look like the stored policy. */
+  if (policy === null) {
+    return error
+      ? <SectionProblem title="Could not load the retention policy" detail={error} onRetry={() => void load()} />
+      : <SectionSkeleton rows={3} label="Loading the retention policy" />;
+  }
   return (
     <div className="space-y-4">
       {error && <p className="text-xs text-[var(--danger)]">{error}</p>}

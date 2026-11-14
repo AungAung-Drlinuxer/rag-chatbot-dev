@@ -28,6 +28,8 @@ import { LLM_PRESETS, presetFor, providerLabel } from "../llmProviders";
 import { IntegrationLogo } from "./IntegrationLogo";
 import {
   BTN_DANGER, BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, INPUT_MONO, Panel, Pill, Row,
+  SectionProblem,
+  SectionSkeleton,
 } from "./SettingsKit";
 
 type Msg = { ok: boolean; text: string } | null;
@@ -59,6 +61,9 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
 
   // ---- status ----------------------------------------------------------------------
   const [loading, setLoading] = useState(true);
+  /* A failed fetch used to be swallowed, leaving a form with the default provider and empty
+     fields that looked like an unconfigured install rather than a broken request. */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -81,7 +86,10 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
       setFieldsSet(d?.fields_set ?? []);
       setSecretFields(d?.secret_fields ?? []);
       setUpdatedAt(d?.updated_at ?? null);
-    } catch { /* non-admin or unconfigured */ }
+      setLoadError(null);
+    } catch (e: any) {
+      setLoadError(e?.message || "Could not load the AI service configuration");
+    }
   };
 
   const loadRuntime = async () => {
@@ -251,11 +259,18 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
     );
   }
 
-  if (loading) {
+  if (loading) return <SectionSkeleton rows={4} label="Loading the AI service configuration" />;
+  if (loadError) {
     return (
-      <div data-slot="card" className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-card p-6 text-xs text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Loading the AI service configuration…
-      </div>
+      <SectionProblem
+        title="Could not load the AI service configuration"
+        detail={loadError}
+        onRetry={() => {
+          setLoadError(null);
+          setLoading(true);
+          void Promise.all([load(), loadRuntime()]).finally(() => setLoading(false));
+        }}
+      />
     );
   }
 

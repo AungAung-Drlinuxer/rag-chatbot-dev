@@ -9,7 +9,7 @@
  * Stored values are write-only (the API returns a mask): a configured field is rendered
  * as a locked row and must be explicitly replaced, and only typed values are submitted.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle, Check, CheckCircle2, ExternalLink, Info, Loader2, Lock, Mail, Pencil,
   Save, Send, ShieldCheck,
@@ -17,7 +17,7 @@ import {
 
 import { getSmtpSettings, putSmtpSettings, sendTestEmail } from "@/features/settings/api";
 import {
-  BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, Panel, Pill, Row,
+  BTN_GHOST, BTN_PRIMARY, Field, FieldGrid, INPUT, Panel, Pill, Row, SectionProblem, SectionSkeleton,
 } from "./SettingsKit";
 
 type Form = {
@@ -46,7 +46,10 @@ export function EmailServerSettings() {
   const smtpEditable = (k: string) =>
     !smtpConfigured(k) || !!replacingSmtp[k] || !!form[k as "host" | "username" | "from"];
 
-  useEffect(() => {
+  const [loadedOk, setLoadedOk] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
     getSmtpSettings()
       .then((d) => {
         const s = d.smtp ?? {};
@@ -62,10 +65,14 @@ export function EmailServerSettings() {
           enabled: s.enabled !== false,
         });
         setPasswordSet(!!s.password_set);
+        setLoadedOk(true);
+        setError(null);
       })
       .catch(() => setError("Failed to load mail settings"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   async function save() {
     // A stored (masked) field counts as satisfied — it is write-only, so the admin is
@@ -160,6 +167,17 @@ export function EmailServerSettings() {
 
   const tlsOn = form.use_tls;
   const hostKnown = smtpConfigured("host") || !!form.host.trim();
+
+  if (loading && !loadedOk) return <SectionSkeleton rows={4} label="Loading the mail server settings" />;
+  if (!loadedOk) {
+    return (
+      <SectionProblem
+        title="Could not load the mail server settings"
+        detail={error}
+        onRetry={() => { setError(null); load(); }}
+      />
+    );
+  }
 
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">

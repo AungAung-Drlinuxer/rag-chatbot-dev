@@ -9,6 +9,8 @@
  * only, so light (violet/white) and dark (charcoal-navy) both work without variants.
  */
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/page";
 
 export const INPUT =
   "h-9 w-full rounded-xl border border-[var(--border)] bg-background px-3 text-xs text-foreground " +
@@ -184,5 +186,55 @@ export function ResultLine({ ok, children }: { ok: boolean; children: ReactNode 
     <p className={`flex items-center gap-1 text-xs ${ok ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
       {children}
     </p>
+  );
+}
+
+
+/* ---------------------------------------------------------------------------
+   Section states
+   ---------------------------------------------------------------------------
+   Every Settings section fetches its own data. Before these existed, a section
+   that was still loading (or had failed) rendered its controls with defaults,
+   which on a settings page reads as "these are your stored values" — the most
+   expensive kind of wrong.
+--------------------------------------------------------------------------- */
+
+/** Shaped like a Panel: a header line and `rows` control rows, so nothing jumps on arrival. */
+export function SectionSkeleton({ rows = 3, label }: { rows?: number; label: string }) {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label={label}>
+      <div className="rounded-2xl border border-[var(--border)] bg-card">
+        <div className="flex items-start gap-3 border-b border-[var(--border)] px-5 py-4">
+          <Skeleton className="mt-0.5 size-4 rounded" />
+          <div className="space-y-2">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-72 max-w-full" />
+          </div>
+        </div>
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 last:border-0">
+            <div className="space-y-2">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3 w-56 max-w-full" />
+            </div>
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A failed fetch, with the retry the reader needs — never a silent default form. */
+export function SectionProblem({ title, detail, onRetry }: {
+  title: string; detail?: string | null; onRetry?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-card">
+      <ErrorState title={title} detail={detail ?? null} onRetry={onRetry} />
+      <p className="px-5 pb-4 text-xs text-muted-foreground">
+        Nothing here has been changed. The controls stay hidden until the stored values load.
+      </p>
+    </div>
   );
 }

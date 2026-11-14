@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, ChevronRight,
 } from "lucide-react";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
+import { SectionSkeleton } from "@/features/settings/components/SettingsKit";
 import { ConnectionsCard } from "@/features/settings/components/ConnectionsCard";
 import { useConfirm } from "@/components/ui/confirm";
 import {
@@ -903,13 +904,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
 
   const activeProvider = selected ? BY_KEY[selected] : null;
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 px-1 py-8 text-xs text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Loading integrations…
-      </div>
-    );
-  }
+  if (loading) return <SectionSkeleton rows={4} label="Loading integrations" />;
 
   return (
     <div className="space-y-4">
