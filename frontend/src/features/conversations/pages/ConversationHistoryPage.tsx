@@ -14,7 +14,12 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { adminListConversations, adminConversationMessages, adminDownloadConversation } from "@/features/conversations/admin-api";
+import {
+  adminListConversations,
+  adminConversationMessages,
+  adminDownloadConversation,
+  adminListAdmins,
+} from "@/features/conversations/admin-api";
 import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { listUsers } from "@/features/users/api";
@@ -238,15 +243,48 @@ export default function ConversationHistoryPage() {
     setDetailError(null);
   }
 
-  function download(c: Conv, format: "txt" | "json") {
-    adminDownloadConversation(c.session_id, format)
-      .then((r) => r.blob())
-      .then((b) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(b);
-        a.download = `conversation-${c.username}-${c.session_id.slice(0, 8)}.${format}`;
-        a.click();
+  /* Exporting a transcript leaves the building, so it goes through a dialog that names the
+     administrator the download is recorded for — and the file itself, the audit entry and the
+     .txt header all carry that name. A button that silently saved a file could not say who
+     asked for it. */
+  const [exportFor, setExportFor] = useState<Conv | null>(null);
+  const [exportFormat, setExportFormat] = useState<"txt" | "json">("txt");
+  const [exportAdmins, setExportAdmins] = useState<{ username: string; email?: string }[]>([]);
+  const [exportAdmin, setExportAdmin] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  function openExport(c: Conv, format: "txt" | "json") {
+    setExportFor(c);
+    setExportFormat(format);
+    setExportError(null);
+    if (exportAdmins.length === 0) {
+      void adminListAdmins().then((list) => {
+        setExportAdmins(list);
+        setExportAdmin((prev) => prev || list[0]?.username || "");
       });
+    }
+  }
+
+  async function confirmExport() {
+    if (!exportFor) return;
+    setExportBusy(true);
+    setExportError(null);
+    try {
+      const r = await adminDownloadConversation(exportFor.session_id, exportFormat, exportAdmin || undefined);
+      if (!r.ok) throw new Error(`Export failed (HTTP ${r.status})`);
+      const b = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `conversation-${exportFor.username}-${exportFor.session_id.slice(0, 8)}.${exportFormat}`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setExportFor(null);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExportBusy(false);
+    }
   }
 
   const shown = useMemo(() => {
@@ -690,13 +728,13 @@ export default function ConversationHistoryPage() {
 
                     <div className="mt-3 flex items-center gap-1.5">
                       <button
-                        onClick={() => download(detail, "txt")}
+                        onClick={() => openExport(detail, "txt")}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2 py-1.5 text-2xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90"
                       >
                         <FileText className="size-3" /> Export .txt
                       </button>
                       <button
-                        onClick={() => download(detail, "json")}
+                        onClick={() => openExport(detail, "json")}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-1.5 text-2xs font-semibold transition hover:bg-muted"
                       >
                         <FileJson className="size-3" /> Export .json
@@ -793,10 +831,81 @@ export default function ConversationHistoryPage() {
           </DialogContent>
         </Dialog>
 
-        <p className="text-2xs leading-relaxed text-muted-foreground">
-          Transcripts are read-only. Exports contain exactly the messages stored for the
-          session; nothing is redacted beyond the profanity mask applied to titles.
-        </p>
+        {/* Export is a decision, not a click: name the administrator it is recorded for. */}
+        <Dialog open={!!exportFor} onOpenChange={(o) => { if (!o) setExportFor(null); }}>
+          <DialogContent size="confirm">
+            <DialogTitle>Export conversation</DialogTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {exportFor
+                ? `${exportFor.username} · ${maskProfanity(exportFor.title) || "(untitled conversation)"} · ${exportFor.messages} message${exportFor.messages === 1 ? "" : "s"}`
+                : ""}
+            </p>
+
+            <div className="mt-4">
+              <label htmlFor="export-admin" className="block text-xs font-medium text-foreground">
+                Administrator
+              </label>
+              <p className="mt-0.5 text-2xs text-muted-foreground">
+                Recorded in the audit log and in the exported file's header.
+              </p>
+              <select
+                id="export-admin"
+                value={exportAdmin}
+                onChange={(e) => setExportAdmin(e.target.value)}
+                className="mt-2 h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-sm text-foreground outline-none focus:border-[var(--primary)]"
+              >
+                {exportAdmins.length === 0 && <option value="">Loading administrators…</option>}
+                {exportAdmins.map((a) => (
+                  <option key={a.username} value={a.username}>
+                    {a.username}{a.email ? ` · ${a.email}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-4 flex gap-2" role="group" aria-label="Export format">
+              {(["txt", "json"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setExportFormat(f)}
+                  aria-pressed={exportFormat === f}
+                  className={[
+                    "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition",
+                    exportFormat === f
+                      ? "border-[var(--primary)] bg-[var(--accent-soft)] text-[var(--accent-foreground)]"
+                      : "border-[var(--border)] text-muted-foreground hover:bg-muted",
+                  ].join(" ")}
+                >
+                  {f === "txt" ? "Text · .txt" : "JSON · .json"}
+                </button>
+              ))}
+            </div>
+
+            {exportError && (
+              <p className="mt-3 text-xs text-[var(--danger)]" role="alert">{exportError}</p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setExportFor(null)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium transition hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmExport}
+                disabled={exportBusy || !exportAdmin}
+                className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 disabled:opacity-50"
+              >
+                {exportBusy ? "Exporting…" : `Download .${exportFormat}`}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </main>
     </PageShell>
   );

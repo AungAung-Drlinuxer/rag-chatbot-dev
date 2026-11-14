@@ -555,14 +555,62 @@ def admin_conversation_messages(session_id: str, user: str = Depends(get_current
             ]}
 
 
-@router.get("/admin/conversations/{session_id}/export")
-def admin_conversation_export(session_id: str, format: str = "txt",
-                              user: str = Depends(get_current_user)):
-    """Admin: export a conversation transcript as .txt (or .json)."""
+@router.get("/admin/admins")
+def admin_list_admins(user: str = Depends(get_current_user)) -> dict:
+    """Administrator accounts, for dialogs that must name who an action is done for.
+
+    Only what the picker needs — the full /api/users payload drags the directory mirror with
+    it, and an export confirmation has no use for a user's department.
+    """
     _require_admin_cap(user, "manage_users")
+    from app.auth.rbac import get_role
+
+    with SessionLocal() as s:
+        rows = s.execute(text(
+            "SELECT username, COALESCE(email, '') AS email FROM users "
+            "WHERE status = 'Active' ORDER BY username")).fetchall()
+    out = []
+    for username, email in rows:
+        try:
+            if get_role(username) != "admin":
+                continue
+        except Exception:
+            continue
+        out.append({"username": username, "email": email})
+    # The caller is always usable, even before their row exists (dev_admin_usernames).
+    if not any(a["username"] == user for a in out):
+        out.insert(0, {"username": user, "email": ""})
+    return {"admins": out}
+
+
+@router.get("/admin/conversations/{session_id}/export")
+def admin_conversation_export(session_id: str, format: str = "txt", on_behalf_of: str = "",
+                              user: str = Depends(get_current_user)):
+    """Admin: export a conversation transcript as .txt (or .json).
+
+    `on_behalf_of` is the administrator the export is recorded for — the dialog asks for it, and
+    both names go into the audit entry and the .txt header. The caller is still checked: naming
+    another admin never grants access, it only attributes the download.
+    """
+    _require_admin_cap(user, "manage_users")
+    requested_for = (on_behalf_of or user).strip() or user
+    if requested_for != user:
+        from app.auth.rbac import get_role
+
+        try:
+            allowed = get_role(requested_for) == "admin"
+        except Exception:
+            allowed = False
+        if not allowed:
+            raise HTTPException(status_code=400, detail="on_behalf_of must be an administrator")
     from fastapi.responses import Response
 
     d = admin_conversation_messages(session_id, user)
+    try:
+        audit("conversation.export", user,
+              detail=f"session={session_id} format={format} on_behalf_of={requested_for}")
+    except Exception as _exc:  # an audit failure must not block the download
+        logger.debug("export audit skipped: %s", _exc)
     fname = f"conversation-{d['username']}-{session_id[:8]}"
     if format == "json":
         import json as _json
@@ -574,7 +622,8 @@ def admin_conversation_export(session_id: str, format: str = "txt",
         "Conversation export — IT Help Chatbot",
         f"User: {d['username']}   Session: {session_id}",
         f"Started: {d['started_at']}   Title: {d['title'] or '(untitled)'}",
-        f"Exported: {datetime.now(UTC).isoformat()} by {user}",
+        f"Exported: {datetime.now(UTC).isoformat()} by {requested_for}"
+        + (f" (session: {user})" if requested_for != user else ""),
         "=" * 60, "",
     ]
     for m in d["messages"]:
