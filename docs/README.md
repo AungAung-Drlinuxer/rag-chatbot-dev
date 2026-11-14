@@ -46,6 +46,14 @@ Start with the row that matches what you are trying to do.
 - **[architecture/REDIS.md](architecture/REDIS.md)** — standalone vs Sentinel, Celery broker
   and result backend, caching, rate limits.
 
+## Design
+
+- **[design/UI-STANDARD.md](design/UI-STANDARD.md)** — the page contract: anatomy, grid,
+  typography, tables, forms, the four states, destructive actions, accessibility, URL state and
+  performance budgets, with the file that owns each rule.
+- **[design/UI-AUDIT.md](design/UI-AUDIT.md)** — the nine pages scored against that contract,
+  with the evidence and a fix list in priority order.
+
 ## Existing deep-dive material
 
 These predate the guides above and remain accurate for their specific topics:
