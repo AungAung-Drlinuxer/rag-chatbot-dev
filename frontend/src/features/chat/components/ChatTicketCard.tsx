@@ -1,4 +1,16 @@
-import { CalendarDays, CheckCircle2, ExternalLink, Loader2, Pencil, Sparkles, Ticket, User } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Layers,
+  Loader2,
+  Pencil,
+  Sparkles,
+  Tag,
+  Ticket,
+  User,
+} from "lucide-react";
 
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import type { TicketDraft } from "@/features/chat/model";
@@ -104,6 +116,30 @@ export function ChatTicketCard({
         <span className="inline-flex items-center gap-1 rounded-md bg-[var(--muted)]/50 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
           <Ticket className="size-3" /> {domainLabel || draft.domain}
         </span>
+        {(draft.components || []).map((c) => (
+          <span
+            key={c}
+            className="inline-flex items-center gap-1 rounded-md bg-[var(--muted)]/50 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground"
+          >
+            <Layers className="size-3" /> {c}
+          </span>
+        ))}
+        {draft.original_estimate && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-[var(--muted)]/50 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
+            <Clock className="size-3" /> Est: {draft.original_estimate}
+          </span>
+        )}
+        {(draft.labels || [])
+          .filter((l) => l.toLowerCase() !== (domainLabel || draft.domain).toLowerCase())
+          .slice(0, 2)
+          .map((l) => (
+          <span
+            key={l}
+            className="inline-flex items-center gap-1 rounded-md bg-[var(--muted)]/40 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground"
+          >
+            <Tag className="size-3" /> {l}
+          </span>
+        ))}
         {draft.assignee && (
           <span className="inline-flex items-center gap-1 rounded-md bg-[var(--muted)]/50 px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
             <User className="size-3" /> {draft.assignee}

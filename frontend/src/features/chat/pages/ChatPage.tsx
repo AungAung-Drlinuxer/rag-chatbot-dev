@@ -465,6 +465,9 @@ export default function Chat({ onNavigate, userName }: Props) {
         priority: fields.priority,
         assignee: fields.assignee,
         due_date: fields.due_date,
+        components: fields.components ?? [],
+        labels: fields.labels ?? [],
+        original_estimate: fields.original_estimate ?? null,
         destination: "jira",
         session_id: sessionId,
       });

@@ -36,6 +36,12 @@ class TicketCreate(BaseModel):
     # v1.6.8 — chat session the request came from (chat dialog only); used to
     # drop the "ticket created" notice into the user's chat history.
     session_id: str | None = None
+    # The rest of a Jira create screen. These are applied to the issue right after it exists
+    # (JSM's request API only accepts summary/description), best-effort per field.
+    components: list[str] | None = None
+    labels: list[str] | None = None
+    original_estimate: str | None = None
+    issue_type: str = "Task"
 
     def effective_subject(self) -> str:
         return (self.subject or self.summary or "").strip()
@@ -287,7 +293,8 @@ def list_tickets(
     # escalation history survives, but they must not appear on the board.
     sql = (
         "SELECT id, jira_key, session_id, domain, status, created_by, created_at, "
-        "subject, description, priority, assignee, due_date "
+        "subject, description, priority, assignee, due_date, components, labels, "
+        "original_estimate, issue_type "
         "FROM jira_tickets "
         "WHERE COALESCE(status, '') <> 'deleted' "
         + ("AND created_by = :user " if not privileged else "")
@@ -324,6 +331,10 @@ def list_tickets(
                 "requester": r.get("created_by") or "unknown",
                 "assignee": r.get("assignee"),
                 "due_date": r["due_date"].isoformat() if r.get("due_date") else None,
+                "components": [c.strip() for c in (r.get("components") or "").split(",") if c.strip()],
+                "labels": [l.strip() for l in (r.get("labels") or "").split(",") if l.strip()],
+                "original_estimate": r.get("original_estimate"),
+                "issue_type": r.get("issue_type") or "Task",
                 "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
                 "updated_at": r["created_at"].isoformat() if r.get("created_at") else None,
             }
@@ -449,6 +460,27 @@ def create_ticket(
             domain=req.domain,
         )
         ext_key, ext_link, ext_mode = res.get("jira_key"), res.get("link", ""), res.get("mode", "")
+
+        # Jira's priority names are not our words: the create screen offers Lowest…Highest.
+        _priority_map = {"critical": "Highest", "high": "High", "medium": "Medium",
+                         "low": "Low", "lowest": "Lowest", "highest": "Highest"}
+        field_warnings: list[str] = []
+        if ext_key:
+            from app.integrations.jira import apply_issue_fields
+
+            try:
+                extra = apply_issue_fields(
+                    ext_key,
+                    priority=_priority_map.get((req.priority or "").lower()),
+                    labels=req.labels,
+                    components=req.components,
+                    due_date=req.due_date,
+                    original_estimate=req.original_estimate,
+                )
+                field_warnings = extra.get("warnings", []) or []
+            except Exception as exc:  # noqa: BLE001 — the ticket exists; do not fail the call
+                logger.warning("apply_issue_fields(%s) failed: %s", ext_key, exc)
+                field_warnings = [f"extra fields not applied: {type(exc).__name__}"]
         if not ext_key:
             raise HTTPException(
                 status_code=502,
@@ -477,6 +509,10 @@ def create_ticket(
             priority=req.priority[:16],
             assignee=assignee_name,
             due_date=(_dt.fromisoformat(req.due_date) if req.due_date else None),
+            components=", ".join(req.components or []) or None,
+            labels=", ".join(req.labels or []) or None,
+            original_estimate=(req.original_estimate or None),
+            issue_type=(req.issue_type or "Task")[:32],
         )
         s.add(row)
         s.commit()
@@ -520,6 +556,11 @@ def create_ticket(
             "assignee": row.assignee,
             "assignee_error": assignee_error,
             "due_date": row.due_date.isoformat() if row.due_date else None,
+            "components": req.components or [],
+            "labels": req.labels or [],
+            "original_estimate": req.original_estimate,
+            "issue_type": req.issue_type or "Task",
+            "field_warnings": field_warnings,
         }
 
 
@@ -767,6 +808,9 @@ class TicketUpdateRequest(BaseModel):
     #: field on the issue, so it is stored here and shown on the row.
     category: str | None = None
     due_date: str | None = None  # ISO date
+    components: list[str] | None = None
+    labels: list[str] | None = None
+    original_estimate: str | None = None
     subject: str | None = None
     description: str | None = None
     #: Posted to the Jira issue as part of the same save as the status change.
@@ -858,6 +902,17 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
             due_date=req.due_date if req.due_date is not None else None,
         )
         fields_synced = bool(pushed.get("ok"))
+        if any(v is not None for v in (req.components, req.labels, req.original_estimate)):
+            from app.integrations.jira import apply_issue_fields
+
+            more = apply_issue_fields(
+                row.jira_key,
+                labels=req.labels,
+                components=req.components,
+                original_estimate=req.original_estimate,
+            )
+            if more.get("warnings"):
+                sync_notes.append("; ".join(more["warnings"]))
         if not fields_synced:
             logger.warning("jira field update refused for %s: %s", row.jira_key, pushed.get("detail"))
             sync_notes.append(f"fields not saved to Jira ({pushed.get('detail')})")
@@ -903,6 +958,15 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
                        wanted.lower().replace(" ", "_"))
             row.domain = key[:64]
             changes.append(f"category → {labels.get(key, wanted)}")
+        if req.components is not None:
+            row.components = ", ".join([c for c in req.components if c]) or None
+            changes.append("components edited")
+        if req.labels is not None:
+            row.labels = ", ".join([l for l in req.labels if l]) or None
+            changes.append("labels edited")
+        if req.original_estimate is not None:
+            row.original_estimate = req.original_estimate or None
+            changes.append(f"estimate → {req.original_estimate or 'none'}")
         if req.subject:
             row.subject = req.subject[:200]
             changes.append("subject edited")

@@ -100,6 +100,12 @@ class JiraTicket(Base):
     priority: Mapped[str | None] = mapped_column(String(16))
     assignee: Mapped[str | None] = mapped_column(String(64))          # v0.20.0
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # v0.20.0
+    # What the reviewed create form promised Jira, mirrored so the drawer can show it without
+    # a round trip (Jira remains the source of truth; these are the values we sent).
+    components: Mapped[str | None] = mapped_column(Text)
+    labels: Mapped[str | None] = mapped_column(Text)
+    original_estimate: Mapped[str | None] = mapped_column(String(24))
+    issue_type: Mapped[str | None] = mapped_column(String(32))
     # Set when reconciliation found the issue gone from Jira; cleared when it comes back.
     # The row is kept (status='deleted') because an escalation that existed is history.
     remote_missing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -376,6 +376,85 @@ def create_issue(*, summary: str, description: str, project: str | None = None,
             "mode": "rest", "reporter": reporter}
 
 
+_ESTIMATE_RE = None
+
+
+def apply_issue_fields(
+    key: str,
+    *,
+    priority: str | None = None,
+    labels: list[str] | None = None,
+    components: list[str] | None = None,
+    due_date: str | None = None,
+    original_estimate: str | None = None,
+) -> dict:
+    """Write the fields the reviewed draft promised onto an issue that already exists.
+
+    JSM's request API accepts a summary and a description and little else, so a ticket created
+    there starts naked: no priority, no labels, no component, no estimate. This is the second
+    half of creation — a plain `PUT /rest/api/3/issue/{key}` — and it is deliberately
+    best-effort per field: one unsupported field (a component the project never defined, or
+    time tracking switched off) must not lose the others, and must not lose the ticket.
+    """
+    import re
+
+    import httpx
+
+    cfg = _jira_cfg()
+    if not (cfg.get("base_url") and cfg.get("email") and cfg.get("api_token")):
+        return {"applied": [], "warnings": ["Jira credentials missing"]}
+
+    wanted: dict = {}
+    if priority:
+        wanted["priority"] = {"name": str(priority).capitalize()}
+    if labels:
+        wanted["labels"] = [l for l in labels if l]
+    if components:
+        wanted["components"] = [{"name": c} for c in components if c]
+    if due_date:
+        wanted["duedate"] = due_date
+    if original_estimate and re.fullmatch(r"(\d+[wdhm]\s*)+", str(original_estimate).strip()):
+        wanted["timetracking"] = {"originalEstimate": str(original_estimate).strip()}
+    if not wanted:
+        return {"applied": [], "warnings": []}
+
+    url = f"{cfg['base_url'].rstrip('/')}/rest/api/3/issue/{key}"
+    headers = {"Authorization": _auth_header(), "Accept": "application/json",
+               "Content-Type": "application/json"}
+    applied: list[str] = []
+    warnings: list[str] = []
+
+    def _put(fields: dict) -> tuple[bool, str]:
+        try:
+            with httpx.Client(timeout=30) as client:
+                r = client.put(url, json={"fields": fields}, headers=headers)
+            if r.status_code < 400:
+                return True, ""
+            detail = ""
+            try:
+                errs = (r.json() or {}).get("errors") or {}
+                detail = "; ".join(f"{k}: {v}" for k, v in errs.items()) or r.text[:200]
+            except Exception:  # noqa: BLE001
+                detail = r.text[:200]
+            return False, detail
+        except Exception as exc:  # noqa: BLE001
+            return False, f"{type(exc).__name__}: {exc}"
+
+    ok, detail = _put(wanted)
+    if ok:
+        applied = list(wanted)
+    else:
+        # One bad field poisons the batch, and Jira's message names the field. Retry the rest
+        # individually so a missing component does not cost the reporter their estimate.
+        for field, value in wanted.items():
+            ok_one, why = _put({field: value})
+            if ok_one:
+                applied.append(field)
+            else:
+                warnings.append(f"{field} not applied ({why})")
+    return {"applied": applied, "warnings": warnings}
+
+
 def _create_via_issue_rest(summary, description, reporter, project, assignee):
     """Standard POST /rest/api/3/issue fallback (no JSM service-desk)."""
     import httpx

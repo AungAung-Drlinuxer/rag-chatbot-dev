@@ -10,21 +10,7 @@
  * attachments are callbacks so the page keeps one owner for network + optimistic updates.
  */
 import { useCallback, useEffect, useState } from "react";
-import {
-  CalendarClock,
-  CheckCircle2,
-  Lock,
-  MessageSquare,
-  Paperclip,
-  Send,
-  Tag,
-  Ticket as TicketIcon,
-  Trash2,
-  UserRound,
-  Users,
-  Workflow,
-  X,
-} from "lucide-react";
+import { CalendarClock, CheckCircle2, Layers, Lock, MessageSquare, Paperclip, Send, Tag, Ticket as TicketIcon, Timer, Trash2, UserRound, Users, Workflow, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -43,6 +29,9 @@ import {
 
 /** The fields half of a ticket, as one PUT. Status/comment/attachments are separate actions. */
 export type TicketEditPayload = {
+  components?: string[];
+  labels?: string[];
+  original_estimate?: string | null;
   subject: string;
   description: string;
   category: string;
@@ -533,6 +522,21 @@ export function TicketDetailPanel({
                 icon={<CalendarClock className="size-3" />}
                 label="Due"
                 value={ticket.due_date ? new Date(ticket.due_date).toLocaleDateString() : "—"}
+              />
+              <MetaRow
+                icon={<Timer className="size-3" />}
+                label="Estimate"
+                value={ticket.original_estimate || "—"}
+              />
+              <MetaRow
+                icon={<Layers className="size-3" />}
+                label="Components"
+                value={(ticket.components || []).join(", ") || "—"}
+              />
+              <MetaRow
+                icon={<Tag className="size-3" />}
+                label="Labels"
+                value={(ticket.labels || []).join(", ") || "—"}
               />
             </>
           )}

@@ -34,6 +34,12 @@ export type TicketDraft = {
   domain: string;
   assignee: string | null;
   due_date: string | null;
+  /** Any label is legal in Jira, so the model may propose these. */
+  labels?: string[];
+  /** Components must already exist in the project — only ever set by a human. */
+  components?: string[];
+  /** Jira time format: "2h", "1d 4h", "30m". */
+  original_estimate?: string | null;
 };
 
 export type Message = {

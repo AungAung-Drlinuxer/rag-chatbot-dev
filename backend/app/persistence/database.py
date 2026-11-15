@@ -146,6 +146,11 @@ def init_db() -> None:
                                  "ON domain_assignees (domain_key)"),
         ("jira_tickets.assignee", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS assignee VARCHAR(64)"),
         ("jira_tickets.due_date", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ"),
+        ("jira_tickets.components", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS components TEXT"),
+        ("jira_tickets.labels", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS labels TEXT"),
+        ("jira_tickets.original_estimate",
+         "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS original_estimate VARCHAR(24)"),
+        ("jira_tickets.issue_type", "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS issue_type VARCHAR(32)"),
         (
             "jira_tickets.remote_missing_at",
             "ALTER TABLE jira_tickets ADD COLUMN IF NOT EXISTS remote_missing_at TIMESTAMPTZ",

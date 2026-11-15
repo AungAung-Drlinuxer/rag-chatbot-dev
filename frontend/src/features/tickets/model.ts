@@ -11,6 +11,11 @@ export type Ticket = {
   requester: string;
   assignee?: string | null;
   due_date?: string | null;
+  /** Jira fields the board mirrors so the drawer can render without a round trip. */
+  components?: string[];
+  labels?: string[];
+  original_estimate?: string | null;
+  issue_type?: string;
   created_at: string;
   updated_at: string;
 };

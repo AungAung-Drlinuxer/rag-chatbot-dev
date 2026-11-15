@@ -93,6 +93,9 @@ export function EditTicketDialog({
   const [priority, setPriority] = useState<Ticket["priority"]>("medium");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [components, setComponents] = useState("");
+  const [labels, setLabels] = useState("");
+  const [estimate, setEstimate] = useState("");
   const [status, setStatus] = useState<Ticket["status"]>("open");
 
   // Activity
@@ -124,6 +127,9 @@ export function EditTicketDialog({
     setPriority(ticket.priority || "medium");
     setAssignee(ticket.assignee || "");
     setDueDate(ticket.due_date ? ticket.due_date.slice(0, 10) : "");
+    setComponents((ticket.components || []).join(", "));
+    setLabels((ticket.labels || []).join(", "));
+    setEstimate(ticket.original_estimate || "");
     setStatus(ticket.status || "open");
     setNote("");
     setTried(false);
@@ -310,6 +316,9 @@ export function EditTicketDialog({
         priority,
         assignee,
         due_date: dueDate,
+        components: components.split(",").map((v) => v.trim()).filter(Boolean),
+        labels: labels.split(",").map((v) => v.trim()).filter(Boolean),
+        original_estimate: estimate.trim(),
       });
 
       let statusOk = true;
@@ -568,6 +577,45 @@ export function EditTicketDialog({
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="ticket-estimate" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Original estimate
+                    </label>
+                    <input
+                      id="ticket-estimate"
+                      value={estimate}
+                      onChange={(e) => setEstimate(e.target.value)}
+                      placeholder="2h · 1d 4h"
+                      className={FIELD}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="ticket-labels" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Labels
+                    </label>
+                    <input
+                      id="ticket-labels"
+                      value={labels}
+                      onChange={(e) => setLabels(e.target.value)}
+                      placeholder="vpn, macos"
+                      className={FIELD}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="ticket-components" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Components
+                    </label>
+                    <input
+                      id="ticket-components"
+                      value={components}
+                      onChange={(e) => setComponents(e.target.value)}
+                      placeholder="Network & VPN"
+                      className={FIELD}
+                    />
                   </div>
 
                   <div>

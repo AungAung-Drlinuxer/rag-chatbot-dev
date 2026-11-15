@@ -69,6 +69,10 @@ const EMPTY = {
   priority: "medium",
   assignee: "",
   due_date: "",
+  /* Jira create-screen fields. Components must already exist in the project; labels are free. */
+  components: "",
+  labels: "",
+  original_estimate: "",
 };
 
 const MAX_SUBJECT = 100;
@@ -221,6 +225,9 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
         priority: draft.priority,
         assignee: draft.assignee || null,
         due_date: draft.due_date || null,
+        components: draft.components.split(",").map((v) => v.trim()).filter(Boolean),
+        labels: draft.labels.split(",").map((v) => v.trim()).filter(Boolean),
+        original_estimate: draft.original_estimate.trim() || null,
         destination: "jira",
         session_id: preset?.sessionId || undefined,
       });
@@ -534,6 +541,49 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   aria-hidden
                 />
               </div>
+            </div>
+          </div>
+
+          {/* ---- Jira create-screen extras ---- */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label htmlFor="ticket-components" className="mb-1.5 block text-xs font-medium text-foreground">
+                Components
+              </label>
+              <input
+                id="ticket-components"
+                value={draft.components}
+                onChange={(e) => setDraft({ ...draft, components: e.target.value })}
+                placeholder="Network & VPN, macOS"
+                className={FIELD}
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Comma separated; must exist in Jira.</p>
+            </div>
+            <div>
+              <label htmlFor="ticket-labels" className="mb-1.5 block text-xs font-medium text-foreground">
+                Labels
+              </label>
+              <input
+                id="ticket-labels"
+                value={draft.labels}
+                onChange={(e) => setDraft({ ...draft, labels: e.target.value })}
+                placeholder="vpn, macos"
+                className={FIELD}
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Comma separated, free form.</p>
+            </div>
+            <div>
+              <label htmlFor="ticket-estimate" className="mb-1.5 block text-xs font-medium text-foreground">
+                Original estimate
+              </label>
+              <input
+                id="ticket-estimate"
+                value={draft.original_estimate}
+                onChange={(e) => setDraft({ ...draft, original_estimate: e.target.value })}
+                placeholder="2h · 1d 4h"
+                className={FIELD}
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Jira format: w d h m.</p>
             </div>
           </div>
 

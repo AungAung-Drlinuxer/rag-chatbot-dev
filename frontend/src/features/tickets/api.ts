@@ -91,6 +91,11 @@ export async function createTicketApi(body: {
   assignee?: string | null; due_date?: string | null;
   destination?: string;
   session_id?: string | null;
+  /** Jira create-screen fields applied right after the issue exists. */
+  components?: string[];
+  labels?: string[];
+  original_estimate?: string | null;
+  issue_type?: string;
 }) {
   const r = await apiFetch(`${BASE}/api/tickets`, {
     method: "POST",
@@ -106,6 +111,9 @@ export async function createTicketApi(body: {
     id: string; subject: string; status: string; priority: string; category: string;
     requester: string; assignee: string | null; due_date: string | null;
     assignee_error?: string | null; jira_link?: string;
+    components?: string[]; labels?: string[]; original_estimate?: string | null;
+    issue_type?: string;
+    field_warnings?: string[];
   }>;
 }
 
@@ -113,6 +121,7 @@ export async function ticketUpdate(ref: string, patch: {
   status?: string; assignee?: string | null; due_date?: string | null;
   subject?: string; description?: string; category?: string; priority?: string; comment?: string;
   comment_internal?: boolean;
+  components?: string[]; labels?: string[]; original_estimate?: string | null;
 }) {
   const r = await apiFetch(`${BASE}/api/tickets/${ref}`, {
     method: "PUT",

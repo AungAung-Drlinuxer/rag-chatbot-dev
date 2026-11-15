@@ -97,6 +97,32 @@ def _clean_priority(value: Any) -> str:
     return p if p in _PRIORITIES else "medium"
 
 
+def _clean_labels(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [v for v in value.replace(",", " ").split()]
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for raw in value:
+        label = re.sub(r"[^a-z0-9-]+", "-", str(raw).strip().lower()).strip("-")
+        if label and label not in out:
+            out.append(label[:32])
+    return out[:3]
+
+
+_ESTIMATE = re.compile(r"^\s*((\d+)\s*([wdhm]))(\s+\d+\s*[wdhm])*\s*$", re.I)
+
+
+def _clean_estimate(value: Any) -> str | None:
+    text = str(value or "").strip().lower()
+    if not text or not _ESTIMATE.match(text):
+        return None
+    parts = text.split()
+    if len(parts) > 4:
+        return None
+    return text
+
+
 def _clean_domain(value: Any, live: list[dict[str, str]], fallback: str | None) -> str:
     key = str(value or "").strip().lower()
     allowed = {d["key"] for d in live}
@@ -138,6 +164,9 @@ def draft_ticket(
         '  "domain": one of these keys exactly: ' + domain_menu + ".\n"
         '  "assignee": a username only if the conversation names one, else null.\n'
         '  "due_date": YYYY-MM-DD only if the conversation states a deadline, else null.\n'
+        '  "labels": 1-3 short lowercase kebab-case labels, e.g. ["network","vpn","macos"].\n'
+        '  "original_estimate": a Jira time estimate ("2h", "1d 4h", "30m") the conversation '
+        "implies, else null. Jira accepts only w/d/h/m units.\n"
         "Return JSON only — no prose, no markdown fences.\n\n"
         f"Reporter's question:\n{question or '(not given)'}\n\n"
         f"Assistant's answer:\n{answer or '(not given)'}\n"
@@ -175,6 +204,8 @@ def draft_ticket(
             "domain": _clean_domain(data.get("domain"), live, req.domain),
             "assignee": (str(data["assignee"]).strip() or None) if data.get("assignee") else None,
             "due_date": _clean_date(data.get("due_date")),
+            "labels": _clean_labels(data.get("labels")),
+            "original_estimate": _clean_estimate(data.get("original_estimate")),
         },
         "domains": live,
         "source": {"session_id": req.session_id, "reporter": user},

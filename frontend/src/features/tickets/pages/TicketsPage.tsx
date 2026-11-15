@@ -298,6 +298,9 @@ export default function Tickets({ role, userName, onToast }: Props) {
            a due date or unassigning used to be silently dropped. */
         assignee: p.assignee ?? "",
         due_date: p.due_date ?? "",
+        components: p.components ?? [],
+        labels: p.labels ?? [],
+        original_estimate: p.original_estimate ?? "",
       });
       if (res?.fields_synced === false) problems.push("Jira kept its own copy of the details");
       const [fresh, freshComments] = await Promise.all([

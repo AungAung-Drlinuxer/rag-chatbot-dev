@@ -97,6 +97,43 @@ export default function ChatTicketDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
+              <label className={LABEL} htmlFor="draft-components">
+                Components
+              </label>
+              <input
+                id="draft-components"
+                value={(form.components || []).join(", ")}
+                onChange={(e) =>
+                  set(
+                    "components",
+                    e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                  )
+                }
+                className={FIELD}
+                placeholder="Network & VPN, macOS"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">Must already exist in Jira.</p>
+            </div>
+
+            <div>
+              <label className={LABEL} htmlFor="draft-labels">
+                Labels
+              </label>
+              <input
+                id="draft-labels"
+                value={(form.labels || []).join(", ")}
+                onChange={(e) =>
+                  set(
+                    "labels",
+                    e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                  )
+                }
+                className={FIELD}
+                placeholder="vpn, macos"
+              />
+            </div>
+
+            <div>
               <label className={LABEL} htmlFor="draft-priority">
                 Priority
               </label>
@@ -143,6 +180,19 @@ export default function ChatTicketDialog({
                 onChange={(e) => set("assignee", e.target.value || null)}
                 className={FIELD}
                 placeholder="Leave blank to auto-assign"
+              />
+            </div>
+
+            <div>
+              <label className={LABEL} htmlFor="draft-estimate">
+                Original estimate
+              </label>
+              <input
+                id="draft-estimate"
+                value={form.original_estimate ?? ""}
+                onChange={(e) => set("original_estimate", e.target.value || null)}
+                className={FIELD}
+                placeholder="2h · 1d 4h"
               />
             </div>
 

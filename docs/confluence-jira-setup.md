@@ -323,3 +323,29 @@ Confluence **site** တစ်ခုမှာ space အများကြီး �
 နှစ်မျိုးလုံးအတွက် Settings → Integrations → Confluence → Configure မှာ ထည့်ပြီး **Sync now** နှိပ်ရတယ်။ Knowledge page ရဲ့ **Sources** card က configured site အရေအတွက် ကို ပြတယ် (article မဝင်သေးလည်း ပြတယ်)၊ **Site** filter က site တစ်ခုချင်း ခွဲကြည့်ဖို့ ရတယ်။
 
 > သတိ: sync က ဖျက်တာနဲ့ ပတ်သက်ပြီး (dev-1.0.119 ကတည်းက) — ဖျက်တာက **ဒီ run မှာ fetch လုပ်ပြီး မတွေ့တော့တဲ့** (binding, space) အတွင်းမှာပဲ။ Space key ကို config ထဲက ဖျက်လိုက်ရင် အဲဒီ space ရဲ့ article တွေ KB ထဲမှာ ကျန်နေမယ် (ဖျက်မခံရ)၊ ဒါပေမယ့် Confluence မှာ page တကယ်ဖျက်လိုက်ရင်တော့ ဖျက်ခံရမယ်။ အရင်က config ပြောင်းတာနဲ့ တခြား space အားလုံး ဖျက်ခံရတဲ့ bug ရှိခဲ့တယ်။ Space key ကို မတော်တဆ ဖျက်မိရင် အဲဒီ space ရဲ့ article တွေ ပျောက်မယ် — ပြန်ထည့်ပြီး Sync now နှိပ်ရင် ပြန်ဝင်လာပါတယ်။
+
+## Ticket fields: what actually reaches Jira
+
+A ticket created from the chat or from the Tickets page is now a Jira issue with the fields the
+create screen shows, not just a summary and a description.
+
+| Field | Where it comes from | What Jira gets |
+|---|---|---|
+| Summary | the draft / the form | `summary` (110 characters, enforced) |
+| Description | the draft / the form | `description` as ADF paragraphs |
+| Priority | the draft (`low…critical`) or the form | `priority` mapped to Jira's names (`critical` → **Highest**) |
+| Category | the routing domain | project + issue type; the label is stored here |
+| Assignee | the form, or the category's first owner | `assignee`, only if Jira resolves the account |
+| Labels | the draft or the form | `labels` (free form, any string) |
+| Components | **the form only** | `components` by name — must already exist in the project |
+| Original estimate | the draft or the form | `timetracking.originalEstimate` in `w/d/h/m` |
+| Due date | the draft or the form | `duedate` |
+
+How it is applied: JSM's request API (`/rest/servicedeskapi/request`) accepts a summary and a
+description and little else, so the issue is created there and the remaining fields are written
+with a follow-up `PUT /rest/api/3/issue/{key}`. That PUT is **best-effort per field**: if the
+project has no such component, or time tracking is switched off, Jira's refusal is returned as a
+`field_warnings` entry and the other fields still land. The ticket is never lost to a bad field.
+
+The draft endpoint never invents a component — a name the project has not defined would fail on
+every create. Labels are free form, so the model may propose those.
