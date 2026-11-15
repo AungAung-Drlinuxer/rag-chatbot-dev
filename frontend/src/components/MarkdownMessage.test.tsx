@@ -252,4 +252,23 @@ describe("MarkdownMessage — rich answers (headings, emoji, checklists)", () =>
     expect(wrapperClass(html)).toContain("text-[13.5px]");
     expect(wrapperClass(html)).toContain("[&_h2]:text-sm");
   });
+
+  /* A ```mermaid fence is a picture, not source code: it must reach MermaidDiagram and never
+     the code-block chrome that prints a language label and a Copy button. */
+  it("hands a mermaid fence to the diagram renderer, not the code block", () => {
+    const html = renderToStaticMarkup(
+      <MarkdownMessage content={"Step four:\n\n```mermaid\nflowchart TD\n  A[Start] --> B[Done]\n```\n"} />,
+    );
+    expect(html).toContain('data-slot="mermaid-diagram"');
+    expect(html).not.toContain(">mermaid<");
+    expect(html).not.toContain("A[Start] --&gt; B[Done]");
+  });
+
+  it("still renders an ordinary fenced block as code", () => {
+    const html = renderToStaticMarkup(
+      <MarkdownMessage content={"```bash\nkubectl get pods\n```"} />,
+    );
+    expect(html).not.toContain('data-slot="mermaid-diagram"');
+    expect(html).toContain("kubectl get pods");
+  });
 });

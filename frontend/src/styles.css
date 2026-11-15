@@ -1397,6 +1397,13 @@ code, pre, .mono { font-family: var(--mono); }
 .md-table-wrap { -webkit-overflow-scrolling: touch; }
 .md-table-wrap table { min-width: 100%; }
 
+/* Mermaid keeps its intrinsic width; the wrapper scrolls on a phone instead of shrinking the
+   labels to nothing. `height: auto` keeps the aspect ratio when the card is narrower.
+   A tall flowchart (a 9-step TD graph is ~750px) would push the prose it explains off screen,
+   so the box scrolls inside itself once it passes 60dvh. */
+.mermaid-diagram { max-height: min(60dvh, 560px); overflow: auto; overscroll-behavior: contain; }
+.mermaid-diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
 /* Overview board: panels are absolutely positioned on a 12-column canvas (panels/grid.ts).
    `.dash-cell` remains for any older markup that still uses the stacked grid. */
 .dash-cell { grid-column: span 12 / span 12; }

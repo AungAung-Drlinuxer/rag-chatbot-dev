@@ -25,6 +25,8 @@
  */
 import { useRef, useState, type ReactNode, type HTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
+
+import MermaidDiagram from "./MermaidDiagram";
 import remarkGfm from "remark-gfm";
 import { Check, Copy } from "lucide-react";
 
@@ -150,7 +152,20 @@ export default function MarkdownMessage({
         components={{
           // react-markdown v9 passes the <code> child through `children`; wrapping
           // `pre` is what lets us attach the copy affordance to the whole block.
-          pre: (props) => <CodeBlock {...(props as HTMLAttributes<HTMLPreElement>)} compact={compact} />,
+          pre: (props) => {
+            /* A ```mermaid fence is not code to read, it is a picture to look at. react-markdown
+               hands the fence to `pre` with the <code> element as its only child, and the
+               language lives on that child's className. */
+            const child = (Array.isArray(props.children) ? props.children[0] : props.children) as
+              | { props?: { className?: string; children?: unknown } }
+              | undefined;
+            const lang = /language-([\w+#-]+)/.exec(child?.props?.className || "")?.[1];
+            if (lang === "mermaid") {
+              const chart = String(child?.props?.children ?? "");
+              return <MermaidDiagram chart={chart} compact={compact} />;
+            }
+            return <CodeBlock {...(props as HTMLAttributes<HTMLPreElement>)} compact={compact} />;
+          },
           table: (props) => <Table {...(props as HTMLAttributes<HTMLTableElement>)} />,
           a: ({ children, ...props }) => (
             <a {...props} target="_blank" rel="noreferrer">
