@@ -214,6 +214,8 @@ export function DomainRow({
 
 export function HealthRow({ item }: { item: HealthItem }) {
   const healthy = item.status === "Healthy";
+  // "Not configured" is neither up nor broken: it gets neutral ink, not the outage red.
+  const neutral = !healthy && item.status === "Not configured";
   // Same glyph/colour table as the chat rail, so PostgreSQL is emerald on both pages.
   const glyph = healthGlyph(item.key, item.name);
   const Glyph = glyph.Icon;
@@ -223,12 +225,12 @@ export function HealthRow({ item }: { item: HealthItem }) {
       <div
         className={[
           "grid size-6 shrink-0 place-items-center rounded-md p-0.5",
-          healthy ? glyph.tint : "bg-[var(--danger)]/12 text-[var(--danger)]",
+          healthy ? glyph.tint : neutral ? "bg-[var(--muted)] text-muted-foreground" : "bg-[var(--danger)]/12 text-[var(--danger)]",
         ].join(" ")}
       >
         {healthy && glyph.brand ? (
           <IntegrationLogo providerKey={glyph.brand} name={item.name} size="sm" className="size-3.5" />
-        ) : healthy ? (
+        ) : healthy || neutral ? (
           <Glyph className="size-3.5" aria-hidden />
         ) : (
           item.icon
@@ -237,23 +239,28 @@ export function HealthRow({ item }: { item: HealthItem }) {
 
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium leading-tight text-foreground">{item.name}</div>
-        {healthy && item.meta && (
+        {(healthy || neutral) && item.meta && (
           <div className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">{item.meta}</div>
         )}
         {!healthy && item.detail && (
-          <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--danger)]" title={item.detail}>
+          <div
+            className={["mt-0.5 truncate text-[11px] leading-tight", neutral ? "text-muted-foreground" : "text-[var(--danger)]"].join(" ")}
+            title={item.detail}
+          >
             {item.detail}
           </div>
         )}
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {item.latency_ms != null ? `${item.latency_ms}ms` : "0ms"}
+        {/* A config-presence check has no latency. Printing "0ms" claimed a probe that never
+            happened; "—" is the honest value. */}
+        <span className="text-xs tabular-nums text-muted-foreground" title={item.latency_ms == null ? "configuration check, not a network probe" : undefined}>
+          {item.latency_ms != null ? `${item.latency_ms}ms` : "—"}
         </span>
         <span
           aria-hidden
-          className={["size-2 rounded-full", healthy ? glyph.dot : "bg-rose-500"].join(" ")}
+          className={["size-2 rounded-full", healthy ? glyph.dot : neutral ? "bg-[var(--muted-foreground)]" : "bg-rose-500"].join(" ")}
         />
         <span className="sr-only">{item.status}</span>
       </div>

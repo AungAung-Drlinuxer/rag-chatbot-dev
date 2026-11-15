@@ -7,8 +7,8 @@
  * two titles on screen.
  */
 import {
-  Activity, AlertTriangle, BookOpen, CheckCircle2, Eye, ExternalLink, Gauge,
-  MessageSquare, ShieldAlert, Ticket, Users, } from "lucide-react";
+  Activity, AlertTriangle, BookOpen, Boxes, CheckCircle2, Eye, ExternalLink, Gauge,
+  MessageSquare, ShieldAlert, ShieldCheck, Ticket, Users, } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -333,47 +333,84 @@ function Domains({ title }: PanelBodyProps) {
 }
 
 function Workspace({ title }: PanelBodyProps) {
-  const { stats, role } = useDashboardData();
-  const kb = stats && (stats as any).kb_pages != null ? String((stats as any).kb_pages) : "—";
-  const blocked = stats && (stats as any).attacks_blocked_7d != null ? String((stats as any).attacks_blocked_7d) : "—";
-  /* Narrow card, two facts: one line each. The captions live in the title attribute —
-     stacked two-line rows are what pushed the footer onto "Attacks Blocked". */
+  const { rag, ragError } = useDashboardData();
+  const num = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString());
+  /* Every figure is counted from the live tables (kb_meta, langchain_pg_embedding,
+     audit_log). The old footer said "Guardrails: active 100%" — a constant, not a reading,
+     and the only number on the panel that could never be wrong. */
+  const gate = rag?.gate;
+  const pass = gate?.pass_pct;
+  const tone = pass == null ? "text-muted-foreground"
+    : pass >= 85 ? "text-emerald-400" : pass >= 60 ? "text-[var(--warn)]" : "text-[var(--danger)]";
+
   return (
     <section data-slot="card" className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <h2 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide">{title || "Workspace Stats"}</h2>
+        <h2 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide">{title || "RAG pipeline"}</h2>
         <span className="shrink-0 whitespace-nowrap text-3xs text-muted-foreground">Live</span>
       </div>
 
       <div className="mt-2 flex min-h-0 flex-1 flex-col justify-evenly gap-1.5">
         <div
           className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
-          title="Knowledge-base articles that are indexed and searchable"
+          title="Vector chunks in the pgvector collection — what retrieval can actually return"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--border)] bg-[var(--muted)] text-muted-foreground">
+            <Boxes className="size-3.5" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">Indexed chunks</span>
+          <span className="shrink-0 text-lg font-bold tabular-nums text-foreground">
+            {ragError ? "—" : num(rag?.chunks)}
+          </span>
+        </div>
+
+        <div
+          className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
+          title="Articles in kb_meta — the source pages the chunks were built from"
         >
           <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--brand-text)]/20 bg-[var(--brand-soft)] text-[var(--brand-text)]">
             <BookOpen className="size-3.5" />
           </span>
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">KB Articles</span>
-          <span className="shrink-0 text-lg font-bold tabular-nums text-foreground">{kb}</span>
+          <span className="shrink-0 text-lg font-bold tabular-nums text-foreground">
+            {ragError ? "—" : num(rag?.pages)}
+          </span>
         </div>
 
-        {role === "admin" && (
-          <div
-            className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
-            title="Prompt-injection attempts refused by the guardrails in the last 7 days"
-          >
-            <span className="grid size-7 shrink-0 place-items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-              <ShieldAlert className="size-3.5" />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">Attacks Blocked (7d)</span>
-            <span className="shrink-0 text-lg font-bold tabular-nums text-emerald-400">{blocked}</span>
-          </div>
-        )}
+        <div
+          className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
+          title="Share of confidence-gate decisions that answered rather than cautioned, last 7 days"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--border)] bg-[var(--muted)] text-muted-foreground">
+            <ShieldCheck className="size-3.5" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">Gate pass rate</span>
+          <span className={`shrink-0 text-lg font-bold tabular-nums ${tone}`}>
+            {pass == null ? "—" : `${pass}%`}
+          </span>
+        </div>
+
+        <div
+          className="flex min-h-0 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/25 px-2 py-1.5"
+          title="Prompt-injection and abuse refusals recorded in the audit log, last 7 days"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+            <ShieldAlert className="size-3.5" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">Blocks (7d)</span>
+          <span className="shrink-0 text-lg font-bold tabular-nums text-emerald-400">
+            {ragError ? "—" : num(rag?.blocks_7d)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-[var(--border)] pt-1.5 text-3xs">
-        <span className="truncate text-muted-foreground">Guardrails: active</span>
-        <span className="shrink-0 font-semibold text-emerald-400">100%</span>
+        <span className="truncate text-muted-foreground">
+          {rag ? `${rag.embedding_model} · top-${rag.top_k}` : ragError ? "RAG stats unavailable" : "…"}
+        </span>
+        <span className="shrink-0 text-muted-foreground">
+          {gate ? `${gate.answered} answered · ${gate.cautioned} cautioned` : ""}
+        </span>
       </div>
     </section>
   );
@@ -472,7 +509,7 @@ function UsageKpis({ title }: PanelBodyProps) {
   // Each tile keeps the reference's colour-coded role: violet for volume, sky for the raw
   // token count, emerald for money, amber for time. Semantic tokens only.
   const tiles = [
-    { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "queries resolved", icon: <MessageSquare className="size-3.5" />, tone: "text-[var(--primary)]", stack: undefined as string[] | undefined, hint: undefined as string | undefined },
+    { label: "Answers", value: t ? fmtInt(t.requests) : "—", caption: "assistant answers", icon: <MessageSquare className="size-3.5" />, tone: "text-[var(--primary)]", stack: undefined as string[] | undefined, hint: undefined as string | undefined },
     { label: "Tokens in / out", value: t ? `${fmtInt(t.tokens_in)} / ${fmtInt(t.tokens_out)}` : "—", caption: "total processed", icon: <Eye className="size-3.5" />, tone: "text-[var(--accent-foreground)]",
       stack: t ? [`In ${fmtInt(t.tokens_in)}`, `Out ${fmtInt(t.tokens_out)}`] : undefined, hint: undefined },
     { label: "Estimated cost", value: t ? fmtCost(t.cost_usd) : "—", caption: t ? `avg ${fmtCost(perAnswer)} / answer` : "no usage in this window", icon: <Gauge className="size-3.5" />, tone: "text-[var(--ok)]", stack: undefined, hint: undefined },

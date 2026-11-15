@@ -29,6 +29,7 @@ vi.mock("@/features/dashboard/api", () => ({
   dashRecentTickets: vi.fn(),
   dashHealth: vi.fn(),
   dashGateTrend: vi.fn(),
+  dashRag: vi.fn(),
   getBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
   saveBoardLayout: vi.fn(async () => ({ board: null, custom: true, updated_at: null })),
   clearBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
@@ -76,6 +77,12 @@ function happyPath() {
     attacks_blocked_7d: 3,
     deltas: { total_conversations: 12, resolved_by_bot: 8, active_users: -3 },
     previous: { total_conversations: 30, resolved_by_bot: 22, active_users: 10 },
+  });
+  m.dashRag.mockResolvedValue({
+    pages: 120, chunks: 1480, last_sync: "2026-01-08T01:00:00Z",
+    embedding_model: "nomic-embed-text", top_k: 5,
+    gate: { answered: 10, cautioned: 2, pass_pct: 83.3, avg_confidence: 0.71 },
+    blocks_7d: 3,
   });
   m.dashConversations.mockResolvedValue({
     series: [{ day: "Mon", total: 5, resolved: 4, escalated: 1 }],
@@ -244,14 +251,15 @@ describe("DashboardPage — data rendering", () => {
     expect(text).not.toContain("NaN");
   });
 
-  it("hides 'Attacks Blocked' from a non-admin and shows it to an admin", async () => {
+  it("reads the RAG panel from the live tables, never from a constant", async () => {
     const admin = await mount("admin");
-    expect(admin.textContent).toContain("Attacks Blocked (7d)");
+    // Chunks, pages, gate pass rate and blocks all come from /dashboard/rag.
+    expect(admin.textContent).toContain("Indexed chunks");
+    expect(admin.textContent).toContain("1,480");
+    expect(admin.textContent).toContain("83.3%");
+    expect(admin.textContent).toContain("nomic-embed-text · top-5");
+    expect(admin.textContent).toContain("10 answered · 2 cautioned");
     expect(admin.textContent).toContain("Administrator");
-
-    const user = await mount("user");
-    expect(user.textContent).not.toContain("Attacks Blocked");
-    expect(user.textContent).toContain("User");
   });
 
   it("carries no page footer — the window is the picker's job", async () => {

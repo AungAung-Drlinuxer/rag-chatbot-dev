@@ -9,7 +9,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 import type { Conversation, Domain, HealthItem, RecentTicket } from "@/features/dashboard/lib/dashboardTypes";
-import type { ReportWindow } from "@/features/dashboard/api";
+import type { DashRag, ReportWindow } from "@/features/dashboard/api";
 import type { GuardrailEvent, ObservabilityOverview } from "@/features/observability/api";
 
 export type Totals = {
@@ -66,6 +66,9 @@ export type DashboardData = {
   rangeLabel: string;
   deltaProps: (key: string, current: number) => DeltaProps;
   /** Administrator-only: tokens/cost/guardrail data. null for everyone else. */
+  /** Index size, embedding model and confidence gate — read from the live RAG tables. */
+  rag: DashRag | null;
+  ragError: string | null;
   usage: ObservabilityOverview | null;
   usageError: string | null;
   usageDenied: boolean;

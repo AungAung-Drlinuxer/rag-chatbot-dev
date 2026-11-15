@@ -52,6 +52,23 @@ export async function dashGateTrend(w: ReportWindow = { kind: "preset", days: 7 
   return r.json();
 }
 
+/** The RAG pipeline as the backend reports it: index size, model, knobs, gate. */
+export type DashRag = {
+  pages: number | null;
+  chunks: number | null;
+  last_sync: string | null;
+  embedding_model: string;
+  top_k: number;
+  gate: { answered: number; cautioned: number; pass_pct: number | null; avg_confidence: number | null };
+  blocks_7d: number;
+};
+
+export async function dashRag(): Promise<DashRag> {
+  const r = await apiFetch(`${BASE}/api/dashboard/rag`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
 export async function dashHealth() {
   const r = await apiFetch(`${BASE}/api/dashboard/health`, { headers: authHeaders() });
   return r.json();

@@ -14,6 +14,8 @@ import {
   dashRecentTickets,
   dashHealth,
   dashGateTrend,
+  dashRag,
+  type DashRag,
   type ReportWindow,
 } from "@/features/dashboard/api";
 
@@ -222,6 +224,8 @@ export default function Dashboard({ role, perms }: Props) {
   const [liveHealth, setLiveHealth] = useState<HealthItem[]>([]);
   const [gateTrend, setGateTrend] = useState<GatePoint[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [rag, setRag] = useState<DashRag | null>(null);
+  const [ragError, setRagError] = useState<string | null>(null);
   const [usage, setUsage] = useState<ObservabilityOverview | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [usageDenied, setUsageDenied] = useState(false);
@@ -335,6 +339,15 @@ export default function Dashboard({ role, perms }: Props) {
         } else {
           setLiveTickets([]);
         }
+        // RAG figures come from their own endpoint, independent of the usage payload:
+        // a denial on token spend must never blank the index panel.
+        try {
+          const r = await dashRag();
+          if (mounted) { setRag(r); setRagError(null); }
+        } catch (err) {
+          if (mounted) { setRag(null); setRagError(err instanceof Error ? err.message : String(err)); }
+        }
+
         if (h?.services?.length) {
           setLiveHealth(h.services.map((x: any) => ({
             key: x.key,
@@ -359,21 +372,11 @@ export default function Dashboard({ role, perms }: Props) {
         if (canSeeUsage) {
           try {
             const range = win.kind === "custom" ? { start: win.start, end: win.end } : { days: win.days };
-            const [ov, ev] = await Promise.all([
-              getObservabilityOverview(range),
-              canSeeGuardrails ? getGuardrailEvents(10).catch(() => null) : Promise.resolve(null),
-            ]);
+            const ov = await getObservabilityOverview(range);
             if (!mounted) return;
             setUsage(ov);
             setUsageError(null);
             setUsageDenied(false);
-            if (ev) {
-              setGuardrailEvents(ev.events);
-              setGuardrailDenied(false);
-            } else {
-              setGuardrailEvents([]);
-              setGuardrailDenied(true);
-            }
           } catch (err) {
             if (!mounted) return;
             const msg = err instanceof Error ? err.message : String(err);
@@ -397,6 +400,26 @@ export default function Dashboard({ role, perms }: Props) {
     load();
     return () => { mounted = false; };
   }, [refreshTick, win, canSeeUsage]);
+
+  /* Guardrail refusals are their own request. They used to sit inside the usage fetch's
+     try/catch, so any failure there left the panel saying "Administrator permission
+     required" to an administrator who has `manage_users`. Only an actual 403 is a denial. */
+  useEffect(() => {
+    if (!canSeeGuardrails) {
+      setGuardrailEvents([]);
+      setGuardrailDenied(true);
+      return;
+    }
+    let alive = true;
+    getGuardrailEvents(10)
+      .then((ev) => { if (alive) { setGuardrailEvents(ev.events ?? []); setGuardrailDenied(false); } })
+      .catch((err) => {
+        if (!alive) return;
+        setGuardrailEvents([]);
+        setGuardrailDenied(String(err instanceof Error ? err.message : err).includes("403"));
+      });
+    return () => { alive = false; };
+  }, [canSeeGuardrails, refreshTick]);
 
   function refreshDashboard() {
     setLoading(true);
@@ -471,13 +494,13 @@ export default function Dashboard({ role, perms }: Props) {
         positive: true,
         // No comparison data → say nothing rather than repeating "no baseline" on
         // every tile. Honest silence beats decorative captions.
-        description: prev === 0 && current > 0 ? "new this week" : "",
+        description: prev === 0 && current > 0 ? "new this period" : "",
       };
     }
-    if (prev < 10) return { change: null, positive: d >= 0, description: `up from ${prev} last week` };
+    if (prev < 10) return { change: null, positive: d >= 0, description: `up from ${prev} vs the previous period` };
     if (Math.abs(d) >= 300) {
       const mult = prev > 0 ? current / prev : 0;
-      return { change: null, positive: d >= 0, description: `${mult.toFixed(1)}× last week` };
+      return { change: null, positive: d >= 0, description: `${mult.toFixed(1)}× the previous period` };
     }
     return {
       change: `${d >= 0 ? "+" : "−"}${Math.abs(d)}%`,
@@ -499,6 +522,7 @@ export default function Dashboard({ role, perms }: Props) {
     tickets: liveTickets, health: liveHealth, healthSummary,
     totals, needsReview, attention, healthDown, win, rangeLabel, deltaProps,
     refresh: refreshDashboard,
+    rag, ragError,
     usage, usageError, usageDenied, guardrailEvents, guardrailDenied,
   };
 

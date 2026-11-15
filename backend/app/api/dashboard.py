@@ -99,13 +99,21 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     hard-coded fake percentages; this computes the previous 7-day window for
     every KPI so the change pill is always true)."""
     now = datetime.now(UTC)
-    week_ago = (now - timedelta(days=7)).isoformat()
-    two_weeks_ago = (now - timedelta(days=14)).isoformat()
+    today = now.date()
+    # Same boundaries as /dashboard/conversations: "last 7 days" means the seven calendar
+    # days ending today, inclusive. A rolling now-7d cutoff included part of an eighth day,
+    # so the KPI said 123 while the trend summed to 119 for the same week.
+    week_ago = (today - timedelta(days=6)).isoformat()
+    two_weeks_ago = (today - timedelta(days=13)).isoformat()
+    win_until = today.isoformat()
+    win_until2 = (today - timedelta(days=7)).isoformat()
 
     def _count(sql_where: str, params: dict) -> int:
         base = {
             "since": week_ago,
             "since2": two_weeks_ago,
+            "until": win_until,
+            "until2": win_until2,
         }
         base.update(params)
         cur = _rows(sql_where, base)
@@ -119,17 +127,17 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     mine_a = "" if org else " AND username = :user"
     who = {} if org else {"user": user}
 
+    # A conversation is a session (see /dashboard/conversations): counting user MESSAGES here
+    # made the KPI row and the trend panel report different totals for the same week.
     chats_week = _rows(
-        "SELECT count(*) AS n FROM chat_messages m "
-        "JOIN chat_sessions s ON s.id = m.session_id "
-        "WHERE m.role = 'user' AND m.created_at >= :since" + mine,
-        {"since": week_ago, **who},
+        "SELECT count(*) AS n FROM chat_sessions s "
+        "WHERE date(s.started_at) BETWEEN :since AND :until" + mine,
+        {"since": week_ago, "until": win_until, **who},
     )[0]["n"]
     chats_prev = _rows(
-        "SELECT count(*) AS n FROM chat_messages m "
-        "JOIN chat_sessions s ON s.id = m.session_id "
-        "WHERE m.role = 'user' AND m.created_at >= :since2 AND m.created_at < :since" + mine,
-        {"since": week_ago, "since2": two_weeks_ago, **who},
+        "SELECT count(*) AS n FROM chat_sessions s "
+        "WHERE date(s.started_at) BETWEEN :since2 AND :until2" + mine,
+        {"since": week_ago, "since2": two_weeks_ago, "until": win_until, "until2": win_until2, **who},
     )[0]["n"]
 
     # v0.21.84 — escalation rate must be measured against CONVERSATIONS: a ticket
@@ -138,40 +146,45 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
     escalated_week = _rows(
         "SELECT count(*) AS n FROM jira_tickets "
         "WHERE session_id IS NOT NULL AND created_at >= :since" + mine_t,
-        {"since": week_ago, **who},
+        {"since": week_ago, "until": win_until, **who},
     )[0]["n"]
     escalated_prev = _rows(
         "SELECT count(*) AS n FROM jira_tickets "
         "WHERE session_id IS NOT NULL AND created_at >= :since2 AND created_at < :since" + mine_t,
-        {"since": week_ago, "since2": two_weeks_ago, **who},
+        {"since": week_ago, "since2": two_weeks_ago, "until": win_until, "until2": win_until2, **who},
     )[0]["n"]
 
     # resolved ≈ answered turns where decision was 'answer' (meta JSON)
+    # Resolved = the assistant answered AND the chat did not become a ticket. Counting
+    # answered MESSAGES made three answered messages in one chat read as three resolutions.
+    answer_exists = (
+        "EXISTS (SELECT 1 FROM chat_messages m WHERE m.session_id = s.id "
+        "AND m.role = 'assistant' AND m.meta LIKE '%\"decision\": \"answer\"%')"
+    )
+    no_ticket = "NOT EXISTS (SELECT 1 FROM jira_tickets t WHERE t.session_id = s.id)"
     resolved_week = _rows(
-        "SELECT count(*) AS n FROM chat_messages m "
-        "JOIN chat_sessions s ON s.id = m.session_id "
-        "WHERE m.role = 'assistant' AND m.created_at >= :since "
-        "AND m.meta LIKE '%\"decision\": \"answer\"%'" + mine,
-        {"since": week_ago, **who},
+        "SELECT count(*) AS n FROM chat_sessions s "
+        "WHERE date(s.started_at) BETWEEN :since AND :until "
+        f"AND {answer_exists} AND {no_ticket}" + mine,
+        {"since": week_ago, "until": win_until, **who},
     )[0]["n"]
     resolved_prev = _rows(
-        "SELECT count(*) AS n FROM chat_messages m "
-        "JOIN chat_sessions s ON s.id = m.session_id "
-        "WHERE m.role = 'assistant' AND m.created_at >= :since2 AND m.created_at < :since "
-        "AND m.meta LIKE '%\"decision\": \"answer\"%'" + mine,
-        {"since": week_ago, "since2": two_weeks_ago, **who},
+        "SELECT count(*) AS n FROM chat_sessions s "
+        "WHERE date(s.started_at) BETWEEN :since2 AND :until2 "
+        f"AND {answer_exists} AND {no_ticket}" + mine,
+        {"since": week_ago, "since2": two_weeks_ago, "until": win_until, "until2": win_until2, **who},
     )[0]["n"]
 
     if org:
         active_users = _rows(
             "SELECT count(DISTINCT username) AS n FROM chat_sessions "
-            "WHERE started_at >= :since",
-            {"since": week_ago},
+            "WHERE date(started_at) BETWEEN :since AND :until",
+            {"since": week_ago, "until": win_until},
         )[0]["n"]
         active_users_prev = _rows(
             "SELECT count(DISTINCT username) AS n FROM chat_sessions "
-            "WHERE started_at >= :since2 AND started_at < :since",
-            {"since": week_ago, "since2": two_weeks_ago},
+            "WHERE date(started_at) BETWEEN :since2 AND :until2",
+            {"since2": two_weeks_ago, "until2": win_until2},
         )[0]["n"]
     else:
         # "Active users" for one person is whether *they* were active — never a count of
@@ -186,7 +199,7 @@ def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
         "SELECT count(*) AS n FROM audit_log "
         "WHERE action IN ('guardrail.injection','guardrail.overflow') "
         "AND created_at >= :since" + mine_a,
-        {"since": week_ago, **who},
+        {"since": week_ago, "until": win_until, **who},
     )[0]["n"]
 
     def _pct(cur: int, prev: int) -> float | None:
@@ -237,18 +250,30 @@ def dashboard_conversations(
     end: str | None = None,
     user: str = Depends(get_current_user),
 ) -> dict:
-    """Daily totals / resolved / escalated for the reporting window.
+    """Daily conversations / resolved / escalated for the reporting window.
 
-    `start`+`end` (ISO dates, inclusive) express a CUSTOM window; `days` is the preset
-    shortcut. The reply echoes the effective window so the UI never has to guess.
+    A conversation is a `chat_sessions` row, not a message: "total conversations" used to
+    count user messages, which made this panel disagree with the KPI row by five and made
+    "resolved" mean "no ticket" rather than "the assistant answered".
     """
     since, until, days = _window(days, start, end)
 
     totals = {
         str(r["day"]): int(r["n"])
         for r in _rows(
-            "SELECT date(created_at) AS day, count(*) AS n FROM chat_messages "
-            "WHERE role = 'user' AND date(created_at) BETWEEN :since AND :until "
+            "SELECT date(started_at) AS day, count(*) AS n FROM chat_sessions "
+            "WHERE date(started_at) BETWEEN :since AND :until GROUP BY day ORDER BY day",
+            {"since": since, "until": until},
+        )
+    }
+    resolved = {
+        str(r["day"]): int(r["n"])
+        for r in _rows(
+            "SELECT date(s.started_at) AS day, count(*) AS n FROM chat_sessions s "
+            "WHERE date(s.started_at) BETWEEN :since AND :until "
+            "AND EXISTS (SELECT 1 FROM chat_messages m WHERE m.session_id = s.id "
+            "            AND m.role = 'assistant' AND m.meta LIKE '%\"decision\": \"answer\"%') "
+            "AND NOT EXISTS (SELECT 1 FROM jira_tickets t WHERE t.session_id = s.id) "
             "GROUP BY day ORDER BY day",
             {"since": since, "until": until},
         )
@@ -256,8 +281,9 @@ def dashboard_conversations(
     escalated = {
         str(r["day"]): int(r["n"])
         for r in _rows(
-            "SELECT date(created_at) AS day, count(*) AS n FROM jira_tickets "
-            "WHERE date(created_at) BETWEEN :since AND :until GROUP BY day ORDER BY day",
+            "SELECT date(s.started_at) AS day, count(DISTINCT s.id) AS n FROM chat_sessions s "
+            "JOIN jira_tickets t ON t.session_id = s.id "
+            "WHERE date(s.started_at) BETWEEN :since AND :until GROUP BY day ORDER BY day",
             {"since": since, "until": until},
         )
     }
@@ -265,14 +291,12 @@ def dashboard_conversations(
     series = []
     for day in _day_labels(since, days):
         label = datetime.fromisoformat(day).strftime("%b %d")
-        total = totals.get(day, 0)
-        esc = escalated.get(day, 0)
         series.append(
             {
                 "day": label,
-                "total": total,
-                "resolved": max(0, total - esc),
-                "escalated": esc,
+                "total": totals.get(day, 0),
+                "resolved": resolved.get(day, 0),
+                "escalated": escalated.get(day, 0),
             }
         )
 
@@ -524,12 +548,16 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     services: list[dict] = []
 
     def add(key: str, name: str, ok: bool, latency_ms: int | None = None,
-            detail: str | None = None, meta: str | None = None):
+            detail: str | None = None, meta: str | None = None,
+            status: str | None = None):
+        """`status` exists for services that are neither up nor broken — an integration that
+        was never configured used to be reported as Healthy (LDAP had `or True`), which told
+        an operator a dependency was fine when nothing had ever been wired up."""
         services.append(
             {
                 "key": key,
                 "name": name,
-                "status": "Healthy" if ok else "Down",
+                "status": status or ("Healthy" if ok else "Down"),
                 "latency_ms": latency_ms,
                 # #12 — first line of the failure reason so the panel can explain
                 # WHY a dependency is down instead of only colouring it red.
@@ -595,10 +623,15 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     add("jira", "Jira", jira_ok, detail=None if jira_ok else "no token configured",
         meta=(f"{jira_sites} site{'s' if jira_sites != 1 else ''}") if jira_sites else None)
 
-    # LDAP (config presence; a real bind test is too expensive for a dashboard poll)
+    # LDAP (config presence; a real bind test is too expensive for a dashboard poll).
+    # "Not configured" is its own state — never Healthy, and never counted as an outage.
     ldap_cfg = _integration_cfg("ldap")
-    ldap_ok = bool(str(ldap_cfg.get("bind_password") or "").strip()) or bool(SETTINGS.ldap_url) or True
-    add("ldap", "LDAP / AD", ldap_ok)
+    ldap_ok = bool(str(ldap_cfg.get("bind_password") or "").strip()) or bool(SETTINGS.ldap_url)
+    ldap_mode = str(ldap_cfg.get("mode") or ldap_cfg.get("server_type") or "").strip()
+    add("ldap", "LDAP / AD", ldap_ok,
+        meta=(f"{ldap_mode} · configured" if ldap_mode else "configured") if ldap_ok else None,
+        detail=None if ldap_ok else "not configured",
+        status=None if ldap_ok else "Not configured")
 
     # Security block — guardrail activity is a metric, not a dependency.
     security: dict = {"guardrail_events_7d": 0}
@@ -614,11 +647,12 @@ def dashboard_health(user: str = Depends(get_current_user)) -> dict:
     except Exception as exc:
         logger.warning("guardrail metric failed: %s", exc)
 
-    down = [s["name"] for s in services if s["status"] != "Healthy"]
+    down = [s["name"] for s in services if s["status"] == "Down"]
     degraded = 0 < len(down) < len(services)
     return {
         "services": services,
         "security": security,
+        "checked_at": datetime.now(UTC).isoformat(),
         # #3 — the banner names the failing dependency instead of a vague
         # "Degraded — check services".
         "overall": "Down" if len(down) == len(services) and down else (
@@ -723,6 +757,71 @@ def normalise_panels(panels: list[dict] | list[PanelSpec]) -> list[dict]:
             "options": options,
         })
         seen.add(pid)
+    return out
+
+
+@router.get("/dashboard/rag")
+def dashboard_rag(user: str = Depends(get_current_user)) -> dict:
+    """The RAG pipeline as it actually stands: index size, model, knobs, gate.
+
+    Every figure is counted from the live tables — the pgvector collection, `kb_meta` and
+    the audit trail — so the Overview panel cannot drift from what retrieval would do right
+    now. Nothing here is a sample: a missing table reports null, and the panel says "—".
+    """
+    out: dict = {
+        "pages": None, "chunks": None, "last_sync": None,
+        "embedding_model": SETTINGS.embedding_model,
+        "top_k": SETTINGS.retrieval_top_k,
+        "gate": {"answered": 0, "cautioned": 0, "pass_pct": None, "avg_confidence": None},
+        "blocks_7d": 0,
+    }
+    try:
+        row = _rows("SELECT count(*) AS n, max(last_checked) AS last FROM kb_meta")
+        out["pages"] = int(row[0]["n"]) if row else 0
+        out["last_sync"] = row[0]["last"].isoformat() if row and row[0]["last"] else None
+    except Exception as exc:  # noqa: BLE001 - a dashboard panel must not 500 the page
+        logger.warning("dashboard/rag: kb_meta count failed: %s", exc)
+
+    try:
+        row = _rows("SELECT count(*) AS n FROM langchain_pg_embedding")
+        out["chunks"] = int(row[0]["n"]) if row else 0
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("dashboard/rag: embedding count failed: %s", exc)
+
+    try:
+        row = _rows(
+            "SELECT "
+            " count(*) FILTER (WHERE lower(coalesce(decision,'')) IN ('answer','approved')) AS answered,"
+            " count(*) FILTER (WHERE lower(coalesce(decision,'')) IN ('caution','rejected','blocked')) AS cautioned,"
+            " avg(confidence) FILTER (WHERE confidence IS NOT NULL) AS avg_conf "
+            "FROM audit_log WHERE created_at >= now() - interval '7 days'"
+        )
+        if row:
+            answered = int(row[0]["answered"] or 0)
+            cautioned = int(row[0]["cautioned"] or 0)
+            judged = answered + cautioned
+            out["gate"] = {
+                "answered": answered,
+                "cautioned": cautioned,
+                "pass_pct": round(100.0 * answered / judged, 1) if judged else None,
+                "avg_confidence": round(float(row[0]["avg_conf"]), 3) if row[0]["avg_conf"] is not None else None,
+            }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("dashboard/rag: gate query failed: %s", exc)
+
+    try:
+        row = _rows(
+            # Rate-limit refusals are throttling, not a content block: counting them made
+            # the panel say "232 blocks" on a week with one injection attempt.
+            "SELECT count(*) AS n FROM audit_log WHERE action IN ("
+            "'guardrail.injection','guardrail.toxic','guardrail.profanity',"
+            "'guardrail.pii','guardrail.overflow') "
+            "AND created_at >= now() - interval '7 days'"
+        )
+        out["blocks_7d"] = int(row[0]["n"]) if row else 0
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("dashboard/rag: guardrail count failed: %s", exc)
+
     return out
 
 

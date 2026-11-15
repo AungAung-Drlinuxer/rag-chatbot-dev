@@ -41,7 +41,7 @@ export type HealthItem = {
   /** #12 — stable backend key (postgres/redis/ollama/llm/jira/...) for the icon */
   key?: string;
   name: string;
-  status: "Healthy" | "Degraded" | "Down";
+  status: "Healthy" | "Degraded" | "Down" | "Not configured";
   /** #12 — why a dependency is down (first line of the real error) */
   detail?: string | null;
   latency_ms?: number | null;
