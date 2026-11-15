@@ -1,5 +1,6 @@
-import { Check, Copy, Download, TriangleAlert } from "lucide-react";
+import { Check, Copy, Download, Maximize2, Minus, Plus, TriangleAlert, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * A ```mermaid fence from the assistant, drawn as a diagram.
@@ -98,6 +99,25 @@ export default function MermaidDiagram({
   const [svg, setSvg] = useState<string | null>(() => svgCache.get(cacheKey(chart, isDark())) ?? null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /* Maximise: the chat column is ~600px, a real flowchart needs the whole window. */
+  const [expanded, setExpanded] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvas, setCanvas] = useState({ w: 0, h: 0 });
+
+  /* Fit, then zoom — not "stretch to the panel width". A 275×1000 flowchart stretched across
+     a 1200px dialog becomes a 4000px-tall page, which is worse than the chat column. */
+  useEffect(() => {
+    if (!expanded) return;
+    const el = canvasRef.current;
+    if (!el) return;
+    const measure = () => setCanvas({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expanded]);
   const [dark, setDark] = useState(() => (typeof document === "undefined" ? false : isDark()));
   const alive = useRef(true);
 
@@ -151,6 +171,23 @@ export default function MermaidDiagram({
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+      if (e.key === "+" || e.key === "=") setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)));
+      if (e.key === "-") setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)));
+    };
+    document.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [expanded]);
+
   const copy = useCallback(() => {
     const done = () => {
       setCopied(true);
@@ -183,6 +220,7 @@ export default function MermaidDiagram({
   }
 
   return (
+    <>
     <figure
       className={`group/diagram relative my-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-[var(--border)] dark:bg-[var(--card)] ${compact ? "text-xs" : ""}`}
       data-slot="mermaid-diagram"
@@ -201,6 +239,17 @@ export default function MermaidDiagram({
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-[var(--muted-foreground)] dark:hover:bg-[var(--card)] dark:hover:text-slate-100"
             >
               <Download className="size-3" />
+            </button>
+          )}
+          {svg && (
+            <button
+              type="button"
+              onClick={() => { setZoom(1); setExpanded(true); }}
+              aria-label="Maximise diagram"
+              title="Maximise"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800 dark:text-[var(--muted-foreground)] dark:hover:bg-[var(--card)] dark:hover:text-slate-100"
+            >
+              <Maximize2 className="size-3" />
             </button>
           )}
           <button
@@ -240,5 +289,108 @@ export default function MermaidDiagram({
         </div>
       )}
     </figure>
+
+    {/* Maximise: a full-window canvas with zoom, so a wide or dense flowchart is readable.
+        Rendered in a portal because the chat column clips (overflow) and the message is deep in
+        a scrolling list. */}
+    {expanded && svg && typeof document !== "undefined" &&
+      createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex flex-col bg-slate-950/75 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Diagram, maximised"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setExpanded(false); }}
+        >
+          <div className="mx-auto mt-6 mb-6 flex h-[calc(100dvh-3rem)] w-[min(1280px,95vw)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[var(--border)] dark:bg-[var(--card)]">
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-[var(--border)]">
+              <span className="font-mono text-3xs uppercase tracking-wider text-slate-500 dark:text-[var(--muted-foreground)]">
+                diagram
+              </span>
+              <span className="ml-auto flex items-center gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                  aria-label="Zoom out"
+                  title="Zoom out (−)"
+                  className="grid size-7 place-items-center rounded-md text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-[var(--muted)]"
+                  disabled={zoom <= 0.5}
+                >
+                  <Minus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  title="Fit to width"
+                  className="min-w-11 rounded-md px-1 text-2xs font-medium tabular-nums text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-[var(--muted)]"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
+                  aria-label="Zoom in"
+                  title="Zoom in (+)"
+                  className="grid size-7 place-items-center rounded-md text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-[var(--muted)]"
+                  disabled={zoom >= 3}
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              </span>
+              <button
+                type="button"
+                onClick={download}
+                aria-label="Download diagram as SVG"
+                title="Download SVG"
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-2xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-[var(--border)] dark:text-slate-300 dark:hover:bg-[var(--muted)]"
+              >
+                <Download className="size-3.5" /> SVG
+              </button>
+              <button
+                type="button"
+                onClick={copy}
+                aria-label="Copy diagram source"
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-2xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-[var(--border)] dark:text-slate-300 dark:hover:bg-[var(--muted)]"
+              >
+                {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button
+                ref={closeRef}
+                type="button"
+                onClick={() => setExpanded(false)}
+                aria-label="Close maximised diagram"
+                className="grid size-7 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-[var(--muted)] dark:hover:text-slate-100"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div
+              ref={canvasRef}
+              className="flex-1 overflow-auto bg-slate-50/60 p-4 dark:bg-[var(--background)]"
+            >
+              {(() => {
+                const vb = /viewBox="([^"]+)"/.exec(svg)?.[1]?.trim().split(/[\s,]+/).map(Number);
+                const aspect = vb && vb.length === 4 && vb[3] > 0 ? vb[2] / vb[3] : 1.6;
+                /* 100% is "as large as is useful", not "as small as fits": a tall flowchart
+                   scaled to fit the dialog height is the same size it already was in the chat,
+                   which makes Maximise look broken. Cap at ~2.2× the height-fit so a dense
+                   graph lands readable and the canvas scrolls. */
+                const fitW = canvas.w ? Math.min(canvas.w, canvas.h * aspect * 2.2) : canvas.w;
+                const width = Math.max(120, (fitW || 320) * zoom);
+                return (
+                  <div
+                    className="mmd-maximised mx-auto"
+                    style={{ width: `${width}px`, height: `${width / aspect}px` }}
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                  />
+                );
+              })()}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

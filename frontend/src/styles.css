@@ -1404,6 +1404,10 @@ code, pre, .mono { font-family: var(--mono); }
 .mermaid-diagram { max-height: min(60dvh, 560px); overflow: auto; overscroll-behavior: contain; min-height: 96px; }
 .mermaid-diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 
+/* Maximised view: the wrapper carries the zoom, the svg fills it. Kept out of Tailwind because
+   the important-flag on a descendant selector is exactly what arbitrary variants get wrong. */
+.mmd-maximised svg { max-width: none !important; width: 100% !important; height: 100% !important; }
+
 /* Overview board: panels are absolutely positioned on a 12-column canvas (panels/grid.ts).
    `.dash-cell` remains for any older markup that still uses the stacked grid. */
 .dash-cell { grid-column: span 12 / span 12; }
