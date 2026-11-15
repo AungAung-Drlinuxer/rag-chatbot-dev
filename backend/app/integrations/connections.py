@@ -145,8 +145,8 @@ def create_connection(data: dict) -> dict:
                  active, sequence)
             VALUES (:provider, :label, :base_url, :email, :api_token, :cloud_id, :spaces,
                     :project_key, :active, :sequence)
-            ON CONFLICT (provider, base_url) DO UPDATE SET
-                label = EXCLUDED.label, email = EXCLUDED.email,
+            ON CONFLICT (provider, base_url, label) DO UPDATE SET
+                email = EXCLUDED.email,
                 api_token = COALESCE(NULLIF(EXCLUDED.api_token, ''), integration_connections.api_token),
                 cloud_id = EXCLUDED.cloud_id, spaces = EXCLUDED.spaces,
                 project_key = EXCLUDED.project_key, active = EXCLUDED.active

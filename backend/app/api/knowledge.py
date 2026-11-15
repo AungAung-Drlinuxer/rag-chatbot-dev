@@ -243,19 +243,41 @@ def article_sources(user: str = Depends(get_current_user)) -> dict:
     from sqlalchemy import text
 
 
+    from app.integrations.connections import list_connections
+
     labels = {"confluence": "Confluence", "manual": "Manual", "unknown": "Internal"}
     with SessionLocal() as s:
         rows = s.execute(text(
-            "SELECT COALESCE(source_url, ''), COALESCE(page_id, '') FROM kb_meta"
+            "SELECT COALESCE(source_url, ''), COALESCE(page_id, ''), connection_id "
+            "FROM kb_meta"
         )).fetchall()
     counts: dict[str, int] = {}
-    for url, pid in rows:
+    per_binding: dict[int, int] = {}
+    for url, pid, cid in rows:
         key = classify_source(url, pid)
         counts[key] = counts.get(key, 0) + 1
-    return {"sources": [
-        {"key": k, "label": labels[k], "count": counts[k]}
-        for k in sorted(counts, key=lambda c: -counts[c])
-    ]}
+        if cid:
+            per_binding[int(cid)] = per_binding.get(int(cid), 0) + 1
+    # The sites an admin configured, not just the provider types: two Confluence bindings are
+    # two sources, and the Knowledge page has to be able to say so before either has synced.
+    sites = [
+        {
+            "id": str(c["id"]),
+            "label": c["label"],
+            "base_url": c["base_url"],
+            "spaces": c["spaces"],
+            "count": per_binding.get(int(c["id"]), 0),
+        }
+        for c in list_connections("confluence", active_only=True)
+        if c["id"] is not None
+    ]
+    return {
+        "sources": [
+            {"key": k, "label": labels[k], "count": counts[k]}
+            for k in sorted(counts, key=lambda c: -counts[c])
+        ],
+        "sites": sites,
+    }
 
 
 @router.get("/api/articles-recent")

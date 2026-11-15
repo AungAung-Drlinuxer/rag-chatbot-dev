@@ -181,7 +181,9 @@ describe("KnowledgePage — header, results and rows", () => {
     expect(text).toContain("Last sync");
     // Derived from the rows that exist — never from a fixed provider list, which used to
     // report two sources even when only one integration was configured.
-    expect(text).toContain("With indexed articles");
+    // "Sources" is now the number of configured sites, so adding a second binding shows up
+    // before it has synced anything.
+    expect(text).toContain("Configured in Settings");
     expect(text).toContain("1");
     expect(text).toContain("Runs every 30 min");
   });

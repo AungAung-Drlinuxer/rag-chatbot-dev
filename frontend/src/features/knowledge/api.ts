@@ -113,8 +113,17 @@ export async function listArticleSpaces(): Promise<{ spaces: { key: string; coun
   return r.json();
 }
 
-/** Providers that actually contributed articles (server counts rows, no fixed list). */
-export async function listArticleSources(): Promise<{ sources: ArticleSource[] }> {
+/** An admin-configured Confluence binding: the unit the Knowledge page calls a source. */
+export type ArticleSite = {
+  id: string;
+  label: string;
+  base_url: string;
+  spaces: string[];
+  count: number;
+};
+
+/** Providers that contributed articles, plus every configured site (count 0 included). */
+export async function listArticleSources(): Promise<{ sources: ArticleSource[]; sites?: ArticleSite[] }> {
   const r = await apiFetch(`${BASE}/api/articles-sources`, { headers: { ...authHeaders() } });
   if (!r.ok) throw new Error(`failed to fetch sources (HTTP ${r.status})`);
   return r.json();

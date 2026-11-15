@@ -215,11 +215,19 @@ def init_db() -> None:
                 last_sync_at TIMESTAMPTZ,
                 last_error TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
-                UNIQUE (provider, base_url)
+                UNIQUE (provider, base_url, label)
             )"""),
-        ("integration_connections.site_uniq",
-         "CREATE UNIQUE INDEX IF NOT EXISTS integration_connections_site_uniq "
-         "ON integration_connections (provider, base_url)"),
+        # A *binding*, not a site, is the unit: the same Atlassian site can be configured twice
+        # with different space sets ("AEC" and "IHKB"), and the old (provider, base_url) index
+        # made the second one silently overwrite the first.
+        ("integration_connections.site_uniq.drop",
+         "DROP INDEX IF EXISTS integration_connections_site_uniq"),
+        ("integration_connections.url_uniq.drop",
+         "ALTER TABLE integration_connections "
+         "DROP CONSTRAINT IF EXISTS integration_connections_provider_base_url_key"),
+        ("integration_connections.binding_uniq",
+         "CREATE UNIQUE INDEX IF NOT EXISTS integration_connections_binding_uniq "
+         "ON integration_connections (provider, base_url, label)"),
         ("kb_meta.connection_id",
          "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS connection_id INTEGER"),
         ("kb_meta.site", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS site VARCHAR(255)"),

@@ -297,6 +297,7 @@ single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထာ
 | Overview ရဲ့ SERVICE STATUS မှာ “Confluence sync” / “Jira” ကို အနီ (Down) | `/api/dashboard/health` က legacy token ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်၊ healthy row မှာ “1 site” ပြထားတယ် |
 | Create/Edit ticket dialog မှာ “Jira offline” ပေမယ့် ticket က Jira မှာ တကယ်ရောက်တယ် | `/api/ticket-destinations` က legacy config ဖတ်တယ် | `effective_connections("jira")` ပါ ထည့်စစ်တယ် → “Connected to Jira” / “Jira synced” |
 | Comment ကို app မှာ ရေးပြီး Jira ticket မှာ မပေါ် | `add_comment()` က legacy config ဖတ်တယ် → “Jira is not configured”, toast တစ်ခုပဲ ကျန် | site fallback (dev-1.0.114) + `ticket_comments.jira_synced` → “Local only” pill + “Send to Jira” + admin repair endpoint |
+| Site ၂ ခု ထည့်လိုက်တာ ပထမတစ်ခု ပျောက် / site တစ်ခုပဲ ပြ | backend က `(provider, base_url)` ကို unique ထားတယ် → URL တူရင် row အသစ် မဝင်၊ ရှိပြီးသား row ကို **overwrite** လုပ်တယ် (spaces/token အဟောင်း ပျက်၊ နောက် sync မှာ article တွေပါ ဖျက်ခံရ) | unique key ကို `(provider, base_url, label)` ပြောင်း (dev-1.0.118) → URL တူပေမယ့် label မတူရင် binding နှစ်ခု အတူယှဉ်တွဲ ရှိနိုင်။ Dialog မှာ URL ထပ်နေရင် သတိပေးစာ ပြ |
 | Test က “1 pages visible” | `/rest/api/content` ရဲ့ `size` က response row အရေအတွက် (ငါတို့ 1 ခုပဲ တောင်းတယ်) | space စာရင်း ဖတ်ပြီး “3 spaces visible · not listed: …” |
 
 ဒါကြောင့် “connected လား” ဆိုတာကို **Test** ခလုတ် (site တစ်ခုချင်း၊ အဲဒီ site ရဲ့ token နဲ့)
@@ -311,3 +312,14 @@ single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထာ
 - Internal note က Jira မှာ role visibility နဲ့ ရောက်တယ်။ API account က “Service Desk Team”
   role ထဲ မပါရင် Jira က “Administrators” ကို ရွေးတယ် — အဲဒါကို Jira admin side မှာ ဖြည့်ရမယ်
   (code မဟုတ်)။
+
+## Site တစ်ခုတည်းရှိတဲ့ Atlassian account မှာ source နှစ်ခု ဘယ်လိုထားမလဲ
+
+Confluence **site** တစ်ခုမှာ space အများကြီး ရှိနိုင်တယ်။ Source နှစ်ခုလိုချင်ရင် နည်းနှစ်မျိုး ရှိတယ်:
+
+1. **Site တစ်ခု၊ space အားလုံး** — row တစ်ခုတည်းမှာ `AEC, IHKB, HELP, IT` လို့ comma ခြားပြီး ရေးပါ။ ဒါက အရိုးရှင်းဆုံး၊ token တစ်ခုတည်း သုံးတယ်။
+2. **Binding နှစ်ခု၊ space ကွဲ** — `AI Engineer Course` (AEC) နဲ့ `HQ Confluence` (IHKB, HELP, IT) ဆိုပြီး row နှစ်ခု ထားပါ။ URL တူလို့ ရပါတယ် (dev-1.0.118 ကတည်းက)၊ label မတူဖို့ လိုတယ်။
+
+နှစ်မျိုးလုံးအတွက် Settings → Integrations → Confluence → Configure မှာ ထည့်ပြီး **Sync now** နှိပ်ရတယ်။ Knowledge page ရဲ့ **Sources** card က configured site အရေအတွက် ကို ပြတယ် (article မဝင်သေးလည်း ပြတယ်)၊ **Site** filter က site တစ်ခုချင်း ခွဲကြည့်ဖို့ ရတယ်။
+
+> သတိ: configure လုပ်ထားတဲ့ space မဟုတ်တဲ့ article တွေကို နောက် sync မှာ KB ထဲက ဖျက်ပါတယ်။ Space key ကို မတော်တဆ ဖျက်မိရင် အဲဒီ space ရဲ့ article တွေ ပျောက်မယ် — ပြန်ထည့်ပြီး Sync now နှိပ်ရင် ပြန်ဝင်လာပါတယ်။

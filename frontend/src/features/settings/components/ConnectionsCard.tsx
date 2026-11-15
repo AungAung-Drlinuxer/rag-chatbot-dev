@@ -463,6 +463,21 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
               <Plus className="size-3" /> Add another site
             </button>
           )}
+          {/* Adding a site whose URL already exists used to be an invisible update: the row it
+              landed on simply changed. Say which one, and what the label decides. */}
+          {editing === "new" && (() => {
+            const url = (form.base_url || "").trim().replace(/\/$/, "");
+            const same = url ? (rows ?? []).find((r) => r.base_url.replace(/\/$/, "") === url) : undefined;
+            if (!same) return null;
+            const sameLabel = same.label.trim().toLowerCase() === (form.label || "").trim().toLowerCase();
+            return (
+              <p className="mt-2 rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-1.5 text-2xs text-[var(--warn)]">
+                {sameLabel
+                  ? `This URL is already configured as "${same.label}" — saving updates that site.`
+                  : `This URL is already used by "${same.label}". A different label keeps this as a second binding on the same site.`}
+              </p>
+            );
+          })()}
           <div className="mt-2.5 flex items-center gap-2">
             <button type="button" onClick={save} disabled={saving || !form.label?.trim() || !form.base_url?.trim()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-2xs font-semibold text-[var(--primary-foreground)] disabled:opacity-50">

@@ -407,15 +407,19 @@ export default function Knowledge({ role, onToast }: Props) {
   const hasFilters = chip !== "all" || providerFilter !== "all" || spaceFilter !== "all"
     || siteFilter !== "all" || query.trim().length > 0 || searchMode;
 
-  /** Distinct sites present in the KB (connection id + the label an admin gave it). */
+  /** Configured sites, from the server when it answers, otherwise from what the KB contains.
+   *  A site that has not synced yet is still a source the admin added — it must appear in the
+   *  filter and in the count, or adding a second one looks like nothing happened. */
+  const [configured, setConfigured] = useState<{ id: string; label: string }[]>([]);
   const sites = useMemo(() => {
+    if (configured.length > 0) return configured;
     const map = new Map<string, { id: string; label: string }>();
     for (const sp of spaces ?? []) {
       const id = String(sp.connection_id ?? "default");
       if (!map.has(id)) map.set(id, { id, label: sp.label || sp.site || "Default" });
     }
     return [...map.values()];
-  }, [spaces]);
+  }, [configured, spaces]);
 
   const visibleSpaces = useMemo(
     () => (spaces ?? []).filter((sp) => siteFilter === "all" || String(sp.connection_id ?? "default") === siteFilter),
@@ -432,6 +436,9 @@ export default function Knowledge({ role, onToast }: Props) {
     if (domainResponse?.domains) setDomains(domainResponse.domains);
     if (syncResponse) setStatus(syncResponse);
     if (sourceResponse?.sources) setSources(sourceResponse.sources);
+    if (sourceResponse?.sites) {
+      setConfigured(sourceResponse.sites.map((s) => ({ id: String(s.id), label: s.label })));
+    }
   }
 
   /** Query string for /api/articles-list. Every narrowing control is explicit here so a
@@ -727,9 +734,9 @@ export default function Knowledge({ role, onToast }: Props) {
             tone="info"
             icon={<Database className="size-4" />}
             label="Sources"
-            unit="providers"
-            value={sources != null ? sources.length.toLocaleString() : "—"}
-            caption="With indexed articles"
+            unit={sites.length === 1 ? "site" : "sites"}
+            value={sites.length > 0 ? sites.length.toLocaleString() : (sources != null ? sources.length.toLocaleString() : "—")}
+            caption="Configured in Settings"
           />
           <StatCard
             tone={status?.state === "error" ? "danger" : status?.state === "running" ? "info" : "warn"}
