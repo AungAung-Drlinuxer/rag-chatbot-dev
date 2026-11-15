@@ -15,6 +15,8 @@ import {
   dashHealth,
   dashGateTrend,
   dashRag,
+  dashFeedback,
+  type DashFeedback,
   type DashRag,
   type ReportWindow,
 } from "@/features/dashboard/api";
@@ -224,6 +226,7 @@ export default function Dashboard({ role, perms }: Props) {
   const [liveHealth, setLiveHealth] = useState<HealthItem[]>([]);
   const [gateTrend, setGateTrend] = useState<GatePoint[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [feedback, setFeedback] = useState<DashFeedback | null>(null);
   const [rag, setRag] = useState<DashRag | null>(null);
   const [ragError, setRagError] = useState<string | null>(null);
   const [usage, setUsage] = useState<ObservabilityOverview | null>(null);
@@ -347,6 +350,13 @@ export default function Dashboard({ role, perms }: Props) {
           if (mounted) { setRag(r); setRagError(null); }
         } catch (err) {
           if (mounted) { setRag(null); setRagError(err instanceof Error ? err.message : String(err)); }
+        }
+        // The thumbs the team actually pressed, counted for this same window.
+        try {
+          const fb = await dashFeedback(win.kind === "custom" ? { start: win.start, end: win.end } : { days: win.days });
+          if (mounted) setFeedback(fb);
+        } catch {
+          if (mounted) setFeedback(null);
         }
 
         if (h?.services?.length) {
@@ -535,6 +545,7 @@ export default function Dashboard({ role, perms }: Props) {
     tickets: liveTickets, health: liveHealth, healthSummary,
     totals, needsReview, attention, healthDown, win, rangeLabel, deltaProps,
     refresh: refreshDashboard,
+    feedback,
     rag, ragError,
     usage, usageError, usageDenied, guardrailEvents, guardrailTotal, guardrailDenied,
   };

@@ -30,6 +30,7 @@ vi.mock("@/features/dashboard/api", () => ({
   dashHealth: vi.fn(),
   dashGateTrend: vi.fn(),
   dashRag: vi.fn(),
+  dashFeedback: vi.fn(),
   getBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
   saveBoardLayout: vi.fn(async () => ({ board: null, custom: true, updated_at: null })),
   clearBoardLayout: vi.fn(async () => ({ board: null, custom: false, updated_at: null })),
@@ -79,6 +80,10 @@ function happyPath() {
     attacks_blocked_7d: 3,
     deltas: { total_conversations: 12, resolved_by_bot: 8, active_users: -3 },
     previous: { total_conversations: 30, resolved_by_bot: 22, active_users: 10 },
+  });
+  m.dashFeedback.mockResolvedValue({
+    helpful: 12, not_helpful: 3, total: 15, pct: 80,
+    prev_helpful: 8, prev_not_helpful: 4, recent: [],
   });
   m.dashRag.mockResolvedValue({
     pages: 120, chunks: 1480, last_sync: "2026-01-08T01:00:00Z",

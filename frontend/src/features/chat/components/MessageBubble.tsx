@@ -16,6 +16,7 @@
  */
 import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Loader2, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
 
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import AgentActivity, { stageFromText } from "@/components/AgentActivity";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Avatar } from "@/features/users/avatar";
@@ -86,6 +87,7 @@ function MessageBubble({
   const caution = message.decision === "caution";
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(message.content);
 
@@ -114,32 +116,6 @@ function MessageBubble({
     }
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
-  }
-
-  async function shareText(text: string) {
-    const nav = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> };
-    if (typeof nav.share === "function") {
-      try {
-        await nav.share({ title: document.title, text });
-        flashShared();
-        return;
-      } catch {
-        /* dismissed or blocked — fall through to the clipboard */
-      }
-    }
-    // No Web Share API (most desktops) or the sheet failed: copy, and say so with the
-    // tick. Previously the success path returned before setShared(), so the button on a
-    // browser with share support gave no confirmation at all.
-    // Copy, but light only the Share button: the fallback used to call copyText() and
-    // flash both ticks at once.
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand("copy"); document.body.removeChild(ta);
-    }
-    flashShared();
   }
 
   function flashShared() {
@@ -504,7 +480,7 @@ function MessageBubble({
               type="button"
               title={shared ? "Shared" : "Share answer"}
               aria-label={shared ? "Shared" : "Share answer"}
-              onClick={() => shareText(message.content)}
+              onClick={() => setShareOpen(true)}
               className="grid size-9 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted sm:size-8"
             >
               {shared ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
@@ -523,7 +499,74 @@ function MessageBubble({
           </div>
         )}
       </article>
+
+      {/* Share as a visible act: the one-tap path depended on navigator.share, which a
+          WebView or a denied permission turns into a silent clipboard write. The sheet
+          always appears, so nobody is left guessing whether the press did anything. */}
+      <ShareAnswerDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        text={message.content}
+        onShared={() => { flashShared(); setShareOpen(false); }}
+        onCopied={() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); setShareOpen(false); }}
+      />
     </div>
+  );
+}
+
+function ShareAnswerDialog({ open, onClose, text, onShared, onCopied }: {
+  open: boolean; onClose: () => void; text: string; onShared: () => void; onCopied: () => void;
+}) {
+  const nav = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> };
+  const canShare = typeof nav.share === "function";
+  const [busy, setBusy] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
+    onCopied();
+  }
+
+  async function nativeShare() {
+    if (!canShare) return void copy();
+    setBusy(true);
+    try {
+      await nav.share!({ title: document.title, text });
+      onShared();
+    } catch {
+      // Dismissed or blocked — the sheet stays open so Copy is still one press away.
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-[560px]">
+        <DialogTitle>Share this answer</DialogTitle>
+        <p className="mt-1 text-xs text-muted-foreground">
+          The answer text, exactly as it appears here — sources are not included.
+        </p>
+        <div className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-3 text-xs leading-relaxed">
+          {text.length > 1200 ? `${text.slice(0, 1200)}…` : text}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <button type="button" onClick={copy}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-medium hover:bg-muted">
+            <Copy className="size-3.5" /> Copy text
+          </button>
+          <button type="button" onClick={nativeShare} disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-[var(--primary-foreground)] disabled:opacity-60">
+            <Share2 className="size-3.5" /> {busy ? "Sharing…" : canShare ? "Share to another app" : "Share (copies text)"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

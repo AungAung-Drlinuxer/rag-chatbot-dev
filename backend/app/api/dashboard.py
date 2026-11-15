@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -1012,3 +1012,64 @@ def reset_dashboard_board(user: str = Depends(get_current_user)) -> dict:
         s.execute(text("DELETE FROM runtime_kv WHERE key = :k"), {"k": _board_key(user)})
         s.commit()
     return {"board": None, "custom": False, "updated_at": None}
+
+
+@router.get("/dashboard/feedback")
+def get_dashboard_feedback(
+    days: int = Query(7, ge=1, le=365),
+    start: str | None = None,
+    end: str | None = None,
+    user: str = Depends(get_current_user),
+) -> dict:
+    """Helpful / Not helpful counts for the same window as the rest of the board.
+
+    The feedback table is the only place a person's verdict is stored, so this is a
+    straight count — no sampling and no estimate. `recent` lists the newest Not helpful
+    answers so an administrator can open the conversation the complaint came from.
+    """
+
+    since_s, until_s, span = _window(days, start, end)
+    since = datetime.fromisoformat(since_s).date()
+    until = datetime.fromisoformat(until_s).date()
+    prev_since = since - timedelta(days=span)
+
+    def counts(a: date, b: date) -> tuple[int, int]:
+        with _db() as s:
+            row = s.execute(text(
+                "SELECT "
+                "  COUNT(*) FILTER (WHERE rating > 0), "
+                "  COUNT(*) FILTER (WHERE rating < 0) "
+                "FROM feedback WHERE date(created_at) BETWEEN :a AND :b"
+            ), {"a": a, "b": b}).first()
+        return (int(row[0] or 0), int(row[1] or 0))
+
+    helpful, not_helpful = counts(since, until)
+    prev_helpful, prev_not_helpful = counts(prev_since, since - timedelta(days=1))
+
+    total = helpful + not_helpful
+    pct = round(helpful * 100 / total, 1) if total else None
+
+    recent: list[dict] = []
+    with _db() as s:
+        rows = s.execute(text(
+            "SELECT f.message_id, f.created_at, m.content "
+            "FROM feedback f LEFT JOIN chat_messages m ON m.id::text = f.message_id "
+            "WHERE f.rating < 0 AND date(f.created_at) BETWEEN :a AND :b "
+            "ORDER BY f.created_at DESC LIMIT 5"
+        ), {"a": since, "b": until}).all()
+        for r in rows:
+            recent.append({
+                "message_id": r[0],
+                "at": r[1].isoformat() if r[1] else None,
+                "excerpt": (r[2] or "")[:220],
+            })
+
+    return {
+        "helpful": helpful,
+        "not_helpful": not_helpful,
+        "total": total,
+        "pct": pct,
+        "prev_helpful": prev_helpful,
+        "prev_not_helpful": prev_not_helpful,
+        "recent": recent,
+    }

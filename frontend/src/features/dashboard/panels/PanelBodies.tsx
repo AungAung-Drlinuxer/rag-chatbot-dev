@@ -8,7 +8,7 @@
  */
 import {
   Activity, AlertTriangle, BookOpen, Boxes, CheckCircle2, Eye, ExternalLink, Gauge,
-  MessageSquare, ShieldAlert, ShieldCheck, Ticket, Users, } from "lucide-react";
+  MessageSquare, ShieldAlert, ShieldCheck, ThumbsDown, ThumbsUp, Ticket, Users, } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -94,10 +94,13 @@ function Attention({ title }: PanelBodyProps) {
 }
 
 function Kpis() {
-  const { stats, loading, deltaProps } = useDashboardData();
+  const { stats, loading, deltaProps, feedback } = useDashboardData();
   const s = stats as any;
+  const prevTotal = (feedback?.prev_helpful ?? 0) + (feedback?.prev_not_helpful ?? 0);
+  const prevPct = prevTotal ? Math.round((feedback!.prev_helpful * 100) / prevTotal) : null;
+  const pctDelta = feedback?.pct != null && prevPct != null ? Math.round((feedback.pct - prevPct) * 10) / 10 : null;
   return (
-    <section className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 h-full">
+    <section className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5 h-full">
       <KpiCard
         icon={<MessageSquare className="size-4" />}
         value={stats ? String(s.total_conversations) : "—"}
@@ -130,6 +133,19 @@ function Kpis() {
         title="Active Users"
         {...deltaProps("active_users", s?.active_users ?? 0)}
         loading={loading}
+      />
+      {/* The fifth tile: what the people reading these answers said about them. */}
+      <KpiCard
+        tone="violet"
+        icon={<ThumbsUp className="size-4" />}
+        value={feedback?.pct == null ? "—" : `${feedback.pct}%`}
+        title="Helpful Answers"
+        change={pctDelta == null ? null : `${pctDelta > 0 ? "+" : ""}${pctDelta} pts`}
+        positive={(pctDelta ?? 0) >= 0}
+        description={feedback?.total
+          ? `${fmtInt(feedback.helpful)} helpful · ${fmtInt(feedback.not_helpful)} not helpful`
+          : "no feedback this period"}
+        loading={!feedback}
       />
     </section>
   );
@@ -180,7 +196,9 @@ function Trend({ title }: PanelBodyProps) {
 }
 
 function Quality({ title }: PanelBodyProps) {
-  const { stats, totals, gateTrend } = useDashboardData();
+  const { stats, totals, gateTrend, feedback } = useDashboardData();
+  const prevTotal = (feedback?.prev_helpful ?? 0) + (feedback?.prev_not_helpful ?? 0);
+  const prevPct = prevTotal ? Math.round((feedback!.prev_helpful * 100) / prevTotal) : null;
   return (
     <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="mb-3">
@@ -228,6 +246,39 @@ function Quality({ title }: PanelBodyProps) {
             <span className="h-full rounded-full bg-[var(--ok)]" style={{ width: `${totals.gatePassPct ?? 0}%` }} />
           </div>
         )}
+      </div>
+
+      {/* The team's own verdict, counted — the panel that said how often the bot finished
+          without a human never said how often the human thought the answer was any good. */}
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-muted/30 p-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <ThumbsUp className="size-3" /> Answer feedback
+          </p>
+          {feedback && feedback.total > 0 ? (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <ThumbsUp className="size-3 text-[var(--ok)]" /> {fmtInt(feedback.helpful)} helpful
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <ThumbsDown className="size-3 text-[var(--danger)]" /> {fmtInt(feedback.not_helpful)} not helpful
+              </span>
+              {prevPct !== null && (
+                <span className="text-3xs">vs {prevPct}% previous period</span>
+              )}
+            </p>
+          ) : (
+            <p className="mt-1 text-2xs text-muted-foreground">
+              {feedback ? "No feedback in this window." : "Reading feedback…"}
+            </p>
+          )}
+        </div>
+        <p className="shrink-0 text-right">
+          <span className="block text-base font-semibold tabular-nums">
+            {feedback?.pct == null ? "—" : `${feedback.pct}%`}
+          </span>
+          <span className="block text-3xs uppercase tracking-wide text-muted-foreground">helpful</span>
+        </p>
       </div>
     </section>
   );

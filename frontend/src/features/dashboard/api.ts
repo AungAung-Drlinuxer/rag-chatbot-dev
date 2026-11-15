@@ -74,6 +74,26 @@ export async function dashRag(): Promise<DashRag> {
   return r.json();
 }
 
+export type DashFeedback = {
+  helpful: number;
+  not_helpful: number;
+  total: number;
+  pct: number | null;
+  prev_helpful: number;
+  prev_not_helpful: number;
+  recent: { message_id: string | null; at: string | null; excerpt: string }[];
+};
+
+export async function dashFeedback(win?: { days?: number; start?: string | null; end?: string | null }): Promise<DashFeedback> {
+  const qs = new URLSearchParams();
+  if (win?.start && win?.end) { qs.set("start", win.start); qs.set("end", win.end); }
+  else if (win?.days) qs.set("days", String(win.days));
+  const suffix = qs.toString() ? `?${qs}` : "";
+  const r = await apiFetch(`${BASE}/api/dashboard/feedback${suffix}`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
 export async function dashHealth() {
   const r = await apiFetch(`${BASE}/api/dashboard/health`, { headers: authHeaders() });
   return r.json();
