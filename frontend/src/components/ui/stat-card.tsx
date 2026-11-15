@@ -27,6 +27,8 @@ export function StatCard({
   unit,
   caption,
   loading = false,
+  onClick,
+  active = false,
 }: {
   tone?: StatTone;
   icon: ReactNode;
@@ -36,13 +38,20 @@ export function StatCard({
   unit?: string;
   caption: string;
   loading?: boolean;
+  /** When given, the whole card filters the list below it (and `aria-pressed` reports it). */
+  onClick?: () => void;
+  active?: boolean;
 }) {
   const t = TONES[tone];
-  return (
-    <div
-      data-slot="summary-card"
-      className={["stat-card h-full px-4 py-3.5 sm:px-5", t.edge].join(" ")}
-    >
+  const className = [
+    "stat-card h-full w-full px-4 py-3.5 text-left sm:px-5",
+    t.edge,
+    onClick ? "cursor-pointer transition hover:-translate-y-px hover:border-[var(--primary)]/40" : "",
+    active ? "ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-[var(--background)]" : "",
+  ].join(" ");
+
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
@@ -69,7 +78,26 @@ export function StatCard({
       <p className="mt-1.5 line-clamp-2 text-2xs leading-relaxed text-muted-foreground">
         {loading ? "\u00a0" : caption}
       </p>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div data-slot="summary-card" className={className}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      data-slot="summary-card"
+      aria-pressed={active}
+      onClick={onClick}
+      className={className}
+    >
+      {body}
+    </button>
   );
 }
 

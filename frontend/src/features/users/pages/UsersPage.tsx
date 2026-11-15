@@ -199,6 +199,9 @@ export default function Users() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [roleFilter, setRoleFilter] = useState("All");
+  /* The four figures above the table are also its filters, like Tickets: clicking "Administrators"
+     is the shortest path from "how many" to "which ones". */
+  const [cardFilter, setCardFilter] = useState<"all" | "active" | "admins" | "inactive">("all");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -285,9 +288,14 @@ export default function Users() {
         : statusFilter === "All" || user.status === statusFilter;
       const matchesRole = roleFilter === "All" || user.role === roleFilter;
       const matchesDepartment = departmentFilter === "All" || user.department === departmentFilter;
-      return matchesSearch && matchesStatus && matchesRole && matchesDepartment;
+      const matchesCard =
+        cardFilter === "all" ||
+        (cardFilter === "active" && user.status === "Active") ||
+        (cardFilter === "admins" && user.role === "Administrator") ||
+        (cardFilter === "inactive" && user.status !== "Active");
+      return matchesSearch && matchesStatus && matchesRole && matchesDepartment && matchesCard;
     });
-  }, [users, search, statusFilter, roleFilter, departmentFilter]);
+  }, [users, search, statusFilter, roleFilter, departmentFilter, cardFilter]);
 
   // Options come from the users actually listed. They used to be merged with an
   // admin-managed departments table, which could offer a filter that matched nobody.
@@ -343,6 +351,7 @@ export default function Users() {
 
   function resetFilters() {
     setSearch(""); setStatusFilter("All"); setRoleFilter("All"); setDepartmentFilter("All");
+    setCardFilter("all");
   }
 
   async function toggleUser(userId: string) {
@@ -393,9 +402,12 @@ export default function Users() {
     }
     setPage(1);
   }
-  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, departmentFilter]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, roleFilter, departmentFilter, cardFilter]);
 
-  const hasFilters = Boolean(search || statusFilter !== "All" || roleFilter !== "All" || departmentFilter !== "All");
+  const hasFilters = Boolean(
+    search || statusFilter !== "All" || roleFilter !== "All" || departmentFilter !== "All" ||
+    cardFilter !== "all",
+  );
   const rangeStart = filteredUsers.length === 0 ? 0 : (page - 1) * perPage + 1;
   const rangeEnd = Math.min(page * perPage, filteredUsers.length);
 
@@ -514,14 +526,18 @@ export default function Users() {
         {/* summary cards — label left, icon right, big number, muted caption */}
         <StatRow>
           <StatCard tone="primary" icon={<UsersIcon className="size-4" />} label="Total users" unit={totalUsers === 1 ? "user" : "users"}
-            value={totalUsers} caption="Members in this workspace" />
+            value={totalUsers} caption="Members in this workspace"
+            active={cardFilter === "all"} onClick={() => setCardFilter("all")} />
           <StatCard tone="ok" icon={<UserCheck className="size-4" />} label="Active users" unit="accounts"
-            value={activeUsers} caption="Enabled accounts" />
+            value={activeUsers} caption="Enabled accounts"
+            active={cardFilter === "active"} onClick={() => setCardFilter((current) => (current === "active" ? "all" : "active"))} />
           <StatCard tone="info" icon={<Shield className="size-4" />} label="Administrators" unit={adminUsers === 1 ? "admin" : "admins"}
-            value={adminUsers} caption="Full workspace control" />
+            value={adminUsers} caption="Full workspace control"
+            active={cardFilter === "admins"} onClick={() => setCardFilter((current) => (current === "admins" ? "all" : "admins"))} />
           <StatCard tone="danger" icon={<UserX className="size-4" />} label="Inactive" unit={inactiveUsers === 1 ? "account" : "accounts"}
             value={inactiveUsers}
-            caption={lockedUsers > 0 ? `Disabled or pending · ${lockedUsers} locked` : "Disabled, locked or pending"} />
+            caption={lockedUsers > 0 ? `Disabled or pending · ${lockedUsers} locked` : "Disabled, locked or pending"}
+            active={cardFilter === "inactive"} onClick={() => setCardFilter((current) => (current === "inactive" ? "all" : "inactive"))} />
         </StatRow>
 
         <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
@@ -533,6 +549,22 @@ export default function Users() {
                   ? `${totalUsers} users`
                   : `${filteredUsers.length} of ${totalUsers} users`}
               </span>
+              {/* A card is a filter the dropdowns cannot express ("inactive" means locked +
+                  disabled + pending). Say so, and offer the way out, or the short list above
+                  "All statuses" reads as a bug. */}
+              {cardFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--primary)]/40 bg-[var(--primary)]/10 py-0.5 pl-2 pr-1 text-2xs font-medium text-[var(--primary)]">
+                  {cardFilter === "active" ? "Active users" : cardFilter === "admins" ? "Administrators" : "Inactive accounts"}
+                  <button
+                    type="button"
+                    onClick={() => setCardFilter("all")}
+                    aria-label="Clear the card filter"
+                    className="grid size-4 place-items-center rounded-full transition hover:bg-[var(--primary)]/20"
+                  >
+                    <X className="size-2.5" />
+                  </button>
+                </span>
+              )}
             </div>
             <p className="shrink-0 whitespace-nowrap text-2xs text-muted-foreground">
               {/* On a phone the toolbar is one line shorter than the sentence: "Sorted by
@@ -842,13 +874,15 @@ function UserRow({ user, onSelect, onToggle, onDelete }: {
             title="Managed in Active Directory / LDAP — sign-in and lifecycle follow the directory"
             className="inline-flex items-center gap-1 rounded border border-[var(--border)] bg-[var(--muted)] px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            <Shield className="size-2.5" /> Directory
+            <Building2 className="size-3" aria-hidden />
+            Directory
           </span>
         ) : (
           <span
             title="Local account — lives only in this app, password and lifecycle managed here"
             className="inline-flex items-center gap-1 rounded border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-[var(--accent-foreground)]"
           >
+            <Laptop className="size-3" aria-hidden />
             Local
           </span>
         )}

@@ -200,6 +200,42 @@ describe("UsersPage — filtering, empty state and pagination", () => {
     expect(el.textContent).toContain("Carol Clark");
   });
 
+  it("filters from the summary cards, and the pressed one says so", async () => {
+    const el = await mount();
+    const cards = [...el.querySelectorAll("button[data-slot='summary-card']")] as HTMLButtonElement[];
+    const adminsCard = cards.find((c) => /Administrators/.test(c.textContent || ""))!;
+    expect(adminsCard.getAttribute("aria-pressed")).toBe("false");
+
+    await click(adminsCard);
+    expect(adminsCard.getAttribute("aria-pressed")).toBe("true");
+    expect(rowCount(el)).toBe(1);
+    expect(el.textContent).toContain("Alice Anderson");
+
+    // the same card toggles itself off instead of trapping the reader in a filter
+    await click(adminsCard);
+    expect(adminsCard.getAttribute("aria-pressed")).toBe("false");
+    expect(rowCount(el)).toBe(10);
+  });
+
+  it("counts locked and inactive together under the Inactive card", async () => {
+    const el = await mount();
+    const cards = [...el.querySelectorAll("button[data-slot='summary-card']")] as HTMLButtonElement[];
+    const inactive = cards.find((c) => /Inactive/.test(c.textContent || ""))!;
+    await click(inactive);
+    expect(rowCount(el)).toBe(2);
+    expect(el.textContent).toContain("Bob Brown");
+    expect(el.textContent).toContain("Carol Clark");
+  });
+
+  it("marks Directory and Local accounts with different icons", async () => {
+    const el = await mount();
+    const rows = [...el.querySelectorAll("tbody tr")];
+    const bob = rows.find((r) => /Bob Brown/.test(r.textContent || ""))!;
+    const alice = rows.find((r) => /Alice Anderson/.test(r.textContent || ""))!;
+    expect(bob.innerHTML).toMatch(/lucide-building-?2/);
+    expect(alice.innerHTML).toMatch(/lucide-laptop/);
+  });
+
   it("shows the empty state (with Clear filters) when nothing matches", async () => {
     const el = await mount();
     const search = el.querySelector('input[aria-label="Search users"]') as HTMLInputElement;
