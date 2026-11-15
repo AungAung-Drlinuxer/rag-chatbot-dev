@@ -29,6 +29,7 @@ import { PaginationBar } from "@/components/ui/pagination";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Avatar, useAvatarEditor } from "../avatar";
+import AvatarPickerDialog from "../AvatarPicker";
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -990,6 +991,7 @@ function PhotoEditor({ user }: { user: User }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyLocal, setBusyLocal] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   async function onPick(file: File | undefined) {
     if (!file) return;
@@ -1013,6 +1015,15 @@ function PhotoEditor({ user }: { user: User }) {
         className={working ? "opacity-60" : ""}
       />
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          disabled={working}
+          title="Choose one of the drawn avatars"
+          className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-3xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          Choose
+        </button>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
@@ -1047,6 +1058,22 @@ function PhotoEditor({ user }: { user: User }) {
         }}
       />
       {error && <span className="max-w-24 text-center text-3xs text-[var(--danger)]">{error}</span>}
+
+      {/* The same sheet Settings → Preferences offers, for this member. */}
+      <AvatarPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        busy={working}
+        forWhom={`@${user.username}`}
+        onSave={async (file) => {
+          setError(null);
+          setBusyLocal(true);
+          const res = await upload(file);
+          setBusyLocal(false);
+          if (!res.ok) setError(res.error);
+          return res;
+        }}
+      />
     </div>
   );
 }
