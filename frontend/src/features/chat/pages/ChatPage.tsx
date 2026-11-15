@@ -12,7 +12,7 @@
  * with the evidence rail only from `xl`, because on a phone the transcript is the product.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, ShieldCheck, Sparkles, Square, X } from "lucide-react";
+import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, Sparkles, Square, X } from "lucide-react";
 
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import SystemStatus from "@/features/chat/components/SystemStatusPanel";
@@ -87,11 +87,6 @@ function Greeting({ name, composer, onPickPrompt }: { name: string; composer: Re
           </button>
         ))}
       </div>
-
-      <p className="mt-4 flex items-center justify-center gap-1.5 text-2xs text-muted-foreground">
-        <ShieldCheck className="size-3 text-[var(--ok)]" aria-hidden />
-        Answers cite the pages they used — check anything destructive before acting on it.
-      </p>
     </section>
   );
 }
