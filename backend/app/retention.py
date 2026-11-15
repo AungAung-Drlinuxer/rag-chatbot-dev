@@ -28,7 +28,7 @@ KEY = "retention"
 # The window closes at local midnight in Singapore. Singapore is UTC+8 all year (no DST), so a
 # fixed UTC hour is exact — kept in one place so the crontab and the settings page cannot disagree.
 NIGHTLY_UTC_HOUR = 16
-NIGHTLY_LABEL = "00:00 Singapore (16:00 UTC)"
+NIGHTLY_LABEL = "12:00 AM (midnight) Singapore · 16:00 UTC"
 LAST = "retention_last_run"
 ALLOWED_DAYS = {30, 90, 180, 365}
 BATCH = 2000

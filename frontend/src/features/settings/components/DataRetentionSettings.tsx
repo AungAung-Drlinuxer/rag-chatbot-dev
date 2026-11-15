@@ -56,7 +56,7 @@ export function DataRetentionSettings() {
   const [lastRun, setLastRun] = useState<{ at?: string; removed?: Record<string, number> } | null>(null);
   /* The time comes from the server: the crontab and this label are one decision, and a hard-coded
      "04:30 UTC" is how the page ended up promising a schedule the worker no longer ran. */
-  const [schedule, setSchedule] = useState("00:00 Singapore (16:00 UTC)");
+  const [schedule, setSchedule] = useState("12:00 AM (midnight) Singapore · 16:00 UTC");
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [confirmText, setConfirmText] = useState("");

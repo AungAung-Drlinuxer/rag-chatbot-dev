@@ -589,6 +589,7 @@ export default function Settings({ role }: { role?: string }) {
               </div>
             )}
             {active === "general" && prefsState === "ready" && (
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
             {/* ---- Who you are: the only preference that is a picture rather than a value. ---- */}
             {active === "general" && <ProfilePhotoSettings />}
@@ -726,53 +727,61 @@ export default function Settings({ role }: { role?: string }) {
             </SectionCard>
             )}
 
-            {/* Save — one bar under the content rather than a second column that repeated
-                every value above it. The reference keeps the action next to the work. */}
-            <section
-              data-slot="save-bar"
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-card px-5 py-4"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold">Save configuration</h2>
-                  {saved && !dirty ? (
-                    <Pill tone="ok">Saved</Pill>
-                  ) : dirty ? (
-                    <Pill tone="warn">Unsaved</Pill>
-                  ) : (
-                    <Pill tone="muted">Synced</Pill>
-                  )}
+            {/* The right column states what is in force right now, and holds the only Save
+                for this tab. It is a read-out, not a second form. */}
+            </div>
+
+            <aside className="space-y-3 xl:sticky xl:top-4">
+              <section data-slot="effective-config" className="rounded-2xl border border-[var(--border)] bg-card p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold">Effective configuration</h2>
+                  {saved && !dirty ? <Pill tone="ok">Saved</Pill> : dirty ? <Pill tone="warn">Unsaved</Pill> : <Pill tone="muted">Synced</Pill>}
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Theme, density and motion preview immediately; the stored values change only when you save.
-                </p>
+                <dl className="mt-3 divide-y divide-[var(--border)] text-xs">
+                  {[
+                    ["Theme", darkMode ? "Dark" : "Light"],
+                    ["Density", compact ? "Compact" : "Comfortable"],
+                    ["Motion", animations ? "On" : "Reduced"],
+                    ["Answer text", `${chatFontSize} px`],
+                    ["Citations", sourceCitations ? "Shown" : "Hidden"],
+                    ["Token usage", showTokenUsage ? "Shown" : "Hidden"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between gap-3 py-2">
+                      <dt className="text-muted-foreground">{k}</dt>
+                      <dd className="font-medium text-foreground">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
                 {saveError && (
-                  <p className="mt-1 flex items-start gap-1 text-xs text-[var(--danger)]">
+                  <p className="mt-2 flex items-start gap-1 text-xs text-[var(--danger)]">
                     <XCircle className="mt-0.5 size-3 shrink-0" /> {saveError}
                   </p>
                 )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={discardChanges}
-                  disabled={!dirty || saving}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-2 text-xs font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
-                >
-                  <RotateCcw className="size-3.5" aria-hidden />
-                  Discard changes
-                </button>
-                <button
-                  type="button"
-                  onClick={saveSettings}
-                  disabled={saving || prefsState !== "ready" || !dirty}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-                >
-                  <Save className="size-3.5" aria-hidden />
-                  {saving ? "Saving…" : "Save changes"}
-                </button>
-              </div>
-            </section>
+                <div className="mt-4 space-y-2">
+                  <button
+                    type="button"
+                    onClick={saveSettings}
+                    disabled={saving || prefsState !== "ready" || !dirty}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <Save className="size-3.5" aria-hidden />
+                    {saving ? "Saving…" : "Save changes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardChanges}
+                    disabled={!dirty || saving}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-2 text-xs font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    <RotateCcw className="size-3.5" aria-hidden />
+                    Discard changes
+                  </button>
+                </div>
+                <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
+                  Theme and density preview immediately; the stored values change when you save.
+                </p>
+              </section>
+            </aside>
             </div>
             )}
 

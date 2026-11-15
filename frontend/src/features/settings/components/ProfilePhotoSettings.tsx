@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImageUp, Loader2, Trash2, UserRound } from "lucide-react";
+import { Check, ImageUp, Loader2, Trash2, UserRound } from "lucide-react";
 
 import { getMe } from "@/features/auth/api";
 import { Avatar, useAvatarEditor } from "@/features/users/avatar";
@@ -12,6 +12,48 @@ import { Panel } from "./SettingsKit";
  * to set their own picture. The server allows self or admin, so this card and the one on the
  * roster share the same endpoint and the same editor hook.
  */
+/** Ten ready-made pictures: a gradient and the person's initial, drawn in the browser and
+ *  uploaded through the same endpoint as a chosen file — so they appear everywhere the
+ *  photo appears, with no second storage path to keep in sync. */
+const PRESETS: { from: string; to: string; ink: string }[] = [
+  { from: "#7C3AED", to: "#4C1D95", ink: "#F5F3FF" },
+  { from: "#6366F1", to: "#312E81", ink: "#EEF2FF" },
+  { from: "#0EA5E9", to: "#075985", ink: "#F0F9FF" },
+  { from: "#14B8A6", to: "#115E59", ink: "#F0FDFA" },
+  { from: "#10B981", to: "#065F46", ink: "#ECFDF5" },
+  { from: "#F59E0B", to: "#92400E", ink: "#FFFBEB" },
+  { from: "#F43F5E", to: "#881337", ink: "#FFF1F2" },
+  { from: "#EC4899", to: "#831843", ink: "#FDF2F8" },
+  { from: "#8B5CF6", to: "#1E1B4B", ink: "#EDE9FE" },
+  { from: "#64748B", to: "#0F172A", ink: "#F8FAFC" },
+];
+
+function presetBlob(index: number, letter: string): Promise<Blob | null> {
+  const preset = PRESETS[index];
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return Promise.resolve(null);
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, preset.from);
+  grad.addColorStop(1, preset.to);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  // A soft highlight so the flat gradient does not read as a placeholder swatch.
+  ctx.beginPath();
+  ctx.arc(size * 0.78, size * 0.22, size * 0.34, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fill();
+  ctx.fillStyle = preset.ink;
+  ctx.font = `600 ${Math.round(size * 0.44)}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(letter, size / 2, size / 2 + size * 0.02);
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
+}
+
 export default function ProfilePhotoSettings() {
   const [me, setMe] = useState<{ username: string; displayRole?: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -34,6 +76,8 @@ export default function ProfilePhotoSettings() {
 
   const username = me?.username ?? "";
   const { upload, remove, busy, version } = useAvatarEditor(username || "__none__", 0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const letter = (username || "?").replace(/^@/, "").charAt(0).toUpperCase();
 
   const pick = useCallback(
     async (file?: File) => {
@@ -43,6 +87,24 @@ export default function ProfilePhotoSettings() {
       if (!res.ok) setError(res.error);
     },
     [upload],
+  );
+
+  const usePreset = useCallback(
+    async (index: number) => {
+      if (!me || busy) return;
+      setError(null);
+      setPicked(index);
+      const blob = await presetBlob(index, letter);
+      if (!blob) {
+        setPicked(null);
+        setError("Could not draw that preset in this browser.");
+        return;
+      }
+      const file = new File([blob], `preset-${index + 1}.png`, { type: "image/png" });
+      const res = await upload(file);
+      if (!res.ok) { setPicked(null); setError(res.error); }
+    },
+    [me, busy, letter, upload],
   );
 
   return (
@@ -101,6 +163,39 @@ export default function ProfilePhotoSettings() {
               <Trash2 className="size-3.5" /> Remove
             </button>
           )}
+        </div>
+
+        {/* The ten presets, then the person's own file. The current photo is above; these
+            upload the moment one is pressed, through the same 256×256 path. */}
+        <div className="basis-full">
+          <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+            Or pick a preset
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Preset profile photos">
+            {PRESETS.map((preset, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => void usePreset(i)}
+                disabled={!me || busy}
+                aria-label={`Use preset ${i + 1}`}
+                aria-pressed={picked === i}
+                className={[
+                  "relative grid size-9 place-items-center rounded-full text-sm font-semibold text-white transition",
+                  "ring-offset-2 ring-offset-[var(--card)] hover:scale-105 disabled:opacity-50",
+                  picked === i ? "ring-2 ring-[var(--primary)]" : "ring-1 ring-black/10",
+                ].join(" ")}
+                style={{ background: `linear-gradient(135deg, ${preset.from}, ${preset.to})` }}
+              >
+                {letter}
+                {picked === i && (
+                  <span className="absolute -bottom-1 -right-1 grid size-4 place-items-center rounded-full bg-[var(--primary)] text-white">
+                    <Check className="size-2.5" />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         <input
