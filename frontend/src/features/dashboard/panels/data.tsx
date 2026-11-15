@@ -73,6 +73,8 @@ export type DashboardData = {
   usageError: string | null;
   usageDenied: boolean;
   guardrailEvents: GuardrailEvent[];
+  /** refusals in the selected window (the list itself is capped at 500) */
+  guardrailTotal: number;
   guardrailDenied: boolean;
   refresh: () => void;
 };

@@ -230,6 +230,7 @@ export default function Dashboard({ role, perms }: Props) {
   const [usageError, setUsageError] = useState<string | null>(null);
   const [usageDenied, setUsageDenied] = useState(false);
   const [guardrailEvents, setGuardrailEvents] = useState<GuardrailEvent[]>([]);
+  const [guardrailTotal, setGuardrailTotal] = useState(0);
   const [guardrailDenied, setGuardrailDenied] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [healthSummary, setHealthSummary] = useState<{
@@ -411,15 +412,27 @@ export default function Dashboard({ role, perms }: Props) {
       return;
     }
     let alive = true;
-    getGuardrailEvents(10)
-      .then((ev) => { if (alive) { setGuardrailEvents(ev.events ?? []); setGuardrailDenied(false); } })
+    // Ask for the window the picker is showing, not the newest ten: the card scrolls its
+    // own list, and a 90-day view must report 90 days of refusals.
+    getGuardrailEvents(
+      win.kind === "custom" && win.start && win.end
+        ? { limit: 500, start: win.start, end: win.end }
+        : { limit: 500, days: "days" in win ? win.days : 7 },
+    )
+      .then((ev) => {
+        if (!alive) return;
+        setGuardrailEvents(ev.events ?? []);
+        setGuardrailTotal(ev.total ?? (ev.events ?? []).length);
+        setGuardrailDenied(false);
+      })
       .catch((err) => {
         if (!alive) return;
         setGuardrailEvents([]);
+        setGuardrailTotal(0);
         setGuardrailDenied(String(err instanceof Error ? err.message : err).includes("403"));
       });
     return () => { alive = false; };
-  }, [canSeeGuardrails, refreshTick]);
+  }, [canSeeGuardrails, refreshTick, win]);
 
   function refreshDashboard() {
     setLoading(true);
@@ -523,7 +536,7 @@ export default function Dashboard({ role, perms }: Props) {
     totals, needsReview, attention, healthDown, win, rangeLabel, deltaProps,
     refresh: refreshDashboard,
     rag, ragError,
-    usage, usageError, usageDenied, guardrailEvents, guardrailDenied,
+    usage, usageError, usageDenied, guardrailEvents, guardrailTotal, guardrailDenied,
   };
 
   return (

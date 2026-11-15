@@ -711,10 +711,12 @@ const riskBadgeStyle = (risk: string) => {
   return "bg-slate-800 text-slate-400 border border-slate-700/50";
 };
 
-function GuardrailEvents({ panel, title }: PanelBodyProps) {
-  const { guardrailEvents, guardrailDenied, usage } = useDashboardData();
-  const limit = Math.max(1, Math.min(panel.options.limit ?? 10, 25));
-  const rows = guardrailEvents.slice(0, limit);
+function GuardrailEvents({ title }: PanelBodyProps) {
+  const { guardrailEvents, guardrailTotal, guardrailDenied } = useDashboardData();
+  /* The card owns its own scrollbar. It used to slice to ten rows, so a 90-day range still
+     showed ten events and grew nothing — the list could never be scrolled because there was
+     never more than a screenful to scroll. */
+  const rows = guardrailEvents;
   const [open, setOpen] = useState<(typeof guardrailEvents)[number] | null>(null);
 
   return (
@@ -735,12 +737,18 @@ function GuardrailEvents({ panel, title }: PanelBodyProps) {
         </div>
         {!guardrailDenied && (
           <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
-            {fmtInt(usage?.guardrail_total || rows.length)} events logged
+            {fmtInt(guardrailTotal)} in range
+            {rows.length < guardrailTotal ? ` · newest ${fmtInt(rows.length)}` : ""}
           </span>
         )}
       </div>
 
-      <div data-list-scroll className="table-scroll min-h-0 flex-1 overflow-auto border-t border-[var(--border)]">
+      <div
+        data-list-scroll
+        data-guardrail-scroll
+        style={{ maxHeight: 320 }}
+        className="table-scroll min-h-[160px] flex-1 overflow-y-auto overscroll-contain border-t border-[var(--border)] [scrollbar-gutter:stable]"
+      >
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 bg-[var(--muted)]/60 text-muted-foreground uppercase tracking-wider text-[11px]">
             <tr className="border-b border-[var(--border)]">

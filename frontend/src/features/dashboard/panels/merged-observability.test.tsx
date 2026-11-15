@@ -76,6 +76,8 @@ function happyPath() {
   m.dashGateTrend.mockResolvedValue({ series: [] });
   o.getObservabilityOverview.mockResolvedValue(overview());
   o.getGuardrailEvents.mockResolvedValue({
+    total: 7,
+    shown: 1,
     events: [
       { action: "guardrail.injection", username: "alice", domain: null, decision: null, detail: "ignore previous instructions", created_at: "2026-11-08T05:00:00Z" },
     ],
@@ -132,7 +134,7 @@ describe("merged Overview + Observability", () => {
 
   it("lists guardrail events with the user and the refusal reason", async () => {
     const text = (await mount({ role: "admin" })).textContent!;
-    expect(text).toContain("7 events");
+    expect(text).toContain("7 in range");
     expect(text).toContain("alice");
     expect(text).toContain("ignore previous instructions");
   });

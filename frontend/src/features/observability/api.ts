@@ -65,10 +65,15 @@ export async function getObservabilityOverview(range: UsageRange = 7): Promise<O
   return r.json();
 }
 
-export async function getGuardrailEvents(limit = 25): Promise<{ events: GuardrailEvent[] }> {
-  const r = await apiFetch(`${BASE}/api/observability/events?limit=${limit}`, {
-    headers: authHeaders(),
-  });
+export async function getGuardrailEvents(
+  opts: { limit?: number; days?: number; start?: string | null; end?: string | null } = {},
+): Promise<{ events: GuardrailEvent[]; total: number; shown: number }> {
+  // Paging is done by the panel's own scrollbar, so ask for the whole window (the endpoint
+  // caps at 500) and let the card scroll instead of the page growing.
+  const qs = new URLSearchParams({ limit: String(opts.limit ?? 200) });
+  if (opts.start && opts.end) { qs.set("start", opts.start); qs.set("end", opts.end); }
+  else if (opts.days) qs.set("days", String(opts.days));
+  const r = await apiFetch(`${BASE}/api/observability/events?${qs}`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`events failed: HTTP ${r.status}`);
   return r.json();
 }

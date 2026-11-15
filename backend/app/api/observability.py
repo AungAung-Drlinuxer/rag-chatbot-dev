@@ -170,7 +170,10 @@ def observability_overview(
 
 @router.get("/observability/events")
 def observability_events(
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=500),
+    days: int = Query(0, ge=0, le=180),
+    start: str | None = None,
+    end: str | None = None,
     user: str = Depends(get_current_user),
 ) -> dict:
     """The recent-events table: guardrail and escalation rows, newest first.
@@ -179,13 +182,28 @@ def observability_events(
     """
     if get_role(user) != "admin":
         raise HTTPException(status_code=403, detail="Administrator permission required.")
-    limit = max(1, min(limit, 200))
+    limit = max(1, min(limit, 500))
+
+    # The panel follows the range picker: a 90-day window must be able to say how many
+    # refusals it contains, not just show the newest ten regardless of the range.
+    where = ["action LIKE 'guardrail.%'"]
+    params: dict = {}
+    if start and end:
+        where.append("date(created_at) BETWEEN :d_from AND :d_to")
+        params.update({"d_from": start[:10], "d_to": end[:10]})
+    elif days:
+        where.append("created_at >= now() - make_interval(days => :days)")
+        params["days"] = days
+    clause = " AND ".join(where)
+
     with SessionLocal() as s:
+        total = int(s.execute(text(f"SELECT count(*) FROM audit_log WHERE {clause}"),
+                              params).scalar() or 0)
         rows = [dict(r) for r in s.execute(text(
             "SELECT id, action, username, domain, decision, detail, created_at "
-            "FROM audit_log WHERE action LIKE 'guardrail.%' "
+            f"FROM audit_log WHERE {clause} "
             "ORDER BY created_at DESC LIMIT :n"
-        ), {"n": limit}).mappings()]
+        ), {**params, "n": limit}).mappings()]
     for r in rows:
         r["created_at"] = r["created_at"].isoformat() if r.get("created_at") else None
         act = r.get("action") or ""
@@ -212,4 +230,4 @@ def observability_events(
         else:
             r["type"] = subtype.title()
             r["risk"] = "Low"
-    return {"events": rows}
+    return {"events": rows, "total": total, "shown": len(rows)}

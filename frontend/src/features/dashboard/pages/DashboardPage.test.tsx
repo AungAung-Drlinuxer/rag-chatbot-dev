@@ -66,6 +66,8 @@ function happyPath() {
     generated_at: "2026-01-08T02:00:00Z",
   });
   o.getGuardrailEvents.mockResolvedValue({
+    total: 2,
+    shown: 1,
     events: [{ action: "guardrail.injection", username: "alice", domain: null, decision: null, detail: "ignore previous", created_at: "2026-01-07T10:00:00Z" }],
   });
   m.dashStats.mockResolvedValue({
@@ -238,7 +240,7 @@ describe("DashboardPage — data rendering", () => {
     // Guardrails are a security counter, not a service: they have their own panel (the
     // former Observability board) rather than a footer line under health.
     expect(text).toContain("Guardrail events");
-    expect(text).toContain("2 events");
+    expect(text).toContain("2 in range");
   });
 
   it("shows the gate-trend empty note when there is no gate data (agent board)", async () => {
