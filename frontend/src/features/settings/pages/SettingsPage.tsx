@@ -22,6 +22,7 @@ import { useConfirm } from "@/components/ui/confirm";
 import { registerNavGuard } from "@/app/router";
 import { Panel, Pill, Row, Segmented } from "../components/SettingsKit";
 import ProfilePhotoSettings from "../components/ProfilePhotoSettings";
+import EffectiveIntegrations from "../components/EffectiveIntegrations";
 
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
@@ -801,6 +802,7 @@ export default function Settings({ role }: { role?: string }) {
               {/* Live health used to sit below the whole page, under the fold, where it was
                   read only after something had already failed. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
+                <EffectiveIntegrations />
                 <Panel
                   icon={<Activity className="size-4" />}
                   title="Service status"
