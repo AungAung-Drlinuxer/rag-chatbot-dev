@@ -1,3 +1,4 @@
+import { greetingFor } from "@/features/chat/greeting";
 import { prettyName } from "@/features/chat/model";
 import {
   ArrowRight,
@@ -51,9 +52,8 @@ const SUGGESTIONS = [
 export function EmptyChat({ onSuggestion, userName }: { onSuggestion: (question: string) => void; userName?: string }) {
   const chipFor = (key: string) => DOMAIN_ICONS[key] ?? DOMAIN_ICONS.general;
 
-  // v1.5.2 — time-based personalized greeting (Perplexity-style)
-  const h = new Date().getHours();
-  const timeGreeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  // One source of truth for the four bands — see features/chat/greeting.ts.
+  const timeGreeting = greetingFor();
   // S3.12 — was showing the raw login ("ui-reviewer"). prettyName() derives a
   // readable label from the username — it never invents a legal name.
   const displayName = prettyName(userName);

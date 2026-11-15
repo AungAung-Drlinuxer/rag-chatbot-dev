@@ -25,6 +25,7 @@ import ChatTicketDialog from "@/features/chat/components/ChatTicketDialog";
 import { createTicketApi } from "@/features/tickets/api";
 import { formatMessageTime, latestSources, type Message, type Source, type TicketDraft } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
+import { greetingFor } from "@/features/chat/greeting";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
 } from "@/components/ui/dialog";
@@ -40,12 +41,7 @@ type Props = {
 
 /* ---------------------------------------------------------------- greeting */
 
-function greetingFor(date = new Date()): string {
-  const h = date.getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
+
 
 /** "ith@dmin" → "Ith"; "alice.anderson" → "Alice"; falls back to a neutral salutation. */
 function displayName(raw?: string): string {
