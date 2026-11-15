@@ -6,6 +6,8 @@ import {
   Archive,
   Monitor,
   Plug,
+  Activity,
+  Info,
   RotateCcw,
   Save,
   Settings as SettingsIcon,
@@ -18,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSectionParam } from "@/features/settings/useSectionParam";
 import { useConfirm } from "@/components/ui/confirm";
 import { registerNavGuard } from "@/app/router";
-import { Panel, Pill, RailCard, Row, Segmented } from "../components/SettingsKit";
+import { Panel, Pill, Row, Segmented } from "../components/SettingsKit";
 import ProfilePhotoSettings from "../components/ProfilePhotoSettings";
 
 import { dashHealth } from "@/features/dashboard/api";
@@ -31,7 +33,7 @@ import { refreshBrandingCache } from "@/app/useBranding";
 import { apiFetch, authHeaders, BASE } from "@/shared/api/client";
 import { AiServiceSettings } from "../components/AiServiceSettings";
 import { EmailServerSettings } from "../components/EmailServerSettings";
-import { Image as ImageIcon, SlidersHorizontal } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import {
   getMySettings, updateMySettings, getIntegrationSettings,
 } from "@/features/settings/api";
@@ -552,9 +554,7 @@ export default function Settings({ role }: { role?: string }) {
           title="Settings"
           description="Manage your workspace, connections, and preferences."
           actions={
-            <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-2xs font-medium text-muted-foreground">
-              {isAdmin ? "Administrator" : "Personal settings"}
-            </span>
+            <Pill tone="muted">{isAdmin ? "Administrator" : "Personal settings"}</Pill>
           }
         />
 
@@ -589,8 +589,7 @@ export default function Settings({ role }: { role?: string }) {
               </div>
             )}
             {active === "general" && prefsState === "ready" && (
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="space-y-4">
+            <div className="space-y-4">
             {/* ---- Who you are: the only preference that is a picture rather than a value. ---- */}
             {active === "general" && <ProfilePhotoSettings />}
             {/* ---- Answers: every control here changes how a message is rendered. ---- */}
@@ -727,80 +726,53 @@ export default function Settings({ role }: { role?: string }) {
             </SectionCard>
             )}
 
+            {/* Save — one bar under the content rather than a second column that repeated
+                every value above it. The reference keeps the action next to the work. */}
+            <section
+              data-slot="save-bar"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-card px-5 py-4"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold">Save configuration</h2>
+                  {saved && !dirty ? (
+                    <Pill tone="ok">Saved</Pill>
+                  ) : dirty ? (
+                    <Pill tone="warn">Unsaved</Pill>
+                  ) : (
+                    <Pill tone="muted">Synced</Pill>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Theme, density and motion preview immediately; the stored values change only when you save.
+                </p>
+                {saveError && (
+                  <p className="mt-1 flex items-start gap-1 text-xs text-[var(--danger)]">
+                    <XCircle className="mt-0.5 size-3 shrink-0" /> {saveError}
+                  </p>
+                )}
               </div>
-
-              {/* Rail: the settings in force right now, so the form below reads as a diff
-                  against something visible rather than a wall of toggles. */}
-              <aside className="space-y-4 xl:sticky xl:top-6">
-                <RailCard
-                  icon={<SlidersHorizontal className="size-4" />}
-                  title="Your setup"
-                  description="What the interface uses right now."
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={discardChanges}
+                  disabled={!dirty || saving}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-2 text-xs font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
                 >
-                  <dl className="space-y-2.5">
-                    {[
-                      ["Theme", darkMode ? "Dark" : "Light"],
-                      ["Chat text", `${chatFontSize}px`],
-                      ["Density", compact ? "Compact" : "Comfortable"],
-                      ["Motion", animations ? "On" : "Off"],
-                      ["Citations", sourceCitations ? "Shown" : "Hidden"],
-                      ["Token usage", showTokenUsage ? "Shown" : "Hidden"],
-                      ["Markdown", markdownRendering ? "Formatted" : "Plain"],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex items-baseline justify-between gap-3 text-xs">
-                        <dt className="shrink-0 text-muted-foreground">{k}</dt>
-                        <dd className="min-w-0 truncate text-right font-medium" title={v}>{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </RailCard>
-
-                <RailCard
-                  icon={<Save className="size-4" />}
-                  title="Save"
-                  description="Theme, density and motion apply as you change them, but they are stored for this account only when you save."
+                  <RotateCcw className="size-3.5" aria-hidden />
+                  Discard changes
+                </button>
+                <button
+                  type="button"
+                  onClick={saveSettings}
+                  disabled={saving || prefsState !== "ready" || !dirty}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                 >
-                  <button
-                    type="button"
-                    onClick={saveSettings}
-                    disabled={saving || prefsState !== "ready" || !dirty}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <Save className="size-3.5" aria-hidden />
-                    {saving ? "Saving…" : "Save changes"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={discardChanges}
-                    disabled={!dirty || saving}
-                    className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-2 text-xs font-medium text-foreground transition hover:bg-muted/50 disabled:opacity-50"
-                  >
-                    <RotateCcw className="size-3.5" aria-hidden />
-                    Discard changes
-                  </button>
-
-                  <div className="mt-3 text-xs" aria-live="polite">
-                    {saving ? (
-                      <span className="text-muted-foreground">Saving…</span>
-                    ) : saved ? (
-                      <span className="flex items-center gap-1.5 font-medium text-[var(--ok)]">
-                        <Check className="size-3.5" /> Saved
-                      </span>
-                    ) : dirty ? (
-                      <span className="flex items-center gap-1.5 font-medium text-[var(--warn)]">
-                        <span className="size-1.5 rounded-full bg-[var(--warn)]" /> Unsaved changes
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">No unsaved changes</span>
-                    )}
-                    {saveError && (
-                      <span className="mt-1 flex items-start gap-1 text-[var(--danger)]">
-                        <XCircle className="mt-0.5 size-3 shrink-0" /> {saveError}
-                      </span>
-                    )}
-                  </div>
-                </RailCard>
-              </aside>
+                  <Save className="size-3.5" aria-hidden />
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </section>
             </div>
             )}
 
@@ -820,19 +792,19 @@ export default function Settings({ role }: { role?: string }) {
               {/* Live health used to sit below the whole page, under the fold, where it was
                   read only after something had already failed. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
-                <section data-slot="card" className="overflow-hidden rounded-2xl border border-[var(--border)] bg-card">
-                  <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-                    <span className="size-1.5 rounded-full bg-[var(--ok)]" />
-                    <h2 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Service status</h2>
-                  </div>
+                <Panel
+                  icon={<Activity className="size-4" />}
+                  title="Service status"
+                  description="Live checks on the dependencies those providers rely on."
+                  actions={<span className="size-1.5 rounded-full bg-[var(--ok)]" aria-hidden />}
+                >
                   <div className="p-3">
                     <IntegrationStatusCards />
                   </div>
-                </section>
+                </Panel>
 
-                <section data-slot="card" className="rounded-2xl border border-[var(--border)] bg-card p-4">
-                  <h2 className="text-sm font-semibold">How this works</h2>
-                  <ul className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
+                <Panel icon={<Info className="size-4" />} title="How this works" padded>
+                  <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground">
                     <li className="flex gap-1.5">
                       <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
                       Switching a provider on only reveals its panel — nothing connects until you save its fields.
@@ -846,7 +818,7 @@ export default function Settings({ role }: { role?: string }) {
                       “Remove stored settings” inside a panel is the only way to revoke a connection.
                     </li>
                   </ul>
-                </section>
+                </Panel>
               </aside>
             </div>
             )}
