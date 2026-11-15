@@ -119,6 +119,22 @@ def conversation_messages(session_id: str, user: str = Depends(get_current_user)
             .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
             .all()
         )
+        # The person's own verdict, so Helpful/Not helpful is still lit after a reload.
+        # One row per press, so take the newest rating for each message id.
+        from app.persistence.models import Feedback
+        msg_ids = [str(m.id) for m in rows]
+        ratings: dict[str, int] = {}
+        if msg_ids:
+            for fb in (
+                s.query(Feedback)
+                .filter(Feedback.message_id.in_(msg_ids))
+                .filter(Feedback.username == user)
+                .order_by(Feedback.created_at.asc(), Feedback.id.asc())
+                .all()
+            ):
+                if fb.message_id and fb.rating in (1, -1):
+                    ratings[fb.message_id] = int(fb.rating)
+
         messages = []
         for m in rows:
             meta = None
@@ -136,6 +152,7 @@ def conversation_messages(session_id: str, user: str = Depends(get_current_user)
                 "meta": meta,
                 "caution": caution,
                 "message_id": str(m.id),  # v0.21.90 — real row id so feedback survives reload
+                "feedback": ratings.get(str(m.id)),
                 # The DB row's own clock. Without this the UI had nothing to render and
                 # stamped every re-opened message with the current time.
                 "timestamp": m.created_at.isoformat() if m.created_at else None,

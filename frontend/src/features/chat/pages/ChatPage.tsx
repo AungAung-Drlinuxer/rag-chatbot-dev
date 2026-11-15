@@ -200,6 +200,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         // The feedback target is the top-level message_id from the API; reading only
         // meta.server_id left every re-opened answer without a feedback target.
         serverId: m.message_id || m.meta?.server_id,
+        feedback: m.feedback === 1 ? 1 : m.feedback === -1 ? -1 : undefined,
         guardrailType: m.meta?.guardrail,
       }));
       setMessages(loaded);
@@ -691,7 +692,10 @@ export default function Chat({ onNavigate, userName }: Props) {
                         return (
                           <div key={m.id} data-role={m.role}>
                             <MessageBubble
-                              message={m}
+                              /* The pressed state lives in the page's map; the bubble used
+                                 to read message.feedback, which never changed, so a saved
+                                 vote left both thumbs grey. */
+                              message={{ ...m, feedback: feedback[m.id] ?? m.feedback }}
                               onHelpful={() => void rate(m, 1)}
                               onNotHelpful={() => void rate(m, -1)}
                               onOpenTicketForm={() => void openTicket(m)}

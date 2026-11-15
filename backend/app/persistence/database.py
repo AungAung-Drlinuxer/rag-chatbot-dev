@@ -127,6 +127,7 @@ def init_db() -> None:
         ("chat_messages.meta", "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS meta TEXT"),
         ("ticket_comments.jira_synced",
          "ALTER TABLE ticket_comments ADD COLUMN IF NOT EXISTS jira_synced BOOLEAN"),
+        ("feedback.username", "ALTER TABLE feedback ADD COLUMN IF NOT EXISTS username VARCHAR(120)"),
         ("kb_meta.body", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS body TEXT"),
         ("kb_meta.last_checked", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS last_checked TIMESTAMPTZ"),
         ("kb_meta.updated_by", "ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS updated_by VARCHAR(64)"),

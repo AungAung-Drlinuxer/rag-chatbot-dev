@@ -650,7 +650,7 @@ def feedback(req: FeedbackRequest, user: str = Depends(get_current_user)) -> dic
 
     s = SessionLocal()
     try:
-        fb = Feedback(message_id=req.message_id, rating=req.rating, comment=req.comment)
+        fb = Feedback(message_id=req.message_id, rating=req.rating, comment=req.comment, username=user)
         s.add(fb)
         s.commit()
     finally:

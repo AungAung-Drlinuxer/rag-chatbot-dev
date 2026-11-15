@@ -130,7 +130,15 @@ function MessageBubble({
     // No Web Share API (most desktops) or the sheet failed: copy, and say so with the
     // tick. Previously the success path returned before setShared(), so the button on a
     // browser with share support gave no confirmation at all.
-    await copyText(text);
+    // Copy, but light only the Share button: the fallback used to call copyText() and
+    // flash both ticks at once.
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta);
+    }
     flashShared();
   }
 
@@ -457,7 +465,7 @@ function MessageBubble({
               aria-pressed={message.feedback === 1}
               title={message.serverId ? "Helpful" : "Answer not saved yet"}
               className={[
-                "grid size-8 place-items-center rounded-full border transition",
+                "grid size-9 place-items-center rounded-full border transition sm:size-8",
                 message.feedback === 1
                   ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
@@ -472,7 +480,7 @@ function MessageBubble({
               aria-pressed={message.feedback === -1}
               title={message.serverId ? "Not helpful" : "Answer not saved yet"}
               className={[
-                "grid size-8 place-items-center rounded-full border transition",
+                "grid size-9 place-items-center rounded-full border transition sm:size-8",
                 message.feedback === -1
                   ? "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
                   : "border-[var(--border)] bg-card text-foreground hover:bg-muted",
@@ -488,7 +496,7 @@ function MessageBubble({
               title={copied ? "Copied" : "Copy answer"}
               aria-label={copied ? "Copied" : "Copy answer"}
               onClick={() => copyText(message.content)}
-              className="grid size-8 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted"
+              className="grid size-9 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted sm:size-8"
             >
               {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
             </button>
@@ -497,7 +505,7 @@ function MessageBubble({
               title={shared ? "Shared" : "Share answer"}
               aria-label={shared ? "Shared" : "Share answer"}
               onClick={() => shareText(message.content)}
-              className="grid size-8 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted"
+              className="grid size-9 place-items-center rounded-full border border-[var(--border)] bg-card text-foreground transition hover:bg-muted sm:size-8"
             >
               {shared ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
             </button>
@@ -508,7 +516,7 @@ function MessageBubble({
               aria-busy={ticketBusy}
               disabled={ticketBusy}
               onClick={onOpenTicketForm}
-              className="ml-auto grid size-8 place-items-center rounded-full border border-orange-200 bg-orange-50/80 text-orange-700 transition hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
+              className="ml-auto grid size-9 place-items-center rounded-full border border-orange-200 bg-orange-50/80 text-orange-700 transition hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
             >
               {ticketBusy ? <Loader2 className="size-4 animate-spin" /> : <Ticket className="size-4" />}
             </button>

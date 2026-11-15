@@ -145,6 +145,8 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     message_id: Mapped[str | None] = mapped_column(String(255))
     rating: Mapped[int | None] = mapped_column(SmallInteger)  # 1 helpful, -1 not
+    # Whose verdict this is. Without it a reload showed somebody else's vote.
+    username: Mapped[str | None] = mapped_column(String(120))
     comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
