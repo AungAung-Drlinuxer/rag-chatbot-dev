@@ -501,6 +501,9 @@ def create_ticket(
 
         row = JiraTicket(
             jira_key=ext_key,
+            # The link back to the conversation that produced it. Without it the Overview's
+            # escalation rate reads 0 forever: every ticket looked manually created.
+            session_id=(req.session_id or None),
             domain=req.domain[:64],
             status="open",
             created_by=user,
