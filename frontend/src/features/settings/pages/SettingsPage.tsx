@@ -835,11 +835,11 @@ export default function Settings({ role }: { role?: string }) {
             {/* Email & Notifications — one tab. The bell's switches are personal (every
                 role), the SMTP server below them is administrator-only. */}
             {active === "notifications" && (
-              <>
-                {/* Each block brings its own Panel: one header anatomy across the page. */}
-                <NotificationSettings isAdmin={isAdmin} />
-                {isAdmin && <EmailServerSettings />}
-              </>
+              isAdmin
+                /* One page, one rail: the bell's switches sit above the mail server, and the
+                   right column states the effective mail configuration and holds Save. */
+                ? <EmailServerSettings above={<NotificationSettings isAdmin={isAdmin} />} />
+                : <NotificationSettings isAdmin={isAdmin} />
             )}
 
 

@@ -9,7 +9,7 @@
  * Stored values are write-only (the API returns a mask): a configured field is rendered
  * as a locked row and must be explicitly replaced, and only typed values are submitted.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   AlertCircle, Check, CheckCircle2, ExternalLink, Loader2, Lock, Mail, Pencil,
   Save, Send,
@@ -25,7 +25,7 @@ type Form = {
   use_tls: boolean; enabled: boolean;
 };
 
-export function EmailServerSettings() {
+export function EmailServerSettings({ above }: { above?: ReactNode } = {}) {
   const [form, setForm] = useState<Form>({
     host: "", port: 587, username: "", password: "", from: "",
     use_tls: true, enabled: true,
@@ -181,6 +181,7 @@ export function EmailServerSettings() {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-4">
+        {above}
         {/* Status card: the same anatomy as an Integrations card — icon tile, one-line
             purpose, state chips, and the three facts the strip used to repeat in the rail. */}
         <Panel
@@ -287,9 +288,21 @@ export function EmailServerSettings() {
       <aside className="space-y-4 xl:sticky xl:top-6">
         <RailCard
           icon={<Send className="size-4" />}
-          title="Send & save"
-          description="Save stores the write-only fields; the test proves the server delivers."
+          title="Effective configuration"
+          description="What mail is doing right now. Save stores the write-only fields; the test proves the server delivers."
         >
+          <dl className="mb-3 divide-y divide-[var(--border)] text-xs">
+            {[
+              ["In-app alerts", "Per account"],
+              ["Email alerts", form.enabled ? "On" : "Off"],
+              ["SMTP", hostKnown ? `${form.host || "stored"}:${form.port || "—"}` : "Not configured"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between gap-3 py-2">
+                <dt className="text-muted-foreground">{k}</dt>
+                <dd className="min-w-0 truncate text-right font-medium text-foreground" title={v}>{v}</dd>
+              </div>
+            ))}
+          </dl>
           <Field label="Send a test email to">
             <input
               className={INPUT}
