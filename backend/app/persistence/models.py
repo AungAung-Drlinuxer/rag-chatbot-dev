@@ -167,6 +167,9 @@ class KbMeta(Base):
     site: Mapped[str | None] = mapped_column(String(255))         # host, e.g. hq.atlassian.net
     updated_by: Mapped[str | None] = mapped_column(String(64))   # who last synced/edited
     last_synced: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    #: When a sync last LOOKED at the page. `last_synced` only moves when the content changes,
+    #: so using it as "last sync" made an untouched page look hours stale after a finished run.
+    last_checked: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class IntegrationConnection(Base):

@@ -1,4 +1,5 @@
 import { StatCard, StatRow } from "@/components/ui/stat-card";
+import { readHashParams, writeHashParams } from "@/app/useUrlParams";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -104,6 +105,11 @@ type RecentItem = {
   space_key?: string | null;
   /** Host of the site that supplied the page (HQ vs local instance). */
   site?: string | null;
+  /** The configured binding's label — two sites can share one hostname. */
+  site_label?: string | null;
+  connection_id?: number | null;
+  /** When the sync last looked at the page (moves even if the content did not). */
+  last_checked?: string | null;
   source_url: string;
   updated_by?: string | null;
   last_synced?: string | null;
@@ -363,22 +369,35 @@ export default function Knowledge({ role, onToast }: Props) {
      four lists can be read page for page. A size selector made the Knowledge page the only
      place where "page 2" meant a different amount of work. */
   const pageSize = 10;
-  const [sortKey, setSortKey] = useState<"last_synced" | "title" | "domain">("last_synced");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [providerFilter, setProviderFilter] = useState<string>("all");
+  /* Filters, sort and page live in the address bar: a filtered list is something people send
+     to each other, and a refresh should not throw the work away. Read once, then mirror. */
+  const initialParams = useRef(readHashParams()).current;
+  const [sortKey, setSortKey] = useState<"last_synced" | "title" | "domain">(
+    () => (["last_synced", "title", "domain"].includes(initialParams.sort)
+      ? (initialParams.sort as "last_synced" | "title" | "domain")
+      : "last_synced"),
+  );
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(
+    () => (initialParams.dir === "asc" ? "asc" : "desc"),
+  );
+  const [providerFilter, setProviderFilter] = useState<string>(() => initialParams.provider || "all");
   // Space key is a separate axis from domain: a space can hold pages in several domains.
-  const [spaceFilter, setSpaceFilter] = useState<string>("all");
+  const [spaceFilter, setSpaceFilter] = useState<string>(() => initialParams.space || "all");
   const [spaces, setSpaces] = useState<{
     key: string; count: number; connection_id?: number | null; site?: string; label?: string;
   }[] | null>(null);
   // A site (connection) filters which Confluence instance the list draws from; the space
   // select then only offers that site's spaces — "IT" on HQ is not "IT" locally.
-  const [siteFilter, setSiteFilter] = useState<string>("all");
-  const [qField, setQField] = useState<"all" | "title" | "body">("all");
+  const [siteFilter, setSiteFilter] = useState<string>(() => initialParams.site || "all");
+  const [qField, setQField] = useState<"all" | "title" | "body">(
+    () => (["all", "title", "body"].includes(initialParams.q_field)
+      ? (initialParams.q_field as "all" | "title" | "body")
+      : "all"),
+  );
   const [status, setStatus] = useState<SyncStatus | null>(null);
 
-  const [query, setQuery] = useState("");
-  const [chip, setChip] = useState("all");
+  const [query, setQuery] = useState<string>(() => initialParams.q || "");
+  const [chip, setChip] = useState<string>(() => initialParams.domain || "all");
   const [busy, setBusy] = useState(false);
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -410,10 +429,12 @@ export default function Knowledge({ role, onToast }: Props) {
   /** Configured sites, from the server when it answers, otherwise from what the KB contains.
    *  A site that has not synced yet is still a source the admin added — it must appear in the
    *  filter and in the count, or adding a second one looks like nothing happened. */
-  const [configured, setConfigured] = useState<{ id: string; label: string }[]>([]);
+  const [configured, setConfigured] = useState<
+    { id: string; label: string; count?: number; last_sync?: string | null }[]
+  >([]);
   const sites = useMemo(() => {
     if (configured.length > 0) return configured;
-    const map = new Map<string, { id: string; label: string }>();
+    const map = new Map<string, { id: string; label: string; count?: number; last_sync?: string | null }>();
     for (const sp of spaces ?? []) {
       const id = String(sp.connection_id ?? "default");
       if (!map.has(id)) map.set(id, { id, label: sp.label || sp.site || "Default" });
@@ -437,7 +458,9 @@ export default function Knowledge({ role, onToast }: Props) {
     if (syncResponse) setStatus(syncResponse);
     if (sourceResponse?.sources) setSources(sourceResponse.sources);
     if (sourceResponse?.sites) {
-      setConfigured(sourceResponse.sites.map((s) => ({ id: String(s.id), label: s.label })));
+      setConfigured(sourceResponse.sites.map((s) => ({
+        id: String(s.id), label: s.label, count: s.count, last_sync: s.last_sync,
+      })));
     }
   }
 
@@ -516,19 +539,79 @@ export default function Knowledge({ role, onToast }: Props) {
     }
   }
 
-  /** Any control that narrows or reorders the list restarts at page 1. */
+  /** Any control that narrows or reorders the list restarts at page 1 — except the first
+      run, which honours a page number that arrived in the URL. */
   useEffect(() => {
     if (searchMode) return;
-    void fetchList(0);
+    /* Page is part of the effect rather than a handler: a deep link can arrive with ?page=3,
+       and a handler-only model would fetch page 1 and then render a pager pointing at 3. */
+    void fetchList((page - 1) * pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chip, providerFilter, spaceFilter, siteFilter, sortKey, sortDir, pageSize, searchMode]);
+  }, [chip, providerFilter, spaceFilter, siteFilter, sortKey, sortDir, pageSize, searchMode, page]);
+
+  /* A link is read AFTER mount, not only in the state initialisers: the router can set the
+     hash in the same tick the page mounts, and an initialiser that ran first saw no params.
+     The listener also makes Back/Forward and a pasted link work on a mounted page. */
+  const hydrated = useRef(false);
+  useEffect(() => {
+    const adopt = () => {
+      const p = readHashParams();
+      setQuery(p.q ?? "");
+      setChip(p.domain || "all");
+      setProviderFilter(p.provider || "all");
+      setSiteFilter(p.site || "all");
+      setSpaceFilter(p.space || "all");
+      setQField(["all", "title", "body"].includes(p.q_field) ? (p.q_field as "all" | "title" | "body") : "all");
+      if (["last_synced", "title", "domain"].includes(p.sort)) setSortKey(p.sort as "last_synced" | "title" | "domain");
+      if (p.dir === "asc" || p.dir === "desc") setSortDir(p.dir);
+      const n = Math.max(1, Number(p.page) || 1);
+      if (n !== 1) setPage(n);
+      hydrated.current = true;
+    };
+    adopt();
+    window.addEventListener("hashchange", adopt);
+    return () => window.removeEventListener("hashchange", adopt);
+  }, []);
+
+  /* Mirror the list state into the hash (replaceState — filtering should not fill the back
+     button with every keystroke). Defaults are omitted so a plain page has a plain URL. */
+  useEffect(() => {
+    if (!hydrated.current) return;
+    writeHashParams({
+      q: query.trim() || null,
+      domain: chip !== "all" ? chip : null,
+      provider: providerFilter !== "all" ? providerFilter : null,
+      site: siteFilter !== "all" ? siteFilter : null,
+      space: spaceFilter !== "all" ? spaceFilter : null,
+      q_field: qField !== "all" ? qField : null,
+      sort: sortKey !== "last_synced" || sortDir !== "desc" ? sortKey : null,
+      dir: sortKey !== "last_synced" || sortDir !== "desc" ? sortDir : null,
+      page: page > 1 ? String(page) : null,
+    });
+  }, [query, chip, providerFilter, siteFilter, spaceFilter, qField, sortKey, sortDir, page]);
+
+  /* Typing narrows the list as you type (server-side ILIKE, debounced). Enter still runs the
+     relevance search; the box never shows text the table has not applied. */
+  const firstQueryRun = useRef(true);
+  useEffect(() => {
+    if (firstQueryRun.current) {
+      firstQueryRun.current = false;
+      return;
+    }
+    const t = window.setTimeout(() => {
+      if (searchMode) return;
+      void fetchList(0, { q: query.trim() });
+    }, 350);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   /** Go to a 1-based page number, clamped to the real page count. */
   function goToPage(next: number) {
     const pages = Math.max(1, Math.ceil((kbTotal ?? 0) / pageSize));
     const target = Math.min(Math.max(1, next), pages);
     if (target === page && !listing) return;
-    void fetchList((target - 1) * pageSize);
+    setPage(target);
   }
 
   /** Leave relevance results and return to the paged, filtered library. */
@@ -671,14 +754,11 @@ export default function Knowledge({ role, onToast }: Props) {
         description="Keep your assistant's knowledge organized, searchable, and up to date."
         actions={
           <div className="flex items-center gap-3">
-            {/* Small live indicator — the same two states the page always reported. */}
+            {/* Only when something is wrong: a healthy page already says "Last sync · 26m"
+                in the KPI row, and a second "KB Synced (26m)" chip was the same fact twice. */}
+            {!status?.healthy && (
             <div
-              className={[
-                "hidden items-center gap-2 rounded-xl border px-3 py-1.5 text-xs sm:flex",
-                status?.healthy
-                  ? "border-[var(--ok)]/35 bg-[var(--ok)]/10"
-                  : "border-[var(--warn)]/35 bg-[var(--warn)]/10",
-              ].join(" ")}
+              className="hidden items-center gap-2 rounded-xl border border-[var(--warn)]/35 bg-[var(--warn)]/10 px-3 py-1.5 text-xs sm:flex"
             >
               <span
                 className={[
@@ -686,13 +766,12 @@ export default function Knowledge({ role, onToast }: Props) {
                   status?.healthy ? "bg-[var(--ok)]" : "bg-[var(--warn)]",
                 ].join(" ")}
               />
-              <span className="font-semibold text-foreground">
-                {status?.healthy ? "KB Synced" : "Sync Pending"}
-              </span>
+              <span className="font-semibold text-foreground">Sync pending</span>
               <span className="text-2xs text-muted-foreground">
                 {status?.last_run ? `(${relTime(status.last_run.at)})` : ""}
               </span>
             </div>
+            )}
 
             {/* Primary: syncing is the page's one "do something" action. */}
             <button
@@ -733,10 +812,10 @@ export default function Knowledge({ role, onToast }: Props) {
           <StatCard
             tone="info"
             icon={<Database className="size-4" />}
-            label="Sources"
+            label="Sites"
             unit={sites.length === 1 ? "site" : "sites"}
             value={sites.length > 0 ? sites.length.toLocaleString() : (sources != null ? sources.length.toLocaleString() : "—")}
-            caption="Configured in Settings"
+            caption="Configured knowledge sources"
           />
           <StatCard
             tone={status?.state === "error" ? "danger" : status?.state === "running" ? "info" : "warn"}
@@ -773,7 +852,7 @@ export default function Knowledge({ role, onToast }: Props) {
                 </div>
                 <p className="mt-0.5 font-semibold">
                   {gen > 0
-                    ? `${gen} article${gen === 1 ? "" : "s"} sit in General IT`
+                    ? `${gen} article${gen === 1 ? "" : "s"} use the fallback domain (General IT)`
                     : "Some domains are not usable by the classifier"}
                 </p>
                 <p className="mt-0.5 leading-relaxed">
@@ -876,6 +955,9 @@ export default function Knowledge({ role, onToast }: Props) {
               <Button type="submit" size="default" disabled={busy || !query.trim()} className="h-10 w-full rounded-xl px-5 text-xs font-semibold sm:w-auto">
                 Search
               </Button>
+              <span className="hidden text-2xs text-muted-foreground lg:block">
+                Filters as you type · Enter for relevance search
+              </span>
             </form>
 
             {/* Source was a second chip band. It is a refinement, not a browse axis, so a
@@ -900,7 +982,11 @@ export default function Knowledge({ role, onToast }: Props) {
                 className="h-9 min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-background px-2 text-xs outline-none transition focus:border-[var(--primary)] sm:flex-none"
               >
                 <option value="all">All sites</option>
-                {sites.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id} title={s.last_sync ? `Last checked ${relTime(s.last_sync)}` : undefined}>
+                    {s.label}{typeof s.count === "number" ? ` (${s.count})` : ""}
+                  </option>
+                ))}
               </select>
             )}
 
@@ -957,7 +1043,7 @@ export default function Knowledge({ role, onToast }: Props) {
           {/* 3. domain chips — the primary browse axis, with real per-domain counts. */}
           <div
             ref={chipsRef}
-            className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--border)] px-5 py-3 [scrollbar-width:thin]"
+            className="flex flex-wrap items-center gap-1.5 border-b border-[var(--border)] px-5 py-3"
           >
             <Layers className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
             {chips.map((domain) => {
@@ -1028,29 +1114,103 @@ export default function Knowledge({ role, onToast }: Props) {
             </div>
           )}
 
-          {/* 5. the table — scrolls horizontally on narrow screens. */}
-          <div className="table-scroll overflow-x-auto">
+          {/* 4b. cards on phones: six columns in 335 px hid Source, Site, Space and the
+              timestamp entirely, with no way to see them. */}
+          <ul className="divide-y divide-[var(--border)]/60 md:hidden" data-slot="kb-cards">
+            {listing ? (
+              <li className="p-4"><Skeleton className="h-12 w-full rounded-lg" /></li>
+            ) : listError ? (
+              <li>
+                <ErrorState compact title="Could not load the knowledge base" detail={listError}
+                  onRetry={() => void fetchList((page - 1) * pageSize)} />
+              </li>
+            ) : !items || items.length === 0 ? (
+              <li>
+                {(kbTotal ?? 0) === 0 && !query && chip === "all" && providerFilter === "all" && spaceFilter === "all" ? (
+                  <EmptyState
+                    icon={<BookOpen className="size-5" />}
+                    title="No articles yet"
+                    description="Articles arrive from your knowledge sources and from the sync jobs."
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<SearchX className="size-5" />}
+                    title="No articles match these filters"
+                    description={kbTotal && kbTotal > 0 ? `${kbTotal} article${kbTotal === 1 ? "" : "s"} in the knowledge base, but none match the current filters.` : "No articles match the current filters."}
+                    actionLabel="Clear filters"
+                    onAction={() => resetAll()}
+                  />
+                )}
+              </li>
+            ) : (
+              items.map((article) => {
+                const meta = metaFor(article.domain);
+                return (
+                  <li key={`card-${article.page_id}`} className="p-4">
+                    <button
+                      type="button"
+                      onClick={() => setDetail(article)}
+                      className="block w-full text-left text-sm font-medium leading-snug text-foreground"
+                    >
+                      <span className="line-clamp-2">
+                        {query.trim() ? highlight(article.title, query) : article.title}
+                      </span>
+                    </button>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className={`text-2xs ${meta.bgClass} ${meta.iconClass}`}>
+                        {meta.label}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-muted/40 px-1.5 py-0.5 text-2xs text-muted-foreground">
+                        {article.site_label || article.site || "—"}
+                        {article.space_key ? ` · ${article.space_key}` : ""}
+                      </span>
+                      <span className="text-2xs text-muted-foreground">
+                        Updated {relTime(article.last_synced)}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          {/* 5. the table — desktop only; the cards above are the phone view. */}
+          <div className="table-scroll hidden overflow-x-auto md:block">
             <table className="w-full min-w-0 text-xs md:min-w-[720px]">
               {/* Sticky: the list is long and paging scrolls the header out of view, so the
                   column names — and the sort control inside them — have to stay reachable. */}
               <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-muted/60 backdrop-blur-sm">
-                <tr className="text-left text-2xs uppercase tracking-wide text-muted-foreground">
+                <tr className="text-left text-2xs text-muted-foreground">
                   {([
                     { k: "title", l: "Article title", cls: "px-5 py-3.5 font-semibold" },
                     { k: null, l: "Source", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
                     { k: "domain", l: "Domain", cls: "px-4 py-3.5 font-semibold" },
                     { k: null, l: "Space key", cls: "hidden px-4 py-3.5 font-semibold md:table-cell" },
                     { k: null, l: "Site", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
-                    { k: "last_synced", l: "Last sync", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
+                    { k: "last_synced", l: "Updated", cls: "hidden px-4 py-3.5 font-semibold lg:table-cell" },
                   ] as const).map((h) => (
-                    <th key={h.l} className={h.cls}>
+                    <th
+                      key={h.l}
+                      className={h.cls}
+                      aria-sort={
+                        h.k
+                          ? h.k === sortKey
+                            ? sortDir === "asc" ? "ascending" : "descending"
+                            : "none"
+                          : undefined
+                      }
+                    >
                       {h.k ? (
                         /* Sorting is server-side: clicking sorts the whole KB,
                            not just the rows currently loaded. */
                         <button
                           type="button"
                           onClick={() => {
-                            const nextDir = sortKey === h.k && sortDir === "desc" ? "asc" : "desc";
+                            /* First click on a text column is A→Z; dates start newest-first. */
+                            const nextDir =
+                              sortKey === h.k
+                                ? (sortDir === "asc" ? "desc" : "asc")
+                                : (h.k === "title" ? "asc" : "desc");
                             setSortKey(h.k as typeof sortKey);
                             setSortDir(nextDir);
                             setSearchMode(false);
@@ -1187,13 +1347,21 @@ export default function Knowledge({ role, onToast }: Props) {
                             <span className="text-2xs text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="hidden max-w-[160px] truncate px-4 py-3 text-2xs text-muted-foreground lg:table-cell"
-                          title={article.site || undefined}>
-                          {article.site || "—"}
+                        <td
+                          className="hidden max-w-[170px] truncate px-4 py-3 text-2xs text-muted-foreground lg:table-cell"
+                          title={article.site ? `${article.site_label || article.site}\n${article.site}` : undefined}
+                        >
+                          {article.site_label || article.site || "—"}
                         </td>
                         <td
                           className="hidden px-4 py-3 text-xs text-muted-foreground lg:table-cell"
-                          title={article.last_synced ? new Date(article.last_synced).toLocaleString() : "never synced"}
+                          title={
+                            article.last_checked
+                              ? `Last checked ${new Date(article.last_checked).toLocaleString()}`
+                              : article.last_synced
+                                ? new Date(article.last_synced).toLocaleString()
+                                : "never synced"
+                          }
                         >
                           {relTime(article.last_synced)}
                         </td>

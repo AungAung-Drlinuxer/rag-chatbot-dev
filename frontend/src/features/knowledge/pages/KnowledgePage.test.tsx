@@ -94,7 +94,10 @@ async function settle() {
   for (let i = 0; i < 4; i++) await act(async () => { await Promise.resolve(); });
 }
 
-async function mount(role = "admin") {
+async function mount(role = "admin", hash = "") {
+  /* Each test starts at a clean URL: the page mirrors its state into the hash, so a leftover
+     "?domain=langchain" from one test would silently filter the next one. */
+  window.history.replaceState(null, "", hash || "/");
   if (root) await act(async () => { root!.unmount(); });
   container?.remove();
   container = document.createElement("div");
@@ -164,28 +167,54 @@ describe("KnowledgePage — header, results and rows", () => {
     expect(el.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows the sync-health chip from /sync-status", async () => {
+  it("says 'Sync pending' only when the sync is unhealthy", async () => {
+    /* A healthy page states the sync once, in the KPI row ("Last sync · just now"). The old
+       header chip repeated the same fact, so it now exists only as a warning. */
     const healthy = await mount("admin");
-    expect(healthy.textContent).toContain("KB Synced");
+    expect(healthy.textContent).toContain("Last sync");
+    expect(healthy.textContent).not.toContain("Sync pending");
 
     m.getSyncStatus.mockResolvedValue({ pages: 12, state: "idle", last_run: null, healthy: false, beat_interval_minutes: 30 });
     const stale = await mount("admin");
-    expect(stale.textContent).toContain("Sync Pending");
+    expect(stale.textContent).toContain("Sync pending");
   });
 
   it("reports the four measured figures in the facts strip", async () => {
     const text = (await mount("admin")).textContent!;
     expect(text).toContain("Articles");
     expect(text).toContain("Domains");
-    expect(text).toContain("Sources");
+    expect(text).toContain("Sites");
     expect(text).toContain("Last sync");
     // Derived from the rows that exist — never from a fixed provider list, which used to
     // report two sources even when only one integration was configured.
-    // "Sources" is now the number of configured sites, so adding a second binding shows up
-    // before it has synced anything.
-    expect(text).toContain("Configured in Settings");
+    // "Sites" is the number of configured bindings, so adding a second one shows up before
+    // it has synced anything.
+    expect(text).toContain("Configured knowledge sources");
     expect(text).toContain("1");
     expect(text).toContain("Runs every 30 min");
+  });
+
+  it("announces the sort column and starts a text column A→Z", async () => {
+    /* The header carried a chevron but no aria-sort, so a screen reader could not tell which
+       column ordered the list or in which direction. And a first click on the title sorted
+       Z→A, which reads as "nothing happened" on a page whose rows start with Lesson 1.x. */
+    const el = await mount("admin");
+    const titleBtn = el.querySelector('button[aria-label="Sort by Article title"]') as HTMLButtonElement;
+    expect(titleBtn).toBeTruthy();
+    await click(titleBtn);
+    expect(titleBtn.closest("th")!.getAttribute("aria-sort")).toBe("ascending");
+  });
+
+  it("opens a filtered link exactly as it was shared", async () => {
+    /* Filters, sort and page live in the hash. A link to "langchain, A→Z, page 2" must render
+       that list, not page 1 of everything — the reason the state moved into the URL at all. */
+    await mount("admin", "#/articles?domain=langchain&sort=title&dir=asc&page=2");
+    const calls = m.listArticles.mock.calls.map((c: unknown[]) => String(c[0]));
+    const page2 = calls.find((c: string) => c.includes("offset=10"));
+    expect(page2).toBeTruthy();
+    expect(page2).toContain("domain=langchain");
+    expect(page2).toContain("sort=title");
+    expect(page2).toContain("order=asc");
   });
 });
 
@@ -254,7 +283,7 @@ describe("KnowledgePage — filters, search and sync", () => {
     });
     const text = (await mount("admin")).textContent!;
     expect(text).toContain("Needs review");
-    expect(text).toContain("5 articles sit in General IT");
+    expect(text).toContain("5 articles use the fallback domain (General IT)");
     expect(text).toContain("fallback bucket");
     expect(text).toContain("1 domain have no description");
   });

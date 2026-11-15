@@ -248,16 +248,22 @@ def article_sources(user: str = Depends(get_current_user)) -> dict:
     labels = {"confluence": "Confluence", "manual": "Manual", "unknown": "Internal"}
     with SessionLocal() as s:
         rows = s.execute(text(
-            "SELECT COALESCE(source_url, ''), COALESCE(page_id, ''), connection_id "
-            "FROM kb_meta"
+            "SELECT COALESCE(source_url, ''), COALESCE(page_id, ''), connection_id, "
+            "last_synced, last_checked FROM kb_meta"
         )).fetchall()
     counts: dict[str, int] = {}
     per_binding: dict[int, int] = {}
-    for url, pid, cid in rows:
+    binding_last: dict[int, str] = {}
+    for url, pid, cid, last_synced, last_checked in rows:
         key = classify_source(url, pid)
         counts[key] = counts.get(key, 0) + 1
         if cid:
             per_binding[int(cid)] = per_binding.get(int(cid), 0) + 1
+            stamp = last_checked or last_synced
+            if stamp is not None:
+                iso = stamp.isoformat()
+                if iso > binding_last.get(int(cid), ""):
+                    binding_last[int(cid)] = iso
     # The sites an admin configured, not just the provider types: two Confluence bindings are
     # two sources, and the Knowledge page has to be able to say so before either has synced.
     sites = [
@@ -267,6 +273,7 @@ def article_sources(user: str = Depends(get_current_user)) -> dict:
             "base_url": c["base_url"],
             "spaces": c["spaces"],
             "count": per_binding.get(int(c["id"]), 0),
+            "last_sync": binding_last.get(int(c["id"])),
         }
         for c in list_connections("confluence", active_only=True)
         if c["id"] is not None
@@ -406,10 +413,14 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
         params["conn"] = connection
 
     clause = " AND ".join(where)
-    sql = ("SELECT page_id, title, domain, space_key, connection_id, site, source_url, "
-           "updated_by, last_synced "
-           f"FROM kb_meta WHERE {clause} "
-           f"ORDER BY {sort_col} {direction} NULLS LAST, page_id ASC "
+    # The site a page came from is a BINDING (one Confluence URL can carry two space sets),
+    # not a host: two configured sites on the same Atlassian instance share a hostname, so the
+    # list printed the same value on every row and the page could not show which site it meant.
+    sql = ("SELECT k.page_id, k.title, k.domain, k.space_key, k.connection_id, k.site, "
+           "k.source_url, k.updated_by, k.last_synced, k.last_checked, c.label AS site_label "
+           f"FROM kb_meta k LEFT JOIN integration_connections c ON c.id = k.connection_id "
+           f"WHERE {clause} "
+           f"ORDER BY {sort_col} {direction} NULLS LAST, k.page_id ASC "
            "LIMIT :lim OFFSET :off")
     # v1.6.46 — the count uses the same WHERE clause so the header reports the real
     # size of what this user may see, not the number of rows returned by LIMIT.
@@ -423,8 +434,10 @@ def articles_list(domain: str | None = None, q: str | None = None, limit: int = 
          "space_key": r["space_key"] or _space_from_url(r["source_url"]),
          "connection_id": r["connection_id"],
          "site": r["site"] or _host_of(r["source_url"]),
+         "site_label": r["site_label"] or r["site"] or _host_of(r["source_url"]),
          "source_url": r["source_url"], "updated_by": r["updated_by"],
-         "last_synced": r["last_synced"].isoformat() if r["last_synced"] else None}
+         "last_synced": r["last_synced"].isoformat() if r["last_synced"] else None,
+         "last_checked": r["last_checked"].isoformat() if r["last_checked"] else None}
         for r in rows
     ]
     return {"articles": articles, "total": int(total), "returned": len(articles),

@@ -120,6 +120,8 @@ export type ArticleSite = {
   base_url: string;
   spaces: string[];
   count: number;
+  /** Last time any page of this binding was checked by a sync. */
+  last_sync?: string | null;
 };
 
 /** Providers that contributed articles, plus every configured site (count 0 included). */

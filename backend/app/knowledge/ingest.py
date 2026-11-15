@@ -65,6 +65,7 @@ def _upsert_meta(page_id: str, chash: str, domain: str, title: str, source_url: 
         if site:
             meta.site = site
         meta.last_synced = datetime.now(UTC)
+        meta.last_checked = meta.last_synced
         s.add(meta)
         s.commit()
 
@@ -129,6 +130,13 @@ def ingest_article(art: dict) -> str:
     # doing it before this check meant every 30-minute sync paid one model call per page
     # (94 calls, minutes of CPU) only to write nothing.
     if existing and existing.content_hash == chash:
+        # The page was not rewritten, but it WAS checked: record that, so "Last sync" on the
+        # Knowledge page can mean the run rather than the last edit.
+        with SessionLocal() as s:
+            row = s.get(KbMeta, art["page_id"])
+            if row is not None:
+                row.last_checked = datetime.now(UTC)
+                s.commit()
         return "skipped"
 
     art = {**art, "domain": _effective_domain(art)}
