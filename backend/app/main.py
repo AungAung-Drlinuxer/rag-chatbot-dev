@@ -20,6 +20,7 @@ from app.api.observability import router as observability_router
 from app.api.settings import router as settings_router
 from app.api.setup import router as setup_router
 from app.api.tickets import router as tickets_router
+from app.api.ticket_draft import router as ticket_draft_router
 from app.api.users import router as users_router
 from app.config import SETTINGS
 from app.observability.telemetry import setup_telemetry
@@ -102,6 +103,7 @@ from app.security.api_keys import router as apikeys_router
 
 app.include_router(apikeys_router)
 app.include_router(tickets_router)
+app.include_router(ticket_draft_router)
 app.include_router(escalations_router)
 app.include_router(notifications_router)
 app.include_router(users_router)

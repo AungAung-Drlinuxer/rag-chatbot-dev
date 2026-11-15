@@ -17,12 +17,13 @@ import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, ShieldCheck, Sparkl
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import SystemStatus from "@/features/chat/components/SystemStatusPanel";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
-import { submitFeedback } from "@/features/chat/api";
+import { draftTicket, submitFeedback } from "@/features/chat/api";
 import { getConversationMessages } from "@/features/conversations/api";
 import { takePendingConversation } from "@/features/chat/pendingConversation";
 import { conversationFromHash, setConversationHash } from "@/app/router";
-import { CreateTicketDialog } from "@/features/tickets/components/CreateTicketDialog";
-import { formatMessageTime, latestSources, type Message, type Source } from "@/features/chat/model";
+import ChatTicketDialog from "@/features/chat/components/ChatTicketDialog";
+import { createTicketApi } from "@/features/tickets/api";
+import { formatMessageTime, latestSources, type Message, type Source, type TicketDraft } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
@@ -119,7 +120,9 @@ export default function Chat({ onNavigate, userName }: Props) {
      to open it are gone, so there is one way to raise a ticket and it starts from the answer
      it belongs to. */
   const [ticketFor, setTicketFor] = useState<Message | null>(null);
-  const [ticketPreset, setTicketPreset] = useState<{ subject: string; description: string; domain?: string }>({ subject: "", description: "" });
+  const [ticketDomains, setTicketDomains] = useState<{ key: string; label: string }[]>([]);
+  const [draftingFor, setDraftingFor] = useState<string | null>(null);
+  const [creatingFor, setCreatingFor] = useState<string | null>(null);
 
   const history = useRef<{ role: string; content: string }[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -428,9 +431,57 @@ export default function Chat({ onNavigate, userName }: Props) {
      reporter writes what happened in their own words (then may improve it with AI). Only
      the routing domain is carried over — it decides the category, the request type and the
      team, and a reporter cannot know it. */
-  function openTicket(m: Message) {
-    setTicketPreset({ subject: "", description: "", domain: m.domain });
-    setTicketFor(m);
+  /* Ask the server to read the exchange and propose the fields. The reporter's own words are
+     the source; the card is a review step, and "Create" is the only thing that writes. */
+  async function openTicket(m: Message) {
+    if (m.ticketDraft || draftingFor) return;
+    const question =
+      [...messages.slice(0, messages.findIndex((x) => x.id === m.id))].reverse().find((x) => x.role === "user")?.content ?? "";
+    setDraftingFor(m.id);
+    try {
+      const res = await draftTicket({ question, answer: m.content, domain: m.domain, session_id: sessionId });
+      setTicketDomains(res.domains || []);
+      setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ticketDraft: res.draft } : x)));
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Could not draft a ticket.");
+    } finally {
+      setDraftingFor(null);
+    }
+  }
+
+  function patchDraft(id: string, draft: TicketDraft) {
+    setMessages((prev) => prev.map((x) => (x.id === id ? { ...x, ticketDraft: draft } : x)));
+  }
+
+  async function createFromDraft(m: Message, draft?: TicketDraft) {
+    const fields = draft ?? m.ticketDraft;
+    if (!fields || creatingFor) return;
+    setCreatingFor(m.id);
+    try {
+      const res = await createTicketApi({
+        subject: fields.subject,
+        description: fields.description,
+        domain: fields.domain,
+        priority: fields.priority,
+        assignee: fields.assignee,
+        due_date: fields.due_date,
+        destination: "jira",
+        session_id: sessionId,
+      });
+      setMessages((prev) =>
+        prev.map((x) =>
+          x.id === m.id
+            ? { ...x, ticketDraft: fields, createdTicket: { key: String(res.id), link: res.jira_link } }
+            : x,
+        ),
+      );
+      setTicketFor(null);
+      notify(`Ticket ${res.id} created in Jira.`);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Ticket could not be created.");
+    } finally {
+      setCreatingFor(null);
+    }
   }
 
   const citedTitles = useMemo(() => new Set(latest.map((s) => s.title)).size, [latest]);
@@ -640,7 +691,11 @@ export default function Chat({ onNavigate, userName }: Props) {
                               message={m}
                               onHelpful={() => void rate(m, 1)}
                               onNotHelpful={() => void rate(m, -1)}
-                              onOpenTicketForm={() => openTicket(m)}
+                              onOpenTicketForm={() => void openTicket(m)}
+                              onEditTicketDraft={() => setTicketFor(m)}
+                              onCreateTicketDraft={() => void createFromDraft(m)}
+                              ticketBusy={creatingFor === m.id || draftingFor === m.id}
+                              ticketDomainLabel={ticketDomains.find((d) => d.key === m.ticketDraft?.domain)?.label}
                               /* Edit: resend the edited text in place of the original turn.
                                  This prop was never passed before, so "Save & resend"
                                  closed the editor and did nothing. */
@@ -704,11 +759,14 @@ export default function Chat({ onNavigate, userName }: Props) {
       )}
 
       {/* ---------------- one ticket form, one door: the icon under an answer ---------------- */}
-      <CreateTicketDialog
+      <ChatTicketDialog
         open={!!ticketFor}
+        draft={ticketFor?.ticketDraft ?? null}
+        domains={ticketDomains}
+        busy={!!ticketFor && creatingFor === ticketFor.id}
         onOpenChange={(o) => { if (!o) setTicketFor(null); }}
-        preset={{ subject: ticketPreset.subject, description: ticketPreset.description, domain: ticketPreset.domain, sessionId }}
-        onToast={notify}
+        onSave={(next) => { if (ticketFor) patchDraft(ticketFor.id, next); }}
+        onCreate={(next) => { if (ticketFor) void createFromDraft(ticketFor, next); }}
       />
 
       {toast && (

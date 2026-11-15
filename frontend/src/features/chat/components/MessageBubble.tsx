@@ -14,11 +14,12 @@
  * mockup's literal hexes, so the card follows both themes. Everything the card shows
  * is a value the message already carries — no figure is invented to fill it out.
  */
-import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
+import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Loader2, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
 
 import AgentActivity, { stageFromText } from "@/components/AgentActivity";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Avatar } from "@/features/users/avatar";
+import ChatTicketCard from "./ChatTicketCard";
 import { ConfidenceBadge } from "@/features/chat/components/MessageParts";
 import { groupSources, matchLabel, referenceLabel } from "@/features/chat/sources";
 import RagPipelineStatus from "@/features/chat/components/RagPipelineStatus";
@@ -53,6 +54,10 @@ function MessageBubble({
   markdownRendering = true,
   authorName,
   authorUsername,
+  onEditTicketDraft,
+  onCreateTicketDraft,
+  ticketBusy = false,
+  ticketDomainLabel,
 }: {
   message: Message;
   onHelpful: () => void;
@@ -71,6 +76,11 @@ function MessageBubble({
   /** Who wrote a user turn — drives the photo beside the bubble. */
   authorName?: string;
   authorUsername?: string;
+  /** The ticket card lives inside the answer: a draft is the answer's next step, not a page. */
+  onEditTicketDraft?: () => void;
+  onCreateTicketDraft?: () => void;
+  ticketBusy?: boolean;
+  ticketDomainLabel?: string;
 }) {
   const isUser = message.role === "user";
   const caution = message.decision === "caution";
@@ -422,6 +432,17 @@ function MessageBubble({
           )}
         </div>
 
+        {message.ticketDraft && (
+          <ChatTicketCard
+            draft={message.ticketDraft}
+            created={message.createdTicket}
+            domainLabel={ticketDomainLabel}
+            busy={ticketBusy}
+            onEdit={() => onEditTicketDraft?.()}
+            onCreate={() => onCreateTicketDraft?.()}
+          />
+        )}
+
         {message.content && (
           /* Icon-only action row. The "Was this helpful?" caption and the button labels
              made the footer twice as wide as the mockup's, so each action keeps only its
@@ -482,12 +503,14 @@ function MessageBubble({
             </button>
             <button
               type="button"
-              title="Create Jira ticket"
+              title={ticketBusy ? "Drafting from this answer…" : "Draft a Jira ticket from this answer"}
               aria-label="Create Jira ticket"
+              aria-busy={ticketBusy}
+              disabled={ticketBusy}
               onClick={onOpenTicketForm}
               className="ml-auto grid size-8 place-items-center rounded-full border border-orange-200 bg-orange-50/80 text-orange-700 transition hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
             >
-              <Ticket className="size-4" />
+              {ticketBusy ? <Loader2 className="size-4 animate-spin" /> : <Ticket className="size-4" />}
             </button>
           </div>
         )}

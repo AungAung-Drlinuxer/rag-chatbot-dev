@@ -26,6 +26,16 @@ export type RetrievalInfo = {
   role?: string;
 };
 
+/** The shape the draft endpoint returns — only fields the create API can honour. */
+export type TicketDraft = {
+  subject: string;
+  description: string;
+  priority: "low" | "medium" | "high" | "critical";
+  domain: string;
+  assignee: string | null;
+  due_date: string | null;
+};
+
 export type Message = {
   id: string;
   role: MsgRole;
@@ -49,6 +59,10 @@ export type Message = {
   retrieval?: RetrievalInfo;  // S1.1 — real retrieval stats for the right panel
   /** Set when the answer is a policy refusal: injection | pii | profanity | toxic | overflow. */
   guardrailType?: string;
+  /** An AI-drafted Jira ticket for this answer, waiting for a human to approve it. */
+  ticketDraft?: TicketDraft;
+  /** Set once the draft became a real issue. */
+  createdTicket?: { key: string; link?: string };
 };
 
 export type Conv = {

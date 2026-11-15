@@ -121,3 +121,33 @@ export async function patchConversation(sessionId: string, body: Record<string, 
   if (!r.ok) throw new Error(`patch conversation failed: ${r.status}`);
   return r.json();
 }
+
+
+/** Ask the server to read a finished exchange and propose a ticket. Pure read: nothing is
+ *  created until the reporter presses Create, so a misread draft costs nothing. */
+export async function draftTicket(body: {
+  question: string;
+  answer: string;
+  domain?: string | null;
+  session_id?: string | null;
+}) {
+  const r = await apiFetch(`${BASE}/api/tickets/draft`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let detail = `HTTP ${r.status}`;
+    try {
+      const j = await r.json();
+      if (j?.detail) detail = String(j.detail);
+    } catch {
+      /* keep the status */
+    }
+    throw new Error(detail);
+  }
+  return (await r.json()) as {
+    draft: import("./model").TicketDraft;
+    domains: { key: string; label: string }[];
+  };
+}

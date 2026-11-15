@@ -121,13 +121,14 @@ describe("CreateTicketDialog", () => {
     });
   });
 
-  it("is the dialog the chat opens — no second, smaller form", () => {
+  it("the chat drafts from the transcript, then creates through this same API", () => {
+    /* The chat no longer opens this empty form: it asks /api/tickets/draft to read the
+       exchange first, and only Create writes. What must not come back is a second, bespoke
+       ticket endpoint — the create call stays the one this dialog's tests cover. */
     const chat = readFileSync(resolve(process.cwd(), "src/features/chat/pages/ChatPage.tsx"), "utf8");
-    expect(chat).toContain("<CreateTicketDialog");
-    // The old inline dialog titled the form "Create Jira ticket" with only two fields.
-    expect(chat).not.toContain("Create Jira ticket</DialogTitle>");
-    expect(chat).not.toContain("createTicketApi");
-    // One door: the header button and the rail action are gone.
+    expect(chat).toContain("draftTicket");
+    expect(chat).toContain("createTicketApi");
+    expect(chat).toContain("<ChatTicketDialog");
     expect(chat).not.toContain("Escalate to IT");
   });
 
