@@ -6,14 +6,11 @@ import {
   Archive,
   Monitor,
   Plug,
-  Activity,
-  Info,
   RotateCcw,
   Save,
   Settings as SettingsIcon,
   XCircle,
 } from "lucide-react";
-import { IntegrationLogo } from "../components/IntegrationLogo";
 import { useEffect, useRef, useState } from "react";
 import { PageShell, PageHeader, ErrorState } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +21,6 @@ import { Panel, Pill, Row, Segmented } from "../components/SettingsKit";
 import ProfilePhotoSettings from "../components/ProfilePhotoSettings";
 import EffectiveIntegrations from "../components/EffectiveIntegrations";
 
-import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
 import { DataRetentionSettings } from "../components/DataRetentionSettings";
 import NotificationSettings from "../components/NotificationSettings";
@@ -799,37 +795,10 @@ export default function Settings({ role }: { role?: string }) {
                 <IntegrationsConfig />
               </div>
 
-              {/* Live health used to sit below the whole page, under the fold, where it was
-                  read only after something had already failed. */}
+              {/* One rail, one job: state what is configured. The dependency check and the
+                  how-it-works list repeated what the panels below already say. */}
               <aside className="space-y-4 xl:sticky xl:top-6">
                 <EffectiveIntegrations />
-                <Panel
-                  icon={<Activity className="size-4" />}
-                  title="Service status"
-                  description="Live checks on the dependencies those providers rely on."
-                  actions={<span className="size-1.5 rounded-full bg-[var(--ok)]" aria-hidden />}
-                >
-                  <div className="p-3">
-                    <IntegrationStatusCards />
-                  </div>
-                </Panel>
-
-                <Panel icon={<Info className="size-4" />} title="How this works" padded>
-                  <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-                    <li className="flex gap-1.5">
-                      <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
-                      Switching a provider on only reveals its panel — nothing connects until you save its fields.
-                    </li>
-                    <li className="flex gap-1.5">
-                      <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
-                      Credentials are write-only: stored server-side and never returned, so a wrong value is fixed by replacing it, not by reading it.
-                    </li>
-                    <li className="flex gap-1.5">
-                      <span className="mt-1 size-1 shrink-0 rounded-full bg-[var(--primary)]" />
-                      “Remove stored settings” inside a panel is the only way to revoke a connection.
-                    </li>
-                  </ul>
-                </Panel>
               </aside>
             </div>
             )}
@@ -866,83 +835,3 @@ export default function Settings({ role }: { role?: string }) {
 /* ============================================================
    INTEGRATIONS STATUS CARDS + EDITOR + SYSTEM HEALTH (live)
 ============================================================ */
-
-/** The four connected systems, at a glance, on every settings tab. */
-function IntegrationStatusCards() {
-  const [services, setServices] = useState<any[]>([]);
-  const [cfg, setCfg] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    dashHealth()
-      .then((list) => setServices(Array.isArray(list) ? list : []))
-      .catch(() => {});
-    Promise.all([
-      getIntegrationSettings("confluence"),
-      getIntegrationSettings("jira"),
-      getIntegrationSettings("ldap"),
-      getIntegrationSettings("llm"),
-    ]).then((vals) => {
-      const map: Record<string, any> = {};
-      vals.forEach((v: any, i: number) => { map[["confluence", "jira", "ldap", "llm"][i]] = v?.settings ?? v; });
-      setCfg(map);
-    }).catch(() => {});
-  }, []);
-
-  const st = (needle: string) => {
-    const hit = services.find((s) => (s.name || "").toLowerCase().includes(needle));
-    return hit ? hit.status : null;
-  };
-  const chip = (needle: string) => {
-    const s = st(needle);
-    if (!s) return null;
-    const ok = /healthy|ok|up/i.test(s);
-    return (
-      <span className={["inline-flex items-center gap-1 text-xs font-medium", ok ? "text-[var(--ok)]" : "text-[var(--danger)]"].join(" ")}>
-        <span className={["size-1.5 rounded-full", ok ? "bg-[var(--ok)]" : "bg-[var(--danger)]"].join(" ")} />
-        {ok ? "Connected" : s}
-      </span>
-    );
-  };
-
-  const cards = [
-    { key: "confluence", name: "Confluence", desc: "Knowledge base and documentation source.",
-      detail: cfg.confluence?.base_url ? `URL: ${cfg.confluence.base_url}` : "Credentials stored per site — open the Confluence panel" },
-    { key: "jira", name: "Jira", desc: "Issue tracking and ticket management.",
-      detail: cfg.jira?.base_url ? `URL: ${cfg.jira.base_url}` : "Credentials stored per site — open the Jira panel" },
-    { key: "ldap", name: "LDAP / Active Directory", desc: "User authentication and group synchronization.",
-      detail: cfg.ldap?.host ? `Server: ${cfg.ldap.host}:${cfg.ldap.port ?? 389}` : "Server: 10.10.10.10" },
-    // The model provider's status lives in the AI service section now — it shows the
-    // provider, model, key state and detection count, which is strictly more than this
-    // card said. Keeping a second copy here is how the two screens drifted apart before.
-    // Redis is infrastructure, not an integration: single sign-on is what the fourth slot
-    // is for, and it is the one provider the catalogue lists that had no status anywhere.
-    { key: "keycloak", name: "Keycloak SSO", desc: "Single sign-on over OpenID Connect.",
-      detail: cfg.keycloak?.issuer ? `Issuer: ${cfg.keycloak.issuer}` : "Issuer: (not set)" },
-  ];
-
-  return (
-    /* One column: this lives in the 340px rail, where two tiles side by side truncated
-       every URL down to "URL: (con…". */
-    <div className="space-y-2">
-      {cards.map((c) => (
-        <div
-          key={c.key}
-          className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-background/60 p-2.5 transition hover:border-[var(--primary)]/30"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.04] p-1 ring-1 ring-[var(--border)] dark:bg-white/[0.03]">
-            <IntegrationLogo providerKey={c.key} name={c.name} size="sm" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-xs font-semibold">{c.name}</span>
-              {chip(c.key)}
-            </div>
-            <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground" title={c.detail}>
-              {c.detail}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}

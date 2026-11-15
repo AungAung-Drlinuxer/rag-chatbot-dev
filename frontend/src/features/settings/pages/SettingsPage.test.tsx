@@ -173,11 +173,11 @@ describe("SettingsPage — role gating and the grouped nav", () => {
     expect(el.textContent).not.toContain("My integrations");
   });
 
-  it("opens the Integrations panel (with service status) from the nav", async () => {
+  it("opens the Integrations panel (with the effective configuration rail) from the nav", async () => {
     const el = await mount("admin");
     await click(navBtn(el, "Integrations"));
     expect(el.querySelector('[data-stub="integrations"]')).toBeTruthy();
-    expect(el.textContent).toContain("Service status");
+    expect(el.textContent).toContain("Effective configuration");
     expect(m.getIntegrationSettings).toHaveBeenCalled();
   });
 
