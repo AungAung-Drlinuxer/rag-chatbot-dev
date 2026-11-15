@@ -5,15 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import type { TicketDraft } from "@/features/chat/model";
+import {
+  TicketFormFields,
+  SUBJECT_MAX,
+  EMPTY_TICKET_FORM,
+  type TicketFormValues,
+} from "@/features/tickets/components/TicketForm";
+import {
+  improveTicketDescription,
+  ticketAssignees,
+  type CategoryAssignee,
+} from "@/features/tickets/api";
 
-const PRIORITIES = ["low", "medium", "high", "critical"] as const;
-
-const FIELD =
-  "h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-xs text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
-const LABEL = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
-
-/** Edit the draft before it becomes an issue. Same fields as the create API — offering
- *  Controls the ticket cannot carry would be a form that lies. */
+/** Edit the draft before it becomes an issue. It draws the shared ticket form — the same
+ *  fields, in the same order, as Create ticket and Edit ticket — because a draft is just a
+ *  pre-filled create: anything the reporter could change there, they can change here. */
 export default function ChatTicketDialog({
   open,
   draft,
@@ -22,6 +28,7 @@ export default function ChatTicketDialog({
   onOpenChange,
   onSave,
   onCreate,
+  onToast,
 }: {
   open: boolean;
   draft: TicketDraft | null;
@@ -30,23 +37,71 @@ export default function ChatTicketDialog({
   onOpenChange: (open: boolean) => void;
   onSave: (next: TicketDraft) => void;
   onCreate: (next: TicketDraft) => void;
+  onToast?: (message: string, tone?: "ok" | "err") => void;
 }) {
-  const [form, setForm] = useState<TicketDraft | null>(draft);
+  const [form, setForm] = useState<TicketFormValues>(EMPTY_TICKET_FORM);
+  const [assignable, setAssignable] = useState<CategoryAssignee[]>([]);
+  const [assigneeScope, setAssigneeScope] = useState<"category" | "all">("all");
+  const [improving, setImproving] = useState(false);
 
+  /** Category is stored as a label (what the API takes); the draft carries a domain key. */
+  const labelFor = (key: string) =>
+    domains.find((d) => d.key.toLowerCase() === key?.toLowerCase())?.label ?? key ?? "";
+
+  // Each opening starts from the draft, not from the previous attempt's leftovers.
   useEffect(() => {
-    if (open) setForm(draft);
+    if (!open || !draft) return;
+    setForm({
+      ...EMPTY_TICKET_FORM,
+      subject: draft.subject ?? "",
+      description: draft.description ?? "",
+      category: labelFor(draft.domain),
+      priority: draft.priority ?? "medium",
+      assignee: draft.assignee ?? "",
+      due_date: draft.due_date ?? "",
+      components: (draft.components ?? []).join(", "),
+      labels: (draft.labels ?? []).join(", "),
+      original_estimate: draft.original_estimate ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft]);
 
-  if (!form) return null;
+  // Same pool rule as Create ticket: the category decides who can own it.
+  useEffect(() => {
+    let alive = true;
+    if (!open || !form.category) {
+      setAssignable([]);
+      return;
+    }
+    ticketAssignees(form.category.toLowerCase())
+      .then((d) => {
+        if (!alive) return;
+        setAssignable(d.assignees ?? []);
+        setAssigneeScope(d.configured ? "category" : "all");
+      })
+      .catch(() => { if (alive) setAssignable([]); });
+    return () => { alive = false; };
+  }, [open, form.category]);
 
-  const set = <K extends keyof TicketDraft>(key: K, value: TicketDraft[K]) =>
-    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+  if (!draft) return null;
 
   const valid = form.subject.trim().length > 0;
 
+  const toDraft = (): TicketDraft => ({
+    subject: form.subject.trim(),
+    description: form.description,
+    priority: form.priority as TicketDraft["priority"],
+    domain: domains.find((d) => d.label === form.category)?.key ?? draft.domain,
+    assignee: form.assignee || null,
+    due_date: form.due_date || null,
+    components: form.components.split(",").map((v) => v.trim()).filter(Boolean),
+    labels: form.labels.split(",").map((v) => v.trim()).filter(Boolean),
+    original_estimate: form.original_estimate.trim() || null,
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="form">
+      <DialogContent size="editor">
         <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pr-14 pt-5">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-lg shadow-black/25">
             <Ticket className="size-5" aria-hidden />
@@ -65,160 +120,45 @@ export default function ChatTicketDialog({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-6 py-5">
-          <div>
-            <label className={LABEL} htmlFor="draft-subject">
-              Summary <span className="text-[var(--danger)]">*</span>
-            </label>
-            <input
-              id="draft-subject"
-              value={form.subject}
-              onChange={(e) => set("subject", e.target.value)}
-              maxLength={110}
-              className={FIELD}
-              placeholder="One line naming the problem"
-            />
-            <p className="mt-1 text-[11px] text-muted-foreground">{form.subject.length}/110 characters</p>
-          </div>
-
-          <div>
-            <label className={LABEL} htmlFor="draft-description">
-              Description
-            </label>
-            <textarea
-              id="draft-description"
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              rows={10}
-              className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs leading-relaxed text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
-              placeholder="What is happening, the impact, what was tried"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className={LABEL} htmlFor="draft-components">
-                Components
-              </label>
-              <input
-                id="draft-components"
-                value={(form.components || []).join(", ")}
-                onChange={(e) =>
-                  set(
-                    "components",
-                    e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
-                  )
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <TicketFormFields
+            values={form}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            categories={domains.map((d) => ({ key: d.key, label: d.label }))}
+            assignable={assignable}
+            assigneeScope={assigneeScope}
+            onImprove={async () => {
+              setImproving(true);
+              try {
+                const improved = await improveTicketDescription(form.description, form.subject);
+                if (improved) {
+                  setForm((f) => ({ ...f, description: improved }));
+                  onToast?.("Description improved");
+                } else {
+                  onToast?.("Nothing came back — try again", "err");
                 }
-                className={FIELD}
-                placeholder="Network & VPN, macOS"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">Must already exist in Jira.</p>
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-labels">
-                Labels
-              </label>
-              <input
-                id="draft-labels"
-                value={(form.labels || []).join(", ")}
-                onChange={(e) =>
-                  set(
-                    "labels",
-                    e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
-                  )
-                }
-                className={FIELD}
-                placeholder="vpn, macos"
-              />
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-priority">
-                Priority
-              </label>
-              <select
-                id="draft-priority"
-                value={form.priority}
-                onChange={(e) => set("priority", e.target.value as TicketDraft["priority"])}
-                className={FIELD}
-              >
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p} className="capitalize">
-                    {p[0].toUpperCase() + p.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-domain">
-                Category
-              </label>
-              <select
-                id="draft-domain"
-                value={form.domain}
-                onChange={(e) => set("domain", e.target.value)}
-                className={FIELD}
-              >
-                {domains.length === 0 && <option value={form.domain}>{form.domain}</option>}
-                {domains.map((d) => (
-                  <option key={d.key} value={d.key}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-assignee">
-                Assignee
-              </label>
-              <input
-                id="draft-assignee"
-                value={form.assignee ?? ""}
-                onChange={(e) => set("assignee", e.target.value || null)}
-                className={FIELD}
-                placeholder="Leave blank to auto-assign"
-              />
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-estimate">
-                Original estimate
-              </label>
-              <input
-                id="draft-estimate"
-                value={form.original_estimate ?? ""}
-                onChange={(e) => set("original_estimate", e.target.value || null)}
-                className={FIELD}
-                placeholder="2h · 1d 4h"
-              />
-            </div>
-
-            <div>
-              <label className={LABEL} htmlFor="draft-due">
-                Due date
-              </label>
-              <input
-                id="draft-due"
-                type="date"
-                value={form.due_date ?? ""}
-                onChange={(e) => set("due_date", e.target.value || null)}
-                className={FIELD}
-              />
-            </div>
-          </div>
+              } catch (e: any) {
+                onToast?.(e?.message || "Could not improve the description", "err");
+              } finally {
+                setImproving(false);
+              }
+            }}
+            improving={improving}
+          />
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Subject limit {SUBJECT_MAX} characters — Jira rejects anything longer.
+          </p>
         </div>
 
         <DialogFooter className="gap-2 border-t border-[var(--border)] px-6 py-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" className="rounded-lg" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             variant="outline"
+            className="rounded-lg"
             onClick={() => {
-              onSave({ ...form, subject: form.subject.trim() });
+              onSave(toDraft());
               onOpenChange(false);
             }}
             disabled={!valid}
@@ -227,7 +167,7 @@ export default function ChatTicketDialog({
           </Button>
           <button
             type="button"
-            onClick={() => onCreate({ ...form, subject: form.subject.trim() })}
+            onClick={() => onCreate(toDraft())}
             disabled={!valid || busy}
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] px-4 text-xs font-semibold text-white shadow-lg shadow-black/25 transition hover:opacity-95 active:scale-[0.99] disabled:opacity-60"
           >

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
-  CalendarDays,
   CheckCircle2,
   ChevronDown,
   Download,
@@ -18,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { TicketFormFields } from "@/features/tickets/components/TicketForm";
 import { attachmentUrl, downloadAttachment } from "@/features/tickets/api";
 import { listActiveDomains } from "@/features/tickets/api";
 import type { TicketEditPayload } from "@/features/tickets/components/TicketDetailPanel";
@@ -41,9 +41,6 @@ const QUICK_TAGS = [
   "Fix deployed to staging",
   "Verified in production",
 ];
-
-const FIELD =
-  "h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 const SELECT =
   "h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--background)] pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
@@ -110,7 +107,6 @@ export function EditTicketDialog({
 
   // Attachments
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dueRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
   // Load the opened ticket into the form — once per ticket, not on every refresh of the same
@@ -459,212 +455,34 @@ export function EditTicketDialog({
                   )}
                 </div>
 
-                {/* subject */}
-                <div>
-                  <label htmlFor="ticket-subject" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    Subject <span className="text-[var(--danger)]">*</span>
-                  </label>
-                  <input
-                    id="ticket-subject"
-                    value={subject}
-                    maxLength={200}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Brief summary of the issue"
-                    aria-invalid={missingSubject || undefined}
-                    className={[FIELD, missingSubject ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15" : ""].join(" ")}
-                  />
-                  {missingSubject && (
-                    <p className="mt-1 text-2xs text-[var(--danger)]">A subject is required.</p>
-                  )}
-                </div>
-
-                {/* description */}
-                <div>
-                  <label htmlFor="ticket-description" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    Description <span className="text-[var(--danger)]">*</span>
-                  </label>
-                  <textarea
-                    id="ticket-description"
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What happened, error messages, and what was already tried…"
-                    aria-invalid={missingDescription || undefined}
-                    className={[
-                      "w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15",
-                      missingDescription ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15" : "",
-                    ].join(" ")}
-                  />
-                </div>
-
-                {/* category + priority */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="ticket-category" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Category
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="ticket-category"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        aria-label="Category"
-                        className={[SELECT, "pl-3"].join(" ")}
-                      >
-                        {!categories.some((c) => c.label === category) && category && (
-                          <option value={category}>{category}</option>
-                        )}
-                        {categories.map((c) => (
-                          <option key={c.key} value={c.label}>{c.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="ticket-priority" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Priority
-                    </label>
-                    <div className="relative">
-                      <AlertTriangle
-                        className={["pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2", priorityMetaOf(priority).className].join(" ")}
-                        aria-hidden
-                      />
-                      <select
-                        id="ticket-priority"
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value as Ticket["priority"])}
-                        aria-label="Priority"
-                        className={SELECT}
-                      >
-                        <option value="critical">Critical</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                    </div>
-                  </div>
-                </div>
-
-                {/* assignee + due date */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="ticket-assignee" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Assignee
-                    </label>
-                    <div className="relative">
-                      <span
-                        className="pointer-events-none absolute left-2.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full bg-[var(--muted)] text-[11px] font-semibold uppercase text-muted-foreground ring-1 ring-[var(--border)]"
-                        aria-hidden
-                      >
-                        {(assignee || "?").slice(0, 1)}
-                      </span>
-                      <select
-                        id="ticket-assignee"
-                        value={assignee}
-                        onChange={(e) => setAssignee(e.target.value)}
-                        aria-label="Assignee"
-                        className={SELECT}
-                      >
-                        <option value="">Unassigned</option>
-                        {assignable.map((a) => (
-                          <option key={a.username} value={a.username}>
-                            {a.username}{a.group ? ` · ${a.group}` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="ticket-estimate" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Original estimate
-                    </label>
-                    <input
-                      id="ticket-estimate"
-                      value={estimate}
-                      onChange={(e) => setEstimate(e.target.value)}
-                      placeholder="2h · 1d 4h"
-                      className={FIELD}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="ticket-labels" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Labels
-                    </label>
-                    <input
-                      id="ticket-labels"
-                      value={labels}
-                      onChange={(e) => setLabels(e.target.value)}
-                      placeholder="vpn, macos"
-                      className={FIELD}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="ticket-components" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Components
-                    </label>
-                    <input
-                      id="ticket-components"
-                      value={components}
-                      onChange={(e) => setComponents(e.target.value)}
-                      placeholder="Network & VPN"
-                      className={FIELD}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="ticket-due-date" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Due date
-                    </label>
-                    <div className="relative">
-                      <input
-                        ref={dueRef}
-                        id="ticket-due-date"
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        aria-label="Due date"
-                        /* Clicking the field opens the calendar. A date input only opens on
-                           its (invisible) picker glyph by default, which is why the field
-                           read as "can't set a date" — the caret was there, the picker was
-                           not. */
-                        onClick={() => dueRef.current?.showPicker?.()}
-                        className={[
-                          FIELD,
-                          "pl-9 pr-11 [&::-webkit-calendar-picker-indicator]:hidden",
-                          /* Hide the native dd/mm/yyyy only while the placeholder is up.
-                             It used to be hidden whenever a date existed, and a formatted
-                             label was painted on top — on mobile WebKit the pseudo-element
-                             rule is ignored, so both renderings showed and the field read
-                             as doubled ("20/06/2026" printed twice). */
-                          dueDate ? "" : "[&::-webkit-datetime-edit]:text-transparent",
-                        ].join(" ")}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => dueRef.current?.showPicker?.()}
-                        aria-label="Open calendar"
-                        className="absolute right-1 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition hover:bg-[var(--muted)] hover:text-foreground"
-                      >
-                        <CalendarDays className="size-4" aria-hidden />
-                      </button>
-                      {!dueDate && (
-                        <span className="pointer-events-none absolute left-9 top-1/2 -translate-y-1/2 text-sm text-muted-foreground/85">
-                          Select date
-                        </span>
-                      )}
-                      <span className="pointer-events-none absolute left-3 top-1/2 grid size-4 -translate-y-1/2 place-items-center text-muted-foreground">
-                        <CalendarDays className="size-4" aria-hidden />
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {/* The same fields the create dialog and the chat's review dialog draw. */}
+                <TicketFormFields
+                  values={{
+                    subject,
+                    description,
+                    category,
+                    priority,
+                    assignee,
+                    due_date: dueDate,
+                    components,
+                    labels,
+                    original_estimate: estimate,
+                  }}
+                  onChange={(patch) => {
+                    if (patch.subject !== undefined) setSubject(patch.subject);
+                    if (patch.description !== undefined) setDescription(patch.description);
+                    if (patch.category !== undefined) { setCategory(patch.category); setAssignee(""); }
+                    if (patch.assignee !== undefined) setAssignee(patch.assignee);
+                    if (patch.priority !== undefined) setPriority(patch.priority as Ticket["priority"]);
+                    if (patch.due_date !== undefined) setDueDate(patch.due_date);
+                    if (patch.components !== undefined) setComponents(patch.components);
+                    if (patch.labels !== undefined) setLabels(patch.labels);
+                    if (patch.original_estimate !== undefined) setEstimate(patch.original_estimate);
+                  }}
+                  categories={categories}
+                  assignable={assignable}
+                  errors={{ subject: missingSubject, description: missingDescription }}
+                />
 
                 {/* attachments */}
                 <div>

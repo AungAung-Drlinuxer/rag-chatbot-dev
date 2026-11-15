@@ -22,6 +22,7 @@ import { getConversationMessages } from "@/features/conversations/api";
 import { takePendingConversation } from "@/features/chat/pendingConversation";
 import { conversationFromHash, setConversationHash } from "@/app/router";
 import ChatTicketDialog from "@/features/chat/components/ChatTicketDialog";
+import { listActiveDomains } from "@/features/tickets/api";
 import { createTicketApi } from "@/features/tickets/api";
 import { formatMessageTime, latestSources, type Message, type Source, type TicketDraft } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
@@ -116,6 +117,13 @@ export default function Chat({ onNavigate, userName }: Props) {
   const [creatingFor, setCreatingFor] = useState<string | null>(null);
 
   const history = useRef<{ role: string; content: string }[]>([]);
+  // The ticket form's categories: fetched once, so opening it from an existing draft has a
+  // full dropdown and not just the one value the draft happens to carry.
+  useEffect(() => {
+    listActiveDomains()
+      .then((ds) => setTicketDomains(ds.map((d) => ({ key: d.key, label: d.label }))))
+      .catch(() => {});
+  }, []);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
@@ -426,7 +434,14 @@ export default function Chat({ onNavigate, userName }: Props) {
   /* Ask the server to read the exchange and propose the fields. The reporter's own words are
      the source; the card is a review step, and "Create" is the only thing that writes. */
   async function openTicket(m: Message) {
-    if (m.ticketDraft || draftingFor) return;
+    if (draftingFor) return;
+    /* A draft already on the message means the ticket exists as an object — open the form on
+       it. This used to return early, so the ticket icon did nothing at all on any answer that
+       had already been drafted. */
+    if (m.ticketDraft) {
+      setTicketFor(m);
+      return;
+    }
     const question =
       [...messages.slice(0, messages.findIndex((x) => x.id === m.id))].reverse().find((x) => x.role === "user")?.content ?? "";
     setDraftingFor(m.id);
@@ -765,6 +780,7 @@ export default function Chat({ onNavigate, userName }: Props) {
         onOpenChange={(o) => { if (!o) setTicketFor(null); }}
         onSave={(next) => { if (ticketFor) patchDraft(ticketFor.id, next); }}
         onCreate={(next) => { if (ticketFor) void createFromDraft(ticketFor, next); }}
+        onToast={(message) => notify(message)}
       />
 
       {toast && (

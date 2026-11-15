@@ -18,11 +18,12 @@
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  AlertCircle, Bug, CalendarDays, Cloud, KeyRound, Paperclip,
-  Send, Sparkles, Ticket as TicketIcon, X,
+  AlertCircle, Bug, Cloud, KeyRound, Paperclip,
+  Send, Ticket as TicketIcon, X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SUBJECT_MAX, TicketFormFields } from "@/features/tickets/components/TicketForm";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import {
   Dialog,
@@ -75,23 +76,6 @@ const EMPTY = {
   original_estimate: "",
 };
 
-const MAX_SUBJECT = 100;
-const MAX_DESCRIPTION = 2000;
-
-/** What each priority means, said once — a select of four adjectives is a guess. */
-const PRIORITY_GUIDE: Record<string, string> = {
-  critical: "A service is down for everyone. Nothing else matters.",
-  high: "Work is blocked for a person or a team, with no workaround.",
-  medium: "Degraded or inconvenient, but there is a way to keep working.",
-  low: "A question, a cosmetic issue, or a request with no deadline.",
-};
-
-const PRIORITY_DOT: Record<string, string> = {
-  critical: "bg-[var(--danger)]",
-  high: "bg-[var(--warn)]",
-  medium: "bg-[var(--primary)]",
-  low: "bg-[var(--muted-foreground)]",
-};
 
 /**
  * Templates seed the fields a reporter tends to get wrong — category and priority — and
@@ -106,10 +90,6 @@ const TEMPLATES = [
   { key: "service", label: "Service request", hint: "Hardware, software, setup", icon: Cloud,
     match: /service|request|hardware|software/i, priority: "medium", prefix: "" },
 ];
-
-/** The shared input shell: one border, one focus ring, the same height everywhere. */
-const FIELD =
-  "h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -178,7 +158,7 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
     if (!open) return;
     setDraft({
       ...EMPTY,
-      ...(preset?.subject ? { subject: preset.subject.slice(0, MAX_SUBJECT) } : {}),
+      ...(preset?.subject ? { subject: preset.subject.slice(0, SUBJECT_MAX) } : {}),
       ...(preset?.description ? { description: preset.description } : {}),
     });
     setTried(false);
@@ -338,254 +318,34 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
             </div>
           </div>
 
-          {/* ---- subject ---- */}
-          <div>
-            <div className="mb-1.5 flex items-baseline justify-between gap-2">
-              <label htmlFor="ticket-subject" className="text-xs font-medium text-foreground">
-                Subject <span className="text-[var(--danger)]">*</span>
-              </label>
-              <span className="text-[11px] tabular-nums text-muted-foreground">
-                {draft.subject.length} / {MAX_SUBJECT}
-              </span>
-            </div>
-            <input
-              id="ticket-subject"
-              ref={subjectRef}
-              value={draft.subject}
-              maxLength={MAX_SUBJECT}
-              onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
-              placeholder="Briefly describe the issue…"
-              aria-label="Subject"
-              aria-invalid={missingSubject || undefined}
-              className={[
-                FIELD,
-                missingSubject
-                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15"
-                  : "",
-              ].join(" ")}
-            />
-            {missingSubject && (
-              <p className="mt-1 flex items-center gap-1 text-2xs text-[var(--danger)]">
-                <AlertCircle className="size-3" /> A subject is what the queue shows first.
-              </p>
-            )}
-          </div>
-
-          {/* ---- description ---- */}
-          <div>
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <label htmlFor="ticket-description" className="text-xs font-medium text-foreground">
-                Description <span className="text-[var(--danger)]">*</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] tabular-nums text-muted-foreground">
-                  {draft.description.length} / {MAX_DESCRIPTION}
-                </span>
-                <button
-                  type="button"
-                  /* Improve, not generate: the reporter's own words go in and a clearer version
-                     of them comes back. It only needs their description — a subject can come later. */
-                  disabled={drafting || !draft.description.trim()}
-                  title="Rewrite what you typed as a clearer ticket description"
-                  onClick={async () => {
-                    setDrafting(true);
-                    try {
-                      const improved = await improveTicketDescription(draft.description, draft.subject);
-                      if (improved) {
-                        setDraft((d) => ({ ...d, description: improved }));
-                        onToast?.("Description improved");
-                      } else {
-                        onToast?.("Nothing came back — try again", "err");
-                      }
-                    } catch (e: any) {
-                      onToast?.(e?.message || "Could not improve the description", "err");
-                    } finally {
-                      setDrafting(false);
-                    }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--primary)]/25 bg-[var(--primary)]/10 px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/20 disabled:opacity-40"
-                >
-                  <Sparkles className="size-3" />
-                  {drafting ? "Improving…" : "Improve with AI"}
-                </button>
-              </div>
-            </div>
-            <textarea
-              id="ticket-description"
-              rows={4}
-              value={draft.description}
-              maxLength={MAX_DESCRIPTION}
-              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-              placeholder="What happened, any error messages, the affected system, and what you already tried…"
-              aria-label="Ticket description"
-              aria-invalid={missingDescription || undefined}
-              className={[
-                "w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm leading-6 text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15",
-                missingDescription
-                  ? "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/15"
-                  : "",
-              ].join(" ")}
-            />
-            {missingDescription && (
-              <p className="mt-1 flex items-center gap-1 text-2xs text-[var(--danger)]">
-                <AlertCircle className="size-3" /> Say what happened — IT cannot act on a title alone.
-              </p>
-            )}
-          </div>
-
-          {/* ---- category + priority ---- */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-foreground">
-                Category <span className="text-[var(--danger)]">*</span>
-              </span>
-              <select
-                value={draft.category}
-                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                aria-label="Category"
-                className={FIELD}
-              >
-                <option value="">Select a category…</option>
-                {categories.map((c) => (
-                  <option key={c.key} value={c.label}>{c.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-foreground">
-                <span>Priority</span>
-                <span className="flex items-center gap-1.5 text-[11px] font-normal capitalize text-muted-foreground">
-                  <span className={["size-1.5 rounded-full", PRIORITY_DOT[draft.priority] ?? PRIORITY_DOT.medium].join(" ")} />
-                  {draft.priority}
-                </span>
-              </div>
-              <select
-                value={draft.priority}
-                onChange={(e) => setDraft({ ...draft, priority: e.target.value })}
-                aria-label="Priority"
-                className={FIELD}
-              >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
-                {PRIORITY_GUIDE[draft.priority] ?? PRIORITY_GUIDE.medium}
-              </span>
-            </div>
-          </div>
-
-          {/* ---- assignee + due date ---- */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-foreground">Assignee</span>
-              <select
-                value={draft.assignee}
-                onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
-                aria-label="Assignee"
-                className={FIELD}
-              >
-                <option value="">Unassigned</option>
-                {Object.entries(
-                  assignable.reduce<Record<string, typeof assignable>>((acc, u) => {
-                    const g = u.group || (assigneeScope === "category" ? "Category team" : "Everyone");
-                    (acc[g] ??= []).push(u);
-                    return acc;
-                  }, {}),
-                ).map(([group, users]) => (
-                  <optgroup key={group} label={group}>
-                    {users.map((u) => (
-                      <option key={u.username} value={u.username}>
-                        {u.username}{u.jira_account === false ? " — no Jira account" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
-                {assigneeScope === "category"
-                  ? `Only people mapped to ${draft.category} can be picked.`
-                  : "No team is mapped to this category yet — showing every assignable user."}
-              </span>
-              {assignable.find((u) => u.username === draft.assignee)?.jira_account === false && (
-                <span className="mt-1 block rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-2 py-1 text-[11px] leading-snug text-[var(--warn)]">
-                  {draft.assignee} has no Jira account, so Jira will leave this ticket unassigned.
-                </span>
-              )}
-            </label>
-
-            <div>
-              <label htmlFor="ticket-due-date" className="mb-1.5 block text-xs font-medium text-foreground">
-                Due date
-              </label>
-              <div className="relative">
-                <input
-                  id="ticket-due-date"
-                  type="date"
-                  value={draft.due_date}
-                  onChange={(e) => setDraft({ ...draft, due_date: e.target.value })}
-                  aria-label="Due date"
-                  /* No painted placeholder over a date input: WebKit on phones ignores the
-                     ::-webkit-datetime-edit rule that hides the native text, so an overlay
-                     doubled the value ("20/06/2026" printed twice). The native placeholder
-                     is the browser's own and cannot collide with anything. */
-                  className={[
-                    FIELD,
-                    "pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0",
-                  ].join(" ")}
-                />
-                <CalendarDays
-                  className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ---- Jira create-screen extras ---- */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label htmlFor="ticket-components" className="mb-1.5 block text-xs font-medium text-foreground">
-                Components
-              </label>
-              <input
-                id="ticket-components"
-                value={draft.components}
-                onChange={(e) => setDraft({ ...draft, components: e.target.value })}
-                placeholder="Network & VPN, macOS"
-                className={FIELD}
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">Comma separated; must exist in Jira.</p>
-            </div>
-            <div>
-              <label htmlFor="ticket-labels" className="mb-1.5 block text-xs font-medium text-foreground">
-                Labels
-              </label>
-              <input
-                id="ticket-labels"
-                value={draft.labels}
-                onChange={(e) => setDraft({ ...draft, labels: e.target.value })}
-                placeholder="vpn, macos"
-                className={FIELD}
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">Comma separated, free form.</p>
-            </div>
-            <div>
-              <label htmlFor="ticket-estimate" className="mb-1.5 block text-xs font-medium text-foreground">
-                Original estimate
-              </label>
-              <input
-                id="ticket-estimate"
-                value={draft.original_estimate}
-                onChange={(e) => setDraft({ ...draft, original_estimate: e.target.value })}
-                placeholder="2h · 1d 4h"
-                className={FIELD}
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">Jira format: w d h m.</p>
-            </div>
-          </div>
+          {/* The fields are the shared ticket form — the same ones the chat's review dialog
+              and the edit dialog draw, so the three cannot drift apart again. */}
+          <TicketFormFields
+            values={draft}
+            onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+            categories={categories}
+            assignable={assignable}
+            assigneeScope={assigneeScope}
+            errors={{ subject: missingSubject, description: missingDescription }}
+            onImprove={async () => {
+              setDrafting(true);
+              try {
+                const improved = await improveTicketDescription(draft.description, draft.subject);
+                if (improved) {
+                  setDraft((d) => ({ ...d, description: improved }));
+                  onToast?.("Description improved");
+                } else {
+                  onToast?.("Nothing came back — try again", "err");
+                }
+              } catch (e: any) {
+                onToast?.(e?.message || "Could not improve the description", "err");
+              } finally {
+                setDrafting(false);
+              }
+            }}
+            improving={drafting}
+            subjectRef={subjectRef}
+          />
 
           {/* ---- attachments ---- */}
           <div>
