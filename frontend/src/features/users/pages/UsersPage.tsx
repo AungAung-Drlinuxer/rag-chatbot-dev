@@ -27,6 +27,7 @@ import {
 import { StatCard, StatRow } from "@/components/ui/stat-card";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
+import { Avatar, useAvatarEditor } from "../avatar";
 import { downloadCsv, printReport as printReportSheet } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -95,6 +96,8 @@ type User = {
   /** Which identity provider owns the account: AD/LDAP, a local password, or Keycloak SSO. */
   identitySource?: "ldap" | "local" | "sso";
   removedAt?: string | null;
+  /** Bumped on every upload; part of the photo URL so a change is seen immediately. */
+  avatarVersion?: number;
 };
 
 type PermissionKey =
@@ -165,22 +168,6 @@ const ROLE_DEFAULTS: Record<UserRole, PermissionMap> = {
   "Knowledge Manager": { chatbot: true, kb_search: true, create_tickets: true, manage_kb: true, manage_users: false, manage_domains: true },
   User: { chatbot: true, kb_search: true, create_tickets: true, manage_kb: false, manage_users: false, manage_domains: false },
 };
-
-/* Avatar tones — a deterministic colour per person, so two rows are told apart
-   at a glance. Presentation only; nothing here is derived from account data. */
-const AVATAR_TONES = [
-  "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  "bg-[var(--brand-soft)] text-[var(--brand-text)]",
-  "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
-  "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-];
-
-function avatarTone(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) % 997;
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
-}
 
 /* ============================================================
    PAGE
@@ -847,7 +834,7 @@ function UserRow({ user, onSelect, onToggle, onDelete }: {
         {/* w-full + flex-1: without it the name block kept its 26ch max-width inside a
             narrower fixed cell and painted the email over the Department column. */}
         <button type="button" onClick={onSelect} className="flex w-full min-w-0 items-center gap-3 text-left">
-          <Avatar name={user.name} />
+          <Avatar name={user.name} username={user.username} version={user.avatarVersion ?? 0} />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-xs font-semibold" title={user.name}>{user.name}</span>
@@ -956,7 +943,7 @@ function UserCard({ user, onSelect, onToggle, onDelete }: {
   return (
     <div className="px-4 py-4" data-slot="user-card">
       <button type="button" onClick={onSelect} className="flex w-full min-w-0 items-center gap-3 text-left">
-        <Avatar name={user.name} />
+        <Avatar name={user.name} username={user.username} version={user.avatarVersion ?? 0} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">{user.name}</span>
           <span className="mt-0.5 block truncate text-2xs text-muted-foreground">@{user.username}</span>
@@ -998,11 +985,71 @@ function UserCard({ user, onSelect, onToggle, onDelete }: {
    AVATAR / ROLE BADGE / STATUS BADGE
 ============================================================ */
 
-function Avatar({ name }: { name: string }) {
+/* A photo is optional: initials stay when there is none, and the buttons only appear for
+   somebody allowed to change it (the server enforces the same rule). */
+function PhotoEditor({ user }: { user: User }) {
+  const { upload, remove, busy, version } = useAvatarEditor(user.username, user.avatarVersion ?? 0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyLocal, setBusyLocal] = useState(false);
+
+  async function onPick(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setBusyLocal(true);
+    const res = await upload(file);
+    setBusyLocal(false);
+    if (!res.ok) setError(res.error);
+  }
+
+  const working = busy || busyLocal;
+
   return (
-    <span className={["grid size-9 shrink-0 place-items-center rounded-full text-2xs font-bold", avatarTone(name)].join(" ")}>
-      {getInitials(name)}
-    </span>
+    <div className="flex shrink-0 flex-col items-center gap-1.5">
+      <Avatar
+        name={user.name}
+        username={user.username}
+        version={version}
+        size="size-12"
+        rounded="rounded-2xl"
+        className={working ? "opacity-60" : ""}
+      />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={working}
+          className="rounded-md border border-[var(--border)] px-1.5 py-0.5 text-3xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+        >
+          {working ? "Saving…" : version ? "Change" : "Add photo"}
+        </button>
+        {version > 0 && (
+          <button
+            type="button"
+            onClick={async () => {
+              setError(null);
+              const res = await remove();
+              if (!res.ok) setError(res.error);
+            }}
+            disabled={working}
+            className="rounded-md px-1 py-0.5 text-3xs text-muted-foreground transition hover:text-[var(--danger)] disabled:opacity-50"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="sr-only"
+        onChange={(e) => {
+          void onPick(e.target.files?.[0]);
+          e.currentTarget.value = "";
+        }}
+      />
+      {error && <span className="max-w-24 text-center text-3xs text-[var(--danger)]">{error}</span>}
+    </div>
   );
 }
 
@@ -1244,9 +1291,7 @@ function UserDrawer({ user, onClose, onUserUpdated, onRestore, onPurge }: {
         >
           {/* ---- header: who this is, at a glance ---- */}
           <div className="flex items-start gap-3 border-b border-[var(--border)] px-6 pb-4 pt-5">
-            <span className={["grid size-12 shrink-0 place-items-center rounded-2xl text-sm font-bold", avatarTone(user.name)].join(" ")} aria-hidden>
-              {getInitials(user.name)}
-            </span>
+            <PhotoEditor user={user} />
 
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User details</p>
@@ -1681,9 +1726,6 @@ function InputField({ label, value, onChange, placeholder, type = "text" }: {
   );
 }
 
-function getInitials(name: string) {
-  return name.split(" ").map((part) => part.charAt(0)).join("").slice(0, 2).toUpperCase();
-}
 
 function formatDate(value: string) {
   if (!value) return "—";

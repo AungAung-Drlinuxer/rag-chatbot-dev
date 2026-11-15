@@ -17,6 +17,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     Numeric,
     SmallInteger,
     String,
@@ -44,6 +45,24 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(16), default="Active", server_default="Active")
     role_override: Mapped[str | None] = mapped_column(String(32))  # admin | agent | user
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UserAvatar(Base):
+    """A profile photo, one per username.
+
+    Kept out of `users` because the row is a blob: listing users must not drag megabytes of
+    image data through every query, and an LDAP-synced user has no local `users` row to hang
+    it on. `version` is bumped on every write so the browser can cache the image forever and
+    still see a change immediately.
+    """
+
+    __tablename__ = "user_avatars"
+
+    username: Mapped[str] = mapped_column(String(64), primary_key=True)
+    mime: Mapped[str] = mapped_column(String(32), nullable=False)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    version: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ChatSession(Base):

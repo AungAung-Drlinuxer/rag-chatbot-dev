@@ -225,6 +225,16 @@ def init_db() -> None:
         ("integration_connections.url_uniq.drop",
          "ALTER TABLE integration_connections "
          "DROP CONSTRAINT IF EXISTS integration_connections_provider_base_url_key"),
+        ("user_avatars",
+         """CREATE TABLE IF NOT EXISTS user_avatars (
+                username VARCHAR(64) PRIMARY KEY,
+                mime VARCHAR(32) NOT NULL,
+                data BYTEA NOT NULL,
+                version BIGINT NOT NULL DEFAULT 0,
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )"""),
+        ("user_avatars.version",
+         "ALTER TABLE user_avatars ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0"),
         ("integration_connections.binding_uniq",
          "CREATE UNIQUE INDEX IF NOT EXISTS integration_connections_binding_uniq "
          "ON integration_connections (provider, base_url, label)"),

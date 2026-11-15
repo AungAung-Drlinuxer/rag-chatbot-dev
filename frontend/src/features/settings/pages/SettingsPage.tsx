@@ -19,6 +19,7 @@ import { useSectionParam } from "@/features/settings/useSectionParam";
 import { useConfirm } from "@/components/ui/confirm";
 import { registerNavGuard } from "@/app/router";
 import { Panel, Pill, RailCard, Row, Segmented } from "../components/SettingsKit";
+import ProfilePhotoSettings from "../components/ProfilePhotoSettings";
 
 import { dashHealth } from "@/features/dashboard/api";
 import { IntegrationsConfig } from "../components/IntegrationsConfig";
@@ -590,6 +591,8 @@ export default function Settings({ role }: { role?: string }) {
             {active === "general" && prefsState === "ready" && (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               <div className="space-y-4">
+            {/* ---- Who you are: the only preference that is a picture rather than a value. ---- */}
+            {active === "general" && <ProfilePhotoSettings />}
             {/* ---- Answers: every control here changes how a message is rendered. ---- */}
             {active === "general" && (
               <SectionCard

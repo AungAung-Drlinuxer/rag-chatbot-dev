@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -252,6 +252,20 @@ def list_users(include_removed: bool = False,
                 }
         except Exception as exc:
             logger.warning("LDAP user search failed: %s", exc)
+    # One query for every photo version, so the roster can build a cacheable URL per person
+    # without an image request per row.
+    try:
+        with SessionLocal() as s:
+            versions = {
+                r[0]: int(r[1] or 0)
+                for r in s.execute(text("SELECT username, version FROM user_avatars")).all()
+            }
+        for entry in out.values():
+            entry["avatarVersion"] = versions.get(entry["username"], 0)
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+        for entry in out.values():
+            entry.setdefault("avatarVersion", 0)
     return {"users": sorted(out.values(), key=lambda x: x["username"].lower())}
 
 
@@ -572,4 +586,118 @@ def set_local_password(username: str, payload: dict, user: str = Depends(get_cur
     return {"ok": True}
 
 
+# ---------------------------------------------------------------------------
+# Profile photos
+# ---------------------------------------------------------------------------
+# Small on purpose: the browser crops and re-encodes to 256x256 WebP before uploading, so a
+# normal photo lands at 20-40 KB. The cap only stops a hand-rolled client from filling the DB.
+_AVATAR_MAX_BYTES = 512 * 1024
+_AVATAR_TYPES: list[tuple[str, bytes]] = [
+    ("image/png", b"\x89PNG\r\n\x1a\n"),
+    ("image/jpeg", b"\xff\xd8\xff"),
+    ("image/webp", b"RIFF"),
+]
 
+
+def _sniff_image(data: bytes) -> str | None:
+    """Trust the bytes, not the Content-Type the client claimed."""
+    for mime, magic in _AVATAR_TYPES:
+        if data.startswith(magic):
+            if mime == "image/webp" and data[8:12] != b"WEBP":
+                continue
+            return mime
+    return None
+
+
+def _require_self_or_admin(actor: str, target: str) -> None:
+    from app.auth.rbac import get_role as _gr
+
+    if actor != target and _gr(actor) != "admin":
+        raise HTTPException(status_code=403, detail="You can only change your own photo.")
+
+
+@router.get("/users/{username}/avatar")
+def get_avatar(username: str,
+               if_none_match: str | None = Header(default=None),
+               user: str = Depends(get_current_user)) -> Response:
+    """The photo itself. Any signed-in user may read one — it is directory information, and the
+    chat, the roster and the ticket assignee picker all need the same image."""
+    with SessionLocal() as s:
+        row = s.execute(text(
+            "SELECT mime, data, version FROM user_avatars WHERE username = :u"
+        ), {"u": username}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="No photo for this user")
+    etag = f'"{username}-{row["version"]}"'
+    if if_none_match and if_none_match.strip() == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    return Response(
+        content=bytes(row["data"]),
+        media_type=row["mime"],
+        headers={
+            "ETag": etag,
+            # private: a browser cache, not a shared proxy. The version makes it safe to keep
+            # for a day — a new upload changes the URL the UI asks for.
+            # Revalidate every time: a photo can be removed, and `?v=` in the URL is not a
+            # promise the server makes (it serves whatever row exists). A 304 costs nothing.
+            "Cache-Control": "private, no-cache",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/users/{username}/avatar/meta")
+def avatar_meta(username: str, user: str = Depends(get_current_user)) -> dict:
+    """Whether a photo exists and which version it is — lets the editor show "Photo set" and
+    cache-bust the image without downloading it first."""
+    with SessionLocal() as s:
+        row = s.execute(text(
+            "SELECT version, mime, updated_at FROM user_avatars WHERE username = :u"
+        ), {"u": username}).mappings().first()
+    if not row:
+        return {"version": 0, "mime": None, "updated_at": None}
+    return {
+        "version": int(row["version"] or 0),
+        "mime": row["mime"],
+        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+    }
+
+
+@router.post("/users/{username}/avatar")
+async def upload_avatar(username: str,
+                        file: UploadFile = File(...),
+                        user: str = Depends(get_current_user)) -> dict:
+    _require_self_or_admin(user, username)
+    data = await file.read(_AVATAR_MAX_BYTES + 1)
+    if len(data) > _AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Photo is larger than 512 KB")
+    mime = _sniff_image(data)
+    if not mime:
+        raise HTTPException(status_code=415, detail="Photo must be a PNG, JPEG or WebP image")
+    with SessionLocal() as s:
+        row = s.execute(text(
+            "INSERT INTO user_avatars (username, mime, data, version, updated_at) "
+            "VALUES (:u, :m, :d, 1, NOW()) "
+            "ON CONFLICT (username) DO UPDATE SET mime = :m, data = :d, "
+            "version = user_avatars.version + 1, updated_at = NOW() "
+            "RETURNING version"
+        ), {"u": username, "m": mime, "d": data}).mappings().first()
+        s.commit()
+    try:
+        audit("user.avatar.set", user, detail=f"target={username} mime={mime} bytes={len(data)}")
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+    return {"ok": True, "version": int(row["version"]) if row else 1, "mime": mime}
+
+
+@router.delete("/users/{username}/avatar")
+def delete_avatar(username: str, user: str = Depends(get_current_user)) -> dict:
+    _require_self_or_admin(user, username)
+    with SessionLocal() as s:
+        s.execute(text("DELETE FROM user_avatars WHERE username = :u"), {"u": username})
+        s.commit()
+    try:
+        audit("user.avatar.remove", user, detail=f"target={username}")
+    except Exception as _exc:
+        logger.debug("%s suppressed: %s", type(_exc).__name__, _exc)
+    return {"ok": True}
