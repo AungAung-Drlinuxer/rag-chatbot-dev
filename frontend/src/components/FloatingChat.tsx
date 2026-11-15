@@ -62,6 +62,11 @@ const Ctx = createContext<FloatingChatCtx>({
   setMinimized: () => {},
 });
 
+const isChatRoute = () => {
+  const h = window.location.hash || "#/";
+  return h === "#/" || h === "" || h.startsWith("#/?c=");
+};
+
 export function useFloatingChat() {
   return useContext(Ctx);
 }
@@ -111,6 +116,14 @@ function CopyButton({ getText, label }: { getText: () => string; label: string }
 type Msg = Message & { sources?: Source[]; confidence?: number; failed?: boolean; retryQuestion?: string };
 
 export function FloatingChatPopup() {
+  /* The assistant is already on screen when the chat page is open; its floating button sat
+     on top of the composer's Send area on a 390px phone. */
+  const [onChatPage, setOnChatPage] = useState(isChatRoute);
+  useEffect(() => {
+    const update = () => setOnChatPage(isChatRoute());
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
   const preferences = useUserPreferences();
   const { open, setOpen, minimized, setMinimized } = useFloatingChat();
   /* Restored from sessionStorage so a page change or a reload does not wipe the thread. */
@@ -340,6 +353,8 @@ export function FloatingChatPopup() {
   /* Minimized — or never opened — the widget is still there as a round bubble. There is no
      close button by design: the assistant is a permanent part of the workspace, and a user
      who dismissed it once should not have to hunt for it again. */
+  if (onChatPage) return null;
+
   if (!open || minimized) {
     return (
       <button

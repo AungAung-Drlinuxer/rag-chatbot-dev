@@ -37,7 +37,7 @@ export default function SetupChecklist() {
     // Silent on failure: the Integrations screen must still work when this one call fails,
     // and a red "readiness unavailable" banner on every load is noise, not information.
     return failed ? null : (
-      <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-card px-4 py-3 text-xs text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" /> Checking installation readiness…
       </div>
     );
@@ -47,7 +47,7 @@ export default function SetupChecklist() {
 
   if (pending.length === 0) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2.5 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-card px-4 py-2.5 text-xs text-muted-foreground">
         <CheckCircle2 className="size-3.5 text-[var(--ok)]" />
         Installation ready — {data.database.tables} tables, pgvector {data.database.vector_version}
         {data.knowledge.articles > 0 && ` · ${data.knowledge.articles} indexed articles`}
@@ -57,7 +57,7 @@ export default function SetupChecklist() {
 
   return (
     <section
-      className="rounded-xl border border-[var(--border)] bg-[var(--panel)]"
+      className="rounded-xl border border-[var(--border)] bg-card"
       aria-label="Installation readiness"
     >
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-4 py-3">

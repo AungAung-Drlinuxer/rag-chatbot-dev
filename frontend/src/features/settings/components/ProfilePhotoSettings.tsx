@@ -373,7 +373,7 @@ export default function ProfilePhotoSettings() {
                 >
                   <img src={src} alt="" className="size-full rounded-full" draggable={false} />
                   {on && (
-                    <span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)]">
+                    <span className="absolute bottom-0 right-0 grid size-4 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)]">
                       <Check className="size-2.5" />
                     </span>
                   )}

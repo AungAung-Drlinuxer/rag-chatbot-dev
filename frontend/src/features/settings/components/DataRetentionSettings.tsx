@@ -155,7 +155,11 @@ export function DataRetentionSettings() {
       ? <SectionProblem title="Could not load the retention policy" detail={error} onRetry={() => void load()} />
       : <SectionSkeleton rows={3} label="Loading the retention policy" />;
   }
+  const windowLabel = (days: number | null) =>
+    days == null ? "Kept indefinitely" : OPTIONS.find((o) => Number(o.value) === days)?.label ?? `${days} days`;
+
   return (
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
     <div className="space-y-4">
       {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
 
@@ -261,6 +265,35 @@ export function DataRetentionSettings() {
           <ShieldAlert className="size-3" /> {notice.message}
         </p>
       )}
+    </div>
+
+    {/* Same right-hand read-out as Preferences: the values in force, not a second form. */}
+    <aside className="space-y-3 xl:sticky xl:top-4">
+      <section data-slot="effective-config" className="rounded-2xl border border-[var(--border)] bg-card p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Effective configuration</h2>
+          {notice?.ok ? <Pill tone="ok">Saved</Pill> : <Pill tone="muted">Policy</Pill>}
+        </div>
+        <dl className="mt-3 divide-y divide-[var(--border)] text-xs">
+          {[
+            ["Conversations", policy ? windowLabel(policy.conversations_days) : "—"],
+            ["Audit log", policy ? windowLabel(policy.audit_days) : "—"],
+            ["Stored now", totals ? `${totals.conversations} conversations` : "—"],
+            ["Oldest kept", oldest.conversations ? new Date(oldest.conversations).toLocaleDateString() : "—"],
+            ["Nightly job", schedule],
+            ["Last run", lastRun?.at ? new Date(lastRun.at).toLocaleString() : "Not run yet"],
+          ].map(([k, v]) => (
+            <div key={k} className="flex items-start justify-between gap-3 py-2">
+              <dt className="shrink-0 text-muted-foreground">{k}</dt>
+              <dd className="min-w-0 text-right font-medium text-foreground">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
+          “Save policy” applies both windows. Tonight’s run deletes anything older at {schedule}.
+        </p>
+      </section>
+    </aside>
     </div>
   );
 }

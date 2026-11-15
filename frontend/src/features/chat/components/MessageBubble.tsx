@@ -301,15 +301,17 @@ function MessageBubble({
               conversation or a cached payload cannot reintroduce them either. */}
           {showSources && (message.sources?.length ?? 0) > 0 && (
             <div className="mt-4 border-t border-[var(--border)] pt-3">
-              <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold text-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="size-3.5 text-[var(--primary)]" />
+              {/* One line for the heading even at 390px: the count drops under it instead of
+                  squeezing "Sources for this answer" onto two lines. */}
+              <div className="mb-2 flex flex-col gap-0.5 text-xs font-semibold text-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                <span className="flex items-center gap-1.5 whitespace-nowrap">
+                  <Sparkles className="size-3.5 shrink-0 text-[var(--primary)]" />
                   Sources for this answer
                 </span>
                 {/* The mockup's count line gives BOTH figures: the references that came
                     back and the distinct titles they collapse to. The list below is
                     grouped the same way, so the two numbers cannot disagree. */}
-                <span className="shrink-0 text-2xs font-normal text-muted-foreground">
+                <span className="shrink-0 pl-5 text-2xs font-normal text-muted-foreground sm:pl-0">
                   {referenceLabel(message.sources!.length)} · {sourceGroups.length} grouped{" "}
                   {sourceGroups.length === 1 ? "title" : "titles"}
                 </span>
@@ -327,7 +329,10 @@ function MessageBubble({
                         {idx + 1}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-foreground" title={s.title}>
+                        {/* Two lines, not one: a lesson title cut after "Git…" told nobody
+                            which lesson it was, and a source you cannot identify is not a
+                            source. */}
+                        <div className="line-clamp-2 break-words text-xs font-medium leading-snug text-foreground" title={s.title}>
                           {s.title}
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-2xs text-muted-foreground">
