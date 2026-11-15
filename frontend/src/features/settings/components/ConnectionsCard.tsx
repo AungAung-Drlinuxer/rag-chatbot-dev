@@ -33,6 +33,9 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [ordering, setOrdering] = useState(false);
+  /* The first sequence of the current draft. Kept here so moving a block to the top renumbers
+     the draft from where it started, not from whichever number that block happened to carry. */
+  const [draftBase, setDraftBase] = useState(1);
 
   const load = useCallback(async () => {
     try {
@@ -53,22 +56,58 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
     [provider],
   );
 
+  /** The first sequence a new site can take: after every site already saved. */
+  const baseSequence = () => Math.max(0, ...(rows ?? []).map((r) => r.sequence ?? 0)) + 1;
+
+  /** Sequence follows position — the drag/arrow order IS the priority, with no duplicate numbers. */
+  function renumber(first: Record<string, string>, rest: Record<string, string>[]) {
+    const base = draftBase || baseSequence();
+    return {
+      first: { ...first, sequence: String(base) },
+      rest: rest.map((row, i) => ({ ...row, sequence: String(base + i + 1) })),
+    };
+  }
+
   function addRow() {
-    setExtra((rows_) => [...rows_, blankRow((rows?.length ?? 0) + rows_.length + 2)]);
+    setExtra((rows_) => [...rows_, blankRow(draftBase + rows_.length + 1)]);
   }
 
   function dropRow(index: number) {
-    setExtra((rows_) => rows_.filter((_, i) => i !== index));
+    const next = extra.filter((_, i) => i !== index);
+    const fixed = renumber(form, next);
+    setForm(fixed.first);
+    setExtra(fixed.rest);
+  }
+
+  function moveRow(index: number, dir: -1 | 1) {
+    /* -1 moves the block above (index -1 targets the first site and is a no-op). */
+    const to = index + dir;
+    const all = [form, ...extra];
+    if (to < 0 || to >= all.length) return;
+    const next = [...all];
+    [next[index], next[to]] = [next[to], next[index]];
+    const fixed = renumber(next[0], next.slice(1));
+    setForm(fixed.first);
+    setExtra(fixed.rest);
   }
 
   function startNew() {
+    /* Clicking "Add site" while a draft is open used to throw the first site away: the same
+       button cleared the form. Now it adds the next block and keeps every keystroke. */
+    if (editing === "new" && (form.label?.trim() || form.base_url?.trim() || extra.length > 0)) {
+      addRow();
+      return;
+    }
+    const base = baseSequence();
+    setDraftBase(base);
     setEditing("new");
     setExtra([]);
-    setForm(blankRow((rows?.length ?? 0) + 1));
+    setForm(blankRow(base));
     setNotice(null);
   }
 
   function startEdit(c: Connection) {
+    setDraftBase(c.sequence ?? 1);
     setEditing(c);
     setExtra([]);
     setForm({
@@ -245,7 +284,7 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
           </span>
         )}
         <span className="text-2xs text-muted-foreground/70">
-          1 is read and synced first — use the arrows on a row to change it
+          1 is read and synced first — ↑↓ on a row changes it
         </span>
         {ordering && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
       </div>
@@ -267,18 +306,6 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
               >
                 {c.sequence}
               </span>
-              <span className="flex flex-col">
-                <button type="button" onClick={() => move(c, -1)} disabled={idx === 0 || ordering}
-                  aria-label={`Move ${c.label} earlier`}
-                  className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25">
-                  <ChevronUp className="size-3" />
-                </button>
-                <button type="button" onClick={() => move(c, 1)} disabled={idx === ordered.length - 1 || ordering}
-                  aria-label={`Move ${c.label} later`}
-                  className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25">
-                  <ChevronDown className="size-3" />
-                </button>
-              </span>
               <span className="text-xs font-semibold text-foreground">{c.label}</span>
               <span className="truncate text-2xs text-muted-foreground" title={c.base_url}>{c.base_url}</span>
               {isConf && c.spaces.length > 0 && (
@@ -296,6 +323,21 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
                 {c.token_set ? "token set" : "no token"}
               </span>
               <span className="ml-auto flex items-center gap-1">
+                {/* A labelled pair rather than two 12px chevrons: reordering was possible before,
+                    but nobody found it. These are the primary way to change the sequence. */}
+                <span className="flex items-center rounded-md border border-[var(--border)]" role="group" aria-label={`Reorder ${c.label}`}>
+                  <button type="button" onClick={() => move(c, -1)} disabled={idx === 0 || ordering}
+                    aria-label={`Move ${c.label} earlier`} title="Read this site earlier"
+                    className="grid size-6 place-items-center rounded-l-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30">
+                    <ChevronUp className="size-3.5" />
+                  </button>
+                  <span className="h-4 w-px bg-[var(--border)]" aria-hidden />
+                  <button type="button" onClick={() => move(c, 1)} disabled={idx === ordered.length - 1 || ordering}
+                    aria-label={`Move ${c.label} later`} title="Read this site later"
+                    className="grid size-6 place-items-center rounded-r-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30">
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </span>
                 <button type="button" onClick={() => probe(c)} disabled={busyId === c.id}
                   className="rounded-md border border-[var(--border)] px-2 py-1 text-2xs font-medium transition hover:bg-muted disabled:opacity-50">
                   {busyId === c.id ? <Loader2 className="size-3 animate-spin" /> : "Test"}
@@ -336,20 +378,48 @@ export function ConnectionsCard({ provider }: { provider: "confluence" | "jira" 
               key={idx}
               className={`grid grid-cols-1 gap-2 md:grid-cols-2 ${idx > 0 ? "mt-2.5 rounded-lg border border-dashed border-[var(--border)] p-2.5" : ""}`}
             >
-              {idx > 0 && (
-                <div className="flex items-center gap-2 md:col-span-2">
-                  <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Site {idx + 1}
-                  </span>
+              <div className="flex items-center gap-2 md:col-span-2">
+                <span className="inline-flex size-5 items-center justify-center rounded-full bg-[var(--primary)]/15 text-[10px] font-bold text-[var(--accent-foreground)]">
+                  {idx + 1}
+                </span>
+                <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Site {idx + 1}
+                  {idx === 0 ? " · read first" : ""}
+                </span>
+                {/* Order inside the dialog, not just after saving: the block you put on top is the
+                    one the assistant reads first, so the sequence numbers follow these arrows. */}
+                <span className="ml-auto flex items-center gap-0.5 rounded-md border border-[var(--border)] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => moveRow(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label={`Move site ${idx + 1} earlier`}
+                    title="Move earlier"
+                    className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25"
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveRow(idx, 1)}
+                    disabled={idx === extra.length}
+                    aria-label={`Move site ${idx + 1} later`}
+                    title="Move later"
+                    className="rounded p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-25"
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </span>
+                {idx > 0 && (
                   <button
                     type="button"
                     onClick={() => dropRow(idx - 1)}
-                    className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-1.5 py-0.5 text-2xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-1.5 py-0.5 text-2xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   >
                     <X className="size-3" /> Remove
                   </button>
-                </div>
-              )}
+                )}
+              </div>
               {[
                 { k: "label", l: "Label", ph: isConf ? "HQ Confluence" : "HQ Jira" },
                 { k: "base_url", l: "Base URL", ph: "https://hq.atlassian.net/wiki" },
