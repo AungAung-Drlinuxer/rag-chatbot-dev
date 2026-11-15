@@ -26,18 +26,28 @@ def test_load_fileshare_missing_dir():
 
 
 class _Result:
+    """Row container that answers both `.fetchall()` and `.mappings().all()`."""
+
     def __init__(self, rows):
         self._rows = rows
 
     def fetchall(self):
-        return [(r,) for r in self._rows]
+        return self._rows
+
+    def mappings(self):
+        return self
+
+    def all(self):
+        return self._rows
 
 
 class _Session:
     """Minimal SessionLocal stand-in: records deletes, answers the page_id query."""
 
-    def __init__(self, known):
+    def __init__(self, known, connection_id=9, space_key="AEC"):
         self.known = known
+        self.connection_id = connection_id
+        self.space_key = space_key
         self.deleted: list[str] = []
         self.committed = False
 
@@ -45,7 +55,10 @@ class _Session:
         if params and "p" in params:
             self.deleted.append(params["p"])
             return _Result([])
-        return _Result(self.known)
+        return _Result([
+            {"page_id": p, "connection_id": self.connection_id, "space_key": self.space_key}
+            for p in self.known
+        ])
 
     def commit(self):
         self.committed = True
@@ -90,3 +103,36 @@ def test_prune_orphans_never_empties_the_kb(monkeypatch):
     assert session.deleted == []
     assert vectors == []
     assert session.committed is False
+
+
+def test_prune_orphans_leaves_scopes_the_sync_did_not_load(monkeypatch):
+    """A page that belongs to a space this run never fetched is not an orphan.
+
+    Narrowing a site's space list used to make every other space look deleted, and the prune
+    then wiped the whole knowledge base down to whatever the remaining space held.
+    """
+    session, vectors = _wire(monkeypatch, ["1", "2", "3"])
+
+    removed = _prune_orphans({"3"}, scopes={(9, "AEC")})
+
+    assert removed == 2
+    assert session.deleted == ["1", "2"]
+
+
+def test_prune_orphans_spares_another_space_entirely(monkeypatch):
+    session = _Session(["1"], connection_id=9, space_key="AEC")
+    other = _Session(["99"], connection_id=9, space_key="IHKB")
+    vector_hits: list[str] = []
+    monkeypatch.setattr(ingest, "SessionLocal", lambda: session)
+    monkeypatch.setattr(ingest, "_delete_vectors", vector_hits.append)
+    # kb_meta rows: one AEC page, one IHKB page. This run covered AEC only.
+    session.execute = lambda statement, params=None: (
+        _Result([{"page_id": "1", "connection_id": 9, "space_key": "AEC"},
+                 {"page_id": "99", "connection_id": 9, "space_key": "IHKB"}])
+        if not (params and "p" in params) else _Result([])
+    )
+
+    removed = _prune_orphans({"1"}, scopes={(9, "AEC")})
+
+    assert removed == 0
+    assert vector_hits == []

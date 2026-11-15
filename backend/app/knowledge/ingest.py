@@ -191,7 +191,16 @@ def _orphan_ids(live_ids: set[str], known_ids: set[str]) -> list[str]:
     return sorted(known_ids - live_ids)
 
 
-def _prune_orphans(live_ids: set[str]) -> int:
+def _scope_key(connection_id, space_key) -> tuple[int | None, str]:
+    """What a prune is allowed to look at: one binding, one space."""
+    try:
+        cid = int(connection_id) if connection_id not in (None, "") else None
+    except (TypeError, ValueError):
+        cid = None
+    return cid, (space_key or "").strip()
+
+
+def _prune_orphans(live_ids: set[str], scopes: set | None = None) -> int:
     """Delete KB rows whose source page no longer exists; returns how many were removed.
 
     A Confluence delete only moves the page to the trash — the sync itself only ever
@@ -201,12 +210,23 @@ def _prune_orphans(live_ids: set[str]) -> int:
 
     Guard: an empty load means the connector is unconfigured or the fetch failed, never a
     request to empty the knowledge base — so nothing is pruned when no page came back.
+
+    Guard: pruning is limited to the (binding, space) pairs this run actually loaded. A site
+    whose spaces were narrowed, or a binding that was removed, used to have every one of its
+    pages counted as an "orphan" and deleted — changing a connection silently emptied the KB
+    of everything the other spaces held. Content is now only removed from a scope that was
+    fetched and simply no longer contains the page.
     """
     if not live_ids:
         logger.warning("kb prune skipped: the sync loaded no pages")
         return 0
     with SessionLocal() as s:
-        known = {r[0] for r in s.execute(text("SELECT page_id FROM kb_meta")).fetchall()}
+        rows = s.execute(text(
+            "SELECT page_id, connection_id, space_key FROM kb_meta"
+        )).mappings().all()
+        if scopes is not None:
+            rows = [r for r in rows if _scope_key(r["connection_id"], r["space_key"]) in scopes]
+        known = {r["page_id"] for r in rows}
         orphans = _orphan_ids(live_ids, known)
         for pid in orphans:
             _delete_vectors(pid)
@@ -340,7 +360,8 @@ def _sync_all_locked(updated_by: str | None, started: float) -> dict:
     try:
         # Pages deleted at the source leave their row (and vectors) behind, so "deleted in
         # Confluence" only becomes "gone from the KB" if the sync prunes what it no longer sees.
-        stats["removed"] = _prune_orphans({a["page_id"] for a in articles})
+        covered = {_scope_key(a.get("connection_id"), a.get("space_key")) for a in articles}
+        stats["removed"] = _prune_orphans({a["page_id"] for a in articles}, covered)
     except Exception as exc:  # a prune failure must not lose the ingest that just succeeded
         logger.warning("kb prune skipped (%s): %s", type(exc).__name__, exc)
     try:
