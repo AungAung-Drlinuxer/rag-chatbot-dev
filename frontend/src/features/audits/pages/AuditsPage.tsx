@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   Clock,
@@ -137,11 +137,12 @@ const RESULT_STYLE: Record<string, { dot: string; text: string; label: string }>
 };
 
 /**
- * The endpoint clamps `limit` to 500, so that is the largest working set we can hold.
- * Paging and the result filter run over these loaded rows; the footer states how many
- * of the true total are loaded so "no match" is never confused with "not loaded".
+ * Filtering, counting and paging all happen in SQL. They used to run over the newest 500
+ * rows, which meant the pager could never reach events 501+ and the footer had to confess
+ * "500 loaded of 984" under a table that claimed to page the log. `total` is now the count
+ * of everything that matches the filters.
  */
-const AUDIT_FETCH_LIMIT = 500;
+const EXPORT_LIMIT = 500;
 
 /**
  * Rows shown per page. The mockup's pager pages over a fixed window, and the sibling
@@ -153,9 +154,13 @@ const PAGE_SIZE = 10;
 export default function AuditsPage() {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [today, setToday] = useState(0);
+  const [distinctUsers, setDistinctUsers] = useState(0);
   const [actions, setActions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** How much of a large filtered set an export actually contained. */
+  const [exportNote, setExportNote] = useState<string | null>(null);
   /* Every filter is address-bar state: "the failed sign-ins from Tuesday" is a link people
      send, and a refresh must not throw the filters away. */
   const [params, setParams] = useUrlParams(["q", "action", "result", "from", "to", "page", "dir"] as const);
@@ -181,9 +186,27 @@ export default function AuditsPage() {
     // tells the user the data is empty when the truth is that it could not be read.
     setError(null);
     try {
-      const d = await listAudits({ limit: AUDIT_FETCH_LIMIT, action: filterAction || undefined });
+      const d = await listAudits({
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+        action: filterAction || undefined,
+        q: q || undefined,
+        result: filterResult || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        order: sortDir,
+      });
+      const lastPage = Math.max(1, Math.ceil(Number(d.total ?? 0) / PAGE_SIZE));
+      if (page > lastPage) {
+        /* A hand-edited or stale ?page=99 against a shorter filtered set would otherwise
+           render an empty table under a range like "991–990". Clamp and refetch. */
+        setPage(lastPage);
+        return;
+      }
       setRows(d.audits ?? []);
       setTotal(d.total ?? 0);
+      setToday(d.today ?? 0);
+      setDistinctUsers(d.users ?? 0);
       setActions(d.actions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -193,50 +216,20 @@ export default function AuditsPage() {
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [filterAction]);
+  /* One request per settled filter set: the search box debounces, the rest fire at once. */
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const t = window.setTimeout(() => { void load(); }, q ? 300 : 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, filterAction, filterResult, fromDate, toDate, page, sortDir]);
 
-  // Result filtering is client-side on purpose: the endpoint has no `decision` filter,
-  // and the value set is tiny (answer | caution | null), so filtering the loaded rows
-  // is exact — no server round-trip needed to be correct.
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (filterResult && resultOf(r) !== filterResult) return false;
-      const day = (r.created_at ?? "").slice(0, 10);
-      if (fromDate && day < fromDate) return false;
-      if (toDate && day > toDate) return false;
-      if (!needle) return true;
-      return (
-        (r.username ?? "").toLowerCase().includes(needle) ||
-        r.action.toLowerCase().includes(needle) ||
-        (r.domain ?? "").toLowerCase().includes(needle) ||
-        (r.detail ?? "").toLowerCase().includes(needle)
-      );
-    });
-  }, [rows, q, filterResult, fromDate, toDate]);
+  useEffect(() => { void load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, []);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  // Clamp rather than reset: narrowing a filter must never leave the view past the
-  // last page (a blank table under a "3 / 2" pager), and it should not silently jump
-  // the user back to page 1 either.
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
-  /* A log is not a directory: sorting it by "action" answers nothing. What a reader does want
-     is either the newest event or the oldest one, so the Time column is the only sortable one —
-     and it says which way it is pointing through `aria-sort`. */
-  const ordered = useMemo(
-    () => (sortDir === "asc" ? [...filtered].reverse() : filtered),
-    [filtered, sortDir],
-  );
-  const pageRows = useMemo(
-    () => ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [ordered, safePage],
-  );
-
-  const today = useMemo(() => {
-    const d0 = new Date().toISOString().slice(0, 10);
-    return rows.filter((r) => (r.created_at ?? "").startsWith(d0)).length;
-  }, [rows]);
-  const users = useMemo(() => new Set(rows.map((r) => r.username).filter(Boolean)).size, [rows]);
+  const pageRows = rows;
 
   const hasFilters = Boolean(q || filterAction || filterResult || fromDate || toDate);
   function resetFilters() {
@@ -255,8 +248,11 @@ export default function AuditsPage() {
     { key: "detail", label: "Detail", width: "23%" },
   ];
 
-  const reportRows = useMemo(
-    () => filtered.map((r) => ({
+  /* Export covers the FILTERED SET, not the visible page: "export the failed sign-ins from
+     Tuesday" is the reason the button exists. One request fetches up to EXPORT_LIMIT rows;
+     the report says so when the set is larger. */
+  function toReportRows(list: AuditRow[]) {
+    return list.map((r) => ({
       time: r.created_at ? r.created_at.replace("T", " ").slice(0, 19) : "",
       action: r.action,
       user: r.username,
@@ -264,27 +260,55 @@ export default function AuditsPage() {
       decision: r.decision,
       confidence: r.confidence,
       detail: r.detail ?? "",
-    })),
-    [filtered],
-  );
+    }));
+  }
+
+  async function fetchAllMatching() {
+    const d = await listAudits({
+      limit: EXPORT_LIMIT,
+      action: filterAction || undefined,
+      q: q || undefined,
+      result: filterResult || undefined,
+      from: fromDate || undefined,
+      to: toDate || undefined,
+      order: sortDir,
+    });
+    return { rows: toReportRows(d.audits ?? []), total: Number(d.total ?? 0) };
+  }
 
   const rangeLabel = fromDate || toDate
     ? `${fromDate || "start"} → ${toDate || "today"}`
     : "All loaded events";
 
-  function exportCsv() {
-    downloadCsv(`audit-log-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, reportRows);
+  async function exportCsv() {
+    try {
+      const { rows: all, total: matching } = await fetchAllMatching();
+      downloadCsv(`audit-log-${new Date().toISOString().slice(0, 10)}.csv`, reportColumns, all);
+      if (matching > all.length) {
+        setExportNote(`Exported the first ${all.length} of ${matching.toLocaleString()} matching events.`);
+      } else {
+        setExportNote(null);
+      }
+    } catch (err) {
+      setExportNote(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  function printReportSheet() {
+  async function printReportSheet() {
+    let all: ReturnType<typeof toReportRows> = [];
+    try {
+      all = (await fetchAllMatching()).rows;
+    } catch {
+      all = toReportRows(pageRows);
+    }
     const ok = printReport({
       title: "Audit log",
       subtitle: `Administration · ${rangeLabel}`,
       columns: reportColumns,
-      rows: reportRows,
+      rows: all,
       meta: [
-        `Events: ${reportRows.length}`,
-        `Users: ${users}`,
+        `Events: ${all.length}`,
+        `Users: ${distinctUsers}`,
         q ? `Search: "${q}"` : "",
         filterAction ? `Action: ${filterAction}` : "",
         filterResult ? `Decision: ${filterResult}` : "",
@@ -293,8 +317,8 @@ export default function AuditsPage() {
     if (!ok) window.alert("Your browser blocked the print window. Allow pop-ups for this site and try again.");
   }
 
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length);
+  const rangeStart = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, total);
 
 
   return (
@@ -322,8 +346,8 @@ export default function AuditsPage() {
               <ReportActions
                 onPrint={printReportSheet}
                 onExport={exportCsv}
-                disabled={filtered.length === 0}
-                title={`Export ${filtered.length} events as CSV`}
+                disabled={total === 0}
+                title={`Export ${total} events as CSV`}
               />
             </div>
           }
@@ -345,20 +369,20 @@ export default function AuditsPage() {
             icon={<Clock className="size-4" />}
             label="Today's events"
             value={today.toLocaleString()}
-            caption={`${new Date().toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} · in loaded events`}
+            caption={`${new Date().toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} · across the log`}
           />
           <StatCard
             tone="ok"
             icon={<UserPlus className="size-4" />}
             label="Distinct users"
-            value={users.toLocaleString()}
-            caption="In loaded events"
+            value={distinctUsers.toLocaleString()}
+            caption="Across the log"
           />
           <StatCard
             tone="warn"
             icon={<ListFilter className="size-4" />}
             label="In this range"
-            value={filtered.length.toLocaleString()}
+            value={total.toLocaleString()}
             caption={fromDate || toDate ? `${fromDate || "…"} → ${toDate || "…"}` : "No date limit applied"}
           />
         </StatRow>
@@ -370,7 +394,7 @@ export default function AuditsPage() {
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Activity stream</h2>
               <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                {filtered.length.toLocaleString()} events
+                {total.toLocaleString()} events
               </span>
             </div>
             <span className="flex items-center gap-1 text-2xs text-muted-foreground">
@@ -547,14 +571,14 @@ export default function AuditsPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && !error && filtered.length === 0 && (
+                {!loading && !error && total === 0 && (
                   <tr>
                     <td colSpan={6}>
                       {/* Two different situations, two different messages. "No events
                           yet" is a normal state for a new install; "nothing matches your
                           filters" is a user action they can undo — so only that one gets
                           the clear-filters CTA. */}
-                      {rows.length === 0 ? (
+                      {!hasFilters ? (
                         <EmptyState
                           icon={<ScrollText className="size-5" />}
                           title="No audit events yet"
@@ -609,33 +633,36 @@ export default function AuditsPage() {
                 </article>
               );
             })}
-            {!loading && !error && filtered.length === 0 && (
+            {!loading && !error && total === 0 && (
               <div className="p-4">
-                {rows.length === 0 ? (
+                {!hasFilters ? (
                   <EmptyState icon={<ScrollText className="size-5" />} title="No audit events yet"
                     description="Administrative actions — sign-ins, permission changes, knowledge edits and approvals — are recorded here as they happen." />
                 ) : (
                   <EmptyState icon={<SearchX className="size-5" />} title="No events match these filters"
-                    description={`${rows.length} event${rows.length === 1 ? "" : "s"} loaded, but none match the current search or filters.`}
+                    description="No events match the current search or filters."
                     actionLabel="Clear filters" onAction={resetFilters} />
                 )}
               </div>
             )}
           </div>
 
-          {/* Shared footer. The "loaded of" clause stays: a log bigger than one fetch
-              must never let "no match" read as "this event does not exist". */}
+          {exportNote && (
+            <p className="border-t border-[var(--border)] px-5 py-2 text-2xs text-[var(--warn)]">{exportNote}</p>
+          )}
+
+          {/* Shared footer. The pager now counts the whole log, so the old "500 loaded
+              of 984" confession is no longer needed — the range is the real one. */}
           <PaginationBar
             from={rangeStart}
             to={rangeEnd}
-            total={filtered.length}
+            total={total}
             page={safePage}
             pageCount={pageCount}
             onPage={setPage}
             pageSize={PAGE_SIZE}
             noun="events"
             busy={loading}
-            note={total > rows.length ? `${rows.length.toLocaleString()} loaded of ${total.toLocaleString()}` : undefined}
           />
         </section>
 

@@ -387,31 +387,63 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
 def admin_list_audits(
     user: str = Depends(get_current_user),
     username: str = "", action: str = "", limit: int = 100,
-    offset: int = 0,
+    offset: int = 0, q: str = "", result: str = "",
+    date_from: str = "", date_to: str = "", order: str = "desc",
 ) -> dict:
-    """Admin: read the application audit trail (login/chat/escalate/feedback/sync)."""
+    """Admin: read the application audit trail, filtered and paged in SQL.
+
+    The endpoint used to clamp `limit` to 500 and leave search/result/date filtering to the
+    caller, so the page loaded the newest 500 of 984 events and paged through those: the
+    footer said "500 loaded of 984" and 484 events could not be reached at all. Filtering
+    and counting happen here now, which is the only way the pager can count the whole log.
+    """
     _require_admin_cap(user, "manage_users")
     limit = max(1, min(limit, 500))
     offset = max(0, offset)
-    where = "WHERE 1=1"
+    where = ["1=1"]
     params: dict = {"limit": limit, "offset": offset}
+
     if username:
-        where += " AND username = :username"
+        where.append("username = :username")
         params["username"] = username
     if action:
-        where += " AND action = :action"
+        where.append("action = :action")
         params["action"] = action
+    if q.strip():
+        # ILIKE on the four columns the search box promises (it says "user, domain, or detail").
+        where.append("(username ILIKE :q OR domain ILIKE :q OR detail ILIKE :q OR action ILIKE :q)")
+        params["q"] = f"%{q.strip()}%"
+    if result == "answer":
+        where.append("lower(coalesce(decision, '')) IN ('answer', 'approved')")
+    elif result == "caution":
+        where.append("lower(coalesce(decision, '')) IN ('caution', 'rejected', 'blocked')")
+    elif result == "none":
+        where.append("lower(coalesce(decision, '')) NOT IN ('answer', 'approved', 'caution', 'rejected', 'blocked')")
+    if date_from:
+        where.append("created_at::date >= :date_from")
+        params["date_from"] = date_from
+    if date_to:
+        where.append("created_at::date <= :date_to")
+        params["date_to"] = date_to
+
+    clause = " AND ".join(where)
+    direction = "ASC" if order == "asc" else "DESC"
     with SessionLocal() as s:
         from sqlalchemy import text as _t
 
         rows = s.execute(_t(
             "SELECT id, action, username, domain, confidence, decision, detail, "
-            "created_at FROM audit_log " + where +
-            " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+            "created_at FROM audit_log WHERE " + clause +
+            f" ORDER BY created_at {direction}, id {direction} LIMIT :limit OFFSET :offset"
         ), params).mappings().all()
         total = s.execute(_t(
-            "SELECT count(*) AS n FROM audit_log " + where
-        ), {k: v for k, v in params.items() if k in ("username", "action")}).mappings().first()["n"]
+            "SELECT count(*) AS n FROM audit_log WHERE " + clause
+        ), {k: v for k, v in params.items() if k not in ("limit", "offset")}).mappings().first()["n"]
+        # Totals for the KPI cards: the whole log, not just the page in view.
+        stats = s.execute(_t(
+            "SELECT count(*) FILTER (WHERE created_at::date = CURRENT_DATE) AS today, "
+            "count(DISTINCT username) AS users FROM audit_log"
+        )).mappings().first()
         actions = [r["action"] for r in s.execute(_t(
             "SELECT DISTINCT action FROM audit_log ORDER BY action")).mappings().all()]
     out = [{
@@ -420,7 +452,8 @@ def admin_list_audits(
         "detail": r["detail"],
         "created_at": r["created_at"].isoformat() if r["created_at"] else None,
     } for r in rows]
-    return {"audits": out, "total": total, "actions": actions}
+    return {"audits": out, "total": total, "actions": actions,
+            "today": int(stats["today"] or 0), "users": int(stats["users"] or 0)}
 
 
 @router.get("/admin/audits/export")
