@@ -322,4 +322,4 @@ Confluence **site** တစ်ခုမှာ space အများကြီး �
 
 နှစ်မျိုးလုံးအတွက် Settings → Integrations → Confluence → Configure မှာ ထည့်ပြီး **Sync now** နှိပ်ရတယ်။ Knowledge page ရဲ့ **Sources** card က configured site အရေအတွက် ကို ပြတယ် (article မဝင်သေးလည်း ပြတယ်)၊ **Site** filter က site တစ်ခုချင်း ခွဲကြည့်ဖို့ ရတယ်။
 
-> သတိ: configure လုပ်ထားတဲ့ space မဟုတ်တဲ့ article တွေကို နောက် sync မှာ KB ထဲက ဖျက်ပါတယ်။ Space key ကို မတော်တဆ ဖျက်မိရင် အဲဒီ space ရဲ့ article တွေ ပျောက်မယ် — ပြန်ထည့်ပြီး Sync now နှိပ်ရင် ပြန်ဝင်လာပါတယ်။
+> သတိ: sync က ဖျက်တာနဲ့ ပတ်သက်ပြီး (dev-1.0.119 ကတည်းက) — ဖျက်တာက **ဒီ run မှာ fetch လုပ်ပြီး မတွေ့တော့တဲ့** (binding, space) အတွင်းမှာပဲ။ Space key ကို config ထဲက ဖျက်လိုက်ရင် အဲဒီ space ရဲ့ article တွေ KB ထဲမှာ ကျန်နေမယ် (ဖျက်မခံရ)၊ ဒါပေမယ့် Confluence မှာ page တကယ်ဖျက်လိုက်ရင်တော့ ဖျက်ခံရမယ်။ အရင်က config ပြောင်းတာနဲ့ တခြား space အားလုံး ဖျက်ခံရတဲ့ bug ရှိခဲ့တယ်။ Space key ကို မတော်တဆ ဖျက်မိရင် အဲဒီ space ရဲ့ article တွေ ပျောက်မယ် — ပြန်ထည့်ပြီး Sync now နှိပ်ရင် ပြန်ဝင်လာပါတယ်။
