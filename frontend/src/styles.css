@@ -2040,11 +2040,11 @@ table tbody tr {
 /* The primary action on Tickets, shaped like the reference: a pill with a vertical violet
    gradient and a shadow tinted by the brand (Tailwind's arbitrary shadow cannot resolve a
    var() colour, so the shadow lives here where it can). */
-.create-ticket-btn {
+.primary-pill {
   border-radius: 9999px;
   background-image: linear-gradient(to bottom, var(--brand-grad-from), var(--brand-grad-to));
   box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--brand-solid) 60%, transparent);
 }
-.create-ticket-btn:hover {
+.primary-pill:hover {
   box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--brand-solid) 70%, transparent);
 }

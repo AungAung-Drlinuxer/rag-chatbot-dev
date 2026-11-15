@@ -14,10 +14,13 @@ export function ReportActions({
   onExport,
   disabled,
   title = "Export CSV",
+  exportTone = "primary",
 }: {
   onPrint: () => void;
   onExport: () => void;
   disabled?: boolean;
+  /** "secondary" when the page already has a primary action — two purple fills compete. */
+  exportTone?: "primary" | "secondary";
   /** Tooltip/sub-label for the export button; the visible label is always "Export CSV". */
   title?: string;
 }) {
@@ -42,7 +45,11 @@ export function ReportActions({
         disabled={disabled}
         aria-label="Export CSV"
         title={title}
-        className={`${base} bg-[var(--primary)] font-semibold text-[var(--primary-foreground)] shadow-sm hover:opacity-90`}
+        className={
+          exportTone === "primary"
+            ? `${base} bg-[var(--primary)] font-semibold text-[var(--primary-foreground)] shadow-sm hover:opacity-90`
+            : `${base} border border-[var(--border)] bg-card font-medium text-foreground hover:bg-[var(--muted)]`
+        }
       >
         <Download className="size-3.5" />
         Export CSV

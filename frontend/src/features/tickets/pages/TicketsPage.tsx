@@ -543,7 +543,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 pointing up-right, and a shadow tinted with the brand instead of black. */}
             <Button
               size="sm"
-              className="create-ticket-btn px-4 hover:opacity-95"
+              className="primary-pill px-4 hover:opacity-95"
               onClick={() => setCreateOpen(true)}
             >
               <Send className="mr-2 size-4" />
@@ -595,6 +595,7 @@ export default function Tickets({ role, userName, onToast }: Props) {
                   onExport={exportCsv}
                   disabled={!filteredTickets.length}
                   title={`Export ${filteredTickets.length} tickets as CSV`}
+                  exportTone="secondary"
                 />
                 <button
                   type="button"

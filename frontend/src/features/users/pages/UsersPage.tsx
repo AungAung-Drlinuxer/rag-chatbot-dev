@@ -9,15 +9,16 @@ import {
   AlertTriangle,
   Check,
   KeyRound,
-  Plus,
   RefreshCw,
   RotateCcw,
+  Loader2,
   Search,
   SearchX,
   Shield,
   Trash2,
   UserCheck,
   UserCog,
+  UserPlus,
   Users as UsersIcon,
   UserX,
   X,
@@ -489,7 +490,13 @@ export default function Users() {
               <button type="button" onClick={runDirectorySync} disabled={syncing}
                 title="Reconcile with Active Directory now"
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-card px-2.5 text-xs font-medium transition hover:bg-[var(--muted)] disabled:opacity-50">
-                <Shield className={["size-3.5", syncing ? "animate-pulse" : ""].join(" ")} />
+                {/* The directory has a logo, exactly like Jira on the Tickets toolbar: the mark
+                    says which system is being synchronised, the arrow says what is happening. */}
+                {syncing ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <IntegrationLogo providerKey="ldap" name="Active Directory" size="sm" className="size-4" />
+                )}
                 {syncing ? "Syncing…" : "Sync directory"}
               </button>
               <ReportActions
@@ -497,10 +504,11 @@ export default function Users() {
                 onExport={exportCsv}
                 disabled={filteredUsers.length === 0}
                 title={`Export ${filteredUsers.length} users as CSV`}
+                exportTone="secondary"
               />
               <button type="button" onClick={() => setShowAddUser(true)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:opacity-90">
-                <Plus className="size-4" />
+                className="primary-pill inline-flex h-8 items-center px-4 text-xs font-semibold text-white transition hover:opacity-95">
+                <UserPlus className="mr-2 size-4" />
                 Add user
               </button>
             </div>
