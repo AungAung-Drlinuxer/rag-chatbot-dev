@@ -252,7 +252,7 @@ function MessageBubble({
           )}
           {message.content ? (
             markdownRendering
-              ? <MarkdownMessage content={message.content} />
+              ? <MarkdownMessage content={message.content} streaming={busy} />
               : <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.content}</div>
           ) : busy ? (
             /* v1.6.45 — the animated agent indicator, restored after the markdown

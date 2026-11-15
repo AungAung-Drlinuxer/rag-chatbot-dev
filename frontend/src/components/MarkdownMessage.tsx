@@ -23,8 +23,15 @@
  * keeps the whole list scannable at any width. Do not re-introduce the stacking without
  * the user asking for it.
  */
-import { useRef, useState, type ReactNode, type HTMLAttributes } from "react";
-import ReactMarkdown from "react-markdown";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type AnchorHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 
 import MermaidDiagram from "./MermaidDiagram";
 import remarkGfm from "remark-gfm";
@@ -132,8 +139,11 @@ export default function MarkdownMessage({
   content,
   compact = false,
   className = "",
+  streaming = false,
 }: {
   content: string;
+  /** The answer is still arriving token by token — keep fences as text until it settles. */
+  streaming?: boolean;
   /** tighter type scale + spacing for the floating widget */
   compact?: boolean;
   className?: string;
@@ -145,35 +155,41 @@ export default function MarkdownMessage({
     ? "[&_h1]:mt-2.5 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:mt-2.5 [&_h2]:text-xs [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xs [&_h3]:font-semibold"
     : "[&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:leading-snug [&_h2]:mt-4 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mt-3 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-slate-500 dark:[&_h3]:text-slate-400";
 
+  /* These renderers MUST keep a stable identity. A fresh `pre` function on every render is a
+     new component type, so React unmounted and remounted the whole block for each streamed
+     token — ~50 times per answer. Diagrams flashed in and out, copy buttons lost their state,
+     and the page visibly flapped. Memoising the map is what stops it. */
+  const components = useMemo<Components>(
+    () => ({
+      pre: (props: HTMLAttributes<HTMLPreElement>) => {
+        /* A ```mermaid fence is not code to read, it is a picture to look at. react-markdown
+           hands the fence to `pre` with the <code> element as its only child, and the language
+           lives on that child's className. */
+        const child = (Array.isArray(props.children) ? props.children[0] : props.children) as
+          | { props?: { className?: string; children?: unknown } }
+          | undefined;
+        const lang = /language-([\w+#-]+)/.exec(child?.props?.className || "")?.[1];
+        /* While an answer streams, a half-written fence is re-parsed on every token and the
+           block moves between paragraph and <pre>. Draw the diagram once the message is
+           complete; until then the reader sees the code, which is honest. */
+        if (lang === "mermaid" && !streaming) {
+          return <MermaidDiagram chart={String(child?.props?.children ?? "")} compact={compact} />;
+        }
+        return <CodeBlock {...props} compact={compact} />;
+      },
+      table: (props: HTMLAttributes<HTMLTableElement>) => <Table {...props} />,
+      a: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a {...props} target="_blank" rel="noreferrer">
+          {children as ReactNode}
+        </a>
+      ),
+    }),
+    [compact, streaming],
+  );
+
   return (
     <div className={`${BASE} ${heading} ${compact ? "text-xs" : "text-[13.5px]"} ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          // react-markdown v9 passes the <code> child through `children`; wrapping
-          // `pre` is what lets us attach the copy affordance to the whole block.
-          pre: (props) => {
-            /* A ```mermaid fence is not code to read, it is a picture to look at. react-markdown
-               hands the fence to `pre` with the <code> element as its only child, and the
-               language lives on that child's className. */
-            const child = (Array.isArray(props.children) ? props.children[0] : props.children) as
-              | { props?: { className?: string; children?: unknown } }
-              | undefined;
-            const lang = /language-([\w+#-]+)/.exec(child?.props?.className || "")?.[1];
-            if (lang === "mermaid") {
-              const chart = String(child?.props?.children ?? "");
-              return <MermaidDiagram chart={chart} compact={compact} />;
-            }
-            return <CodeBlock {...(props as HTMLAttributes<HTMLPreElement>)} compact={compact} />;
-          },
-          table: (props) => <Table {...(props as HTMLAttributes<HTMLTableElement>)} />,
-          a: ({ children, ...props }) => (
-            <a {...props} target="_blank" rel="noreferrer">
-              {children as ReactNode}
-            </a>
-          ),
-        }}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>
     </div>

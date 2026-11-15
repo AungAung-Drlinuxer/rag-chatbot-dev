@@ -13,6 +13,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+
 import MarkdownMessage from "./MarkdownMessage";
 
 /** The shape of "Proxmox VMs list ပြပါ" — proxmox_list_vms. */
@@ -270,5 +273,34 @@ describe("MarkdownMessage — rich answers (headings, emoji, checklists)", () =>
     );
     expect(html).not.toContain('data-slot="mermaid-diagram"');
     expect(html).toContain("kubectl get pods");
+  });
+
+  /* While an answer streams, the fence is re-parsed on every token and the block moves between
+     paragraph and <pre>. Drawing a diagram mid-stream mounted and unmounted the component ~50
+     times per answer and the page flapped; the fence stays text until the message is done. */
+  it("keeps a mermaid fence as code while the answer is still streaming", () => {
+    const html = renderToStaticMarkup(
+      <MarkdownMessage streaming content={"```mermaid\nflowchart LR\n  A-->B\n```"} />,
+    );
+    expect(html).not.toContain('data-slot="mermaid-diagram"');
+    expect(html).toContain("flowchart LR");
+  });
+
+  /* The flap: `components={{ pre: (props) => … }}` built a NEW component type on every render,
+     so React unmounted and remounted every code/diagram block once per streamed token. The
+     node identity is the guard — same <pre>, or the block was rebuilt. */
+  it("keeps the same code node when the answer grows by one token", () => {
+    (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const first = "```bash\nkubectl get pods\n```";
+    act(() => root.render(<MarkdownMessage content={first} />));
+    const preBefore = host.querySelector("pre");
+    expect(preBefore).toBeTruthy();
+    act(() => root.render(<MarkdownMessage content={first + "\n\nDone."} />));
+    expect(host.querySelector("pre")).toBe(preBefore);
+    act(() => root.unmount());
+    host.remove();
   });
 });

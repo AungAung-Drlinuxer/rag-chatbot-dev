@@ -15,6 +15,16 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 
 let mermaidPromise: Promise<typeof import("mermaid").default> | null = null;
 
+/** Rendered SVG by palette + definition. A remount (streaming re-render, a reopened
+ *  conversation) then paints the finished picture immediately instead of flashing the
+ *  "Drawing diagram…" placeholder again. */
+const svgCache = new Map<string, string>();
+const CACHE_LIMIT = 40;
+
+function cacheKey(chart: string, dark: boolean) {
+  return `${dark ? "d" : "l"}|${chart.trim()}`;
+}
+
 function loadMermaid() {
   if (!mermaidPromise) {
     mermaidPromise = import("mermaid").then((m) => m.default);
@@ -85,7 +95,7 @@ export default function MermaidDiagram({
 }) {
   const reactId = useId();
   const renderId = useMemo(() => `mmd-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`, [reactId]);
-  const [svg, setSvg] = useState<string | null>(null);
+  const [svg, setSvg] = useState<string | null>(() => svgCache.get(cacheKey(chart, isDark())) ?? null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [dark, setDark] = useState(() => (typeof document === "undefined" ? false : isDark()));
@@ -114,6 +124,8 @@ export default function MermaidDiagram({
         await mermaid.parse(code);
         const { svg: rendered } = await mermaid.render(`${renderId}-${dark ? "d" : "l"}`, code);
         if (!cancelled && alive.current) {
+          if (svgCache.size >= CACHE_LIMIT) svgCache.clear();
+          svgCache.set(cacheKey(code, dark), rendered);
           setSvg(rendered);
           setError(null);
         }
