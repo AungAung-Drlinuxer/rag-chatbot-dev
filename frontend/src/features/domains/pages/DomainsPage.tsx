@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Layers, Plus, Search, SearchX, ShieldAlert, X } from "lucide-react";
 
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
+import { PaginationBar } from "@/components/ui/pagination";
 import { ClassifierDomainItem, getClassifierDomains } from "@/features/domains/api";
 import { DomainClassifierManager } from "@/features/domains/components/DomainClassifierManager";
 import { DomainStats, type DomainTotals } from "@/features/domains/components/DomainStats";
@@ -43,6 +44,7 @@ export default function DomainsPage({
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [page, setPage] = useState(1);
 
   // Bumped by the header's "Add domain" button; the manager watches it and opens its form.
   const [createSignal, setCreateSignal] = useState(0);
@@ -107,6 +109,15 @@ export default function DomainsPage({
   }, [domains, q, status]);
 
   const filtered = q.trim() !== "" || status !== "all";
+
+  /* Same footer as Knowledge, five rows per page: a domain row is a tall card (identity,
+     keyword chips, actions), not a table line, so five keeps the page a screenful and the
+     controls meaningful the moment a sixth domain exists. */
+  const PAGE_SIZE = 5;
+  useEffect(() => { setPage(1); }, [q, status]);
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   // Same rule the backend classifier applies: case-insensitive substring match, most
   // matches first. This previews the keyword rules only — not a live classification.
@@ -301,7 +312,7 @@ export default function DomainsPage({
           ) : (
             <div className="border-t border-[var(--border)]">
               <DomainClassifierManager
-                domains={visible}
+                domains={paged}
                 onRefresh={loadData}
                 canManage={canManage}
                 hideHeader
@@ -311,20 +322,23 @@ export default function DomainsPage({
           )}
 
           {!loading && !error && domains.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-4 py-3 text-2xs text-muted-foreground sm:px-5">
-              {/* No pager: domains are a short, ordered card list — nine rows fit on one
-                  screen and a "page 2" would be invented. The sentence still matches the
-                  other list pages so the same fact is not phrased three ways. */}
-              <span>
-                {filtered
-                  ? <>Showing <span className="font-semibold text-foreground">{visible.length}</span> of{" "}<span className="font-semibold text-foreground">{domains.length}</span> domains · filtered</>
-                  : <>Showing all <span className="font-semibold text-foreground">{domains.length}</span> domain{domains.length === 1 ? "" : "s"}</>}
-              </span>
-              <span>
-                {totals.keywords} keyword{totals.keywords === 1 ? "" : "s"} across {totals.active} active domain
-                {totals.active === 1 ? "" : "s"}
-              </span>
-            </div>
+            <PaginationBar
+              from={visible.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}
+              to={(safePage - 1) * PAGE_SIZE + paged.length}
+              total={visible.length}
+              page={safePage}
+              pageCount={pageCount}
+              pageSize={PAGE_SIZE}
+              onPage={setPage}
+              noun="domains"
+              note={filtered ? "filtered" : undefined}
+              aside={
+                <span className="text-2xs text-muted-foreground">
+                  {totals.keywords} keyword{totals.keywords === 1 ? "" : "s"} across {totals.active} active domain
+                  {totals.active === 1 ? "" : "s"}
+                </span>
+              }
+            />
           )}
         </section>
 

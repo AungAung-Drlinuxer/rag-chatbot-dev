@@ -9,6 +9,7 @@
  * The Knowledge page's version is the reference: an en dash range, real numbered pages with a
  * window (never a dead "… 10"), chevron controls, and the page size stated once.
  */
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /** The page numbers to show: first, last, and a window around the current page. */
@@ -36,6 +37,7 @@ export function PaginationBar({
   note,
   busy = false,
   announce = true,
+  aside,
 }: {
   /** First row on this page, 1-based. */
   from: number;
@@ -54,6 +56,8 @@ export function PaginationBar({
   /** Disables the controls while a page is in flight. */
   busy?: boolean;
   announce?: boolean;
+  /** A second, page-independent fact to sit beside the controls (e.g. keyword totals). */
+  aside?: ReactNode;
 }) {
   const arrow =
     "grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition " +
@@ -77,6 +81,8 @@ export function PaginationBar({
         )}
       </p>
 
+      <div className="flex flex-wrap items-center gap-3">
+        {aside}
       {pageCount > 1 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
@@ -131,6 +137,7 @@ export function PaginationBar({
           </nav>
         </div>
       )}
+      </div>
     </div>
   );
 }
