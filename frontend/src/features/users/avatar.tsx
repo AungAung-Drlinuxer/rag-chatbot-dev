@@ -75,6 +75,9 @@ function forgetUser(username: string) {
 }
 
 export function useAvatarUrl(username?: string | null, version = 0): string | null {
+  // Bumped when someone changes a photo anywhere in the app, so the sidebar and the chat
+  // rows stop showing the picture the settings card just replaced.
+  const [tick, setTick] = useState(0);
   const [url, setUrl] = useState<string | null>(() => {
     if (!username) return null;
     return cache.get(keyOf(username, version))?.url ?? null;
@@ -92,7 +95,19 @@ export function useAvatarUrl(username?: string | null, version = 0): string | nu
     return () => {
       alive = false;
     };
-  }, [username, version]);
+  }, [username, version, tick]);
+
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ username?: string }>).detail;
+      if (!detail?.username || detail.username === username) {
+        if (username) forgetUser(username);
+        setTick((t) => t + 1);
+      }
+    };
+    window.addEventListener("ith:avatar-changed", onChange);
+    return () => window.removeEventListener("ith:avatar-changed", onChange);
+  }, [username]);
 
   return url;
 }
@@ -228,6 +243,7 @@ export function useAvatarEditor(username: string, version: number) {
         }
         const data = await r.json();
         forgetUser(username);
+        window.dispatchEvent(new CustomEvent("ith:avatar-changed", { detail: { username } }));
         if (mounted.current) setLocalVersion(Number(data.version) || localVersion + 1);
         return { ok: true as const };
       } catch (err) {
@@ -248,6 +264,7 @@ export function useAvatarEditor(username: string, version: number) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       forgetUser(username);
+      window.dispatchEvent(new CustomEvent("ith:avatar-changed", { detail: { username } }));
       if (mounted.current) setLocalVersion(0);
       return { ok: true as const };
     } catch (err) {
