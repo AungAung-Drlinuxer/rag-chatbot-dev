@@ -1,4 +1,5 @@
 import { StatCard, StatRow } from "@/components/ui/stat-card";
+import { PaginationBar } from "@/components/ui/pagination";
 import { readHashParams, writeHashParams } from "@/app/useUrlParams";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -6,8 +7,6 @@ import {
   ArrowUpDown,
   BookOpen,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   Clock3,
   Database,
@@ -51,19 +50,6 @@ import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo"
  * Numbers for a pager: first, last, current ±1, and a gap marker where pages are skipped.
  * Returns e.g. [1, "gap", 4, 5, 6, "gap", 20] — never a wall of 20 buttons.
  */
-function pageWindow(current: number, total: number): (number | "gap")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const keep = new Set<number>([1, total, current, current - 1, current + 1]);
-  if (current <= 3) [2, 3, 4].forEach((n) => keep.add(n));
-  if (current >= total - 2) [total - 1, total - 2, total - 3].forEach((n) => keep.add(n));
-  const nums = [...keep].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
-  const out: (number | "gap")[] = [];
-  nums.forEach((n, i) => {
-    if (i > 0 && n - (nums[i - 1] as number) > 1) out.push("gap");
-    out.push(n);
-  });
-  return out;
-}
 
 /**
  * Knowledge — the KB article browser, restyled to the workspace mockup.
@@ -1398,63 +1384,17 @@ export default function Knowledge({ role, onToast }: Props) {
               </button>
             </div>
           ) : kbTotal != null && kbTotal > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-5 py-3.5">
-              <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
-                Showing <span className="font-semibold text-foreground">{rangeStart}–{rangeEnd}</span> of{" "}
-                <span className="font-semibold text-foreground">{kbTotal.toLocaleString()}</span>
-              </p>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
-                  {pageSize} / page
-                </span>
-
-                <nav aria-label="Pagination" className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    aria-label="Previous page"
-                    disabled={page <= 1 || listing}
-                    onClick={() => goToPage(page - 1)}
-                    className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-muted disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground/40"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </button>
-
-                  {pageWindow(page, totalPages).map((n, i) =>
-                    n === "gap" ? (
-                      <span key={`gap-${i}`} aria-hidden className="px-1 text-xs text-muted-foreground">…</span>
-                    ) : (
-                      <button
-                        key={n}
-                        type="button"
-                        aria-label={`Page ${n}`}
-                        aria-current={n === page ? "page" : undefined}
-                        disabled={listing}
-                        onClick={() => goToPage(n)}
-                        className={[
-                          "grid size-8 place-items-center rounded-lg border text-xs font-medium transition disabled:opacity-40",
-                          n === page
-                            ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-                            : "border-[var(--border)] bg-card hover:bg-muted",
-                        ].join(" ")}
-                      >
-                        {n}
-                      </button>
-                    ),
-                  )}
-
-                  <button
-                    type="button"
-                    aria-label="Next page"
-                    disabled={page >= totalPages || listing}
-                    onClick={() => goToPage(page + 1)}
-                    className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-muted disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground/40"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                </nav>
-              </div>
-            </div>
+            <PaginationBar
+              from={rangeStart}
+              to={rangeEnd}
+              total={kbTotal}
+              page={page}
+              pageCount={totalPages}
+              onPage={goToPage}
+              pageSize={pageSize}
+              noun="articles"
+              busy={listing}
+            />
           ) : null}
         </section>
 

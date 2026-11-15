@@ -189,7 +189,7 @@ describe("TicketsPage — loading, data and stats", () => {
   it("reports the loaded row count in the results heading", async () => {
     const el = await mount("admin");
     expect(el.textContent).toContain("3 matching tickets");
-    expect(el.textContent).toContain("Showing all 3 tickets");
+    expect(el.textContent).toContain("Showing 1–3 of 3 tickets");
   });
 });
 

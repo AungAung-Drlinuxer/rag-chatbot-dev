@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { StatCard, StatRow } from "@/components/ui/stat-card";
+import { PaginationBar } from "@/components/ui/pagination";
 import { EmptyState, ErrorState, PageHeader, PageShell } from "@/components/ui/page";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Avatar, useAvatarEditor } from "../avatar";
@@ -712,23 +713,19 @@ export default function Users() {
             )}
           </div>
 
-          {/* range + pager footer */}
+          {/* Shared footer */}
           {!loading && !error && filteredUsers.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-[var(--border)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs text-muted-foreground">
-                Showing {rangeStart} to {rangeEnd} of {filteredUsers.length} users
-              </span>
-              <div className="flex items-center gap-1.5">
-                <PaginationButton label="‹" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} />
-                {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => (
-                  <PaginationButton key={i} label={String(i + 1)} active={page === i + 1}
-                    onClick={() => setPage(i + 1)} />
-                ))}
-                {totalPages > 5 && <span className="px-1 text-xs text-muted-foreground">… {totalPages}</span>}
-                <PaginationButton label="›" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} />
-                <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
-              </div>
-            </div>
+            <PaginationBar
+              from={rangeStart}
+              to={rangeEnd}
+              total={filteredUsers.length}
+              page={page}
+              pageCount={totalPages}
+              onPage={setPage}
+              noun="users"
+              note={hasFilters ? "filtered" : undefined}
+              busy={loading}
+            />
           )}
         </section>
 
@@ -1094,20 +1091,6 @@ function FilterSelect({ value, onChange, options, label, allLabel }: {
         <option key={option} value={option}>{option === "All" ? allLabel : option}</option>
       ))}
     </select>
-  );
-}
-
-function PaginationButton({ label, active, disabled, onClick }: {
-  label: string; active?: boolean; disabled?: boolean; onClick?: () => void;
-}) {
-  return (
-    <button type="button" disabled={disabled} onClick={onClick}
-      className={["grid size-8 place-items-center rounded-lg border border-[var(--border)] text-2xs font-medium transition",
-        active ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-          : "bg-card hover:bg-[var(--muted)]",
-        disabled ? "cursor-not-allowed opacity-40" : ""].join(" ")}>
-      {label}
-    </button>
   );
 }
 

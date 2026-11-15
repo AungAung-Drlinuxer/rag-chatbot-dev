@@ -142,7 +142,7 @@ describe("ConversationHistoryPage — the table", () => {
     const el = await mount();
     expect(el.querySelector("h2")?.textContent).toContain("Conversations");
     expect(el.querySelector("h2")?.textContent).toContain("2");
-    expect(el.textContent).toContain("Showing 2 of 2 conversations");
+    expect(el.textContent).toContain("Showing 1–2 of 2 conversations");
   });
 
   it("narrows the rows to a search term and says so in the footer", async () => {
@@ -155,7 +155,7 @@ describe("ConversationHistoryPage — the table", () => {
     });
     await settle();
     expect(rowCount(el)).toBe(1);
-    expect(el.textContent).toContain("Showing 1 of 2 conversations (filtered)");
+    expect(el.textContent).toContain("Showing 1–1 of 1 conversations · filtered");
   });
 });
 

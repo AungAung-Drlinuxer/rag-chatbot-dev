@@ -14,6 +14,7 @@ import { listAudits } from "@/features/audits/api";
 import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { StatCard, StatRow } from "@/components/ui/stat-card";
+import { PaginationBar } from "@/components/ui/pagination";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
 import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -148,28 +149,6 @@ const AUDIT_FETCH_LIMIT = 500;
  * this page matches both rather than carrying a control the mockup does not show.
  */
 const PAGE_SIZE = 10;
-
-function PagerButton({ label, active, disabled, onClick }: {
-  label: string; active?: boolean; disabled?: boolean; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "page" : undefined}
-      className={[
-        "grid h-8 min-w-8 place-items-center rounded-lg border px-2 text-xs font-medium transition",
-        active
-          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-          : "border-[var(--border)] bg-card text-foreground hover:bg-[var(--muted)]",
-        disabled ? "cursor-not-allowed opacity-40" : "",
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
 
 export default function AuditsPage() {
   const [rows, setRows] = useState<AuditRow[]>([]);
@@ -644,30 +623,20 @@ export default function AuditsPage() {
             )}
           </div>
 
-          {/* range + pagination footer */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-5 py-3.5">
-            <span className="text-xs text-muted-foreground">
-              {filtered.length === 0
-                ? "0 events"
-                : `Showing ${rangeStart} to ${rangeEnd} of ${filtered.length} events`}{" "}
-              {/* Say so when the log is bigger than one fetch: "no match" must never be
-                  read as "this event does not exist". */}
-              {total > rows.length && (
-                <span className="ml-1.5 text-muted-foreground/80">
-                  ({rows.length.toLocaleString()} loaded of {total.toLocaleString()})
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage(Math.max(1, safePage - 1))} />
-              {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
-                <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
-              ))}
-              {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
-              <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage(Math.min(pageCount, safePage + 1))} />
-              <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
-            </div>
-          </div>
+          {/* Shared footer. The "loaded of" clause stays: a log bigger than one fetch
+              must never let "no match" read as "this event does not exist". */}
+          <PaginationBar
+            from={rangeStart}
+            to={rangeEnd}
+            total={filtered.length}
+            page={safePage}
+            pageCount={pageCount}
+            onPage={setPage}
+            pageSize={PAGE_SIZE}
+            noun="events"
+            busy={loading}
+            note={total > rows.length ? `${rows.length.toLocaleString()} loaded of ${total.toLocaleString()}` : undefined}
+          />
         </section>
 
         </div>

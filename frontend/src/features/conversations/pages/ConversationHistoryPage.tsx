@@ -24,6 +24,7 @@ import { downloadCsv, printReport } from "@/shared/report";
 import { ReportActions } from "@/shared/ReportActions";
 import { listUsers } from "@/features/users/api";
 import { EmptyState, ErrorState, PageShell, PageHeader } from "@/components/ui/page";
+import { PaginationBar } from "@/components/ui/pagination";
 import { useUrlParams } from "@/app/useUrlParams";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -119,27 +120,6 @@ function maskProfanity(text: string): string {
 
 /** One figure per card, counted from the loaded list. */
 /** The pager control Users uses: same size, same active fill. */
-function PagerButton({ label, active, disabled, onClick }: {
-  label: string; active?: boolean; disabled?: boolean; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "page" : undefined}
-      className={[
-        "grid h-8 min-w-8 place-items-center rounded-lg border px-2 text-xs font-medium transition",
-        active
-          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-          : "border-[var(--border)] bg-card text-foreground hover:bg-[var(--muted)]",
-        disabled ? "cursor-not-allowed opacity-40" : "",
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
 
 export default function ConversationHistoryPage() {
   const [convs, setConvs] = useState<Conv[]>([]);
@@ -277,9 +257,8 @@ export default function ConversationHistoryPage() {
   }, [convs, q, fromDate, toDate]);
 
   const totalMsgs = convs.reduce((a, c) => a + c.messages, 0);
-  const activeUsers = new Set(convs.map((c) => c.username)).size;
   const filtered = q.trim() !== "" || fromDate !== "" || toDate !== "" || filterUser !== "";
-
+  const activeUsers = new Set(convs.map((c) => c.username)).size;
   const PER_PAGE = 10;
   const pageCount = Math.max(1, Math.ceil(shown.length / PER_PAGE));
   const safePage = Math.min(page, pageCount);
@@ -640,29 +619,23 @@ export default function ConversationHistoryPage() {
               )}
             </div>
 
-            {/* range + pager footer — the same footer as Users */}
-            {!loading && shown.length > 0 && (
-              <div className="flex flex-col gap-3 border-t border-[var(--border)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-xs text-muted-foreground">
-                  Showing {rangeStart} to {rangeEnd} of {shown.length} conversations
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <PagerButton label="‹" disabled={safePage <= 1} onClick={() => setPage(Math.max(1, safePage - 1))} />
-                  {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => (
-                    <PagerButton key={i} label={String(i + 1)} active={safePage === i + 1} onClick={() => setPage(i + 1)} />
-                  ))}
-                  {pageCount > 5 && <span className="px-1 text-xs text-muted-foreground">… {pageCount}</span>}
-                  <PagerButton label="›" disabled={safePage >= pageCount} onClick={() => setPage(Math.min(pageCount, safePage + 1))} />
-                  <span className="ml-2 rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">10 / page</span>
-                </div>
-              </div>
+            {/* One footer, shared with every other list page. The old second line
+                ("Showing 98 of 98") sat directly under "Showing 51 to 60 of 98" and
+                contradicted it; the message count already has a card of its own. */}
+            {!loading && !error && shown.length > 0 && (
+              <PaginationBar
+                from={rangeStart}
+                to={rangeEnd}
+                total={shown.length}
+                page={safePage}
+                pageCount={pageCount}
+                onPage={setPage}
+                pageSize={PER_PAGE}
+                noun="conversations"
+                note={filtered ? "filtered" : undefined}
+                busy={loading}
+              />
             )}
-
-            <div className="border-t border-[var(--border)] px-5 py-3 text-2xs text-muted-foreground">
-              Showing {shown.length} of {convs.length} conversation{convs.length === 1 ? "" : "s"}
-              {filtered ? " (filtered)" : ""} · {totalMsgs} message{totalMsgs === 1 ? "" : "s"} in
-              this result
-            </div>
           </section>
 
         </div>

@@ -249,9 +249,9 @@ describe("UsersPage — filtering, empty state and pagination", () => {
 
   it("pages the list and reports the real window", async () => {
     const el = await mount();
-    expect(el.textContent).toContain("Showing 1 to 10 of 12 users");
-    await click(button(el, "›"));
-    expect(el.textContent).toContain("Showing 11 to 12 of 12 users");
+    expect(el.textContent).toContain("Showing 1–10 of 12 users");
+    await click(el.querySelector('button[aria-label="Next page"]'));
+    expect(el.textContent).toContain("Showing 11–12 of 12 users");
     expect(rowCount(el)).toBe(2);
   });
 });

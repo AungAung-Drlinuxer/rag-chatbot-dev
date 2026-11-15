@@ -12,9 +12,10 @@
  *
  * The pager is shared by both views and counts from the real (already filtered) row set.
  */
-import { ChevronLeft, ChevronRight, Clock3, Pencil, UserRound } from "lucide-react";
+import { Clock3, Pencil, UserRound } from "lucide-react";
 
 import { priorityMeta, relTime, statusMeta, type Ticket } from "@/features/tickets/model";
+import { PaginationBar } from "@/components/ui/pagination";
 
 export type SortKey = "id" | "subject" | "status" | "priority" | "requester";
 
@@ -156,12 +157,6 @@ export function TicketTable({
 }) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
-
-  const pageNumbers = (() => {
-    if (pageCount <= 5) return Array.from({ length: pageCount }, (_, i) => i + 1);
-    const set = new Set([1, pageCount, page - 1, page, page + 1]);
-    return [...set].filter((n) => n >= 1 && n <= pageCount).sort((a, b) => a - b);
-  })();
 
   return (
     <div>
@@ -324,59 +319,16 @@ export function TicketTable({
         })}
       </ul>
 
-      {/* ---------- range + pager ---------- */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3 sm:px-5">
-        <span className="text-2xs text-muted-foreground">
-          {pageCount <= 1
-            ? `Showing all ${total} ticket${total === 1 ? "" : "s"}`
-            : `Showing ${from}–${to} of ${total} tickets`}
-        </span>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label="Previous page"
-            disabled={page <= 1}
-            onClick={() => onPage(page - 1)}
-            className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronLeft className="size-3.5" aria-hidden />
-          </button>
-
-          {pageNumbers.map((n, i) => {
-            const gap = i > 0 && n - pageNumbers[i - 1] > 1;
-            return (
-              <span key={n} className="flex items-center gap-1">
-                {gap && <span className="px-0.5 text-2xs text-muted-foreground">…</span>}
-                <button
-                  type="button"
-                  onClick={() => onPage(n)}
-                  aria-label={`Page ${n}`}
-                  aria-current={n === page ? "page" : undefined}
-                  className={[
-                    "grid size-8 place-items-center rounded-lg border text-2xs font-medium transition",
-                    n === page
-                      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-                      : "border-[var(--border)] bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {n}
-                </button>
-              </span>
-            );
-          })}
-
-          <button
-            type="button"
-            aria-label="Next page"
-            disabled={page >= pageCount}
-            onClick={() => onPage(page + 1)}
-            className="grid size-8 place-items-center rounded-lg border border-[var(--border)] bg-card transition hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronRight className="size-3.5" aria-hidden />
-          </button>
-        </div>
-      </div>
+      {/* ---------- range + pager (shared footer) ---------- */}
+      <PaginationBar
+        from={from}
+        to={to}
+        total={total}
+        page={page}
+        pageCount={pageCount}
+        onPage={onPage}
+        noun="tickets"
+      />
     </div>
   );
 }

@@ -312,9 +312,13 @@ export default function DomainsPage({
 
           {!loading && !error && domains.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] px-4 py-3 text-2xs text-muted-foreground sm:px-5">
+              {/* No pager: domains are a short, ordered card list — nine rows fit on one
+                  screen and a "page 2" would be invented. The sentence still matches the
+                  other list pages so the same fact is not phrased three ways. */}
               <span>
-                Showing {visible.length} of {domains.length} domain{domains.length === 1 ? "" : "s"}
-                {filtered ? " (filtered)" : ""}
+                {filtered
+                  ? <>Showing <span className="font-semibold text-foreground">{visible.length}</span> of{" "}<span className="font-semibold text-foreground">{domains.length}</span> domains · filtered</>
+                  : <>Showing all <span className="font-semibold text-foreground">{domains.length}</span> domain{domains.length === 1 ? "" : "s"}</>}
               </span>
               <span>
                 {totals.keywords} keyword{totals.keywords === 1 ? "" : "s"} across {totals.active} active domain
