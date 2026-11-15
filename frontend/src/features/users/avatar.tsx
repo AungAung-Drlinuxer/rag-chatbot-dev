@@ -1,3 +1,6 @@
+/* eslint-disable no-restricted-globals -- avatars are binary blobs fetched as object URLs.
+   apiFetch() parses JSON; a photo needs the raw Response (and a 304/404 branch), so these
+   five calls are the documented exception to "no raw fetch in components". */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { BASE, authHeaders } from "@/shared/api/client";

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from app import branding
 
 
@@ -79,7 +77,6 @@ def test_no_hardcoded_product_name_in_outbound_subjects():
     for path in root.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         for line in text.splitlines():
-            if '"Subject"' in line or "send_alert(" in line:
-                if "iTH" in line:
-                    offenders.append(f"{path.name}: {line.strip()}")
+            if ('"Subject"' in line or "send_alert(" in line) and "iTH" in line:
+                offenders.append(f"{path.name}: {line.strip()}")
     assert offenders == [], f"hardcoded brand in outbound mail: {offenders}"

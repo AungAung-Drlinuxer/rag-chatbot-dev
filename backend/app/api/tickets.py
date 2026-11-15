@@ -408,7 +408,7 @@ def improve_description(
         return {"description": improved}
     except HTTPException:
         raise
-    except Exception as exc:  # noqa: BLE001 — the reporter can still type it themselves
+    except Exception as exc:
         logger.warning("description improve failed: %s", exc)
         raise HTTPException(status_code=503, detail=f"improve failed: {type(exc).__name__}")
 
@@ -478,7 +478,7 @@ def create_ticket(
                     original_estimate=req.original_estimate,
                 )
                 field_warnings = extra.get("warnings", []) or []
-            except Exception as exc:  # noqa: BLE001 — the ticket exists; do not fail the call
+            except Exception as exc:
                 logger.warning("apply_issue_fields(%s) failed: %s", ext_key, exc)
                 field_warnings = [f"extra fields not applied: {type(exc).__name__}"]
         if not ext_key:
@@ -857,6 +857,7 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
         # row then kept the old pill even though the move had just succeeded.
         try:
             import time as _time
+
             from app.integrations.jira import fetch_issue_status
             from app.integrations.ticket_status import canonical_from_jira_status, is_terminal
 

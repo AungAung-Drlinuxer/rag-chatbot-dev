@@ -38,9 +38,10 @@ def test_article_sources_counts_each_provider(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *a): return False
         def execute(self, *a, **k): return _Res([
-            ("https://x.atlassian.net/wiki/1", "1"),
-            ("https://x.atlassian.net/wiki/2", "2"),
-            ("", "manual-7"),
+            # source_url, page_id, connection_id, last_synced, last_checked
+            ("https://x.atlassian.net/wiki/1", "1", None, None, None),
+            ("https://x.atlassian.net/wiki/2", "2", None, None, None),
+            ("", "manual-7", None, None, None),
         ])
 
     # Patch the name the endpoint actually calls: knowledge.py imported SessionLocal into

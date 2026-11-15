@@ -7,7 +7,7 @@ two directions — fields go up, attachments come down.
 from __future__ import annotations
 
 import inspect
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -26,7 +26,7 @@ class _Resp:
 
 
 class _FakeClient:
-    calls: list[dict] = []
+    calls: ClassVar[list[dict]] = []
     response: _Resp = _Resp(204, {})
 
     def __init__(self, *a, **kw):

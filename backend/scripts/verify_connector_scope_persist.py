@@ -45,24 +45,24 @@ print("1. sent a scoped turn (servers=['grafana']) on", sid[:8])
 convs = call("GET", "/api/conversations?limit=50")["conversations"]
 mine = [c for c in convs if c["session_id"] == sid]
 print("2. GET /api/conversations ->", json.dumps(mine[0]["connector_scope"]) if mine else "NOT LISTED",
-      "(row found: %s)" % bool(mine))
+      f"(row found: {bool(mine)})")
 
 # --- does the MESSAGES endpoint report it (that is what the page reads on reload)?
-msgs = call("GET", "/api/conversations/%s/messages" % sid)
+msgs = call("GET", f"/api/conversations/{sid}/messages")
 print("3. GET /api/conversations/{id}/messages -> connector_scope =",
       json.dumps(msgs.get("connector_scope")))
 
 # --- PATCH: a bogus name must NOT be stored as a scope that matches nothing
-patched = call("PATCH", "/api/conversations/%s" % sid, {"connector_scope": ["bogus", "GRAFANA"]})
+patched = call("PATCH", f"/api/conversations/{sid}", {"connector_scope": ["bogus", "GRAFANA"]})
 print("4. PATCH connector_scope=['bogus','GRAFANA'] ->", json.dumps(patched))
 
-back = call("GET", "/api/conversations/%s/messages" % sid)["connector_scope"]
+back = call("GET", f"/api/conversations/{sid}/messages")["connector_scope"]
 print("5. read back ->", json.dumps(back))
 
 # --- widening back to everything
-widen = call("PATCH", "/api/conversations/%s" % sid, {"connector_scope": []})
+widen = call("PATCH", f"/api/conversations/{sid}", {"connector_scope": []})
 print("6. PATCH connector_scope=[] (widen) ->", json.dumps(widen))
-print("7. read back ->", json.dumps(call("GET", "/api/conversations/%s/messages" % sid)["connector_scope"]))
+print("7. read back ->", json.dumps(call("GET", f"/api/conversations/{sid}/messages")["connector_scope"]))
 
 print()
 ok = (bool(mine) and mine[0]["connector_scope"] == ["grafana"]
@@ -70,10 +70,10 @@ ok = (bool(mine) and mine[0]["connector_scope"] == ["grafana"]
       and patched.get("connector_scope") == ["grafana"]        # bogus dropped, case folded
       and back == ["grafana"]
       and widen.get("connector_scope") == []                   # [] = unscoped, stored as NULL
-      and call("GET", "/api/conversations/%s/messages" % sid)["connector_scope"] == [])
+      and call("GET", f"/api/conversations/{sid}/messages")["connector_scope"] == [])
 print("PASS: the scope is written on the turn, read back by both endpoints, validated on"
       " write, and clears back to unscoped." if ok else "FAIL")
 
 # clean up the probe conversation so it does not sit in the real sidebar
-d = call("DELETE", "/api/conversations/%s" % sid)
+d = call("DELETE", f"/api/conversations/{sid}")
 print("cleanup:", json.dumps(d)[:80])

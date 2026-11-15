@@ -12,15 +12,15 @@ from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.conversations import router as conversations_router
 from app.api.dashboard import router as dashboard_router
+from app.api.escalations import router as escalations_router
 from app.api.health import router as health_router
 from app.api.knowledge import router as knowledge_router
-from app.api.escalations import router as escalations_router
 from app.api.notifications import router as notifications_router
 from app.api.observability import router as observability_router
 from app.api.settings import router as settings_router
 from app.api.setup import router as setup_router
-from app.api.tickets import router as tickets_router
 from app.api.ticket_draft import router as ticket_draft_router
+from app.api.tickets import router as tickets_router
 from app.api.users import router as users_router
 from app.config import SETTINGS
 from app.observability.telemetry import setup_telemetry

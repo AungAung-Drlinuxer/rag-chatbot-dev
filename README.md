@@ -40,7 +40,7 @@ backend/            FastAPI app, RAG pipeline, workers, migrations, tests
 frontend/           React 18 + Vite + Tailwind SPA (served by nginx)
 services/rerank/    CPU cross-encoder service (bge-reranker-base over HTTP)
 infra/
-  k8s-dev/          the complete set of manifests (11 files, apply order = filename)
+  k8s-dev/          the complete set of manifests (12 files, apply order = filename)
   images/ollama/    Dockerfile that bakes the embedding model into the Ollama image
   scripts/          render.py · create-secrets.sh · build-images.sh · deploy.sh
   monitoring/       Grafana dashboard JSON
@@ -58,7 +58,7 @@ docs/               deployment, operations, architecture, course material
 - **Roles & domains** — LDAP/AD sign-in, group→role mapping, per-role domain scoping.
 - **Ops surface** — Overview dashboard (KPIs, cost, latency, guardrail events), Conversations,
   Audit log, Settings for integrations, AI service and SMTP.
-- **Deployable anywhere** — all ten components ship as manifests; images are built from this
+- **Deployable anywhere** — every component ships as a manifest; images are built from this
   repo, so an air-gapped cluster needs no external model download.
 
 ## Versions

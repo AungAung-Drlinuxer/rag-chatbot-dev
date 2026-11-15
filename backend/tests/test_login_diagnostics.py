@@ -10,7 +10,7 @@ client = TestClient(app)
 
 
 def test_unknown_user_is_named_in_the_error(monkeypatch) -> None:
-    monkeypatch.setattr(ldap_auth, "ldap_cfg", lambda: {})  # no directory configured
+    monkeypatch.setattr(ldap_auth, "ldap_cfg", dict)  # no directory configured
     r = client.post("/api/auth/login", json={"username": "nobody@example.com", "password": "x"})
     assert r.status_code == 401
     detail = r.json()["detail"]
@@ -30,5 +30,5 @@ def test_wrong_password_stays_generic(monkeypatch) -> None:
 
 
 def test_authenticate_reports_unknown_when_no_directory(monkeypatch) -> None:
-    monkeypatch.setattr(ldap_auth, "ldap_cfg", lambda: {})
+    monkeypatch.setattr(ldap_auth, "ldap_cfg", dict)
     assert ldap_auth.authenticate("ghost", "pw") == "unknown:ghost"

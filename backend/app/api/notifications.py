@@ -46,13 +46,13 @@ def _prefs(user: str) -> dict:
             row = s.execute(
                 text("SELECT prefs FROM user_settings WHERE username = :u"), {"u": user}
             ).scalar()
-    except Exception:  # noqa: BLE001 - a missing row is the normal first-visit case
+    except Exception:
         row = None
     if isinstance(row, str):
         try:
             import json
             row = json.loads(row)
-        except Exception:  # noqa: BLE001
+        except Exception:
             row = None
     out = dict(PREF_DEFAULTS)
     if isinstance(row, dict):
@@ -87,7 +87,7 @@ def _dismissed(user: str) -> set[str]:
                 text("SELECT item_id FROM notification_dismissals WHERE username = :u"),
                 {"u": user},
             ).scalars().all()
-    except Exception as exc:  # noqa: BLE001 - table may not exist on a very old schema
+    except Exception as exc:
         logger.warning("notification_dismissals unavailable: %s", exc)
         return set()
     return set(rows)

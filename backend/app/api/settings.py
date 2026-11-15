@@ -24,13 +24,12 @@ def validate_ldap_payload(data: dict) -> dict:
     """
     out = dict(data)
     flt = out.get("user_filter")
-    if isinstance(flt, str) and flt.strip() not in ("", "__CLEAR__"):
-        if "{username}" not in flt:
-            raise HTTPException(
-                status_code=400,
-                detail="user_filter must contain the {username} placeholder, "
-                       "e.g. (sAMAccountName={username})",
-            )
+    if isinstance(flt, str) and flt.strip() not in ("", "__CLEAR__") and "{username}" not in flt:
+        raise HTTPException(
+            status_code=400,
+            detail="user_filter must contain the {username} placeholder, "
+                   "e.g. (sAMAccountName={username})",
+        )
     port = out.get("port")
     if isinstance(port, str) and port.strip() not in ("", "__CLEAR__"):
         if not port.strip().isdigit():
@@ -345,9 +344,16 @@ def _reload_after_change(key: str) -> None:
 
 @router.get("/settings/retention")
 def get_retention(user: str = Depends(require_role("admin"))) -> dict:
-    from app.retention import ALLOWED_DAYS, NIGHTLY_LABEL, NIGHTLY_UTC_HOUR, get_policy, last_run, scope_counts
-
-    from app.retention import oldest, totals
+    from app.retention import (
+        ALLOWED_DAYS,
+        NIGHTLY_LABEL,
+        NIGHTLY_UTC_HOUR,
+        get_policy,
+        last_run,
+        oldest,
+        scope_counts,
+        totals,
+    )
 
     policy = get_policy()
     return {
@@ -363,7 +369,7 @@ def get_retention(user: str = Depends(require_role("admin"))) -> dict:
 
 @router.put("/settings/retention")
 def put_retention(payload: dict, user: str = Depends(require_role("admin"))) -> dict:
-    from app.retention import get_policy, scope_counts, set_policy
+    from app.retention import scope_counts, set_policy
 
     try:
         policy = set_policy(payload.get("conversations_days"), payload.get("audit_days"))

@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-import app.auth.rbac as rbac
+from app.auth import rbac
 from app.auth.deps import get_current_user
 from app.main import app
 

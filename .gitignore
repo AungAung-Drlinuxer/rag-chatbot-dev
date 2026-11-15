@@ -50,3 +50,9 @@ docs/qa/
 # Rendered manifests + per-cluster deploy values (never commit a credential-bearing env)
 infra/.rendered/
 infra/env
+
+# Local scratch: screenshots and one-off scripts, never part of the app
+scratch/
+
+# render.py output for a specific cluster
+infra/.rendered/

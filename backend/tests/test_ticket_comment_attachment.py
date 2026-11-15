@@ -12,7 +12,7 @@ The upload path is the one with a non-obvious requirement: Jira's multipart endp
 from __future__ import annotations
 
 import inspect
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -31,9 +31,9 @@ class _Resp:
 
 
 class _FakeClient:
-    calls: list[dict] = []
+    calls: ClassVar[list[dict]] = []
     response: _Resp
-    get_payload: list = []
+    get_payload: ClassVar[list] = []
 
     def __init__(self, *a, **kw):
         self.headers = kw.get("headers") or {}

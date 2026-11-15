@@ -21,7 +21,7 @@ def db():
     try:
         with SessionLocal() as s:
             s.execute(__import__("sqlalchemy").text("SELECT 1"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         pytest.skip(f"database unavailable: {exc}")
     return SessionLocal
 

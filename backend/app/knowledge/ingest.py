@@ -315,7 +315,7 @@ def sync_state() -> dict:
                         return {**run, "state": "stale", "stale": True,
                                 "stale_after_seconds": int(_STALE_AFTER)}
                 return run
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("sync state unreadable: %s", exc)
     return {"state": "idle"}
 
@@ -329,7 +329,7 @@ def _write_sync_state(payload: dict) -> None:
             kv.value = json.dumps(payload)
             s.add(kv)
             s.commit()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("sync state write skipped (%s): %s", type(exc).__name__, exc)
 
 
@@ -346,7 +346,7 @@ def sync_all(updated_by: str | None = None) -> dict:
     _write_sync_state({"state": "running", "started_at": started, "by": updated_by or "scheduler"})
     try:
         return _sync_all_locked(updated_by, started)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _write_sync_state({"state": "error", "started_at": started, "by": updated_by or "scheduler",
                            "error": str(exc)[:300], "finished_at": time.time()})
         raise

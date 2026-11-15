@@ -72,7 +72,7 @@ def test_matrix_endpoint_lists_only_the_three_roles(monkeypatch):
     """
     from fastapi.testclient import TestClient
 
-    import app.auth.rbac as rbac
+    from app.auth import rbac
     from app.auth.deps import get_current_user
     from app.main import app
 

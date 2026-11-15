@@ -349,8 +349,8 @@ def decide_approval(approval_id: str, payload: dict, user: str = Depends(get_cur
 
     # (2) email the requester
     try:
-        from app.notifier import notify_ticket_created, send_alert, user_email
         from app.branding import mail_prefix
+        from app.notifier import notify_ticket_created, send_alert, user_email
         if decision == "approved" and ticket_id:
             notify_ticket_created(requester, ticket_id, (res.get("question") or "")[:120])
         elif decision == "rejected":

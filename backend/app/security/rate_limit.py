@@ -158,7 +158,7 @@ def limit(rule: str, by_ip: bool = False):
         async def awrapper(*args, **kwargs):
             request = kwargs.get("request") or next(
                 (a for a in args if isinstance(a, Request)), None)
-            _, retry, key = _resolve_key(rule, by_ip, request, kwargs, args)
+            _, _retry, key = _resolve_key(rule, by_ip, request, kwargs, args)
             allowed, retry_after = check_limit(rule, key)
             if not allowed:
                 return _too_many(rule, retry_after)
@@ -168,7 +168,7 @@ def limit(rule: str, by_ip: bool = False):
         def swrapper(*args, **kwargs):
             request = kwargs.get("request") or next(
                 (a for a in args if isinstance(a, Request)), None)
-            _, retry, key = _resolve_key(rule, by_ip, request, kwargs, args)
+            _, _retry, key = _resolve_key(rule, by_ip, request, kwargs, args)
             allowed, retry_after = check_limit(rule, key)
             if not allowed:
                 return _too_many(rule, retry_after)

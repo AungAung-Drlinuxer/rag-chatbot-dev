@@ -16,7 +16,7 @@ Rules that matter more than the model:
 import json
 import logging
 import re
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -40,8 +40,8 @@ class TicketDraftRequest(BaseModel):
 
 
 def _live_domains() -> list[dict[str, str]]:
-    from app.persistence.models import ClassifierDomain
     from app.persistence.database import SessionLocal
+    from app.persistence.models import ClassifierDomain
 
     try:
         with SessionLocal() as s:
@@ -52,7 +52,7 @@ def _live_domains() -> list[dict[str, str]]:
                 .all()
             )
             return [{"key": d.domain_key, "label": d.display_name} for d in rows]
-    except Exception as exc:  # noqa: BLE001 — a draft is still useful without the dropdown
+    except Exception as exc:
         logger.warning("ticket draft: domain list unavailable: %s", exc)
         return []
 
@@ -62,7 +62,7 @@ def _extract_json(text: str) -> dict[str, Any] | None:
     raw = (text or "").strip()
     if not raw:
         return None
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.S)
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if fence:
         raw = fence.group(1)
     else:
@@ -72,7 +72,7 @@ def _extract_json(text: str) -> dict[str, Any] | None:
     try:
         data = json.loads(raw)
         return data if isinstance(data, dict) else None
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -86,7 +86,7 @@ def _clean_date(value: Any) -> str | None:
         d = date.fromisoformat(text)
     except ValueError:
         return None
-    today = date.today()
+    today = datetime.now(UTC).date()
     if d < today or d > today + timedelta(days=365):
         return None
     return d.isoformat()
@@ -110,7 +110,7 @@ def _clean_labels(value: Any) -> list[str]:
     return out[:3]
 
 
-_ESTIMATE = re.compile(r"^\s*((\d+)\s*([wdhm]))(\s+\d+\s*[wdhm])*\s*$", re.I)
+_ESTIMATE = re.compile(r"^\s*((\d+)\s*([wdhm]))(\s+\d+\s*[wdhm])*\s*$", re.IGNORECASE)
 
 
 def _clean_estimate(value: Any) -> str | None:
@@ -187,7 +187,7 @@ def draft_ticket(
             raise HTTPException(status_code=503, detail="The model did not return a blueprint — try again.")
     except HTTPException:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("ticket draft failed: %s", exc)
         raise HTTPException(status_code=503, detail=f"Draft failed: {type(exc).__name__}")
 

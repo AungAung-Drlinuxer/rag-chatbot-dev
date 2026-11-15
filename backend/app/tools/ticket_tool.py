@@ -51,11 +51,7 @@ def detect_ticket_status_intent(query: str) -> bool:
     q = query.lower()
     if _TICKET_ID.search(query):
         return True
-    if any(w in q for w in _STATUS_QUERY_WORDS) and any(
-        w in q for w in ("ticket", "request", "issue", "report", "jira", "my")
-    ):
-        return True
-    return False
+    return bool(any(w in q for w in _STATUS_QUERY_WORDS) and any(w in q for w in ("ticket", "request", "issue", "report", "jira", "my")))
 
 
 def detect_ticket_create_intent(query: str) -> bool:
@@ -68,9 +64,7 @@ def detect_ticket_create_intent(query: str) -> bool:
         return True
     if any(c in q for c in _CREATE_WORDS) and "ticket" in q:
         return True
-    if any(c in q for c in _CREATE_WORDS) and any(w in q for w in ("issue", "problem", "bug", "fault", "error", "incident")):
-        return True
-    return False
+    return bool(any(c in q for c in _CREATE_WORDS) and any(w in q for w in ("issue", "problem", "bug", "fault", "error", "incident")))
 
 
 def detect_ticket_intent(query: str) -> bool:

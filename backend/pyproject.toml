@@ -71,7 +71,14 @@ target-version = "py311"
 [tool.ruff.lint]
 # BLE001: intentional fail-safe / fail-open error handling across the app (broad
 #         `except Exception` is deliberate so RAG/persistence/telemetry never breaks a stream).
-ignore = ["BLE001"]
+ignore = [
+    "BLE001",  # broad except: fail-open by design across RAG/persistence/telemetry
+    "B008",    # FastAPI's Depends()/File()/Body() in defaults is the framework idiom
+    "ISC004",  # implicit concatenation is how the multi-line SQL strings are written
+    "S110",    # try/except/pass: best-effort cache/telemetry paths, logged where it matters
+    "S112",    # try/except/continue: one bad row must not abort a sync
+    "RUF100",  # unused-noqa churn after the ignore list above
+]
 
 [dependency-groups]
 dev = [

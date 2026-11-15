@@ -1,14 +1,19 @@
 # Deploying to a new cluster
 
-Everything the app needs is in this repository: eleven manifests, four images, one script.
+Everything the app needs is in this repository: twelve manifests, four images, one script.
 No state lives outside the namespace, so a new cluster is a clean install, not a migration.
 
 ---
 
 ## 0. Bare cluster → working install (one command)
 
+The four images must exist in `REGISTRY` **before** the install: the manifests reference tags,
+they do not build them. Build and push first (§5), or point `REGISTRY` at a registry that
+already holds them.
+
 ```bash
-cp infra/env.example infra/env     # set DOMAIN, NAMESPACE, REGISTRY (or pass them as env vars)
+infra/scripts/build-images.sh --all   # backend, frontend, rerank-svc, ollama (once per release)
+cp infra/env.example infra/env        # set DOMAIN, NAMESPACE, REGISTRY (or pass them as env vars)
 infra/scripts/install.sh
 ```
 
@@ -152,7 +157,7 @@ Order, and why it is this order:
 1. **namespace → config → database** — the ConfigMap is what every later pod mounts.
 2. **wait for `postgres-dev`** — the operator needs ~1 minute; the schema job will fail if it
    starts earlier.
-3. **`db-init` Job** — `python -m app.bootstrap --init`: pgvector, 31 tables, checkpoint
+3. **`db-init` Job** — `python -m app.bootstrap --init`: pgvector, 36 tables, checkpoint
    tables, ownership, verification. Idempotent, so re-running is safe.
 4. **redis, ollama, rerank, workers** — dependencies of chat.
 5. **backend, frontend** — rolled out with `rollout status` waited on.
@@ -207,7 +212,7 @@ In the UI, in this order:
 
 ```bash
 # code already built and pushed as a new tag
-sed -i "s/^BACKEND_TAG=.*/BACKEND_TAG=dev-1.0.60/" infra/env
+sed -i "s/^BACKEND_TAG=.*/BACKEND_TAG=<new-tag>/" infra/env
 python3 infra/scripts/render.py && kubectl apply -f infra/.rendered/30-backend.yaml
 kubectl -n "$NAMESPACE" rollout status deploy/backend --timeout=300s
 ```

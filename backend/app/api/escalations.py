@@ -105,7 +105,7 @@ def _defaults() -> tuple[str, str, list[str], bool]:
             meta = jira_fields.create_meta(project)
             names = [t["name"] for t in meta["issue_types"] if not t.get("subtask")]
             issue_type = names[0] if names else issue_type
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.info("issue-type lookup failed (%s): %s", type(exc).__name__, exc)
     return project, issue_type, jira_fields.priorities(), jira_fields.configured()
 
@@ -123,7 +123,7 @@ def fields(project: str = Query(default=""), user: str = Depends(get_current_use
             data = jira_get("/rest/api/3/project/search", {"maxResults": 50})
             projects = [{"key": p.get("key"), "name": p.get("name")}
                         for p in (data or {}).get("values", []) if p.get("key")]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.info("project list failed (%s): %s", type(exc).__name__, exc)
 
     default_project, default_type, priorities, _ = _defaults()
@@ -135,7 +135,7 @@ def fields(project: str = Query(default=""), user: str = Depends(get_current_use
             meta = jira_fields.create_meta(target)
             issue_types = [t for t in meta["issue_types"] if not t.get("subtask")]
             required = meta.get("required_fields") or []
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.info("createmeta failed (%s): %s", type(exc).__name__, exc)
 
     return {
@@ -323,7 +323,7 @@ def submit(req: SubmitRequest, user: str = Depends(_require_create)) -> dict:
                 meta=json.dumps({"decision": "escalation", "jira_key": key,
                                  "jira_link": link, "draft_id": row.id}),
             ))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("%s suppressed: %s", type(exc).__name__, exc)
 
         try:
@@ -341,7 +341,7 @@ def submit(req: SubmitRequest, user: str = Depends(_require_create)) -> dict:
         from app.notifier import notify_ticket_created
 
         notify_ticket_created(user, key, submitted["summary"][:120])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("%s suppressed: %s", type(exc).__name__, exc)
 
     return {"jira_key": key, "link": link, "duplicate": False, "status": "submitted"}

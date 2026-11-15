@@ -71,6 +71,22 @@ npm run dev          # http://127.0.0.1:1420 — strict port, matches the Tauri 
 Vite proxies `/api` to `127.0.0.1:8000`, so the browser talks same-origin exactly like the
 cluster does.
 
+## 4b. Reranking on a laptop (optional)
+
+The backend defaults to `RERANK_MODE=local` (in-process cross-encoder) and the cluster sets
+`RERANK_MODE=remote` with a `RERANK_URL` pointing at `rerank-svc`. A laptop has neither a
+baked model nor that service, so either:
+
+```bash
+export RERANK_ENABLED=false      # vector order only — fine for UI work
+# or run the service next to the API:
+#   cd services/rerank && uvicorn app:app --port 8080
+export RERANK_MODE=remote RERANK_URL=http://127.0.0.1:8080
+```
+
+Rerank failure is never fatal: chat falls back to vector order and increments
+`rerank_failures_total`.
+
 ## 5. Make it answer
 
 Nothing is seeded. An empty install starts, serves the UI and answers "I don't know".

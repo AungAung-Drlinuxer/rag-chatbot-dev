@@ -295,7 +295,7 @@ export default function AuditsPage() {
   }
 
   async function printReportSheet() {
-    let all: ReturnType<typeof toReportRows> = [];
+    let all: ReturnType<typeof toReportRows>;
     try {
       all = (await fetchAllMatching()).rows;
     } catch {

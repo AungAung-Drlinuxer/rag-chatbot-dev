@@ -35,7 +35,7 @@ def test_rejects_windows_the_ui_does_not_offer(bad):
 
 def test_accepts_forever_for_both_scopes(monkeypatch):
     """`None` must be storable — it is the safe default, not an error."""
-    import app.retention as retention
+    from app import retention
 
     monkeypatch.setattr(retention, "_session", lambda: _NoopSession())
     monkeypatch.setattr(retention, "get_policy", lambda: {"conversations_days": None, "audit_days": None})

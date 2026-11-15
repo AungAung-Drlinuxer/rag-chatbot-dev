@@ -112,9 +112,9 @@ class _quiet_span:
     def __exit__(self, exc_type, exc, tb):
         try:
             return self._cm.__exit__(exc_type, exc, tb)
-        except ValueError as exc:
-            # openetelemetry.context: Token was created in a different Context
-            if "was created in a different Context" in str(exc):
+        except ValueError as err:
+            # opentelemetry.context: Token was created in a different Context
+            if "was created in a different Context" in str(err):
                 logger.debug("span context detach skipped across asyncio context switch")
                 return False
             raise

@@ -4,6 +4,9 @@
 #   cp infra/env.example infra/env && $EDITOR infra/env     # domain, namespace, registry
 #   infra/scripts/install.sh                                # everything, end to end
 #
+# Before running: the four images must already be in REGISTRY — these manifests reference
+# tags, they do not build them. Use infra/scripts/build-images.sh --all once per release.
+#
 # What it adds on top of deploy.sh:
 #   * installs the cluster prerequisites it needs (CloudNativePG, ingress-nginx) instead of
 #     refusing to run when they are missing;

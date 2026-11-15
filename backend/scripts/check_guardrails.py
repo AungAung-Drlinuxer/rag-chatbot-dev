@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.security.guardrails import check_input  # noqa: E402
+from app.security.guardrails import check_input
 
 # (message, expected action, expected type) — type is None when action is "pass".
 CASES: list[tuple[str, str, str | None]] = [

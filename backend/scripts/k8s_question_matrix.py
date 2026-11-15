@@ -95,7 +95,7 @@ def shape(a: str) -> str:
     s = a.strip()
     if not s:
         return "empty"
-    if s.startswith("[") or s.startswith("{"):
+    if s.startswith(("[", "{")):
         return "RAW-JSON"
     if s.count("|") >= 4 and "---" in s:
         return "table"

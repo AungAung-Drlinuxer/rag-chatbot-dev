@@ -54,7 +54,7 @@ def priorities() -> list[str]:
 
     try:
         return _cached("priorities", fetch).get("priorities") or list(FALLBACK_PRIORITIES)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.info("priority lookup failed (%s): %s", type(exc).__name__, exc)
         return list(FALLBACK_PRIORITIES)
 
@@ -126,7 +126,7 @@ def validate(fields: dict) -> list[str]:
     if project:
         try:
             meta = create_meta(project)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             errors.append(f"Could not read Jira metadata for {project}: {exc}")
             return errors
 

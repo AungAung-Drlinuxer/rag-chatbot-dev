@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger("directory")
 
@@ -133,9 +133,8 @@ def plan(rows: list[dict], active_names: set[str], disabled_names: set[str],
 
     for name in disabled_names:
         row = find(name)
-        if row is not None and row.get("ldap_dn"):
-            if (row.get("state") or "active").lower() != "suspended":
-                suspend.append(row["username"])
+        if row is not None and row.get("ldap_dn") and (row.get("state") or "active").lower() != "suspended":
+            suspend.append(row["username"])
 
     linked = [r for r in rows if r.get("ldap_dn")]
     candidates = [
@@ -272,4 +271,4 @@ def maybe_auto_sync() -> dict | None:
 
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

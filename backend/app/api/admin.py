@@ -468,9 +468,9 @@ def suggest_domain_profile(domain_id: int,
             _t("SELECT title FROM kb_meta WHERE lower(domain) = :k "
                "AND title IS NOT NULL ORDER BY last_synced DESC LIMIT 25"),
             {"k": d.domain_key}).mappings().all()]
-        payload = dict(key=d.domain_key, name=d.display_name,
-                       description=d.description or "", keywords=d.keywords or [],
-                       titles=titles)
+        payload = {"key": d.domain_key, "name": d.display_name,
+                       "description": d.description or "", "keywords": d.keywords or [],
+                       "titles": titles}
 
     out = suggest_profile(**payload)
     if out is None:

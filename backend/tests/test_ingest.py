@@ -111,7 +111,7 @@ def test_prune_orphans_leaves_scopes_the_sync_did_not_load(monkeypatch):
     Narrowing a site's space list used to make every other space look deleted, and the prune
     then wiped the whole knowledge base down to whatever the remaining space held.
     """
-    session, vectors = _wire(monkeypatch, ["1", "2", "3"])
+    session, _vectors = _wire(monkeypatch, ["1", "2", "3"])
 
     removed = _prune_orphans({"3"}, scopes={(9, "AEC")})
 
@@ -121,7 +121,7 @@ def test_prune_orphans_leaves_scopes_the_sync_did_not_load(monkeypatch):
 
 def test_prune_orphans_spares_another_space_entirely(monkeypatch):
     session = _Session(["1"], connection_id=9, space_key="AEC")
-    other = _Session(["99"], connection_id=9, space_key="IHKB")
+    _Session(["99"], connection_id=9, space_key="IHKB")
     vector_hits: list[str] = []
     monkeypatch.setattr(ingest, "SessionLocal", lambda: session)
     monkeypatch.setattr(ingest, "_delete_vectors", vector_hits.append)

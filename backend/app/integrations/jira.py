@@ -24,8 +24,8 @@ _CREATE_PATH = "/secure/CreateIssueDetails!init.jspa"
 # shows "configured" while escalate() still saw empty env vars and silently
 # skipped Jira (tickets saved local-only with jira_key=NULL).
 import time as _time
-from contextvars import ContextVar
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ def _jira_cfg() -> dict:
             conns = effective_connections("jira")
             if conns:
                 out = _conn_cfg(conns[0])
-        except Exception as exc:  # noqa: BLE001 — a lookup failure must not break the caller
+        except Exception as exc:
             logger.debug("jira site fallback skipped: %s", exc)
 
     _JIRA_CFG_CACHE, _JIRA_CFG_AT = out, now
@@ -361,12 +361,12 @@ def create_issue(*, summary: str, description: str, project: str | None = None,
                 try:
                     errs = (r.json() or {}).get("errors") or {}
                     detail = "; ".join(f"{k}: {v}" for k, v in errs.items()) or r.text[:300]
-                except Exception:  # noqa: BLE001
+                except Exception:
                     detail = r.text[:300]
                 return {"jira_key": None, "link": "", "mode": "rest",
                         "error": f"Jira rejected the ticket ({r.status_code}): {detail}"}
             body = r.json()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"jira_key": None, "link": "", "mode": "rest",
                 "error": f"{type(exc).__name__}: {exc}"}
 
@@ -434,13 +434,13 @@ def apply_issue_fields(
             try:
                 errs = (r.json() or {}).get("errors") or {}
                 detail = "; ".join(f"{k}: {v}" for k, v in errs.items()) or r.text[:200]
-            except Exception:  # noqa: BLE001
+            except Exception:
                 detail = r.text[:200]
             return False, detail
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return False, f"{type(exc).__name__}: {exc}"
 
-    ok, detail = _put(wanted)
+    ok, _detail = _put(wanted)
     if ok:
         applied = list(wanted)
     else:
@@ -945,7 +945,7 @@ def add_comment(issue_key: str, body: str, internal: bool = False) -> dict:
             for role in internal_roles():
                 r = client.post(
                     _issue_url(f"/rest/api/3/issue/{issue_key}/comment"),
-                    json={**{"body": adf}, "visibility": {"type": "role", "value": role}},
+                    json={"body": adf, "visibility": {"type": "role", "value": role}},
                 )
                 if r.status_code in (200, 201):
                     return {"ok": True, "id": (r.json() or {}).get("id"),

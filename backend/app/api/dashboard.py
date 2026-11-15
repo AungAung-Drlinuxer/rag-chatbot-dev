@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -359,7 +359,7 @@ def dashboard_domains(user: str = Depends(get_current_user)) -> dict:
                     "percentage": round(100.0 * int(loose) / total, 1) if total else 0.0,
                 }
             )
-    except Exception as exc:  # noqa: BLE001 - the chart must still draw
+    except Exception as exc:
         logger.warning("dashboard/domains: unrouted count failed: %s", exc)
 
     return {"domains": domains, "total": total}
@@ -768,9 +768,9 @@ def normalise_panels(panels: list[dict] | list[PanelSpec]) -> list[dict]:
         title = str(p.get("title") or "").strip()[:120]
         options = p.get("options") if isinstance(p.get("options"), dict) else {}
 
-        def _int(name: str, default: int, lo: int, hi: int) -> int:
+        def _int(name: str, default: int, lo: int, hi: int, _p=p) -> int:
             try:
-                return max(lo, min(hi, int(p.get(name, default))))
+                return max(lo, min(hi, int(_p.get(name, default))))
             except (TypeError, ValueError):
                 return default
 
@@ -807,13 +807,13 @@ def dashboard_rag(user: str = Depends(get_current_user)) -> dict:
         row = _rows("SELECT count(*) AS n, max(last_checked) AS last FROM kb_meta")
         out["pages"] = int(row[0]["n"]) if row else 0
         out["last_sync"] = row[0]["last"].isoformat() if row and row[0]["last"] else None
-    except Exception as exc:  # noqa: BLE001 - a dashboard panel must not 500 the page
+    except Exception as exc:
         logger.warning("dashboard/rag: kb_meta count failed: %s", exc)
 
     try:
         row = _rows("SELECT count(*) AS n FROM langchain_pg_embedding")
         out["chunks"] = int(row[0]["n"]) if row else 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("dashboard/rag: embedding count failed: %s", exc)
 
     try:
@@ -834,7 +834,7 @@ def dashboard_rag(user: str = Depends(get_current_user)) -> dict:
                 "pass_pct": round(100.0 * answered / judged, 1) if judged else None,
                 "avg_confidence": round(float(row[0]["avg_conf"]), 3) if row[0]["avg_conf"] is not None else None,
             }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("dashboard/rag: gate query failed: %s", exc)
 
     try:
@@ -847,7 +847,7 @@ def dashboard_rag(user: str = Depends(get_current_user)) -> dict:
             "AND created_at >= now() - interval '7 days'"
         )
         out["blocks_7d"] = int(row[0]["n"]) if row else 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("dashboard/rag: guardrail count failed: %s", exc)
 
     return out

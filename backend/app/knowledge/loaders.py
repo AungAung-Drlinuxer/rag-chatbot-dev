@@ -9,7 +9,6 @@ import os
 
 from app.config import SETTINGS
 from app.integrations.confluence import fetch_space as _fetch_confluence
-from app.integrations.confluence import space_keys as _confluence_space_keys
 
 logger = logging.getLogger("knowledge.loaders")
 

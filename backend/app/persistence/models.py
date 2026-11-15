@@ -10,7 +10,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
-    text,
     BigInteger,
     Boolean,
     DateTime,
@@ -25,6 +24,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column

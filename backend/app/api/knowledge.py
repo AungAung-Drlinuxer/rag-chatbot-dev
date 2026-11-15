@@ -81,7 +81,7 @@ def articles_sync(user: str = Depends(get_current_user),
 
         task = sync_kb.delay(user)
         return {"queued": True, "task_id": task.id, "runner": "celery"}
-    except Exception as exc:  # noqa: BLE001 — broker down: still never block for 90s
+    except Exception as exc:
         logging.getLogger("knowledge.sync").warning(
             "celery enqueue failed (%s); running the sync in a thread", exc
         )
@@ -91,7 +91,7 @@ def articles_sync(user: str = Depends(get_current_user),
                 sync_all(updated_by=user)
             except SyncBusy:
                 pass
-            except Exception:  # noqa: BLE001 — the run-state row records the failure
+            except Exception:
                 logging.getLogger("knowledge.sync").exception("background sync failed")
 
         threading.Thread(target=_run, name="kb-sync", daemon=True).start()
@@ -241,7 +241,6 @@ def article_sources(user: str = Depends(get_current_user)) -> dict:
     the number a fact.
     """
     from sqlalchemy import text
-
 
     from app.integrations.connections import list_connections
 

@@ -4,8 +4,7 @@ The context block is now fenced and labelled ("=== KNOWLEDGE BASE CONTEXT (DATA 
 so these assertions read the current shape: a boundary line, the question, numbered
 article blocks, and the truncation notice at the tail.
 """
-import app.runtime as runtime
-
+from app import runtime
 from app.config import SETTINGS
 from app.rag.retrieval import build_context
 

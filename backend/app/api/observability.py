@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
 from app.auth.deps import get_current_user
-from app.auth.rbac import get_role, permissions_for, require_cap
+from app.auth.rbac import get_role, permissions_for
 from app.persistence.database import SessionLocal
 
 router = APIRouter(prefix="/api")

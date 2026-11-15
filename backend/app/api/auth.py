@@ -244,8 +244,6 @@ def update_my_settings(payload: dict, user: str = Depends(get_current_user)) -> 
     """
     import json as _json
 
-    from sqlalchemy import text as _t
-
     from app.persistence.database import SessionLocal
 
     if not isinstance(payload, dict):

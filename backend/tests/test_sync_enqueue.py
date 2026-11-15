@@ -74,7 +74,7 @@ def test_a_running_sync_is_refused(monkeypatch) -> None:
 def test_two_concurrent_runs_are_serialised(monkeypatch) -> None:
     from app.knowledge import ingest
 
-    monkeypatch.setattr(ingest, "load_all", lambda: [])
+    monkeypatch.setattr(ingest, "load_all", list)
     monkeypatch.setattr(ingest, "_write_sync_state", lambda payload: None)
     monkeypatch.setattr(ingest, "register_domains", lambda domains: 0)
 

@@ -140,7 +140,7 @@ def test_start_login_builds_a_pkce_authorize_request():
 
 
 def test_full_exchange_yields_verified_claims(fake_idp):
-    url, params = _begin()
+    _url, params = _begin()
     state = params["state"][0]
     fake_idp["nonce"] = sso._STATES[state]["nonce"]
 

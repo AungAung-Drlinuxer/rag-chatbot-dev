@@ -43,7 +43,7 @@ Schema ကို ဒီနေရာမှာ အပြည့်အစုံ သ�
 | Orchestration | `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | LangGraph state |
 | Graph RAG | `semantica_entities`, `semantica_relations` | (optional) knowledge graph |
 
-စုစုပေါင်း **31 tables / 48 indexes**၊ vector index က
+စုစုပေါင်း **36 tables / 60 indexes**၊ vector index က
 `langchain_pg_embedding_hnsw_idx` (`vector_cosine_ops`, m=16, ef_construction=64)။
 
 ---

@@ -51,7 +51,7 @@ _SECTION_TITLES = [
 # --------------------------------------------------------------------------- redaction
 def _redaction_patterns() -> list[tuple[re.Pattern[str], str]]:
     """Reuse the chat guardrail patterns so the two cannot drift apart."""
-    from app.security.guardrails import _PII_PATTERNS  # noqa: PLC0415 — avoids a cycle
+    from app.security.guardrails import _PII_PATTERNS
 
     extra = [
         (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "email"),
@@ -270,7 +270,7 @@ def generate_draft(messages: list[dict]) -> tuple[dict, str]:
                 if fields["summary"]:
                     return fields, "llm"
             logger.info("draft: model returned no usable JSON, using the fallback")
-    except Exception as exc:  # noqa: BLE001 — a draft must exist even when the LLM is down
+    except Exception as exc:
         logger.warning("draft generation failed (%s): %s", type(exc).__name__, exc)
 
     return fallback_draft(relevant), "fallback"

@@ -4,8 +4,7 @@ The default is no longer read from SETTINGS — the runtime registry (system_set
 editable from the admin RAG panel) is the source of truth, so a test that monkeypatched
 SETTINGS was asserting against a value the orchestrator had stopped consulting.
 """
-import app.runtime as runtime
-
+from app import runtime
 from app.orchestration import orchestrator as orchestration
 
 

@@ -12,12 +12,12 @@ class _Pipe:
         self.store = store
         self.key = ""
 
-    def incr(self, key: str) -> "_Pipe":
+    def incr(self, key: str) -> _Pipe:
         self.key = key
         self.store[key] = self.store.get(key, 0) + 1
         return self
 
-    def expire(self, _key: str, _ttl: int) -> "_Pipe":
+    def expire(self, _key: str, _ttl: int) -> _Pipe:
         return self
 
     def execute(self) -> list[int]:
@@ -58,7 +58,7 @@ def test_default_ceiling_is_not_a_page_load_budget() -> None:
 
 
 def test_a_burst_writes_one_audit_row_per_window(fake, monkeypatch) -> None:
-    redis, audits = fake
+    _redis, audits = fake
     monkeypatch.setitem(rate_limit.LIMITS, "default", (2, 60))
 
     allowed = [rate_limit.check_limit("default", "user:x")[0] for _ in range(8)]

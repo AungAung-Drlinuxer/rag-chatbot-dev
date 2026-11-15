@@ -1,6 +1,5 @@
 """Profile photos: the bytes decide the type, and the size cap is enforced."""
 
-import pytest
 
 from app.api.users import _AVATAR_MAX_BYTES, _sniff_image
 

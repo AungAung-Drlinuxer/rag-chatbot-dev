@@ -36,7 +36,7 @@ def test_days_are_clamped_to_a_year():
 
 
 def test_a_custom_range_includes_the_whole_end_day():
-    start, end, label = observability._window(7, "2026-11-01", "2026-11-03")
+    _start, end, label = observability._window(7, "2026-11-01", "2026-11-03")
     # "to 2026-11-03" must cover the 3rd, not stop at its midnight.
     assert end.date().isoformat() == "2026-11-04"
     assert label == "2026-11-01 → 2026-11-03"
@@ -83,7 +83,9 @@ def test_the_chat_path_records_usage():
 
 def test_overview_is_gated_like_the_audit_log():
     source = inspect.getsource(observability.observability_overview)
-    assert 'require_cap("manage_users")' in source
+    # Organization-wide spend is gated by the permission, not by a role string.
+    assert 'permissions_for(user)' in source
+    assert '"manage_users"' in source
 
 
 def test_costs_are_cast_to_float_for_the_client():

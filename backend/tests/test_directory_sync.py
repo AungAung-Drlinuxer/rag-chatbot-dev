@@ -9,7 +9,7 @@ def row(username, *, dn="cn=x,dc=corp", state="active", misses=0):
 
 
 def test_active_account_is_left_alone():
-    out = plan([row("alice")], {"alice"}, set())
+    plan([row("alice")], {"alice"}, set())
 
 
 def test_names_are_compared_case_insensitively():

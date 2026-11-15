@@ -80,7 +80,7 @@ def test_hash_is_stable_and_covers_the_approved_body() -> None:
 
 
 def test_generate_draft_falls_back_when_no_llm(monkeypatch) -> None:
-    import app.llm.client as client
+    from app.llm import client
 
     monkeypatch.setattr(client, "make_llm", lambda: None)
     fields, source = D.generate_draft(CONVERSATION)
