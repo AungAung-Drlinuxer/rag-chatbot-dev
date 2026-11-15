@@ -83,12 +83,16 @@ export function PaginationBar({
 
       <div className="flex flex-wrap items-center gap-3">
         {aside}
-      {pageCount > 1 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
-            {pageSize} / page
-          </span>
+          {/* The size is stated even on a single page: "10 / page" is the answer to "how
+              many should I expect here", and hiding it made a changed size look unchanged. */}
+          {total > 0 && (
+            <span className="rounded-lg border border-[var(--border)] px-2 py-1 text-2xs text-muted-foreground">
+              {pageSize} / page
+            </span>
+          )}
 
+          {pageCount > 1 && (
           <nav aria-label="Pagination" className="flex items-center gap-1">
             <button
               type="button"
@@ -135,8 +139,8 @@ export function PaginationBar({
               <ChevronRight className="size-3.5" aria-hidden />
             </button>
           </nav>
+          )}
         </div>
-      )}
       </div>
     </div>
   );

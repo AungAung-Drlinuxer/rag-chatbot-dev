@@ -110,10 +110,10 @@ export default function DomainsPage({
 
   const filtered = q.trim() !== "" || status !== "all";
 
-  /* Same footer as Knowledge, five rows per page: a domain row is a tall card (identity,
-     keyword chips, actions), not a table line, so five keeps the page a screenful and the
-     controls meaningful the moment a sixth domain exists. */
-  const PAGE_SIZE = 5;
+  /* Same footer and the same page size as Knowledge: ten rows. The controls only appear
+     once the list outgrows one page, but the sentence and the size are stated identically
+     on every list page. */
+  const PAGE_SIZE = 10;
   useEffect(() => { setPage(1); }, [q, status]);
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
