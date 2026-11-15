@@ -94,19 +94,27 @@ def _scoped(user: str) -> bool:
 
 
 @router.get("/dashboard/stats")
-def dashboard_stats(user: str = Depends(get_current_user)) -> dict:
+def dashboard_stats(
+    days: int = 7,
+    start: str | None = None,
+    end: str | None = None,
+    user: str = Depends(get_current_user),
+) -> dict:
     """v1.1.6 — real week-over-week deltas (the frontend previously showed
     hard-coded fake percentages; this computes the previous 7-day window for
     every KPI so the change pill is always true)."""
-    now = datetime.now(UTC)
-    today = now.date()
-    # Same boundaries as /dashboard/conversations: "last 7 days" means the seven calendar
-    # days ending today, inclusive. A rolling now-7d cutoff included part of an eighth day,
-    # so the KPI said 123 while the trend summed to 119 for the same week.
-    week_ago = (today - timedelta(days=6)).isoformat()
-    two_weeks_ago = (today - timedelta(days=13)).isoformat()
-    win_until = today.isoformat()
-    win_until2 = (today - timedelta(days=7)).isoformat()
+    # The KPI row follows the range picker. It used to be pinned to seven days while the
+    # trend below it honoured 30/90, so switching range left "TOTAL CONVERSATIONS 120" over
+    # a chart that summed to 124 — the same two-truths bug, one control later.
+    win_since, win_until, n_days = _window(days, start, end)
+    first_day = datetime.fromisoformat(win_since).date()
+    last_day = datetime.fromisoformat(win_until).date()
+    week_ago = first_day.isoformat()
+    win_until = last_day.isoformat()
+    prev_last = first_day - timedelta(days=1)
+    prev_first = prev_last - timedelta(days=n_days - 1)
+    two_weeks_ago = prev_first.isoformat()
+    win_until2 = prev_last.isoformat()
 
     def _count(sql_where: str, params: dict) -> int:
         base = {
@@ -309,31 +317,51 @@ def dashboard_conversations(
 
 @router.get("/dashboard/domains")
 def dashboard_domains(user: str = Depends(get_current_user)) -> dict:
-    # #10 — total across ALL domains, then take the top 8 and fold the remainder
-    # into an explicit "Other" bucket. Previously the percentages summed to ~79%
-    # with no explanation of where the rest went.
-    total = int(_rows("SELECT count(*) AS n FROM kb_meta")[0]["n"] or 0) or 1
+    """Every ACTIVE classifier domain, with the articles it owns.
+
+    The chart used to be built from `kb_meta` alone, so a domain created a minute ago was
+    invisible until someone synced an article into it. The registry is now the spine and the
+    counts hang off it — a new domain appears at 0 immediately, which is the truth: it exists
+    and nothing has been routed to it yet. Articles whose domain matches no active key are
+    reported as "Unrouted" instead of being hidden inside "Other".
+    """
+    total = int(_rows("SELECT count(*) AS n FROM kb_meta")[0]["n"] or 0)
     rows = _rows(
-        "SELECT domain AS name, count(*) AS n FROM kb_meta "
-        "GROUP BY domain ORDER BY n DESC LIMIT 8"
+        "SELECT d.domain_key AS key, d.display_name AS name, count(k.page_id) AS n "
+        "FROM classifier_domains d "
+        "LEFT JOIN kb_meta k ON lower(k.domain) = lower(d.domain_key) "
+        "WHERE d.is_active "
+        "GROUP BY d.domain_key, d.display_name "
+        "ORDER BY n DESC, d.display_name ASC"
     )
     domains = [
         {
-            "name": str(r["name"] or "general").capitalize(),
+            "key": str(r["key"]),
+            "name": str(r["name"] or r["key"]).capitalize(),
             "count": int(r["n"]),
-            "percentage": round(100.0 * int(r["n"]) / total, 1),
+            "percentage": round(100.0 * int(r["n"]) / total, 1) if total else 0.0,
         }
         for r in rows
     ]
-    shown = sum(int(r["n"]) for r in rows)
-    if shown < total:
-        domains.append(
-            {
-                "name": "Other",
-                "count": total - shown,
-                "percentage": round(100.0 * (total - shown) / total, 1),
-            }
-        )
+
+    try:
+        loose = _rows(
+            "SELECT count(*) AS n FROM kb_meta k WHERE NOT EXISTS ("
+            " SELECT 1 FROM classifier_domains d WHERE d.is_active "
+            " AND lower(d.domain_key) = lower(k.domain))"
+        )[0]["n"]
+        if loose:
+            domains.append(
+                {
+                    "key": "__unrouted__",
+                    "name": "Unrouted",
+                    "count": int(loose),
+                    "percentage": round(100.0 * int(loose) / total, 1) if total else 0.0,
+                }
+            )
+    except Exception as exc:  # noqa: BLE001 - the chart must still draw
+        logger.warning("dashboard/domains: unrouted count failed: %s", exc)
+
     return {"domains": domains, "total": total}
 
 

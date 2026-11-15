@@ -323,7 +323,7 @@ function Domains({ title }: PanelBodyProps) {
         {(domains ?? []).length === 0 ? (
           <div className="py-4 text-center text-xs text-muted-foreground">No domain data yet.</div>
         ) : (
-          (domains ?? []).slice(0, 6).map((domain, i) => (
+          (domains ?? []).map((domain, i) => (
             <DomainRow key={domain.name} domain={domain} index={i} />
           ))
         )}

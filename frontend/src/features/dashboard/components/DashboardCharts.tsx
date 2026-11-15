@@ -294,20 +294,36 @@ export function ConversationChart({
 
         {/* X labels */}
 
-        {data.map(
-          (item, index) => (
-              <text
-                key={item.day}
-                x={xAt(index)}
-                y={height - 10}
-                textAnchor="middle"
-                fontSize="11"
-                className={hover === index ? "fill-[var(--foreground)] font-semibold" : "fill-slate-400"}
-              >
-                {item.day}
-              </text>
-          )
-        )}
+        {(() => {
+          /* 30 and 90 day windows used to print a label per point: at 30 days the text
+             collided into unreadable pairs ("Oct 20 Oct 20"), at 90 it was a grey smear.
+             Pick a tick set about one per 64px, and always keep the last day so the axis
+             ends on a date the reader can name. */
+          const most = Math.max(2, Math.min(12, Math.floor(chartWidth / 64)));
+          const step = Math.max(1, Math.ceil((data.length - 1) / Math.max(1, most - 1)));
+          const ticks: number[] = [];
+          for (let i = 0; i < data.length; i += step) ticks.push(i);
+          const lastIndex = data.length - 1;
+          if (lastIndex >= 0) {
+            const prev = ticks[ticks.length - 1];
+            if (prev !== lastIndex) {
+              if (lastIndex - prev < step * 0.6) ticks[ticks.length - 1] = lastIndex;
+              else ticks.push(lastIndex);
+            }
+          }
+          return ticks.map((index) => (
+            <text
+              key={`x-${index}`}
+              x={xAt(index)}
+              y={height - 10}
+              textAnchor="middle"
+              fontSize="11"
+              className={hover === index ? "fill-[var(--foreground)] font-semibold" : "fill-slate-400"}
+            >
+              {data[index].day}
+            </text>
+          ));
+        })()}
 
       </svg>
 

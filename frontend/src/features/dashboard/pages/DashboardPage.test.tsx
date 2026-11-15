@@ -170,7 +170,7 @@ describe("DashboardPage — data rendering", () => {
       deltas: { total_conversations: 400 }, previous: { total_conversations: 5 },
     });
     const text = (await mount("admin")).textContent!;
-    expect(text).toContain("up from 5 last week");
+    expect(text).toContain("up from 5 vs the previous period");
     expect(text).not.toContain("+400%");
   });
 

@@ -18,8 +18,13 @@ export function windowQuery(w: ReportWindow): string {
     : `days=${w.days}`;
 }
 
-export async function dashStats() {
-  const r = await apiFetch(`${BASE}/api/dashboard/stats`, { headers: authHeaders() });
+export async function dashStats(win?: { days?: number; start?: string | null; end?: string | null }) {
+  // Same window as the trend: the KPI row and the chart must summarise the same days.
+  const qs = new URLSearchParams();
+  if (win?.start && win?.end) { qs.set("start", win.start); qs.set("end", win.end); }
+  else if (win?.days) qs.set("days", String(win.days));
+  const suffix = qs.toString() ? `?${qs}` : "";
+  const r = await apiFetch(`${BASE}/api/dashboard/stats${suffix}`, { headers: authHeaders() });
   return r.json();
 }
 

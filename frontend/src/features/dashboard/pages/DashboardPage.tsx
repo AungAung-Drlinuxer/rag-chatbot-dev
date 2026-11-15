@@ -301,7 +301,7 @@ export default function Dashboard({ role, perms }: Props) {
       setLoadError(null);
       try {
         const [s, c, d, rc, rt, h, g] = await Promise.all([
-          dashStats(),
+          dashStats(win),
           dashConversations(win),
           dashDomains(),
           dashRecentConversations(6),
