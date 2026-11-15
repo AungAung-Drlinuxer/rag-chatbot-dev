@@ -650,6 +650,8 @@ export default function Chat({ onNavigate, userName }: Props) {
                                  before the one you clicked. */
                               onRetryQuestion={() => void send(m.content, { replaceId: m.id })}
                               busy={busy}
+                              authorName={userName}
+                              authorUsername={userName}
                               liveStageText={busy ? stage : undefined}
                               liveElapsedMs={busy ? elapsed : undefined}
                             />

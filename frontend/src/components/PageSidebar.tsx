@@ -9,6 +9,7 @@ import { dateBucket, relativeAge } from "@/features/chat/model";
 import { setPendingConversation } from "@/features/chat/pendingConversation";
 import { conversationFromHash } from "@/app/router";
 import { brandInitials, displayAppName, useBranding } from "@/app/useBranding";
+import { useAvatarUrl } from "@/features/users/avatar";
 import { BookOpen, ChevronDown, Layers, ChevronRight, Home, MessageSquare, MessagesSquare, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, Plus, ScrollText, Settings as SettingsIcon, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { useNotifications, NotificationBell } from "@/components/NotificationBell";
 import {
@@ -64,6 +65,7 @@ export default function PageSidebar({
   active,
   onNavigate,
   userName,
+  username,
   role,
   displayRole,
   perms,
@@ -74,6 +76,8 @@ export default function PageSidebar({
   active: string;
   onNavigate: (nav: string) => void;
   userName?: string;
+  /** The signed-in account id — what the avatar endpoint is keyed on. */
+  username?: string;
   role?: string;
   displayRole?: string;
   perms?: Record<string, boolean>;
@@ -82,6 +86,7 @@ export default function PageSidebar({
   onToggleCollapsed?: () => void;
 }) {
   const branding = useBranding();
+  const avatarSrc = useAvatarUrl(username);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -440,9 +445,19 @@ export default function PageSidebar({
       <div className={"shrink-0 border-t border-white/15 dark:border-[var(--sidebar-border)] py-4 " + (collapsed ? "px-2" : "px-4")}>
         <div className={"flex " + (collapsed ? "flex-col items-center gap-2" : "flex-col gap-2.5")}>
           <div className="flex w-full min-w-0 items-center gap-3">
-            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white dark:bg-[var(--primary)]" title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}>
-              {(userName?.charAt(0) ?? "A").toUpperCase()}
-            </div>
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt=""
+                aria-hidden
+                className="size-9 shrink-0 rounded-full object-cover ring-2 ring-white/40"
+                title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}
+              />
+            ) : (
+              <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white dark:bg-[var(--primary)]" title={collapsed ? (userName ?? "User") + " · " + pretty : undefined}>
+                {(userName?.charAt(0) ?? "A").toUpperCase()}
+              </div>
+            )}
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold text-white" title={userName ?? "User"}>{userName ?? "User"}</div>

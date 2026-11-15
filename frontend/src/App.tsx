@@ -245,7 +245,7 @@ export default function App() {
   const shell = (active: string, children: React.ReactNode) => (
     <>
       <div className="flex h-[100dvh] overflow-hidden">
-        <PageSidebar active={active} onNavigate={setNav} userName={userName} role={role}
+        <PageSidebar active={active} onNavigate={setNav} userName={userName} username={userName} role={role}
           displayRole={meDisplay} perms={perms} onLogout={onLogout}
           collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
         {/* The content column is a flex stack: the page scroll area fills it, so a page

@@ -20,7 +20,24 @@ function keyOf(username: string, version: number) {
   return `${username}:${version}`;
 }
 
+async function currentVersion(username: string): Promise<number> {
+  try {
+    const r = await fetch(`${BASE}/api/users/${encodeURIComponent(username)}/avatar/meta`, {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
+    if (!r.ok) return 0;
+    const j = await r.json();
+    return Number(j?.version) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function load(username: string, version: number): Promise<string | null> {
+  /* A display-only caller (sidebar, chat bubble) has no version to pass. Ask for it once so the
+     URL is still unique per upload — otherwise a cached "v=0" image survives a photo change. */
+  if (!version) version = await currentVersion(username);
   const key = keyOf(username, version);
   const hit = cache.get(key);
   if (hit?.url) return hit.url;

@@ -18,6 +18,7 @@ import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Pencil, RotateCc
 
 import AgentActivity, { stageFromText } from "@/components/AgentActivity";
 import MarkdownMessage from "@/components/MarkdownMessage";
+import { Avatar } from "@/features/users/avatar";
 import { ConfidenceBadge } from "@/features/chat/components/MessageParts";
 import { groupSources, matchLabel, referenceLabel } from "@/features/chat/sources";
 import RagPipelineStatus from "@/features/chat/components/RagPipelineStatus";
@@ -50,6 +51,8 @@ function MessageBubble({
   showSources = true,
   showTokenUsage = true,
   markdownRendering = true,
+  authorName,
+  authorUsername,
 }: {
   message: Message;
   onHelpful: () => void;
@@ -65,6 +68,9 @@ function MessageBubble({
   showSources?: boolean;
   showTokenUsage?: boolean;
   markdownRendering?: boolean;
+  /** Who wrote a user turn — drives the photo beside the bubble. */
+  authorName?: string;
+  authorUsername?: string;
 }) {
   const isUser = message.role === "user";
   const caution = message.decision === "caution";
@@ -126,7 +132,7 @@ function MessageBubble({
   /* ---------------- the user turn: a bubble, as before ---------------- */
   if (isUser) {
     return (
-      <div className="group/msg flex justify-end gap-3">
+      <div className="group/msg flex justify-end gap-2.5 sm:gap-3">
         <div className="min-w-0 max-w-[85%]">
           <div className="min-w-0 max-w-full overflow-hidden rounded-2xl rounded-br-md bg-[var(--primary)] px-5 py-3.5 text-[length:var(--chat-font-size,16px)] leading-[1.7] text-[var(--primary-foreground)]">
             {editing ? (
@@ -211,9 +217,19 @@ function MessageBubble({
           </div>
         </div>
 
-        <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)]">
-          <User className="size-4" />
-        </div>
+        {authorUsername ? (
+          <Avatar
+            name={authorName || authorUsername}
+            username={authorUsername}
+            size="size-8"
+            rounded="rounded-xl"
+            className="mt-0.5 ring-1 ring-[var(--border)]"
+          />
+        ) : (
+          <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+            <User className="size-4" />
+          </div>
+        )}
       </div>
     );
   }
