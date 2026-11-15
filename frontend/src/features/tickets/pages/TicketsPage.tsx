@@ -541,12 +541,11 @@ export default function Tickets({ role, userName, onToast }: Props) {
                 <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-[var(--border)]" />
               </>
             )}
-            {/* Pill, not a rounded rectangle: the primary action should not look like the two
-                secondary ones beside it. Vertical violet gradient (top lighter), the paper plane
-                pointing up-right, and a shadow tinted with the brand instead of black. */}
+            {/* Same geometry as Sync Jira and Reconcile — one control row, three buttons that
+                line up. It stays the primary by fill, not by shape. */}
             <Button
               size="sm"
-              className="primary-pill px-4 hover:opacity-95"
+              className="rounded-lg px-3.5"
               onClick={() => setCreateOpen(true)}
             >
               <Send className="mr-2 size-4" />

@@ -494,8 +494,9 @@ export default function Users() {
                 title={`Export ${filteredUsers.length} users as CSV`}
                 exportTone="secondary"
               />
+              {/* Same rectangle as the toolbar's other buttons; primary by fill, not shape. */}
               <button type="button" onClick={() => setShowAddUser(true)}
-                className="primary-pill inline-flex h-8 items-center px-4 text-xs font-semibold text-white transition hover:opacity-95">
+                className="inline-flex h-8 items-center rounded-lg bg-gradient-to-r from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] px-3.5 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 active:scale-[0.98]">
                 <UserPlus className="mr-2 size-4" />
                 Add user
               </button>
