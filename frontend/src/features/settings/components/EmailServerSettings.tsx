@@ -179,8 +179,8 @@ export function EmailServerSettings({ above }: { above?: ReactNode } = {}) {
   }
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="space-y-4">
+    <div className="flex flex-wrap items-start gap-5">
+      <div className="min-w-0 flex-1 basis-[520px] space-y-4">
         {above}
         {/* Status card: the same anatomy as an Integrations card — icon tile, one-line
             purpose, state chips, and the three facts the strip used to repeat in the rail. */}
@@ -285,7 +285,7 @@ export function EmailServerSettings({ above }: { above?: ReactNode } = {}) {
       </div>
 
       {/* rail: the two actions that prove the server works. The facts live in the status card. */}
-      <aside className="space-y-4 xl:sticky xl:top-6">
+      <aside className="w-full shrink-0 space-y-4 sm:w-[320px] xl:sticky xl:top-6">
         <RailCard
           icon={<Send className="size-4" />}
           title="Effective configuration"

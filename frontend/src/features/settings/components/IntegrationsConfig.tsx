@@ -385,23 +385,25 @@ function ProviderEditor({ provider, onConfigured }: {
 
     return (
       <div key={f.key} className="space-y-1.5">
-        <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-          {f.label}
+        <label className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-foreground">
+          <span className="min-w-0 break-words">{f.label}</span>
           {configured && (
             <span className="inline-flex items-center gap-1 text-2xs text-[var(--ok)]">
               {isSecret ? <Lock className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
-              {isSecret ? "Saved — not retrievable" : "Configured"}
+              {isSecret ? "Saved" : "Configured"}
             </span>
           )}
         </label>
         {f.hint && <p className="text-2xs leading-relaxed text-muted-foreground">{f.hint}</p>}
 
         {configured && !editable ? (
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[var(--border)] bg-muted/40 px-3 py-2"
+              title="Stored server-side and never returned. Use Replace to set a new value."
+            >
               <Lock className="h-3 w-3 shrink-0 text-muted-foreground" />
               <span className="select-none font-mono text-xs tracking-widest text-muted-foreground">••••••••</span>
-              <span className="ml-auto text-2xs text-muted-foreground">write-only</span>
             </div>
             <button
               type="button"
@@ -541,7 +543,7 @@ function ProviderEditor({ provider, onConfigured }: {
                 <span className="text-2xs text-muted-foreground/70">{GROUP_META[group].hint}</span>
                 {group === "credentials" && <Lock className="size-3 text-muted-foreground" />}
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {fields.map(renderField)}
               </div>
             </section>

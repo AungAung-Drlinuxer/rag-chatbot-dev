@@ -159,8 +159,8 @@ export function DataRetentionSettings() {
     days == null ? "Kept indefinitely" : OPTIONS.find((o) => Number(o.value) === days)?.label ?? `${days} days`;
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-    <div className="space-y-4">
+    <div className="flex flex-wrap items-start gap-5">
+    <div className="min-w-0 flex-1 basis-[520px] space-y-4">
       {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
 
       <Panel
@@ -268,7 +268,7 @@ export function DataRetentionSettings() {
     </div>
 
     {/* Same right-hand read-out as Preferences: the values in force, not a second form. */}
-    <aside className="space-y-3 xl:sticky xl:top-4">
+    <aside className="w-full shrink-0 space-y-3 sm:w-[320px] xl:sticky xl:top-4">
       <section data-slot="effective-config" className="rounded-2xl border border-[var(--border)] bg-card p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Effective configuration</h2>

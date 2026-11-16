@@ -586,8 +586,8 @@ export default function Settings({ role }: { role?: string }) {
               </div>
             )}
             {active === "general" && prefsState === "ready" && (
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-4">
+            <div className="flex flex-wrap items-start gap-5">
+            <div className="min-w-0 flex-1 basis-[520px] space-y-4">
             {/* ---- Who you are: the only preference that is a picture rather than a value. ---- */}
             {active === "general" && <ProfilePhotoSettings />}
             {/* ---- Answers: every control here changes how a message is rendered. ---- */}
@@ -728,7 +728,7 @@ export default function Settings({ role }: { role?: string }) {
                 for this tab. It is a read-out, not a second form. */}
             </div>
 
-            <aside className="space-y-3 xl:sticky xl:top-4">
+            <aside className="w-full shrink-0 space-y-3 sm:w-[320px] xl:sticky xl:top-4">
               <section data-slot="effective-config" className="rounded-2xl border border-[var(--border)] bg-card p-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold">Effective configuration</h2>
@@ -785,19 +785,19 @@ export default function Settings({ role }: { role?: string }) {
             {/* ==================== INTEGRATIONS ==================== */}
 
             {active === "integrations" && (
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex flex-wrap items-start gap-5">
               {/* The catalogue and the provider editor are the work; the header card that
                   used to sit above them only repeated the tab's own name. The readiness
                   strip answers the only question that matters after a fresh install:
                   is anything still missing? */}
-              <div className="space-y-4">
+              <div className="min-w-0 flex-1 basis-[520px] space-y-4">
                 <SetupChecklist />
                 <IntegrationsConfig />
               </div>
 
               {/* One rail, one job: state what is configured. The dependency check and the
                   how-it-works list repeated what the panels below already say. */}
-              <aside className="space-y-4 xl:sticky xl:top-6">
+              <aside className="w-full shrink-0 space-y-4 sm:w-[320px] xl:sticky xl:top-6">
                 <EffectiveIntegrations />
               </aside>
             </div>

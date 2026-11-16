@@ -567,7 +567,7 @@ function UsageKpis({ title }: PanelBodyProps) {
     { label: "p95 latency", value: t ? fmtMs(t.p95_latency_ms) : "—", caption: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : "LLM generation", icon: <Activity className="size-3.5" />, tone: "text-[var(--warn)]", stack: undefined, hint: t ? `p50 ${fmtMs(t.p50_latency_ms)} · max ${fmtMs(t.max_latency_ms)}` : undefined },
   ];
   return (
-    <section aria-label="Tokens, cost and latency" className="rounded-2xl border border-[var(--border)] bg-card p-4">
+    <section aria-label="Tokens, cost and latency" className="@container rounded-2xl border border-[var(--border)] bg-card p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">{title}</h2>
         <span className="text-2xs text-muted-foreground">
@@ -581,7 +581,7 @@ function UsageKpis({ title }: PanelBodyProps) {
       )}
       {/* Four tiles, each with its own icon and caption: the number is the headline, the
           caption says what it counts, and the icons keep a glance cheap. */}
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
+      <div className="mt-2 grid grid-cols-1 gap-1.5 @min-[320px]:grid-cols-2">
         {tiles.map((tile) => (
           <div
             key={tile.label}
@@ -590,7 +590,7 @@ function UsageKpis({ title }: PanelBodyProps) {
           >
             <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
               <span className={tile.tone}>{tile.icon}</span>
-              <span className="truncate">{tile.label}</span>
+              <span className="min-w-0 break-words">{tile.label}</span>
             </div>
             {/* In/out is two numbers; one line of a narrow tile clipped the second one.
                 Stacking them keeps both readable without shrinking the other tiles. */}

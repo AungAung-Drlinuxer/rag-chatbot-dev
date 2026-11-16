@@ -1728,7 +1728,10 @@ table tbody tr {
   position: absolute;
   display: flex;
   min-width: 0;
-  transition: left 120ms ease, top 120ms ease, width 120ms ease, height 120ms ease;
+  /* Width/height must not animate: the board measures itself, and an animated width feeds a
+     new measurement back into the observer, which restarts the animation forever (the panels
+     then paint at the stale fallback and hang over the right edge). */
+  transition: left 120ms ease, top 120ms ease;
 }
 .board-surface__item > .board-surface__body {
   display: flex;

@@ -286,9 +286,9 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
   })();
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="flex flex-wrap items-start gap-5">
       {dialog}
-      <div className="space-y-5">
+      <div className="min-w-0 flex-1 basis-[520px] space-y-5">
         {/* ---- status -------------------------------------------------------------
             Same anatomy as an Integrations card: provider mark, name, state chips and the
             one link that leaves the app. The numbers it used to bury in a strip are rows. */}
@@ -556,7 +556,7 @@ export function AiServiceSettings({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {/* ---- rail: what this save will commit, and the actions --------------------- */}
-      <aside className="space-y-5 xl:sticky xl:top-6">
+      <aside className="w-full shrink-0 space-y-5 sm:w-[340px] xl:sticky xl:top-6">
         <RailCard
           icon={<SlidersHorizontal className="size-4" />}
           title="Effective configuration"

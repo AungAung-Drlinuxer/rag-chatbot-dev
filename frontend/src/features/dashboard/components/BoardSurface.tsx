@@ -71,14 +71,18 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
   useEffect(() => {
     const el = hostRef.current;
     if (!el) return;
+    /* Measure the slot the board sits in, not the board itself: a panel transition can change
+       the board's own width mid-frame, and feeding that back into state re-triggered the
+       transition on every paint. The parent is the stable column width. */
+    const host = el.parentElement ?? el;
     const paint = () => {
-      const next = Math.round(el.clientWidth);
+      const next = Math.round(host.clientWidth || el.clientWidth);
       setWidth((prev) => (Math.abs(next - prev) < 2 ? prev : next));
     };
     paint();
     if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(paint);
-    ro.observe(el);
+    const ro = new ResizeObserver(() => requestAnimationFrame(paint));
+    ro.observe(host);
     return () => ro.disconnect();
   }, []);
 
@@ -233,7 +237,8 @@ export function BoardSurface({ panels, rects, editing, onChange, children }: Pro
   const box = (r: PanelRect): React.CSSProperties => ({
     left: r.x * (colWidth + GRID_GAP),
     top: r.y * (GRID_ROW_HEIGHT + GRID_GAP),
-    width: r.w * colWidth + (r.w - 1) * GRID_GAP,
+    /* Clamped to the board: a stale measurement must never let a panel hang past the edge. */
+    width: Math.min(r.w * colWidth + (r.w - 1) * GRID_GAP, boardWidth),
     height: r.h * GRID_ROW_HEIGHT + (r.h - 1) * GRID_GAP,
   });
 

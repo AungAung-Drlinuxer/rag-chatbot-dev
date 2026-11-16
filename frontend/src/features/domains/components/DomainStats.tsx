@@ -51,11 +51,13 @@ function StatTile({
     <div
       className={["stat-card p-4", emphasis ? "stat-card--warn" : EDGE[tone]].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <span className={["grid size-9 shrink-0 place-items-center rounded-xl", TONES[tone]].join(" ")} aria-hidden>
           {icon}
         </span>
-        <span className="pt-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="min-w-0 break-words pt-0.5 text-right text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
       </div>
 
       <div className="mt-3 text-[26px] font-semibold leading-none tracking-tight tabular-nums">
@@ -75,7 +77,7 @@ export function DomainStats({
   loading: boolean;
 }) {
   return (
-    <section aria-label="Routing metrics" className="kpi-row grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Routing metrics" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <StatTile
         tone="primary"
         icon={<Layers className="size-4" />}
