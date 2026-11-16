@@ -162,7 +162,7 @@ export const PROVIDERS: Provider[] = [
     icon: KeyRound,
     docs: "https://www.keycloak.org/documentation",
     fields: [
-      { key: "issuer", label: "Issuer / Base URL", placeholder: "https://keycloak-chatbot.drlinuxer.com" },
+      { key: "issuer", label: "Issuer / Base URL", placeholder: "https://sso.example.com" },
       { key: "realm", label: "Realm", placeholder: "ith-chatbot" },
       { key: "client_id", label: "Client ID", placeholder: "it-help-chatbot" },
       { key: "client_secret", label: "Client Secret", placeholder: "OIDC client secret", isSecret: true },

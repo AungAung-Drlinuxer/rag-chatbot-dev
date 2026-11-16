@@ -307,7 +307,7 @@ export function EmailServerSettings({ above }: { above?: ReactNode } = {}) {
             <input
               className={INPUT}
               value={testTo}
-              placeholder={form.username || "you@drlinuxer.com"}
+              placeholder={form.username || "you@example.com"}
               onChange={(e) => setTestTo(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") sendTest(); }}
               aria-label="Send a test email to"
