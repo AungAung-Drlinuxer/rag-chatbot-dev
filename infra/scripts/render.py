@@ -26,7 +26,7 @@ DEFAULTS = {
     "NAMESPACE": "rag-chatbot-dev",
     "REGISTRY": "harbor.drlinuxer.com/rag-chatbot-dev",
     "FRONTEND_TAG": "dev-1.11.192",
-    "BACKEND_TAG": "dev-1.0.142",
+    "BACKEND_TAG": "dev-1.0.143",
     "OLLAMA_TAG": "0.5.7-models",
     "RERANK_TAG": "1.0.2",
     "DOMAIN": "dev-chat.drlinuxer.com",

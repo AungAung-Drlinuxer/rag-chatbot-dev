@@ -1,28 +1,8 @@
 """Application settings (env / .env) via pydantic-settings."""
 from __future__ import annotations
 
-import logging
-
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-_log = logging.getLogger(__name__)
-
-
-def _resolve_openbao_overrides() -> dict[str, str]:
-    """Try to read secrets from OpenBao (k8s-auth + KV). On any failure
-    return {} so the caller falls back to env vars (k8s Secret).
-
-    Kept lazy-imported so that local dev / unit tests don't require httpx
-    or pod-internal paths.
-    """
-    try:
-        from app.secrets import openbao as _openbao
-        data = _openbao.load()
-    except Exception as exc:
-        _log.info("openbao resolver unavailable: %s", exc)
-        return {}
-    return data or {}
 
 
 class Settings(BaseSettings):
@@ -179,8 +159,7 @@ class Settings(BaseSettings):
     }
 
 
-_OPENBAO_OVERRIDES = _resolve_openbao_overrides()
-if _OPENBAO_OVERRIDES:
-    SETTINGS = Settings(**_OPENBAO_OVERRIDES)
-else:
-    SETTINGS = Settings()
+# Settings come from the environment (defaults in the class above, overridden by the
+# values install.sh renders into 05-config.yaml). There is no external secret store:
+# operator secrets live in the namespace Secret, provider secrets in system_settings.
+SETTINGS = Settings()

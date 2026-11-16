@@ -3,7 +3,6 @@
 .env.*
 *.env
 *.local
-infra/k8s/openbao/.init-credentials.json
 infra/k8s/_source/
 
 # Dependencies & Build artifacts
