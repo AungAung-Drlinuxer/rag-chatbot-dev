@@ -119,7 +119,6 @@ monitoring/            Grafana dashboard JSON
 | `confluence-jira-setup.md`, `ldap-keycloak-setup.md` | integration setup |
 | `domains.md`, `tickets-and-approvals.md`, `jira-reconciliation.md` | feature behaviour |
 | `architecture/` | diagrams (HTML + PNG) and the guardrails spec |
-| `design/` | UI references, including the Overview board spec |
 
 **Course material is historical.** It walks the project as it was built, so it mentions
 models and versions that have since changed (`bge-m3`, `llama3.2:1b`). For current behaviour,

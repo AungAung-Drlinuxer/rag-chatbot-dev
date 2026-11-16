@@ -43,7 +43,7 @@ infra/
   images/ollama/    Dockerfile that bakes the embedding model into the Ollama image
   scripts/          render.py · create-secrets.sh · build-images.sh · deploy.sh
   monitoring/       Grafana dashboard JSON
-docs/               deployment, operations, architecture, guides, design
+docs/               deployment, operations, architecture, guides
 ```
 
 ## Features
