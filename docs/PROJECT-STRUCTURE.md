@@ -39,7 +39,7 @@ app/
   tools/               live lookups: tickets, cluster, alerts
   smalltalk.py         greetings answered without retrieval
   notifier.py          SMTP alerts (approvals, escalations)
-db/schema.sql          31 tables; migrations add the other 5 (36 live)
+db/schema.sql          31 tables; --init adds checkpoint + migration tables (34), first ingest adds 2 LangChain tables (36)
 workers/               celery_app.py (beat schedule) + sync_tasks.py
 tests/                 240+ tests; DB-backed ones skip when no database is reachable
 eval/                  gold-set Q/A used to score retrieval changes

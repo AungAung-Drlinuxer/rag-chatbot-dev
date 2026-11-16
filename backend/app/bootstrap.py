@@ -93,8 +93,15 @@ def _install_extension_as_superuser() -> bool:
     if not url:
         return False
     from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
 
-    engine = create_engine(url, future=True)
+    # The URL usually points at the maintenance database (`/postgres`); the extension has to
+    # live in the application's database, or `init_db` still cannot see it.
+    app_db = make_url(os.environ.get("DATABASE_URL", "")).database if os.environ.get("DATABASE_URL") else None
+    parsed = make_url(url)
+    if app_db and parsed.database != app_db:
+        parsed = parsed.set(database=app_db)
+    engine = create_engine(parsed, future=True)
     try:
         with engine.begin() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

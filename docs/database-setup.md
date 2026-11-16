@@ -1,9 +1,10 @@
-# Setting up a fresh database (Fresh database guide)
+# Setting up a fresh database
 
-This guide is for another team / another org that wants to stand this application up with its own
-new database. As a reference it is based on the schema of the currently running
-dev/prod database (PostgreSQL 16 + pgvector 0.8.0, 36 tables, 60 indexes).
-**No data is included** — schema only.
+This guide is for another team that wants to stand this application up with its own new
+database. It is written against a PostgreSQL 16 + pgvector install measured on this repository:
+a fresh `--init` produces **34 tables / 51 indexes**, and the first knowledge-base ingest adds
+the two LangChain tables (+9 indexes), giving **36 tables / 60 indexes**. **No data is
+included** — schema only.
 
 ---
 
@@ -12,7 +13,7 @@ dev/prod database (PostgreSQL 16 + pgvector 0.8.0, 36 tables, 60 indexes).
 | Component | Version | Note |
 | --- | --- | --- |
 | PostgreSQL | **16** | can be a CNPG/cluster or managed Postgres |
-| pgvector | **0.8.0** (>= 0.5 works) | `langchain_pg_embedding.embedding` uses the `vector` type |
+| pgvector | **0.8.x** (>= 0.5 works) | `langchain_pg_embedding.embedding` uses the `vector` type |
 | Database | new, empty | `--init` runs `CREATE DATABASE assistant OWNER app` automatically |
 | App credentials | non-superuser role | only the extension is created with the superuser |
 
@@ -22,7 +23,9 @@ Do **not** give the application role superuser.
 > `CREATE EXTENSION vector` automatically as superuser via `postInitApplicationSQL`
 > (`infra/k8s-dev/20-database.yaml`). The manual step described below is only needed when using
 > **external PostgreSQL**. In that case the one-time superuser requirement for `CREATE EXTENSION vector`
-> is handled by `BOOTSTRAP_SUPERUSER_URL`.
+> is handled by `BOOTSTRAP_SUPERUSER_URL`: point it at any database the superuser can log into
+> (usually `/postgres`) and the bootstrap retargets it to the application's database before
+> creating the extension.
 
 ---
 
@@ -43,12 +46,19 @@ The full schema is stored here — `backend/db/schema.sql` (a production-shaped 
 | Orchestration | `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | LangGraph state |
 | Graph RAG | `semantica_entities`, `semantica_relations` | (optional) knowledge graph |
 
-In total **36 tables / 60 indexes**; the vector index is
-`langchain_pg_embedding_hnsw_idx` (`vector_cosine_ops`, m=16, ef_construction=64).
+Two counts are correct, depending on when you look:
+
+| Moment | Tables | Indexes | Why |
+| --- | --- | --- | --- |
+| immediately after `--init` | **34** | **51** | schema + migrations + the four LangGraph checkpoint tables |
+| after the first KB ingest | **36** | **60** | LangChain creates `langchain_pg_collection` and `langchain_pg_embedding`, plus their indexes |
+
+The vector index is `langchain_pg_embedding_hnsw_idx` (`vector_cosine_ops`, m=16,
+ef_construction=64) and exists only after that first ingest.
 
 ---
 
-## 3. Step 1 — Build the whole database with the single installer
+## 3. Build the whole database with the single installer
 
 `app.bootstrap --init` creates the **role, database, pgvector extension, all tables, table ownership,
 LangGraph checkpoint tables** in order and verifies them at the end.
@@ -64,9 +74,9 @@ DATABASE_URL='postgresql+psycopg2://app:<app-role-password>@<host>:5432/assistan
 The resulting report (example):
 
 ```
-database ready: tables=29, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
-schema: 29/25 tables, pgvector 0.8.0
-  owners: app=29
+database ready: tables=34, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
+schema: 34/30 tables, pgvector 0.8.7
+  owners: app=34
 note: no administrator yet — run with --admin <username> before using the UI
 ```
 
@@ -77,9 +87,10 @@ note: no administrator yet — run with --admin <username> before using the UI
 | `--json` | machine-readable report for CI/Jobs |
 | `--check` | create nothing (build the schema if needed) and report the current state |
 
-`tables=29` means **25 required + 4 LangGraph checkpoint**. The vector store's
+`tables=34` means **30 required + 4 LangGraph checkpoint**. The vector store's
 `langchain_pg_collection`/`langchain_pg_embedding` are created by LangChain on the first ingest —
-the installer reports those two as `lazy_tables_missing`, which is not an error.
+the installer reports those two as `lazy_tables_missing`, which is not an error. The `36` in
+readiness and dashboards is simply the count after that ingest has run.
 
 ### Running it in Kubernetes
 
@@ -124,7 +135,7 @@ ownership carefully — if `ALTER TABLE ... OWNER TO app` has not been done, lat
 
 ---
 
-## 5. Step 3 — Create the first administrator
+## 5. Create the first administrator
 
 There is no default account (intentionally). So one is needed before opening the UI:
 
@@ -143,7 +154,7 @@ and log in with directory credentials.
 
 ---
 
-## 6. Step 4 — Connect the app
+## 6. Connect the app
 
 | Env / Secret | Required? | Explanation |
 | --- | --- | --- |
@@ -181,7 +192,7 @@ directly from the database and returns them:
 {
   "ready": false,
   "steps": [
-    {"key": "database",      "status": "done", "detail": "29 tables · pgvector 0.8.0"},
+    {"key": "database",      "status": "done", "detail": "34 tables · pgvector 0.8.7"},
     {"key": "administrator", "status": "done", "detail": "1 admin account"},
     {"key": "knowledge",     "status": "todo", "detail": "Confluence connected, nothing indexed yet",
      "hint": "Open Knowledge and press Sync — or wait for the sync queued by saving credentials"},
@@ -201,8 +212,8 @@ the hint shows directly which command to run.
 ## 8. Verification queries (is the fresh install correct?)
 
 ```sql
-SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 29 (--init) / 31 (after first ingest)
-SELECT extversion FROM pg_extension WHERE extname='vector';                       -- 0.8.0
+SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 34 (--init) / 36 (after first ingest)
+SELECT extversion FROM pg_extension WHERE extname='vector';                       -- 0.8.x
 SELECT indexname FROM pg_indexes WHERE indexname='langchain_pg_embedding_hnsw_idx';
 SELECT count(*) FROM users;             -- 1 (the first admin) — no demo user
 SELECT count(*) FROM kb_meta;           -- 0
@@ -217,7 +228,7 @@ SELECT key FROM system_settings;        -- llm/integrations/smtp/security ... as
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `must be superuser to create this extension` | the app role is not superuser | run `CREATE EXTENSION` once as superuser per section 3, or provide `BOOTSTRAP_SUPERUSER_URL` |
+| `must be superuser to create this extension` | the app role is not superuser | run `CREATE EXTENSION` once as superuser (section 4), or provide `BOOTSTRAP_SUPERUSER_URL` |
 | `must be owner of table chat_messages` (startup warning) | the table owner is not the app role | `ALTER TABLE ... OWNER TO app;` (only then can the FTS/meta migration run) |
 | Login 401 immediately | no admin yet / wrong password | re-run `--admin` (idempotent) |
 | no key in `system_settings` | nothing has been configured yet | enter it in UI → Settings (no defaults are baked into the code) |

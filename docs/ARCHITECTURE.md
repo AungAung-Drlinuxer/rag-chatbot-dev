@@ -81,7 +81,7 @@ Rate limits: chat 10/min, escalations 5/min, login 5/min/IP, everything else 240
 user (all overridable with `RATE_LIMIT_*_PER_MIN`). The default tier is a runaway guard,
 not a usage budget — one page load legitimately fires a few dozen reads.
 
-## Data model (36 tables)
+## Data model (36 tables once the first ingest has run; 34 right after `--init`)
 
 | Group | Tables | Notes |
 | --- | --- | --- |
@@ -93,9 +93,10 @@ not a usage budget — one page load legitimately fires a few dozen reads.
 | Ops | `audit_log`, `runtime_kv`, `system_settings`, `classifier_domains`, `domain_assignees`, `integration_connections`, `llm_usage`, `dashboard_layouts`, `notification_dismissals` | `system_settings` is the write-only secrets store; `integration_connections` is one row per site (`UNIQUE (provider, base_url, label)`), ordered by `sequence` |
 | LangGraph | `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | conversation state for human-in-the-loop |
 
-Schema lives in `backend/db/schema.sql` (31 tables); migrations in
-`backend/app/persistence/database.py` add the rest (`user_avatars`, `feedback.username`,
-`kb_meta.last_checked`, …). `python -m app.bootstrap --init` applies both and is idempotent.
+Schema lives in `backend/db/schema.sql` (31 tables). `--init` applies that file, the migrations in
+`backend/app/persistence/database.py` (`user_avatars`, `feedback.username`, `kb_meta.last_checked`,
+…) and the four LangGraph checkpoint tables, which is **34**; LangChain then adds its two tables on
+the first ingest, which is **36**. The bootstrap is idempotent and safe to re-run.
 
 ## Product surfaces, and why they look the way they do
 

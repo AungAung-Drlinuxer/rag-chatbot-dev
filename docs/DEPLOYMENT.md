@@ -157,7 +157,7 @@ Order, and why it is this order:
 1. **namespace → config → database** — the ConfigMap is what every later pod mounts.
 2. **wait for `postgres-dev`** — the operator needs ~1 minute; the schema job will fail if it
    starts earlier.
-3. **`db-init` Job** — `python -m app.bootstrap --init`: pgvector, 36 tables, checkpoint
+3. **`db-init` Job** — `python -m app.bootstrap --init`: pgvector, 34 tables (36 after the first ingest), checkpoint
    tables, ownership, verification. Idempotent, so re-running is safe.
 4. **redis, ollama, rerank, workers** — dependencies of chat.
 5. **backend, frontend** — rolled out with `rollout status` waited on.
