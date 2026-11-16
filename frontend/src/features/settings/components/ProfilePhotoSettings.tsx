@@ -75,8 +75,7 @@ export default function ProfilePhotoSettings() {
             {me ? `@${me.username}` : loadError ?? "Loading your account…"}
           </p>
           <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">
-            Pick one of twelve presets, or upload your own. PNG, JPEG or WebP is cropped
-            square and resized to 256×256 in your browser before it is uploaded.
+            Choose a preset or upload a photo — cropped square to 256×256.
           </p>
           {error && <p className="mt-1 text-2xs text-[var(--danger)]">{error}</p>}
         </div>
