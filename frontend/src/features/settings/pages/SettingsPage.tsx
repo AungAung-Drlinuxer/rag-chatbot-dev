@@ -447,7 +447,7 @@ export default function Settings({ role }: { role?: string }) {
         .catch(() => {});
     }
     return () => { mounted = false; };
-  }, [reloadKey]);
+  }, [reloadKey, isAdmin]);
 
   function retryPrefs() {
     setPrefsState("loading");

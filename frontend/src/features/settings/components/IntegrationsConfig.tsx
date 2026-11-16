@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, CheckCircle2, ExternalLink, Info, KeyRound, Loader2, Loader as LoaderIcon, Lock,
   Pencil, Save, Search, ShieldCheck, Ticket, Trash2, Users, XCircle,
@@ -797,7 +797,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<ProviderKey | null>(null);
   const [loading, setLoading] = useState(true);
-  const [prefs, setPrefs] = useState<Record<string, any>>({});
+  const prefsRef = useRef<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
 
   // Load the per-user opt-in map (falls back to an empty map = everything off).
@@ -809,7 +809,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
         const all: Record<string, any> = s?.settings && typeof s.settings === "object"
           ? { ...s.settings, ...s }
           : { ...s };
-        setPrefs(all);
+        prefsRef.current = all;
         const map = all?.[PREF_KEY];
         const clean: Record<string, boolean> = {};
         if (map && typeof map === "object") {
@@ -823,9 +823,20 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       .catch(() => { /* the catalogue renders anyway; its toggles start empty */ })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
-    // `personal` only decides whether the catalogue opens first; re-running on its
-    // change would refetch the user's toggles and discard their current selection.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Read the latest map, not the one captured when the callback was created: the probe
+     effect can resolve before the settings request does, and merging a stale copy of the
+     user's other preferences into the patch would write them back over newer values. */
+  const persist = useCallback(async (next: Record<string, boolean>) => {
+    setError(null);
+    const body = { ...prefsRef.current, [PREF_KEY]: next };
+    prefsRef.current = body;
+    try {
+      await updateMySettings(body as any);
+    } catch (e: any) {
+      setError(e?.message || "Could not save your integration choices");
+    }
   }, []);
 
   const markConfigured = useCallback((key: ProviderKey, configured: boolean) => {
@@ -838,7 +849,7 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       void persist(merged);
       return merged;
     });
-  }, [personal]);
+  }, [personal, persist]);
 
   // Probe every provider once so the catalogue can show real Configured / Needs setup
   // states. Ten small GETs on open beats showing a placeholder that looks like an answer.
@@ -875,18 +886,8 @@ export function IntegrationsConfig({ variant = "admin" }: { variant?: "admin" | 
       });
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [persist, personal]);
 
-  async function persist(next: Record<string, boolean>) {
-    setError(null);
-    const body = { ...prefs, [PREF_KEY]: next };
-    setPrefs(body);
-    try {
-      await updateMySettings(body as any);
-    } catch (e: any) {
-      setError(e?.message || "Could not save your integration choices");
-    }
-  }
 
   function toggle(key: ProviderKey, next: boolean) {
     const map = { ...enabled };

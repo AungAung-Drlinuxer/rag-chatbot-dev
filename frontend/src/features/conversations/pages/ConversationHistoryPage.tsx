@@ -266,8 +266,9 @@ export default function ConversationHistoryPage() {
   const rangeStart = shown.length === 0 ? 0 : (safePage - 1) * PER_PAGE + 1;
   const rangeEnd = Math.min(safePage * PER_PAGE, shown.length);
 
-  // Narrowing a filter must not leave the reader on a page that no longer exists.
-  useEffect(() => { setPage(1); }, [q, fromDate, toDate, filterUser]);
+  /* Narrowing a filter must not leave the reader on a page that no longer exists — every
+     filter setter above already clears `page` in the same write, so an effect here only
+     re-ran the reset on every render. */
 
   /* Reports print/export the *filtered* list, not the ten rows on screen. */
   const reportColumns = [
