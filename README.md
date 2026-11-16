@@ -23,6 +23,7 @@ Browser ──▶ frontend (nginx, SPA) ──▶ backend (FastAPI)
 | hand it to an end user | [docs/guides/USER-GUIDE.md](docs/guides/USER-GUIDE.md) |
 | administer roles, knowledge, integrations | [docs/guides/ADMIN-GUIDE.md](docs/guides/ADMIN-GUIDE.md) |
 | see the components and the request lifecycle | [docs/architecture/SYSTEM.md](docs/architecture/SYSTEM.md) |
+| see the whole system on one page | [docs/architecture-diagram.html](docs/architecture-diagram.html) |
 | follow a question through retrieval → answer | [docs/architecture/RAG-PIPELINE.md](docs/architecture/RAG-PIPELINE.md) |
 | understand chunking · embeddings · pgvector · rerank · Redis | [docs/architecture/](docs/architecture/) |
 | run it on my laptop | [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) |

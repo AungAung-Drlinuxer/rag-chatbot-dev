@@ -93,6 +93,11 @@ reasoning behind 800 tokens: [../architecture/CHUNKING.md](../architecture/CHUNK
 **Settings → Integrations.** Every connector has a **Test** button that performs a real
 authenticated call; a saved form is not evidence that the connector works.
 
+The tab opens with an **Effective configuration** rail — Knowledge (*n* sites · *n* articles),
+Ticketing, Identity and Credentials (`Write-only, server-side`) — followed by one panel per
+provider. Switching a provider on only reveals its panel; nothing is connected until that panel
+is saved. A saved panel still proves nothing on its own, which is why every one carries Test.
+
 ### Confluence
 
 | Field | Notes |
@@ -108,6 +113,14 @@ authenticated call; a saved form is not evidence that the connector works.
 | Base URL / email / token | same account as Confluence is fine |
 | Project key | e.g. `ITHD`; tickets are created here |
 | Service desk ID + request types | optional; enables portal-style requests per domain |
+
+### One row per site, not per provider
+
+Both Confluence and Jira are lists. Each row is a binding (`UNIQUE (provider, base_url, label)`)
+with its own token, spaces or project, active flag and **↑ / ↓** order — two Confluence sites are
+two sources, and the first one that syncs is simply the top row. Deleting a row asks you to type
+its label, and pruning only touches articles that came from that binding's `(site, space)` pairs;
+another site's pages are never removed by it.
 
 Writes are one-way by design: the app transitions and comments on issues, and mirrors them into
 the queue. **Tickets → Sync Jira** reconciles the mirror with upstream state.
@@ -170,6 +183,14 @@ and the code is `backend/app/security/guardrails.py`.
 
 - **Tickets** is the queue: filters, sort, CSV export, and an **Edit** modal per ticket
   (Details for fields, Activity for the timeline and notes).
+- **Create ticket**, the chat's **Review ticket** and **Edit** mount the same form component, so
+  they ask for the same nine fields in the same order (subject, description, category, priority,
+  assignee, due date, components, labels, original estimate), with Jira's own limits and hints
+  (200 / 2,000 characters, `2h 30m`, `backend,api`). Edit adds *status*; a create call cannot
+  honour a status, so create does not offer one.
+- A ticket created from a conversation stores that conversation's id. That is the only thing
+  that makes it an **escalation** on the Overview — a ticket raised by hand on the Tickets page
+  is a ticket, not an escalation.
 - Internal notes are agent-only: they are posted to Jira with a role-restricted comment, so
   the requester never sees them. Public replies go to the customer.
 - **Approvals** holds requests that need a second pair of eyes before they run.
@@ -184,7 +205,7 @@ and the code is `backend/app/security/guardrails.py`.
 | --- | --- |
 | **Audit log** | who did what, when — sign-ins, settings changes, KB syncs, refusals, ticket writes. Exportable. |
 | **Conversations** | every session with its messages, confidence and citations; export as transcript |
-| **Overview** | KPIs, cost, latency, guardrail events, dependency health. **Edit layout** turns the board into a Grafana-style grid: drag a panel by its handle, resize it from any edge, then **Save view** — the arrangement is stored per account in `runtime_kv` (`board_layout:<user>`) and restored on every device. Below 1024 px the board stacks into one column. |
+| **Overview** | Every figure is a live query — conversations, resolved, escalations (chat-origin tickets only), active users, **helpful %** from `feedback`, tokens · cost · latency, the RAG confidence gate, knowledge by domain and guardrail events. Nothing on this board is sampled or mocked; a zero means the query returned zero. **Edit layout** turns the board into a Grafana-style grid: drag a panel by its handle, resize it from any edge, then **Save view** — the arrangement is stored per account in `dashboard_layouts` and restored on every device. Below 1024 px the board stacks into one column. |
 | **`GET /api/health`** | dependency probe: Postgres, Redis, embeddings, vector store, LLM |
 | **`GET /api/setup/readiness`** | which integration is unconfigured, for a fresh install |
 
@@ -199,7 +220,11 @@ Metrics and traces: `infra/monitoring/` (Alloy → Prometheus/Loki) and
 
 - change the **role** (User / Knowledge Manager / Administrator),
 - toggle **capabilities** (chat, KB search, tickets, manage KB, manage users),
-- disable an account (`status`), which blocks new tokens without deleting history.
+- disable an account (`status`), which blocks new tokens without deleting history,
+- set a **profile photo** — **Choose** opens the same twelve-mark sheet Settings offers for your
+  own account, and **Change** accepts a 512 KiB PNG/JPEG/WebP. The photo is fetched as a blob
+  (the endpoint is Bearer-protected), cached per `username:version` and refreshed everywhere on
+  `ith:avatar-changed`, so a member sees the new mark without reloading.
 
 Group membership in the directory always wins on the next sign-in unless an explicit override
 is set — record why an override exists in the audit trail by making the change through the UI,

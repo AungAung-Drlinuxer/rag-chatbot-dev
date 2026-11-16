@@ -2,7 +2,7 @@
 
 ဒီ guide က ဒီ application ကို **တခြား team / တခြား org** က ကိုယ်ပိုင် database အသစ်နဲ့
 stand-up လုပ်ချင်တဲ့အခါ လိုက်နာရန် ရေးထားတာပါ။ Reference အနေနဲ့ လက်ရှိ run နေတဲ့
-dev/prod database ရဲ့ schema (PostgreSQL 16 + pgvector 0.8.0, tables ၃၁ ခု, indexes ၄၈ ခု) ကို
+dev/prod database ရဲ့ schema (PostgreSQL 16 + pgvector 0.8.0, tables ၃၆ ခု, indexes ၆၀ ခု) ကို
 အခြေခံထားပါတယ်။ **Data မပါဝင်ပါ** — schema တစ်ခုတည်း။
 
 ---

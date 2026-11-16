@@ -39,7 +39,7 @@ app/
   tools/               live lookups: tickets, cluster, alerts
   smalltalk.py         greetings answered without retrieval
   notifier.py          SMTP alerts (approvals, escalations)
-db/schema.sql          31 tables, the reference schema
+db/schema.sql          31 tables; migrations add the other 5 (36 live)
 workers/               celery_app.py (beat schedule) + sync_tasks.py
 tests/                 240+ tests; DB-backed ones skip when no database is reachable
 eval/                  gold-set Q/A used to score retrieval changes
@@ -118,11 +118,9 @@ monitoring/            Grafana dashboard JSON
 | `monitoring.md`, `observability.md` | metrics, traces, dashboards |
 | `confluence-jira-setup.md`, `ldap-keycloak-setup.md` | integration setup |
 | `domains.md`, `tickets-and-approvals.md`, `jira-reconciliation.md` | feature behaviour |
-| `architecture/` | diagrams (HTML + PNG) and the guardrails spec |
-
-**Course material is historical.** It walks the project as it was built, so it mentions
-models and versions that have since changed (`bge-m3`, `llama3.2:1b`). For current behaviour,
-the docs above are authoritative.
+| `architecture-diagram.html` | the whole system on one page (self-contained SVG) |
+| `architecture/` | four pipeline diagrams (HTML, Mermaid-generated) and the guardrails spec |
+| `guides/` | `SETUP.md`, `ADMIN-GUIDE.md`, `USER-GUIDE.md` — the three audiences |
 
 ## Versioning
 

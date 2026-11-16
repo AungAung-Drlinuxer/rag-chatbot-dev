@@ -48,7 +48,7 @@ Start with the row that matches what you are trying to do.
 
 ## Existing deep-dive material
 
-These predate the guides above and remain accurate for their specific topics:
+Long-form references, kept current with the code:
 
 | Document | Topic |
 | --- | --- |
@@ -64,3 +64,17 @@ These predate the guides above and remain accurate for their specific topics:
 | [tickets-and-approvals.md](tickets-and-approvals.md) | the ticket workflow |
 | [domains.md](domains.md) | domain routing |
 | [jira-reconciliation.md](jira-reconciliation.md) | mirroring Jira into the queue |
+
+## Diagrams
+
+| Diagram | Shows |
+| --- | --- |
+| [architecture-diagram.html](architecture-diagram.html) | the whole system on one page: workloads, data stores, external services, the two contract notes (one ticket form, the effective-configuration rail) |
+| [architecture/rag-pipeline-6-stages.html](architecture/rag-pipeline-6-stages.html) | one question from guardrail to answer |
+| [architecture/hybrid-search-bm25-pgvector.html](architecture/hybrid-search-bm25-pgvector.html) | dense + sparse retrieval, RRF, the gate |
+| [architecture/rag-chunking-strategy.html](architecture/rag-chunking-strategy.html) | page → chunk → context prefix |
+| [architecture/rag-reranker-architecture.html](architecture/rag-reranker-architecture.html) | the rerank split, batching and timing |
+
+The four pipeline diagrams are regenerated from Mermaid sources with
+`node frontend/scripts/arch-render.mjs`; the system diagram is hand-drawn SVG so it needs no
+network and no font download.

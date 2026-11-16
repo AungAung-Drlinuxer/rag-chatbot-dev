@@ -71,12 +71,24 @@ page moved or your account lost access; that is a permission problem, not a wron
 
 Every answer has these controls:
 
-- **Not helpful** — records feedback tied to the exact answer so administrators can fix the
-  source article.
-- **Copy** / **Retry** — retry re-runs the same question (useful after a KB sync).
+- **Helpful** / **Not helpful** — records a vote tied to the exact answer and to you. The vote
+  survives a reload, and the Overview's helpful % is counted from these rows, so a "not helpful"
+  is how a bad article gets found. Voting twice replaces your earlier vote.
+- **Copy** — copies the answer text with its sources.
+- **Share** — opens a sheet with *Copy text* and, on phones that support it, the system share
+  sheet. Sharing never leaves the page without you choosing a destination.
+- **Retry** — re-runs the same question (useful after a KB sync).
 - **Edit query** — change your question in place and resend.
 - **Create Jira ticket** — raises a ticket pre-filled with the question and the situation. Use
-  this when the KB has no answer, or the fix in the KB did not work.
+  this when the KB has no answer, or the fix in the KB did not work. If a draft already exists,
+  the ticket icon reopens that draft instead of starting a second one.
+
+### The ticket you review
+
+The Review dialog is the same form the Tickets page uses to create a ticket: subject,
+description, category, priority, assignee, due date, components, labels and original estimate.
+Nothing is sent to Jira until you press **Create ticket**; the conversation is attached, so the
+agent can read what you already tried. You can change every field before sending.
 
 ### Escalation, in order
 

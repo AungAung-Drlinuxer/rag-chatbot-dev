@@ -56,7 +56,10 @@ regenerate the text between review and submit — and:
 - is idempotent per `idempotency_key`, so a double click or a retry returns the existing
   ticket instead of opening a second one;
 - writes `audit_log.action = escalate.submitted` with draft id, conversation id, approved
-  content hash and the resulting key, then appends the key and link to the transcript.
+  content hash and the resulting key, then appends the key and link to the transcript;
+- stores the conversation id on the ticket (`jira_tickets.session_id`), which is what the
+  Overview's **Escalated to IT** counts. A ticket raised by hand on the Tickets page has no
+  session and is therefore not an escalation.
 
 Defaults, deliberately: priority is left empty when the conversation does not state one,
 `business_impact` stays empty unless the user said it, and unknowns are listed in
@@ -78,20 +81,33 @@ Rate limits: chat 10/min, escalations 5/min, login 5/min/IP, everything else 240
 user (all overridable with `RATE_LIMIT_*_PER_MIN`). The default tier is a runaway guard,
 not a usage budget — one page load legitimately fires a few dozen reads.
 
-## Data model (32 tables)
+## Data model (36 tables)
 
 | Group | Tables | Notes |
 | --- | --- | --- |
-| Knowledge | `langchain_pg_collection`, `langchain_pg_embedding`, `kb_meta`, `semantica_entities`, `semantica_relations` | LangChain's PGVector store; embeddings are `vector(768)` |
-| Chat | `chat_sessions`, `chat_messages`, `chat_attachments`, `feedback` | `chat_messages.meta` carries sources, confidence and usage per answer |
-| Tickets | `jira_tickets`, `ticket_comments`, `ticket_attachments`, `approvals` | escalation is an approval-gated action |
-| Identity | `users`, `local_user_credentials`, `departments`, `department_members`, `app_groups`, `app_group_members`, `user_settings` | directory users are mirrored, never given a password |
+| Knowledge | `langchain_pg_collection`, `langchain_pg_embedding`, `kb_meta`, `semantica_entities`, `semantica_relations` | LangChain's PGVector store; embeddings are `vector(768)`. `kb_meta` carries `source_url`, `connection_id`, `last_synced` (content changed) and `last_checked` (the sync looked) |
+| Chat | `chat_sessions`, `chat_messages`, `chat_attachments`, `feedback` | `chat_messages.meta` carries sources, confidence and usage per answer; `feedback` rows are per user (`username`) so one person's vote never shows on someone else's screen |
+| Tickets | `jira_tickets`, `ticket_comments`, `ticket_attachments`, `approvals`, `escalation_drafts` | `jira_tickets.session_id` is the link back to the conversation; without it a ticket is manual, not an escalation |
+| Identity | `users`, `local_user_credentials`, `app_groups`, `app_group_members`, `user_settings`, `user_avatars` | directory users are mirrored, never given a password; avatars are one row per user, capped at 512 KiB |
 | Access | `rbac_matrix`, `user_permission_overrides`, `api_keys` | role → domain scope |
-| Ops | `audit_log`, `runtime_kv`, `system_settings`, `classifier_domains` | `system_settings` is the write-only secrets store |
+| Ops | `audit_log`, `runtime_kv`, `system_settings`, `classifier_domains`, `domain_assignees`, `integration_connections`, `llm_usage`, `dashboard_layouts`, `notification_dismissals` | `system_settings` is the write-only secrets store; `integration_connections` is one row per site (`UNIQUE (provider, base_url, label)`), ordered by `sequence` |
 | LangGraph | `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | conversation state for human-in-the-loop |
 
-Schema lives in `backend/db/schema.sql`; `python -m app.bootstrap --init` applies it and is
-idempotent.
+Schema lives in `backend/db/schema.sql` (31 tables); migrations in
+`backend/app/persistence/database.py` add the rest (`user_avatars`, `feedback.username`,
+`kb_meta.last_checked`, …). `python -m app.bootstrap --init` applies both and is idempotent.
+
+## Product surfaces, and why they look the way they do
+
+| Surface | Contract |
+| --- | --- |
+| **Settings** | Five tabs (Preferences, Integrations, AI service, Email & notifications, Data retention). Every tab is the same grammar — one `Panel` (icon tile, title, one-line description, right-hand status) — and every tab carries an **Effective configuration** rail that reads back what is in force, with that tab's only Save line. Secrets are write-only: the API answers `configured: true`, never the value |
+| **Integrations** | One row per site, not per provider: two Confluence bindings are two sources, ordered by ↑/↓, unique on `(provider, base_url, label)`. Switching a provider on reveals its panel; nothing connects until the panel is saved |
+| **Tickets** | One form component (`TicketFormFields`) draws Create, the chat draft's Review dialog and Edit, so the three ask for the same nine fields in the same order (subject, description, category, priority, assignee, due date, components, labels, original estimate). Chat presets subject/description and carries the session id |
+| **Chat** | Helpful / Not helpful post to `/api/feedback` and are echoed back per user on reload; Copy and Share are separate acts (Share is a sheet with *Copy text* and the native share when the browser has one) |
+| **Overview** | Every figure is a query, never a mock: conversations, resolved, escalations (chat-origin tickets), active users, helpful %, tokens/cost/latency, RAG gate, knowledge by domain, guardrail events. Panels are drag-and-drop, 12-column, Grafana-style, and the layout is stored per user in `dashboard_layouts` |
+| **Lists** | One pagination footer everywhere (Knowledge, Conversations, Audit log, Users, Tickets, Domains): `Showing a–b of N`, a real numbered window, and the page size always stated |
+| **Avatars** | Photos are fetched as blobs (the endpoint is Bearer-protected), cached per `username:version`, and broadcast with `ith:avatar-changed`. An administrator can set any member's photo from Users, using the same twelve drawn presets Settings offers |
 
 ## Background work
 
