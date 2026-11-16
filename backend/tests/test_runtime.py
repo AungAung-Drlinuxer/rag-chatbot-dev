@@ -11,6 +11,10 @@ def test_runtime_metadata_returns_whitelisted_keys():
 
 
 def test_runtime_get_returns_default_when_unset():
+    # A previous test (or a failed one) may have left an override behind; "unset" has to be
+    # true before the default can be asserted.
+    runtime.reset("retrieval_top_k")
+    runtime.reset("confidence_gate_threshold")
     assert runtime.get("retrieval_top_k") == 5
     assert runtime.get("confidence_gate_threshold") == 0.75
 

@@ -24,6 +24,11 @@ import pytest
 # A deterministic key for tests only. Set before any `app.*` import reads SETTINGS.
 os.environ.setdefault("JWT_SECRET", "test-only-signing-key-not-a-real-secret-0123456789")
 
+# The admin-surface tests mint a token for the configured developer administrator; with no
+# DEV_ADMIN_USERNAMES the promotion list is empty and they can only fail. One test identity,
+# never promoted outside the test process.
+os.environ.setdefault("DEV_ADMIN_USERNAMES", "dev,ith@admin")
+
 _DB_OUTAGE_MARKERS = (
     "connection to server at",
     "could not connect to server",
@@ -84,3 +89,24 @@ def _captured_db_outage(report) -> bool:
         if any(m in text for m in _DB_OUTAGE_MARKERS):
             return True
     return False
+
+
+@pytest.fixture(autouse=True)
+def _clear_rate_limit_counters():
+    """Each test starts with an empty fixed-window budget.
+
+    Once Redis is running (the normal dev stack), the login tests share one "testclient"
+    bucket and the sixth request of the session is a 429 instead of a 401 — a suite that
+    passed only because the limiter was failing open. The counters are test state, not the
+    thing under test (`test_rate_limit.py` installs its own fake client).
+    """
+    try:
+        from app.security.rate_limit import _redis
+
+        client = _redis()
+        if client is not None:
+            for key in client.scan_iter("rl:*", count=500):
+                client.delete(key)
+    except Exception:  # Redis absent is the fail-open path the limiter already handles
+        pass
+    yield

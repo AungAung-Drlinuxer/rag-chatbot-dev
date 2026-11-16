@@ -27,12 +27,16 @@ def client():
             "CREATE TABLE IF NOT EXISTS kb_meta ("
             " page_id TEXT PRIMARY KEY, domain TEXT, title TEXT)"
         ))
-        # langchain_pg_embedding is created by the pgvector integration, not by
-        # init_db — create it here only if this database has never seen one.
+        # langchain_pg_embedding is created by the pgvector integration, not by init_db —
+        # create it here only if this database has never seen one, and create the *real*
+        # shape: the three-column stub this fixture used to make satisfied IF NOT EXISTS and
+        # then broke every later LangChain ingest in the same run ("column collection_id
+        # does not exist").
         conn.execute(text(
             "CREATE TABLE IF NOT EXISTS langchain_pg_embedding ("
-            " uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),"
-            " custom_id varchar, cmetadata json)"
+            " collection_id uuid, embedding vector(768), document varchar,"
+            " cmetadata json, custom_id varchar,"
+            " uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(), tsv tsvector)"
         ))
     with TestClient(app) as c:
         yield c

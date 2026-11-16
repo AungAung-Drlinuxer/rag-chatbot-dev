@@ -188,20 +188,25 @@ def test_runtime_settings_shape(client):
 
 
 def test_runtime_put_round_trips_a_known_key(client):
-    before = client.get("/api/runtime", headers=_admin()).json()
-    key = "confidence_gate_threshold" if "confidence_gate_threshold" in before else next(iter(before))
-    original = before[key]
-    if not isinstance(original, (int, float)):
-        pytest.skip(f"{key} is not numeric; nothing safe to round-trip")
+    """The endpoint wraps its map in {"overrides": …} on both GET and PUT.
+
+    The old version read the wrapper as if it were the map (so it always skipped) and sent a
+    body the handler ignores.
+    """
+    before = client.get("/api/runtime", headers=_admin()).json()["overrides"]
+    key = "confidence_gate_threshold"
+    original = before.get(key, 0.75)
 
     try:
-        r = client.put("/api/runtime", headers=_admin(), json={key: 0.42})
+        r = client.put("/api/runtime", headers=_admin(), json={"overrides": {key: 0.42}})
         assert r.status_code == 200, r.text
-        assert client.get("/api/runtime", headers=_admin()).json()[key] == 0.42
+        now = client.get("/api/runtime", headers=_admin()).json()["overrides"]
+        assert now[key] == 0.42
     finally:
-        client.put("/api/runtime", headers=_admin(), json={key: original})
+        client.put("/api/runtime", headers=_admin(), json={"overrides": {key: original}})
 
-    assert client.get("/api/runtime", headers=_admin()).json()[key] == original
+    restored = client.get("/api/runtime", headers=_admin()).json()["overrides"]
+    assert restored[key] == original
 
 
 def test_approvals_shape(client):

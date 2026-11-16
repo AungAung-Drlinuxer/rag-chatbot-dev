@@ -70,14 +70,24 @@ def get_active_keyword_rules(force_reload: bool = False) -> dict[str, list[str]]
                     "SELECT domain_key, keywords FROM classifier_domains WHERE is_active = true"
                 )).fetchall()
                 if rows:
-                    rules: dict[str, list[str]] = {}
+                    # Start from the built-in vocabulary: a domain row with an empty keyword
+                    # list (a freshly created domain, a rename, a half-filled form) used to
+                    # replace the whole cache with `{domain: []}`, and every question then
+                    # classified as "general" with 0.3 confidence.
+                    rules: dict[str, list[str]] = {
+                        k: list(v) for k, v in DEFAULT_KEYWORD_RULES.items()
+                    }
+                    filled = 0
                     for d_key, kws in rows:
-                        if isinstance(kws, list):
+                        if isinstance(kws, list) and kws:
                             rules[d_key] = [str(k).lower().strip() for k in kws if k]
-                    if rules:
+                            filled += 1
+                    if filled:
                         _cached_rules = rules
                         _last_loaded = now
-                        logger.info("Classifier rules reloaded from DB: %d active domains", len(rules))
+                        logger.info(
+                            "Classifier rules reloaded from DB: %d domains with keywords", filled
+                        )
                         return _cached_rules
         except Exception as e:
             logger.warning("Classifier cache reload from DB skipped (%s), using existing cache", e)

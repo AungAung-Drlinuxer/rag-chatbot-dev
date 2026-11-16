@@ -16,7 +16,9 @@ from app.persistence.database import engine, init_db
 
 
 def _embeddings_reachable() -> bool:
-    base = (getattr(SETTINGS, "ollama_base_url", "") or "").rstrip("/")
+    # `ollama_url` is the field's real name; asking for `ollama_base_url` always returned ""
+    # and skipped these three tests even with Ollama running.
+    base = (getattr(SETTINGS, "ollama_url", "") or "").rstrip("/")
     if not base:
         return False
     try:
@@ -45,6 +47,17 @@ def _seed():
     init_db()
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM kb_meta"))
+
+    # The fixtures assert exact per-domain counts, so vectors left by another test file must
+    # go too. Each delete gets its own transaction: on a brand-new database LangChain has not
+    # created these tables yet, and a failed statement must not abort the rest of the seed.
+    for table in ("langchain_pg_embedding", "langchain_pg_collection"):
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"DELETE FROM {table}"))
+        except Exception:  # noqa: BLE001 — absent table means nothing to clear
+            pass
+
     ingest_article({"page_id": "kt-db-1", "title": "DB Timeout", "domain": "database",
                     "source_url": "http://x/db-1", "body": "Check pooler and pg_hba.",
                     "updated_by": "tester"})

@@ -64,6 +64,7 @@ Long-form references, kept current with the code:
 | [tickets-and-approvals.md](tickets-and-approvals.md) | the ticket workflow |
 | [domains.md](domains.md) | domain routing |
 | [jira-reconciliation.md](jira-reconciliation.md) | mirroring Jira into the queue |
+| [testing.md](testing.md) | running the full backend suite |
 
 ## Diagrams
 
