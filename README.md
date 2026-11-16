@@ -29,7 +29,6 @@ Browser ──▶ frontend (nginx, SPA) ──▶ backend (FastAPI)
 | keep it alive (backup, upgrade, rollback, logs) | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
 | know what every directory is for | [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) |
 | test or change the safety filters | [docs/GUARDRAILS.md](docs/GUARDRAILS.md) |
-| learn the stack module by module | [docs/course/](docs/course/) |
 
 The full documentation index is [docs/README.md](docs/README.md).
 
@@ -44,7 +43,7 @@ infra/
   images/ollama/    Dockerfile that bakes the embedding model into the Ollama image
   scripts/          render.py · create-secrets.sh · build-images.sh · deploy.sh
   monitoring/       Grafana dashboard JSON
-docs/               deployment, operations, architecture, course material
+docs/               deployment, operations, architecture, guides, design
 ```
 
 ## Features

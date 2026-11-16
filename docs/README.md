@@ -72,4 +72,3 @@ These predate the guides above and remain accurate for their specific topics:
 | [tickets-and-approvals.md](tickets-and-approvals.md) | the ticket workflow |
 | [domains.md](domains.md) | domain routing |
 | [jira-reconciliation.md](jira-reconciliation.md) | mirroring Jira into the queue |
-| [course/](course/) | the module-by-module teaching course |
