@@ -114,7 +114,9 @@ export function Row({ title, hint, children, className = "" }: {
         <p className="text-xs font-semibold text-foreground">{title}</p>
         {hint && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
       </div>
-      <div className="shrink-0">{children}</div>
+      {/* `max-w-full` lets a control wider than the row wrap inside instead of
+          pushing past the panel edge on a 320px phone. */}
+      <div className="min-w-0 max-w-full shrink-0">{children}</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Clock3, DatabaseZap, Loader2, Play, Save, ShieldAlert } from "lucide-react";
 
 import { BASE, apiFetch, authHeaders } from "@/shared/api/client";
-import { BTN_DANGER, BTN_PRIMARY, INPUT_MONO, Panel, Pill, Row, SectionProblem, SectionSkeleton } from "./SettingsKit";
+import { BTN_DANGER, BTN_PRIMARY, Panel, Pill, Row, SectionProblem, SectionSkeleton } from "./SettingsKit";
 
 /**
  * Data retention for conversation history and the audit trail.
@@ -218,19 +218,19 @@ export function DataRetentionSettings() {
         }
       >
         <Row title="Confirm deletion" hint="Type DELETE to enable the button. Pinned conversations are never deleted.">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="DELETE"
               aria-label="Type DELETE to confirm"
-              className={INPUT_MONO + " w-[110px] uppercase"}
+              className="h-9 w-[110px] shrink-0 rounded-xl border border-[var(--border)] bg-background px-3 font-mono text-xs uppercase text-foreground outline-none transition focus:border-[var(--primary)]"
             />
             <button
               type="button"
               onClick={runNow}
               disabled={running || confirmText.trim().toUpperCase() !== "DELETE" || nothingToDelete}
-              className={BTN_DANGER}
+              className={BTN_DANGER + " whitespace-nowrap"}
               title={nothingToDelete ? "Nothing is past the window right now" : "Delete everything past the window"}
             >
               {running ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
