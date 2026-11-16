@@ -1,66 +1,64 @@
-# Jira Reconciliation — mirror ကို Jira နဲ့ ကိုက်ညီအောင် ထိန်းခြင်း
+# Jira Reconciliation — keeping the mirror in sync with Jira
 
-`jira_tickets` က Jira ရဲ့ **mirror** ပါ။ Ticket တင်ချိန်မှာ row တစ်ခု ဆောက်တယ်၊
-list ဖတ်တိုင်း status ကို refresh လုပ်တယ်။ ဒါပေမယ့် **Jira မှာ issue ဖျက်လိုက်တာ** ကို
-ဘယ်လမ်းကနေမှ မသိနိုင်ပါ — ဖျက်ထားတဲ့ ticket က board ပေါ်မှာ ဆက်ပေါ်နေတယ်။
+`jira_tickets` is a **mirror** of Jira. A row is created when a ticket is filed, and the status is
+refreshed every time the list is read. But there is no way to learn that **an issue was deleted in
+Jira** — a deleted ticket keeps showing on the board.
 
-Reconciliation က အဲဒီလမ်းကြောင်းကို ဖြည့်တာပါ: mirror ထဲက key တိုင်းကို Jira ကို
-မေးပြီး ကိုက်ညီအောင် ပြင်တယ်။
+Reconciliation closes that gap: every key in the mirror is queried against Jira and corrected to match.
 
-## ၁။ ဆုံးဖြတ်ချက် ၃ မျိုး
+## 1. Three possible decisions
 
-| Jira ရဲ့ အဖြေ | လုပ်ဆောင်ချက် |
+| Jira's answer | Action |
 |---|---|
-| **404** (issue မရှိတော့) | row ကို `status='deleted'` + `remote_missing_at` သတ်မှတ် → board ပေါ်က ဖျောက် (row ကို မဖျက် — escalation ဖြစ်ခဲ့တာ မှတ်တမ်း) |
-| **200 + status** | canonical status (`open \| pending \| resolved \| closed`) ကို လိုက်ယူ; အရင် `deleted` ဖြစ်ခဲ့ရင် ပြန်ရှင် |
-| timeout / 401 / 500 / မဖွင့်ထား | **ဘာမှ မလုပ်** — Jira ပျက်နေတာ ticket ဖျက်တာ မဟုတ် |
+| **404** (issue no longer exists) | set `status='deleted'` + `remote_missing_at` on the row → hide it from the board (do not delete the row — it records that an escalation happened) |
+| **200 + status** | adopt the canonical status (`open \| pending \| resolved \| closed`); revive it if it was previously `deleted` |
+| timeout / 401 / 500 / not configured | **do nothing** — a Jira outage is not a deleted ticket |
 
-နောက်ဆုံးအချက်က အရေးကြီးဆုံး: outage တစ်ခုက board ကို ရှင်းပစ်လိုက်ရင် ဒါက data
-ဆုံးရှုံးမှုပါ။ ဒါကြောင့် 404 တစ်ခုတည်းကိုပဲ delete အဖြစ် သတ်မှတ်တယ်။
+The last point matters most: if an outage were allowed to wipe the board, that would be data
+loss. So only a 404 is treated as a delete.
 
-## ၂။ ဘယ်အချိန် run လဲ
+## 2. When it runs
 
 - **Nightly 03:15 UTC** — Celery beat (`reconcile-jira` → `workers.sync_tasks.reconcile_jira`)
-- **Manual** — Tickets စာမျက်နှာရဲ့ **Reconcile** ခလုတ် (admin/agent) ဒါမှမဟုတ်
+- **Manual** — the **Reconcile** button on the Tickets page (admin/agent), or
   `POST /api/tickets/reconcile?limit=200`
 
-Manual က Jira မှာ issue ဖျက်ပြီးတာနဲ့ ချက်ချင်း board ရှင်းချင်တဲ့အခါ သုံးပါ။
-Nightly run က 500 key အထိ စစ်တယ်; manual က default 200။
+Use manual when you want the board cleared immediately after an issue is deleted in Jira.
+The nightly run checks up to 500 keys; manual defaults to 200.
 
-## ၃။ စစ်ဆေးပုံ
+## 3. How to verify
 
 ```bash
-# nightly schedule ရှိလား
+# is the nightly schedule present?
 kubectl -n rag-chatbot-dev exec deploy/celery-beat -- \
   python -c "from workers.celery_app import celery_app; print(celery_app.conf.beat_schedule['reconcile-jira'])"
 
-# ကိုယ်တိုင် run (backend pod ထဲကနေ)
+# run it yourself (from inside the backend pod)
 kubectl -n rag-chatbot-dev exec -i deploy/backend -- python - <<'PY'
 from app.integrations.jira_reconcile import reconcile_jira
 print(reconcile_jira(limit=200))
 PY
 # → {"checked": 4, "missing": 0, "updated": 0, "revived": 0, "unreachable": 0, ...}
 
-# DB မှာ ဘာတွေ deleted ဖြစ်နေလဲ
+# what is marked deleted in the DB
 kubectl -n rag-chatbot-dev exec postgres-dev-1 -- psql -U postgres -d assistant -c \
   "SELECT jira_key, status, remote_missing_at FROM jira_tickets WHERE status='deleted';"
 ```
 
-## ၄။ Code
+## 4. Code
 
 - `backend/app/integrations/jira_reconcile.py` — `decide()` (pure rules) + `reconcile_jira()`
-- `backend/app/integrations/jira.py::fetch_issue_status` — 404 ကို `missing: True` နဲ့ ပြန်တယ်
+- `backend/app/integrations/jira.py::fetch_issue_status` — returns a 404 as `missing: True`
 - `backend/workers/sync_tasks.py` — `reconcile_jira_task`
 - `backend/workers/celery_app.py` — beat schedule
-- `backend/app/api/tickets.py` — `list_tickets` က `deleted` ကို ဖယ်; `POST /api/tickets/reconcile`
-- `frontend/src/features/tickets` — **Reconcile** ခလုတ် (toast နဲ့ ရလဒ်ပြ)
+- `backend/app/api/tickets.py` — `list_tickets` excludes `deleted`; `POST /api/tickets/reconcile`
+- `frontend/src/features/tickets` — **Reconcile** button (shows the result in a toast)
 
-## ၅။ သတိထားရန်
+## 5. Things to watch
 
-- Ticket ကို Jira မှာ **ဖျက်လိုက်တာ** နဲ့ **archive/permission ပြောင်းလိုက်တာ** က
-  Jira မှာ နှစ်မျိုးတူတူ 404 ပြန်နိုင်တယ်။ ဒါကြောင့် row ကို ဖျက်မပစ်ဘဲ `deleted`
-  အဖြစ် မှတ်ထားတယ် — လိုအပ်ရင် ပြန်ရှင်စေနိုင်တယ်။
-- Jira credential မရှိရင် `unreachable` တိုးပြီး ဘာမှ မပြောင်းဘူး; Settings → Integrations
-  မှာ Jira ကို အရင် စစ်ပါ။
-- 500 key အထက်ရှိရင် nightly run က အစ 500 ကိုပဲ စစ်တယ် — `limit` ကို တိုးချင်ရင်
-  `reconcile_jira_task` ထဲ ပြင်ပါ။
+- A ticket **deleted in Jira** and one whose **archive/permission changed** can both return 404 in
+  Jira. So the row is not deleted but marked `deleted` — it can be revived if needed.
+- Without Jira credentials `unreachable` increases and nothing changes; check Jira first in
+  Settings → Integrations.
+- Above 500 keys the nightly run checks only the first 500 — to raise `limit`, edit
+  `reconcile_jira_task`.

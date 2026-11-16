@@ -51,9 +51,9 @@ def turn(question, servers, label, mode="infra"):
 print("GET /api/mcp/servers ->", json.dumps(get("/api/mcp/servers")))
 print()
 print("HTTP turns:")
-m1, e1 = turn("Loki က label ဘာတွေရှိလဲ", None, "unscoped")
-m2, e2 = turn("Loki က label ဘာတွေရှိလဲ", ["grafana"], "scoped -> grafana")
-m3, e3 = turn("Proxmox VMs list ပြပါ", ["proxmox"], "scoped -> proxmox")
+m1, e1 = turn("what labels does Loki have", None, "unscoped")
+m2, e2 = turn("what labels does Loki have", ["grafana"], "scoped -> grafana")
+m3, e3 = turn("list the Proxmox VMs", ["proxmox"], "scoped -> proxmox")
 print()
 assert (m2 or {}).get("servers_scope") == ["grafana"], "the scope did not survive the request"
 assert (m3 or {}).get("servers_scope") == ["proxmox"], "the scope did not survive the request"

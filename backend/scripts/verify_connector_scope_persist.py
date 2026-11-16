@@ -38,7 +38,7 @@ def stream(msg, sid, servers=None):
 
 # a fresh conversation, scoped to grafana
 sid = str(uuid.uuid4())
-stream("Loki က label ဘာတွေရှိလဲ", sid, servers=["grafana"])
+stream("what labels does Loki have", sid, servers=["grafana"])
 print("1. sent a scoped turn (servers=['grafana']) on", sid[:8])
 
 # --- does the LIST endpoint report it?

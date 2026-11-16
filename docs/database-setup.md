@@ -1,37 +1,37 @@
-# Database အသစ် setup လုပ်ခြင်း (Fresh database guide)
+# Setting up a fresh database (Fresh database guide)
 
-ဒီ guide က ဒီ application ကို **တခြား team / တခြား org** က ကိုယ်ပိုင် database အသစ်နဲ့
-stand-up လုပ်ချင်တဲ့အခါ လိုက်နာရန် ရေးထားတာပါ။ Reference အနေနဲ့ လက်ရှိ run နေတဲ့
-dev/prod database ရဲ့ schema (PostgreSQL 16 + pgvector 0.8.0, tables ၃၆ ခု, indexes ၆၀ ခု) ကို
-အခြေခံထားပါတယ်။ **Data မပါဝင်ပါ** — schema တစ်ခုတည်း။
+This guide is for another team / another org that wants to stand this application up with its own
+new database. As a reference it is based on the schema of the currently running
+dev/prod database (PostgreSQL 16 + pgvector 0.8.0, 36 tables, 60 indexes).
+**No data is included** — schema only.
 
 ---
 
-## 1. လိုအပ်ချက်များ (Prerequisites)
+## 1. Prerequisites
 
-| Component | Version | မှတ်ချက် |
+| Component | Version | Note |
 | --- | --- | --- |
-| PostgreSQL | **16** | CNPG/cluster သို့မဟုတ် managed Postgres ဖြစ်နိုင် |
-| pgvector | **0.8.0** (>= 0.5 ရ) | `langchain_pg_embedding.embedding` က `vector` type သုံး |
-| Database | အသစ်၊ အလွတ် | `--init` က `CREATE DATABASE assistant OWNER app` ကို အလိုအလျောက် လုပ်တယ် |
-| App credentials | non-superuser role | extension တစ်ခုတည်းကို superuser နဲ့ လုပ်မယ် |
+| PostgreSQL | **16** | can be a CNPG/cluster or managed Postgres |
+| pgvector | **0.8.0** (>= 0.5 works) | `langchain_pg_embedding.embedding` uses the `vector` type |
+| Database | new, empty | `--init` runs `CREATE DATABASE assistant OWNER app` automatically |
+| App credentials | non-superuser role | only the extension is created with the superuser |
 
-Application role ကို **superuser မပေးပါနဲ့**။
+Do **not** give the application role superuser.
 
-> အစကတည်းက တစ်ခါတည်း အလုပ်ဖြစ်ရအောင် — bundled CloudNativePG cluster က
-> `postInitApplicationSQL` နဲ့ `CREATE EXTENSION vector` ကို superuser အနေနဲ့ အလိုအလျောက်
-> လုပ်ပေးတယ် (`infra/k8s-dev/20-database.yaml`)။ အောက်မှာ ဖော်ပြထားတဲ့ manual step က
-> **ပြင်ပ PostgreSQL** ကို သုံးတဲ့အခါပဲ လိုတယ်။ အဲဒီအခါ `CREATE EXTENSION vector`
-> တစ်ကြိမ်တည်း superuser လိုတာကို `BOOTSTRAP_SUPERUSER_URL` နဲ့ ဖြေရှင်းထားပါတယ်။
+> So that everything works on the first attempt — the bundled CloudNativePG cluster creates
+> `CREATE EXTENSION vector` automatically as superuser via `postInitApplicationSQL`
+> (`infra/k8s-dev/20-database.yaml`). The manual step described below is only needed when using
+> **external PostgreSQL**. In that case the one-time superuser requirement for `CREATE EXTENSION vector`
+> is handled by `BOOTSTRAP_SUPERUSER_URL`.
 
 ---
 
-## 2. Schema ထဲမှာ ဘာတွေ ပါလဲ (reference)
+## 2. What the schema contains (reference)
 
-Schema ကို ဒီနေရာမှာ အပြည့်အစုံ သိမ်းထားပါတယ် — `backend/db/schema.sql` (`pg_dump -s -O -x`
-နဲ့ ထုတ်ထားတဲ့ production-shaped dump၊ data မပါ)။
+The full schema is stored here — `backend/db/schema.sql` (a production-shaped dump produced with
+`pg_dump -s -O -x`, without data).
 
-| အုပ်စု | Tables | အသုံး |
+| Group | Tables | Purpose |
 | --- | --- | --- |
 | Identity & access | `users`, `local_user_credentials`, `user_settings`, `user_permission_overrides`, `app_groups`, `app_group_members`, `rbac_matrix`, `api_keys` | login, role, permission, API key |
 | Chat | `chat_sessions`, `chat_messages`, `chat_attachments`, `feedback` | conversation + transcript + attachment + rating |
@@ -43,16 +43,16 @@ Schema ကို ဒီနေရာမှာ အပြည့်အစုံ သ�
 | Orchestration | `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | LangGraph state |
 | Graph RAG | `semantica_entities`, `semantica_relations` | (optional) knowledge graph |
 
-စုစုပေါင်း **36 tables / 60 indexes**၊ vector index က
-`langchain_pg_embedding_hnsw_idx` (`vector_cosine_ops`, m=16, ef_construction=64)။
+In total **36 tables / 60 indexes**; the vector index is
+`langchain_pg_embedding_hnsw_idx` (`vector_cosine_ops`, m=16, ef_construction=64).
 
 ---
 
-## 3. အဆင့် ၁ — Installer တစ်ခုတည်းနဲ့ database တစ်ခုလုံး ဆောက်
+## 3. Step 1 — Build the whole database with the single installer
 
-`app.bootstrap --init` က **role, database, pgvector extension, tables အားလုံး, table ownership,
-LangGraph checkpoint tables** တွေကို အစဉ်လိုက် ဖန်တီးပြီး နောက်ဆုံးမှာ verify လုပ်ပေးတယ်။
-အဆင့်တိုင်း idempotent ဖြစ်လို့ ပြန် run လည်း ဘာမှ မပျက်ပါ။
+`app.bootstrap --init` creates the **role, database, pgvector extension, all tables, table ownership,
+LangGraph checkpoint tables** in order and verifies them at the end.
+Every step is idempotent, so re-running breaks nothing.
 
 ```bash
 BOOTSTRAP_SUPERUSER_URL='postgresql://postgres:<superuser-pw>@<host>:5432/postgres' \
@@ -61,7 +61,7 @@ DATABASE_URL='postgresql+psycopg2://app:<app-role-password>@<host>:5432/assistan
   python -m app.bootstrap --init
 ```
 
-ထွက်လာတဲ့ report (ဥပမာ):
+The resulting report (example):
 
 ```
 database ready: tables=29, users=0, admins=0, local_credentials=0, settings_rows=0, kb_articles=0, tickets=0
@@ -70,18 +70,18 @@ schema: 29/25 tables, pgvector 0.8.0
 note: no administrator yet — run with --admin <username> before using the UI
 ```
 
-| Flag / env | လုပ်ဆောင်ချက် |
+| Flag / env | Effect |
 | --- | --- |
-| `BOOTSTRAP_SUPERUSER_URL` | role/database ဖန်တီးခြင်း၊ `CREATE EXTENSION vector`၊ ownership ပြောင်းခြင်း — မပေးရင် ဒီအဆင့်တွေ ကျော်ပြီး schema ကို app role နဲ့ပဲ ဆောက်တယ် |
-| `BOOTSTRAP_APP_PASSWORD` | app role အသစ် ဆောက်ရာမှာ သုံးမယ့် password (role ရှိပြီးသားဆိုရင် မ ပြောင်းပါ) |
-| `--json` | CI/Job အတွက် machine-readable report |
-| `--check` | ဘာမှ မ ဆောက်ဘဲ (လိုအပ်ရင် schema ဆောက်ပြီး) လက်ရှိ state ကို report |
+| `BOOTSTRAP_SUPERUSER_URL` | creating the role/database, `CREATE EXTENSION vector`, changing ownership — if not provided, these steps are skipped and the schema is created with the app role only |
+| `BOOTSTRAP_APP_PASSWORD` | the password used when creating a new app role (unchanged if the role already exists) |
+| `--json` | machine-readable report for CI/Jobs |
+| `--check` | create nothing (build the schema if needed) and report the current state |
 
-`tables=29` ဖြစ်တာက **25 required + 4 LangGraph checkpoint**။ Vector store ရဲ့
-`langchain_pg_collection`/`langchain_pg_embedding` ကို ပထမဆုံး ingest လုပ်တဲ့အခါ LangChain
-က ဖန်တီးတယ် — installer က အဲဒီနှစ်ခုကို `lazy_tables_missing` အနေနဲ့ report လုပ်တယ်၊ error မ ဟုတ်ပါ။
+`tables=29` means **25 required + 4 LangGraph checkpoint**. The vector store's
+`langchain_pg_collection`/`langchain_pg_embedding` are created by LangChain on the first ingest —
+the installer reports those two as `lazy_tables_missing`, which is not an error.
 
-### Kubernetes မှာ run လုပ်ခြင်း
+### Running it in Kubernetes
 
 ```bash
 kubectl apply -f infra/k8s-dev/15-db-init.yaml
@@ -89,93 +89,93 @@ kubectl -n rag-chatbot-dev wait --for=condition=complete job/db-init --timeout=1
 kubectl -n rag-chatbot-dev logs job/db-init
 ```
 
-Job ကို apply order မှာ `20-database.yaml` ပြီးနောက်၊ backend မတင်ခင် run ပါ။ Superuser URL
-လိုတဲ့အခါ `db-init-superuser` Secret (`url` key) ကို ဖန်တီးပါ; မရှိရင် Job က schema-only
-အဆင့်တွေကို ဆက်လုပ်တယ်။
+Run the Job after `20-database.yaml` in apply order and before the backend is deployed. When a superuser
+URL is needed, create the `db-init-superuser` Secret (`url` key); if it is absent the Job continues with the
+schema-only steps.
 
 ---
 
-## 4. Manual လမ်း (DBA က ကိုယ်တိုင် လုပ်ချင်ရင်)
+## 4. Manual path (if the DBA wants to do it personally)
 
 ```sql
--- superuser နဲ့ တစ်ကြိမ်
+-- once, as superuser
 CREATE ROLE app LOGIN PASSWORD '<strong-password>';
 CREATE DATABASE assistant OWNER app;
 \c assistant
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-ပြီးရင် schema ကို application ကနေ ဆောက်ခိုင်းပါ (upgrade တိုင်း အလိုအလျောက် ဖြည့်ပေးတယ်):
+Then let the application create the schema (it fills in whatever is missing on every upgrade):
 
 ```bash
 DATABASE_URL='postgresql+psycopg2://app:<pw>@<host>:5432/assistant' \
   python -m app.bootstrap --check
 ```
 
-သို့မဟုတ် reference dump ကို တိုက်ရိုက် apply လုပ်နိုင်တယ် (`data` မပါ၊ schema သက်သက်):
+Or apply the reference dump directly (no `data`, schema only):
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/db/schema.sql
 ```
 
-နှစ်လမ်းစလုံးမှာ **data မပါ**၊ seed/demo record မရှိ။ Manual လမ်းသုံးရင် ownership ကို
-သေချာစစ်ပါ — `ALTER TABLE ... OWNER TO app` မ လုပ်ထားရင် နောက် migration တွေ ကျမယ်
-(`--init` က ဒါကို အလိုအလျောက် လုပ်ပေးတယ်)။
+Neither path includes **data**; there are no seed/demo records. If you use the manual path, check
+ownership carefully — if `ALTER TABLE ... OWNER TO app` has not been done, later migrations will fail
+(`--init` does this automatically).
 
 ---
 
-## 5. အဆင့် ၃ — ပထမ administrator ဖန်တီး
+## 5. Step 3 — Create the first administrator
 
-Default account မရှိပါ (တမင်ဖြစ်ပါတယ်)။ ဒါကြောင့် UI မ ဖွင့်ခင် တစ်ခု လိုတယ်:
+There is no default account (intentionally). So one is needed before opening the UI:
 
 ```bash
-# password ကို prompt (သို့) BOOTSTRAP_ADMIN_PASSWORD / stdin ကနေ ယူတယ်၊ argv မှာ မ ထည့်ပါ
+# takes the password from a prompt, or BOOTSTRAP_ADMIN_PASSWORD / stdin; never from argv
 DATABASE_URL='postgresql+psycopg2://app:<pw>@<host>:5432/assistant' \
   python -m app.bootstrap --admin <username>
 ```
 
-Output က `database ready: tables=…, users=1, admins=1, local_credentials=1, …` ဖြစ်ရမယ်။
-Password ကို salted SHA-256 (`salt$digest`) အနေနဲ့ `local_user_credentials` မှာ သိမ်းတယ် —
-UI က password သတ်မှတ်တဲ့ လမ်းကြောင်းနဲ့ အတူတူ။
+The output should be `database ready: tables=…, users=1, admins=1, local_credentials=1, …`.
+The password is stored as salted SHA-256 (`salt$digest`) in `local_user_credentials` —
+the same path as setting a password from the UI.
 
-Directory (LDAP/AD) သုံးမယ်ဆိုရင် local password မလိုပါ — `DEV_ADMIN_USERNAMES=<username>`
-သတ်မှတ်ပြီး directory credential နဲ့ login လုပ်ပါ။
+If you use a directory (LDAP/AD), no local password is needed — set `DEV_ADMIN_USERNAMES=<username>`
+and log in with directory credentials.
 
 ---
 
-## 6. အဆင့် ၄ — App ကို ချိတ်
+## 6. Step 4 — Connect the app
 
-| Env / Secret | လိုအပ်? | ရှင်းလင်း |
+| Env / Secret | Required? | Explanation |
 | --- | --- | --- |
-| `DATABASE_URL` | ✅ | password ပါနိုင်၊ Secret ထဲ ထားပါ |
-| `JWT_SECRET` | optional | မ ပေးရင် ပထမ boot မှာ generate လုပ်ပြီး `system_settings.security` မှာ သိမ်း |
-| `MAIL_DOMAIN` | optional | directory မှာ mail မရှိရင် address ဆောက်ဖို့ |
-| `DEV_ADMIN_USERNAMES` | optional | directory account ကို admin ပေးဖို့ |
-| LLM key, LDAP, Keycloak, Confluence, Jira, SMTP | — | **UI → Settings** ကနေ ထည့် (DB ထဲ သိမ်း၊ write-only) |
+| `DATABASE_URL` | ✅ | may contain the password — keep it in a Secret |
+| `JWT_SECRET` | optional | if not provided, it is generated on first boot and stored in `system_settings.security` |
+| `MAIL_DOMAIN` | optional | for building addresses when the directory has no mail |
+| `DEV_ADMIN_USERNAMES` | optional | to grant a directory account admin |
+| LLM key, LDAP, Keycloak, Confluence, Jira, SMTP | — | enter via **UI → Settings** (stored in the DB, write-only) |
 
-Boot လုပ်ပြီး စစ်ရန်:
+After booting, check:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' https://<host>/api/branding     # 200
-curl -s https://<host>/api/dashboard/health                               # 401 (login လိုတယ်)
+curl -s https://<host>/api/dashboard/health                               # 401 (login required)
 ```
 
 ---
 
-## 7. Frontend ကနေ setup လုပ်ပြီးတာနဲ့ ready ဖြစ်ခြင်း
+## 7. Becoming ready once setup is done from the frontend
 
-Database ကို `--init` နဲ့ ဆောက်ပြီး admin တစ်ခု ရှိပြီးဆိုရင် ကျန်တာအားလုံး **UI ထဲကနေပဲ**
-ပြီးရမယ် — server ပေါ် ပြန် login လုပ်စရာ မ လိုပါ။
+Once the database is built with `--init` and one admin exists, everything else must be completed
+**from the UI** — there is no need to log back into the server.
 
-| Admin လုပ်တာ (Settings → Integrations) | အလိုအလျောက် ဖြစ်သွားတာ |
+| What the admin does (Settings → Integrations) | What happens automatically |
 | --- | --- |
-| **Confluence** base URL + account email + API token သိမ်း | သိမ်းပြီးတာနဲ့ KB sync တစ်ခု background (Celery) မှာ queue ဝင်တယ်။ ၂ မိနစ်အတွင်း ထပ်သိမ်းရင် ထပ် မ queue ပါ (dedupe)။ Articles ဝင်ပြီး domains တွေ အလိုအလျောက် register ဖြစ်တယ် |
-| **Jira** base URL + email + token သိမ်း | Tickets page က live Jira ကို ဖတ်တယ် (test connection နဲ့ အတည်ပြုနိုင်) |
-| **LDAP/AD** server, base DN, bind DN + password သိမ်း | Directory login အလုပ်လုပ်တယ် (first login မှာ user row ဖန်တီး၊ admin approve လိုအပ်ရင် approve လုပ်ရန်) |
-| **Keycloak** issuer, client id/secret, redirect URI သိမ်း | `/api/auth/sso/enabled` → `true`; login page မှာ “Sign in with SSO” ပေါ်လာတယ် |
+| Save **Confluence** base URL + account email + API token | as soon as it is saved, a KB sync is queued in the background (Celery). Saving again within 2 minutes does not queue another (dedupe). Articles are ingested and domains are registered automatically |
+| Save **Jira** base URL + email + token | the Tickets page reads live Jira (can be confirmed with test connection) |
+| Save **LDAP/AD** server, base DN, bind DN + password | directory login works (the user row is created on first login; approve it if admin approval is required) |
+| Save **Keycloak** issuer, client id/secret, redirect URI | `/api/auth/sso/enabled` → `true`; “Sign in with SSO” appears on the login page |
 
-**Readiness check** — `GET /api/setup/readiness` (login လိုတယ်) က အောက်ပါအချက်တွေကို
-database ကနေ တိုက်ရိုက် ဖတ်ပြီး ပြန်ပေးတယ်:
+**Readiness check** — `GET /api/setup/readiness` (login required) reads the following points
+directly from the database and returns them:
 
 ```json
 {
@@ -191,64 +191,64 @@ database ကနေ တိုက်ရိုက် ဖတ်ပြီး ပြ�
 }
 ```
 
-Settings → Integrations ရဲ့ ထိပ်မှာ ဒီ step တွေကို “Finish setting up” card အနေနဲ့ ပြတယ်;
-အားလုံး done ဖြစ်ရင် တစ်လိုင်းတည်း (“Installation ready — …”) အဖြစ် ကျုံ့သွားတယ်။
-`blocked` ဆိုတာ UI ကနေ မ ပြင်နိုင်တာ (ဥပမာ admin မရှိသေး / pgvector မရှိ) — အဲဒီအခါ
-ဘာ command run ရမလဲ ကို hint မှာ တိုက်ရိုက် ပြထားတယ်။
+At the top of Settings → Integrations these steps are shown as a “Finish setting up” card;
+when all of them are done it collapses to a single line (“Installation ready — …”).
+`blocked` means it cannot be fixed from the UI (e.g. no admin yet / no pgvector) — in that case
+the hint shows directly which command to run.
 
 ---
 
-## 8. Verification queries (fresh install မှန်/မမှန်)
+## 8. Verification queries (is the fresh install correct?)
 
 ```sql
 SELECT count(*) FROM information_schema.tables WHERE table_schema='public';       -- 29 (--init) / 31 (after first ingest)
 SELECT extversion FROM pg_extension WHERE extname='vector';                       -- 0.8.0
 SELECT indexname FROM pg_indexes WHERE indexname='langchain_pg_embedding_hnsw_idx';
-SELECT count(*) FROM users;             -- 1 (ပထမ admin) — demo user မရှိ
+SELECT count(*) FROM users;             -- 1 (the first admin) — no demo user
 SELECT count(*) FROM kb_meta;           -- 0
 SELECT count(*) FROM jira_tickets;      -- 0
-SELECT count(*) FROM audit_log;         -- 0 (စတင်ပြီးမှ ဖြစ်ပေါ်မယ်)
-SELECT key FROM system_settings;        -- llm/integrations/smtp/security ... UI က ထည့်သလို
+SELECT count(*) FROM audit_log;         -- 0 (appears only after the first activity)
+SELECT key FROM system_settings;        -- llm/integrations/smtp/security ... as entered by the UI
 ```
 
 ---
 
-## 9. ဖြစ်လေ့ရှိတဲ့ ပြဿနာများ
+## 9. Common problems
 
-| လက္ခဏာ | အကြောင်း | ဖြေရှင်း |
+| Symptom | Cause | Fix |
 | --- | --- | --- |
-| `must be superuser to create this extension` | app role က superuser မဟုတ် | section 3 က `CREATE EXTENSION` ကို superuser နဲ့ တစ်ကြိမ် run၊ သို့မဟုတ် `BOOTSTRAP_SUPERUSER_URL` ပေး |
-| `must be owner of table chat_messages` (startup warning) | table owner က app role မဟုတ် | `ALTER TABLE ... OWNER TO app;` (ဒါမှ FTS/meta migration လုပ်နိုင်) |
-| Login 401 ချက်ချင်း | admin မ ရှိသေး / password မ ကိုက် | `--admin` ပြန် run (idempotent) |
-| `system_settings` ထဲ key မရှိ | ဘာမှ မ configure ရသေး | UI → Settings မှာ ထည့် (code ထဲ default မ ထည့်ပါ) |
+| `must be superuser to create this extension` | the app role is not superuser | run `CREATE EXTENSION` once as superuser per section 3, or provide `BOOTSTRAP_SUPERUSER_URL` |
+| `must be owner of table chat_messages` (startup warning) | the table owner is not the app role | `ALTER TABLE ... OWNER TO app;` (only then can the FTS/meta migration run) |
+| Login 401 immediately | no admin yet / wrong password | re-run `--admin` (idempotent) |
+| no key in `system_settings` | nothing has been configured yet | enter it in UI → Settings (no defaults are baked into the code) |
 
 ---
 
-## 10. Backup / ရွှေ့ပြောင်း
+## 10. Backup / migration
 
 ```bash
-# data ပါ အပြည့် (schema + data) — တခြား environment ကို ရွှေ့ရန်
+# full, with data (schema + data) — to move to another environment
 pg_dump -Fc -U postgres assistant > assistant.dump
 pg_restore -d assistant_new --no-owner -U postgres assistant.dump
 
-# schema တစ်ခုတည်း (ဒီ repo ရဲ့ reference ကို refresh လုပ်ရန်)
+# schema only (to refresh this repo's reference)
 pg_dump -s -O -x -U postgres assistant > backend/db/schema.sql
 ```
 
-`system_settings.security.jwt_secret` ပါ ပါလာမယ် — database ကို ရွှေ့ရင် token တွေ
-ဆက်အလုပ်လုပ်တယ်။ Key အသစ် လိုချင်ရင် အဲဒီ key ကို ဖျက်ပြီး restart လုပ်ပါ (အလိုအလျောက်
-အသစ် generate လုပ်တယ်၊ ဒါပေမယ့် ရှိပြီးသား session တွေ invalid ဖြစ်မယ်)။
+`system_settings.security.jwt_secret` comes along too — after moving the database, tokens
+keep working. To get a new key, delete that key and restart (a new one is
+generated automatically, but existing sessions become invalid).
 
 ---
 
-## 11. Upgrade လုပ်တဲ့အခါ
+## 11. When upgrading
 
-ကုဒ်အသစ်ကို deploy လုပ်တာနဲ့ `init_db()` က လိုအပ်တဲ့ tables/columns တွေကို ဖြည့်ပေးတယ်
-(`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`)။ Migration tool
-မ လိုပါ၊ ဒါပေမယ့် **table owner က app role ဖြစ်ဖို့** လိုတယ် — မဟုတ်ရင် warning ထွက်ပြီး
-အဲဒီ column က မ ထည့်ဖြစ်ဘူး။
+Deploying new code makes `init_db()` add the tables/columns it needs
+(`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`). No migration tool
+is needed, but the **table owner must be the app role** — otherwise a warning is emitted and
+that column is not added.
 
-Reference dump ကို upgrade တစ်ခုပြီးတိုင်း refresh လုပ်ထားပါ:
+Refresh the reference dump after every upgrade:
 
 ```bash
 pg_dump -s -O -x -U postgres assistant > backend/db/schema.sql

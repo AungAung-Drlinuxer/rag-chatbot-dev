@@ -29,33 +29,31 @@ _GREETINGS = {
     "hi", "hii", "hiii", "hello", "helo", "hey", "heya", "hiya", "yo", "howdy",
     "hi there", "hello there", "hey there", "hi bot", "hello bot", "hey bot",
     "good morning", "good afternoon", "good evening", "good day",
-    "မင်္ဂလာပါ", "ဟယ်လို", "ဟေး", "နေကောင်းလား", "မင်္ဂလာပါရှင့်",
     "chào", "xin chào", "สวัสดี", "नमस्ते",
 }
 _HOW_ARE_YOU = {
     "how are you", "how are you doing", "hows it going", "how is it going",
-    "how do you do", "whats up", "sup", "how have you been", "နေကောင်းလား",
+    "how do you do", "whats up", "sup", "how have you been",
 }
 _THANKS = {
     "thanks", "thank you", "thankyou", "thx", "many thanks", "thanks a lot",
     "thanks so much", "cheers", "got it thanks", "great thanks", "perfect thanks",
-    "okay thanks", "that helps", "that helps thanks", "thank you that helps", "ကျေးဇူးတင်ပါတယ်", "ကျေဇူးတင်ပါတယ်",
+    "okay thanks", "that helps", "that helps thanks", "thank you that helps",
     "cảm ơn", "ขอบคุณ",
 }
 _BYE = {
     "bye", "goodbye", "good bye", "see you", "see ya", "later", "good night",
-    "goodnight", "သွားတော့မယ်", "တာ့တာ",
+    "goodnight",
 }
 _IDENTITY = {
     "who are you", "what are you", "what can you do", "what do you do",
-    "help", "what is this", "နင် ဘယ်သူလဲ", "မင်း ဘယ်သူလဲ", "ဘာလုပ်ပေးနိုင်လဲ",
+    "help", "what is this",
     "what can i ask", "how does this work",
 }
 _ACK = {
     "ok", "okay", "k", "sure", "yes", "yeah", "yep", "no", "nope", "got it",
     "alright", "cool", "nice", "great", "perfect", "fine", "understood",
     "ok thanks", "okay thanks", "ok thank you", "okay thank you",
-    "ရပါပြီ", "အိုကေ", "ဟုတ်ကဲ့", "ကောင်းပါပြီ",
 }
 
 _REPLIES = {
@@ -87,9 +85,9 @@ def normalise(text: str) -> str:
     # Apostrophes vanish rather than become spaces: "how's" must normalise to "hows",
     # not "how s", or it misses the phrase it obviously is.
     text = text.replace("'", "").replace("\u2019", "")
-    # Drop emoji/symbols, keep letters (incl. Burmese), digits, combining marks and
-    # whitespace. Burmese vowels/tone marks are category Mn, which `isalnum()` rejects —
-    # without them "မင်္ဂလာပါ" degrades to "မင ဂလ ပ" and never matches.
+    # Drop emoji/symbols; keep letters, digits, combining marks and whitespace. Scripts
+    # that place vowels in category Mn (Devanagari, Thai) would otherwise be split into
+    # consonant fragments that never match their phrase.
     cleaned = "".join(
         ch if (ch.isalnum() or ch.isspace() or unicodedata.category(ch).startswith("M")) else " "
         for ch in text

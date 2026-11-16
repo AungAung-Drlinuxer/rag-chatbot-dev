@@ -1,7 +1,7 @@
 # Postgres Backup & Restore — dev
 
-Dev မှာ prod နဲ့ **အတူတူ mechanism** ကို သုံးထားပါတယ်: CloudNativePG + barman-cloud plugin
-→ S3 (`s3.drlinuxer.com`)။ ကွာခြားချက်က prefix နဲ့ retention ပဲ။
+Dev uses the **same mechanism** as prod: CloudNativePG + barman-cloud plugin
+→ S3 (`s3.drlinuxer.com`). Only the prefix and retention differ.
 
 | | prod (`rag-chatbot`) | dev (`rag-chatbot-dev`) |
 |---|---|---|
@@ -11,21 +11,21 @@ Dev မှာ prod နဲ့ **အတူတူ mechanism** ကို သုံ�
 | WAL archiving | on (continuous) | on (continuous) |
 | instances | 3 | 1 |
 
-WAL archiving ရှိလို့ **point-in-time recovery** ရပါတယ် — "မနေ့ညက backup" တစ်ခုတည်း
-မဟုတ်ဘဲ မိနစ်အထိ ပြန်တင်နိုင်ပါတယ်။
+With WAL archiving you get **point-in-time recovery** — not just "last night's backup",
+you can restore to the minute.
 
-## ၁။ ဖိုင်တွေ
+## 1. Files
 
-- `infra/k8s-dev/20-database.yaml` — Cluster ထဲမှာ `plugins: barman-cloud…isWALArchiver`
-  နဲ့ `archive_mode: on`။
-- `infra/k8s-dev/21-backup.yaml` — `ObjectStore` (bucket/prefix/credentials) နဲ့
-  `ScheduledBackup` (nightly)။
+- `infra/k8s-dev/20-database.yaml` — the Cluster has `plugins: barman-cloud…isWALArchiver`
+  and `archive_mode: on`.
+- `infra/k8s-dev/21-backup.yaml` — `ObjectStore` (bucket/prefix/credentials) and
+  `ScheduledBackup` (nightly).
 
-Credential secret `cnpg-backup-s3` (keys: `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`)
-ကို **repo ထဲ မထည့်ပါ**။ prod namespace ကနေ copy လုပ်တာဖြစ်ပြီး တန်ဖိုးတွေကို chat/log
-ထဲ မရေးပါ။
+The credential secret `cnpg-backup-s3` (keys: `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`)
+is **not committed to the repo**. It is copied from the prod namespace; do not write the
+values into chat or logs.
 
-## ၂။ စစ်ဆေးပုံ
+## 2. How to verify
 
 ```bash
 # cluster backup plugin + archive mode
@@ -39,12 +39,12 @@ kubectl -n rag-chatbot-dev get scheduledbackup postgres-dev-nightly \
 # backups list (completed/failed + size)
 kubectl -n rag-chatbot-dev get backups
 
-# WAL archiver health — last_archived_time က လတ်တလော ဖြစ်ရမယ်
+# WAL archiver health — last_archived_time must be recent
 kubectl -n rag-chatbot-dev exec postgres-dev-1 -c postgres -- \
   psql -U postgres -d assistant -c "SELECT last_archived_time, failed_count FROM pg_stat_archiver;"
 ```
 
-## ၃။ ကိုယ်တိုင် backup တစ်ခု ယူချင်ရင်
+## 3. Taking a manual backup
 
 ```bash
 kubectl -n rag-chatbot-dev apply -f - <<'YAML'
@@ -62,16 +62,16 @@ YAML
 kubectl -n rag-chatbot-dev get backups -w     # phase: started → completed
 ```
 
-## ၄။ Restore drill (အရေးကြီး)
+## 4. Restore drill (important)
 
-Restore ကို **အသစ်တစ်ခုပေါ်မှာ** စမ်းပါ — လက်ရှိ dev DB ကို မဖျက်ပါနဲ့။
+Test the restore on **a new cluster** — do not delete the current dev DB.
 
 ```bash
-# 1) အဲဒီ backup ရဲ့ ID ကို ယူ
+# 1) Get that backup's ID
 kubectl -n rag-chatbot-dev get backup postgres-dev-manual-202611081200 \
-  -o jsonpath='{.status.backupId}{"\n"}'      # ဥပမာ 20261108T044052
+  -o jsonpath='{.status.backupId}{"\n"}'      # e.g. 20261108T044052
 
-# 2) အသစ် cluster တစ်ခု (တူညီတဲ့ secret တွေ သုံး) ကို ObjectStore ကနေ bootstrap
+# 2) Bootstrap a new cluster (using the same secrets) from the ObjectStore
 kubectl -n rag-chatbot-dev apply -f - <<'YAML'
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
@@ -86,7 +86,7 @@ spec:
     recovery:
       source: dev-store
       recoveryTarget:
-        targetTime: "2026-11-08 12:00:00+00"   # PITR လိုချင်ရင် ဒီနေရာမှာ သတ်မှတ်
+        targetTime: "2026-11-08 12:00:00+00"   # set this to pin PITR
   externalClusters:
     - name: dev-store
       plugin:
@@ -96,17 +96,17 @@ spec:
           serverName: postgres-dev
 YAML
 
-# 3) စစ်ပြီး ပြီးရင် ဖျက်
+# 3) Verify, then delete
 kubectl -n rag-chatbot-dev exec postgres-dev-restore-1 -c postgres -- \
   psql -U postgres -d assistant -tAc "select count(*) from kb_meta;"
 kubectl -n rag-chatbot-dev delete cluster postgres-dev-restore
 ```
 
-## ၅။ သတိထားရန်
+## 5. Cautions
 
-- `retentionPolicy: 7d` — dev အတွက် ရက်သတ္တပတ်တစ်ခုပဲ သိမ်းတယ်။ ပိုကြာချင်ရင်
-  `21-backup.yaml` ထဲ ပြင်ပါ။
-- Bucket တူတူဖြစ်လို့ **prefix ကို ဘယ်တော့မှ မရောပါနဲ့** — dev backup ကို prod လို
-  restore လုပ်မိရင် data ဟောင်းတွေ ဝင်လာမယ်။
-- Backup က database တစ်ခုလုံး (roles အပါ) ပြန်ရတယ်; password တွေက `postgres-dev-app`
-  secret ကနေ လာတာမို့ restore cluster အတွက်လည်း အဲဒီ secret ရှိရမယ်။
+- `retentionPolicy: 7d` — dev keeps one week only. To keep longer, edit
+  `21-backup.yaml`.
+- Because the bucket is shared, **never mix up the prefix** — restoring a dev backup as
+  prod would bring in stale data.
+- A backup restores the entire database (including roles); passwords come from the
+  `postgres-dev-app` secret, so that secret must also exist for the restore cluster.

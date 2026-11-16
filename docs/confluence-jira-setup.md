@@ -1,32 +1,32 @@
-# Confluence KB နှင့် Jira Ticket — preparation & setup guide
+# Confluence KB and Jira Tickets — preparation & setup guide
 
-ဒီ app မှာ Atlassian နှစ်ခုက ဒီလို အလုပ်လုပ်ပါတယ်:
+In this app the two Atlassian products work as follows:
 
-| Integration | လမ်းကြောင်း | App ထဲမှာ ဘယ်နေရာ |
+| Integration | Direction | Where in the app |
 | --- | --- | --- |
-| **Confluence** | **အဝင်** — page တွေ chunk → embed → pgvector → answer source | Knowledge page, Chat citations |
-| **Jira** | **အထွက် + ပြန်လည်** — escalation ticket ဖန်တီး၊ status transition၊ comment၊ existing tickets pull | Tickets page, Chat escalation |
+| **Confluence** | **Input** — pages are chunked → embedded → pgvector → answer source | Knowledge page, Chat citations |
+| **Jira** | **Output + read-back** — create escalation tickets, transition status, comment, pull existing tickets | Tickets page, Chat escalation |
 
-Jira က **ticket တည်ရှိမှု** အပေါ် အခြေခံတယ် — credentials မရှိရင် mock key မ ထုတ်ပါ၊
-error ပြတယ်။ Confluence ကလည်း **စစ်မှန်တဲ့ page** ပဲ ဆွဲတယ် — sample data မ ရှိပါ။
+Jira is based on **ticket existence** — without credentials no mock key is issued; an error is shown.
+Confluence likewise pulls **real pages only** — there is no sample data.
 
 ---
 
-# အပိုင်း ၁ — Confluence (Knowledge Base အဝင်)
+# Part 1 — Confluence (Knowledge Base input)
 
-## 1.1 Atlassian ဘက်က ပြင်ဆင်ရန် (Preparation)
+## 1.1 Preparation on the Atlassian side
 
-**ကိုယ်ပိုင် service account** တစ်ခု ဖန်တီးပါ (လူတစ်ယောက်ရဲ့ token မ သုံးပါနဲ့) —
-`svc-chatbot@your-domain.com`။ ဒါက token လဲလှယ်တဲ့အခါ လူတွေ logout မ ဖြစ်စေဖို့။
+Create a **dedicated service account** (do not use an individual's token) —
+`svc-chatbot@your-domain.com`. This prevents users from being logged out when the token is rotated.
 
-| လုပ်ရန် | ဘယ်မှာ | မှတ်ချက် |
+| Task | Where | Note |
 | --- | --- | --- |
-| API token ဖန်တီး | https://id.atlassian.com/manage-profile/security/api-tokens | **Classic token** ကို ဦးစားပေး (Basic auth လိုတယ်)။ Scoped token သုံးရင် `read:confluence-content.all` + `read:confluence-space.summary` ထည့် |
-| Space ခွင့်ပြုချက် | Space settings → Permissions | service account ကို **Can view** ပေး၊ လိုအပ်တဲ့ space တွေပဲ (အားလုံး မ ပေးပါ) |
-| Page restrictions | page → ⋯ → Restrictions | chatbot ဖတ်ရမယ့် page တွေမှာ restriction မ ရှိစေရ — restriction ရှိရင် CQL က မ ပြန်ပါ |
-| Labels | page → ⋯ → Labels | အောက်ပါ label rule အတိုင်း တပ်ရမယ် |
+| Create API token | https://id.atlassian.com/manage-profile/security/api-tokens | Prefer a **Classic token** (Basic auth is required). For a scoped token, add `read:confluence-content.all` + `read:confluence-space.summary` |
+| Space permission | Space settings → Permissions | Give the service account **Can view**, only on the spaces it needs (do not grant all) |
+| Page restrictions | page → ⋯ → Restrictions | Pages the chatbot must read should carry no restriction — if restricted, CQL will not return them |
+| Labels | page → ⋯ → Labels | Apply labels according to the label rule below |
 
-### Label rule (app က တကယ် စစ်တဲ့ အတိုင်း)
+### Label rule (as the app actually enforces it)
 
 ```cql
 space = "HELP" AND type = page
@@ -37,119 +37,119 @@ AND label != "internal-only"
 AND label != "on-call"
 ```
 
-- page တစ်ခုမှာ **`approved` နဲ့ `chatbot-safe` နှစ်ခုလုံး** ရှိမှ ingest လုပ်တယ်
-- `restricted` / `internal-only` / `on-call` တပ်ထားရင် နှစ်ခုလုံး ရှိလည်း မ ယူပါ
-- ပထမ run မှာ space အသစ်နဲ့ စမ်းချင်ရင် env `CONFLUENCE_SKIP_LABEL_FILTER=1` ထားပြီး စမ်းနိုင်
-  (ဒါပေမယ့် production မှာ မ ထားပါ)
+- A page is ingested only if it has **both `approved` and `chatbot-safe`**
+- If `restricted` / `internal-only` / `on-call` is applied, the page is skipped even when both are present
+- To try a new space on the first run, set the env `CONFLUENCE_SKIP_LABEL_FILTER=1` and test
+  (but do not leave it set in production)
 
-Atlassian search မှာ အထက်က CQL ကို တိုက်ရိုက် paste ပြီး **ဘယ် page တွေ ပါမလဲ** အရင်စစ်ပါ။
-0 ပြန်ရင် app ကလည်း 0 ပဲ ရမယ်။
+Paste the CQL above directly into Atlassian search and first check **which pages are included**.
+If it returns 0, the app will also get 0.
 
-### Content အရည်အသွေး (answer quality အတွက်)
+### Content quality (for answer quality)
 
-- **page တစ်ခု = topic တစ်ခု**။ ရှည်လွန်းတဲ့ page ကို ခွဲပါ
-- **title ကို မေးခွန်းပုံစံ** ရေးပါ (“VPN ချိတ်လို့ မရရင် ဘယ်လိုလုပ်မလဲ”) — title က chunk ထဲ ထည့်ထားတယ်
-- ပုံ/attachment/macro ကို မ ဖတ်ပါ (HTML → text ပဲ)၊ ဇယားက text အနေနဲ့ ပါမယ်
-- code block ကို plain text အနေနဲ့ ပါတယ် — indentation ပျက်နိုင်တာမို့ လိုအပ်ရင် အဆင့်လိုက် ရေးပါ
-- ရက်စွဲ/ပိုင်ရှင် ပါစေ — နောက်မှ မွန်းမံရလွယ်တယ်
+- **One page = one topic**. Split pages that are too long
+- **Write the title as a question** ("What do I do if VPN won't connect") — the title is included in the chunk
+- Images/attachments/macros are not read (HTML → text only); tables are included as text
+- Code blocks are included as plain text — indentation may be lost, so use step-by-step wording where needed
+- Include a date/owner — this makes later maintenance easier
 
-## 1.2 App ထဲမှာ ထည့်ရန်
+## 1.2 Entering it in the app
 
 **Settings → Integrations → Confluence**
 
-| Field | ဥပမာ | မှတ်ချက် |
+| Field | Example | Note |
 | --- | --- | --- |
-| Base URL | `https://your-domain.atlassian.net/wiki` | `/wiki` အဆုံးထိ ထည့်ပါ (Cloud) |
-| Account Email | `svc-chatbot@your-domain.com` | token ဖန်တီးတဲ့ account |
-| API Token | `ATATT3xFfGF0...` | **write-only** — သိမ်းပြီးရင် ပြန်မ ပြပါ |
-| Space Keys | `HELP, IT, ENG` | comma ခြားပြီး၊ အစ/အဆုံး space ပါ |
+| Base URL | `https://your-domain.atlassian.net/wiki` | Include up to `/wiki` (Cloud) |
+| Account Email | `svc-chatbot@your-domain.com` | the account that created the token |
+| API Token | `ATATT3xFfGF0...` | **write-only** — not displayed again after saving |
+| Space Keys | `HELP, IT, ENG` | comma-separated, including the first/last space |
 
-Save လုပ်ပြီး **Test connection** နှိပ်ပါ — app က `GET /rest/api/content?limit=1` ကို
-Basic auth နဲ့ ခေါ်တယ်။ `200` ဆိုရင် ချိတ်ပြီ။
+Save, then click **Test connection** — the app calls `GET /rest/api/content?limit=1`
+with Basic auth. `200` means connected.
 
-> **ဘာပြောင်းသွားလဲ (backend `dev-1.0.5`)**: အရင် Confluence sync က env var
-> (`CONFLUENCE_*`) ပဲ ဖတ်တယ် — UI မှာ ထည့်ထားတာ အလုပ်မ လုပ်ခဲ့ပါ။ အခု DB (`system_settings`)
-> ကို ဦးစားပေးဖတ်တယ်၊ env က fallback ပဲ။ ဒါကြောင့် UI ကနေ ထည့်တာ တကယ် အလုပ်လုပ်တယ်။
+> **What changed (backend `dev-1.0.5`)**: previously Confluence sync read only env vars
+> (`CONFLUENCE_*`) — values entered in the UI did not work. It now reads the DB (`system_settings`)
+> first, with env as fallback only. So what you enter in the UI actually works.
 
-## 1.3 Sync လုပ်ခြင်း
+## 1.3 Running a sync
 
 **Knowledge → Sync from Confluence** (API: `POST /api/articles/sync`, admin/agent)
 
-လုပ်ငန်းစဉ်: page ဆွဲ → HTML→text → chunk → **embed** → `langchain_pg_embedding` သိမ်း →
-`kb_meta` မှာ hash နဲ့ မှတ်။ page မ ပြောင်းရင် hash တူလို့ **ကျော်**တယ် (ထပ်ကို မ embed ပါ)။
+Flow: fetch page → HTML→text → chunk → **embed** → store in `langchain_pg_embedding` →
+record the hash in `kb_meta`. If the page is unchanged the hash matches and it is **skipped** (not re-embedded).
 
-**လိုအပ်ချက်**: embedding က **Ollama** ကနေ လာတယ် (`OLLAMA_URL`, default
-`http://localhost:11434`, model `nomic-embed-text`)။ Ollama မ ရောက်ရင် sync မှာ vector မ
-ဖြစ်ဘဲ answer မ ထွက်ပါ — AI service (chat) ကို configure လုပ်ရုံနဲ့ မ လုံလောက်ပါ။
+**Requirement**: embeddings come from **Ollama** (`OLLAMA_URL`, default
+`http://localhost:11434`, model `nomic-embed-text`). If Ollama is unreachable, sync produces no vectors
+and no answers are produced — configuring the AI service (chat) alone is not enough.
 
 ```bash
-# cluster ထဲက backend pod ကနေ စစ်ရန်
+# check from the backend pod in the cluster
 kubectl -n rag-chatbot-dev exec deploy/backend -- \
   python -c "import httpx,os;from app.config import SETTINGS as s;print(httpx.get(s.ollama_url+'/api/tags',timeout=5).status_code)"
 ```
 
-## 1.4 Domain mapping (အရေးကြီး)
+## 1.4 Domain mapping (important)
 
-Ingest လုပ်တဲ့အခါ page ကို **space key (lowercase)** နဲ့ စတင် domain သတ်မှတ်ပြီး၊
-classifier က ရှိပြီးသား domain rule တွေနဲ့ ကိုက်ညီမှ real domain ပြောင်းတယ်။
+During ingest a page is first assigned a domain from the **space key (lowercase)**; the
+classifier then switches it to the real domain if it matches an existing domain rule.
 
-ဒါကြောင့် **Domains & Routing** မှာ domain တွေ အရင် ရှိထားရမယ် — မ ရှိရင် article တွေ
-`help`/`it` လို placeholder domain မှာ ကျန်ပြီး chat retrieval filter က မ ရှာနိုင်တော့ပါ။
+Therefore the domains must already exist in **Domains & Routing** — otherwise articles stay
+in a placeholder domain such as `help`/`it` and chat retrieval filters will not find them.
 
 ## 1.5 Verify
 
-- Knowledge page: total / per-domain counts တက်လား
-- `GET /api/articles-list?domain=<domain>` → title တွေ ပြန်လား
+- Knowledge page: are total / per-domain counts increasing
+- `GET /api/articles-list?domain=<domain>` → are titles returned
 - `GET /api/sync-status` → last sync stats (`pages/inserted/updated/skipped`)
-- Audit log မှာ `sync` event
-- DB စစ်ချက်:
+- A `sync` event in the audit log
+- DB checks:
   ```sql
   SELECT count(*), count(DISTINCT domain) FROM kb_meta;
   SELECT count(*) FROM langchain_pg_embedding;
   SELECT domain, count(*) FROM kb_meta GROUP BY 1 ORDER BY 2 DESC;
   ```
-- Chat မှာ တစ်ခုမေးကြည့် → citation က သက်ဆိုင်တဲ့ page ကို ညွှန်လား
+- Ask one question in Chat → does the citation point to the relevant page
 
 ## 1.6 Troubleshooting (Confluence)
 
-| လက္ခဏာ | အကြောင်း | ဖြေရှင်း |
+| Symptom | Cause | Fix |
 | --- | --- | --- |
-| Test → `401` | scoped token ကို Basic auth နဲ့ သုံးနေ | Classic API token ဖန်တီးပါ (သို့) email မှန်လား စစ် |
-| Test → `403` | service account ကို space access မ ပေး | Space permissions → Can view |
-| Test `200` ဒါပေမယ့် sync `pages=0` | label rule မ ကိုက် / CQL မှာ space key မှား | Atlassian search မှာ CQL တိုက်ရိုက် စမ်း |
-| Page တချို့ မ ပါ | page restriction / label လွဲ | Restrictions ဖျက်၊ label `approved`+`chatbot-safe` |
-| `pages>0` ဒါပေမယ့် `inserted=0` | hash တူ (မ ပြောင်း) | ပုံမှန် — page ပြင်မှ updated တက် |
-| Embedding error / timeout | Ollama မ ရောက်၊ model မ ဆွဲထား | `ollama pull nomic-embed-text`, `OLLAMA_URL` စစ် |
-| Sync ပြီး chat မ ရှာ | domain placeholder မှာ ကျနေ | Domains & Routing မှာ domain ဖန်တီး → ပြန် sync/reclassify |
-| Confluence **Server/DC** | PAT + `/wiki` path မတူ | Base URL ကို `https://confluence.corp/rest/api` အထိ မထည့်ပါ — host ပဲ ထည့်၊ Basic auth သုံး |
+| Test → `401` | a scoped token is being used with Basic auth | Create a Classic API token (or check the email is correct) |
+| Test → `403` | the service account has no space access | Space permissions → Can view |
+| Test `200` but sync `pages=0` | label rule not matched / wrong space key in CQL | Try the CQL directly in Atlassian search |
+| Some pages missing | page restriction / wrong label | Remove restrictions, set labels `approved`+`chatbot-safe` |
+| `pages>0` but `inserted=0` | identical hash (unchanged) | Normal — `updated` only appears after the page is edited |
+| Embedding error / timeout | Ollama unreachable, model not pulled | `ollama pull nomic-embed-text`, check `OLLAMA_URL` |
+| Chat finds nothing after sync | stuck in a placeholder domain | Create the domain in Domains & Routing → re-sync/reclassify |
+| Confluence **Server/DC** | PAT + `/wiki` path differ | Do not append `https://confluence.corp/rest/api` to the Base URL — enter the host only, use Basic auth |
 
 ---
 
-# အပိုင်း ၂ — Jira (Ticket အထွက်)
+# Part 2 — Jira (ticket output)
 
-## 2.1 Atlassian ဘက်က ပြင်ဆင်ရန်
+## 2.1 Preparation on the Atlassian side
 
-| လုပ်ရန် | ဘယ်မှာ | မှတ်ချက် |
+| Task | Where | Note |
 | --- | --- | --- |
-| service account | Jira admin | `svc-chatbot@...` — reporter အနေနဲ့ ပေါ်မယ် |
+| service account | Jira admin | `svc-chatbot@...` — appears as the reporter |
 | API token | id.atlassian.com → API tokens | Classic token |
-| Project | Project settings | key ကို မှတ်ထား (ဥပမာ `ITHD`) |
+| Project | Project settings | note the key (e.g. `ITHD`) |
 | Permissions | Project → Permissions | **Browse Projects**, **Create Issues**, **Transition Issues**, **Add Comments**, **Create Attachments** |
-| Issue type | Project settings → Issue types | fallback လမ်းက **`Task`** ကို hardcode သုံးတယ် — project မှာ Task မရှိရင် ဖန်တီးပါ (သို့) JSM လမ်း သုံး |
-| Required fields | Project settings → Fields | company-managed project မှာ custom field မဖြစ်မနေ လိုရင် fallback လမ်း `400` ပြမယ် → JSM request type သုံးပါ |
+| Issue type | Project settings → Issue types | the fallback path hardcodes **`Task`** — if the project has no Task, create it (or use the JSM path) |
+| Required fields | Project settings → Fields | if a company-managed project requires a custom field, the fallback path returns `400` → use a JSM request type |
 
-### JSM (Jira Service Management) သုံးမလား?
+### Should you use JSM (Jira Service Management)?
 
-- **JSM request** လမ်းက customer-facing ticket ဖန်တီးတာ ပိုသင့်တော်၊ request type က
-  field တွေ ကို အလိုအလျောက် ဖြည့်ပေးတယ်
-- လိုတာ: `serviceDeskId` + `requestTypeId` (domain အလိုက် ခွဲနိုင်)
-- ဒီ setting နှစ်ခုကို **Settings → Integrations → Jira** မှာ တိုက်ရိုက် ထည့်နိုင်တယ်
-  (env မလို၊ DB မှာ သိမ်း):
-  - **Service Desk ID (JSM, optional)** — ဥပမာ `12`
+- The **JSM request** path is more suitable for creating customer-facing tickets; the request type
+  fills in the fields automatically
+- Required: `serviceDeskId` + `requestTypeId` (can be split per domain)
+- These two settings can be entered directly in **Settings → Integrations → Jira**
+  (no env needed, stored in the DB):
+  - **Service Desk ID (JSM, optional)** — e.g. `12`
   - **Request Type IDs by domain (optional)** — JSON map:
     `{"server": "101", "network": "102", "general": "100"}`
-- ID ကို မ သိရင် app ရဲ့ discovery endpoint (admin) ကို သုံးပါ — သိမ်းထားတဲ့
-  credential နဲ့ ဆွဲပေးတယ်:
+- If you do not know the IDs, use the app's discovery endpoint (admin) — it fetches them
+  with the stored credentials:
 
 ```bash
 curl -s -H "Authorization: Bearer <app-token>" \
@@ -158,39 +158,39 @@ curl -s -H "Authorization: Bearer <app-token>" \
   https://<chatbot-host>/api/settings/integrations/jira/service-desks/12/request-types
 ```
 
-(သို့) Jira ကို တိုက်ရိုက်:
+(or directly against Jira:)
 
 ```bash
 curl -s -u "$EMAIL:$TOKEN" https://your-domain.atlassian.net/rest/servicedeskapi/servicedesk | jq '.values[] | {id, projectKey}'
 curl -s -u "$EMAIL:$TOKEN" https://your-domain.atlassian.net/rest/servicedeskapi/servicedesk/<ID>/requesttype | jq '.values[] | {id, name}'
 ```
 
-- Save လုပ်တဲ့အခါ app က shape ကို စစ်တယ် — desk id က ဂဏန်း မ ဟုတ်ရင်၊ JSON မမှန်ရင်
-  `400` ပြတယ် (ticket ဖန်တီးချိန်မှ မှားတာ မ ဖြစ်စေရ)
-- `domain` key က `general` ကို fallback သုံးတယ်။ မ ရှိရင် app က
-  `POST /rest/api/3/issue` (Task, project key) ကို ကျသွားတယ်။
+- On save the app validates the shape — a non-numeric desk id or invalid JSON
+  returns `400` (so the failure does not surface only when a ticket is created)
+- The `domain` key falls back to `general`. If it is absent the app
+  falls back to `POST /rest/api/3/issue` (Task, project key).
 
 ### Workflow transitions
 
-App ရဲ့ status ၄ ခု (`open | pending | resolved | closed`) ကို Jira transition **အမည်**
-နဲ့ ကိုက်စေတယ် (ပထမ တွေ့တာ ယူ):
+The app's four statuses (`open | pending | resolved | closed`) are matched against the Jira transition
+**name** (first match wins):
 
-| App status | ရှာတဲ့ transition အမည်များ |
+| App status | Transition names searched |
 | --- | --- |
 | `open` | Reopen, Re-open, To Do, Open, Backlog, Pending |
 | `pending` | Start progress, Start Progress, In Progress, Pending |
 | `resolved` | Mark as done, Done, Resolve Issue, Resolve |
 | `closed` | Close Issue, Close, Mark as done, Done |
 
-အမည် မ ကိုက်ရင် app က **ပြောင်းတာ မ လုပ်ဘဲ** ရနိုင်တဲ့ transition list ကို ပြန်ပေးတယ်
-(`no matching transition for 'pending' (available: [...])`). Workflow ကို ဒီအမည်တွေနဲ့
-ကိုက်အောင် ပြင်ပါ (သို့) app ကို ပြင်ရမယ်။
+If no name matches, the app **does not change anything** and returns the list of available
+transitions (`no matching transition for 'pending' (available: [...])`). Adjust the workflow to
+match these names (or change the app).
 
-## 2.2 App ထဲမှာ ထည့်ရန်
+## 2.2 Entering it in the app
 
 **Settings → Integrations → Jira**
 
-| Field | ဥပမာ |
+| Field | Example |
 | --- | --- |
 | Base URL | `https://your-domain.atlassian.net` |
 | Account Email | `svc-chatbot@your-domain.com` |
@@ -199,29 +199,29 @@ App ရဲ့ status ၄ ခု (`open | pending | resolved | closed`) ကို
 | Service Desk ID (JSM, optional) | `12` |
 | Request Type IDs by domain (optional) | `{"server": "101", "general": "100"}` |
 
-Save → **Test connection** (`GET /rest/api/3/myself` → `200` ဆိုရင် ချိတ်ပြီ)။
+Save → **Test connection** (`GET /rest/api/3/myself` → `200` means connected).
 
-## 2.3 Ticket လုပ်ဆောင်ချက်များ
+## 2.3 Ticket operations
 
-| လုပ်ဆောင်ချက် | ဘယ်လို | API |
+| Operation | How | API |
 | --- | --- | --- |
-| Chat escalation → ticket | Chat မှာ escalate | JSM/issue REST |
-| Ticket အသစ် ဖန်တီး | Tickets → Create support ticket | `POST /api/tickets` |
-| Jira ကနေ pull | Tickets → Sync from Jira | `POST /api/tickets/jira/sync` (idempotent) |
-| Status ပြောင်း | Tickets → workflow step | `PUT /api/tickets/{ref}` → Jira transitions |
+| Chat escalation → ticket | escalate in Chat | JSM/issue REST |
+| Create a new ticket | Tickets → Create support ticket | `POST /api/tickets` |
+| Pull from Jira | Tickets → Sync from Jira | `POST /api/tickets/jira/sync` (idempotent) |
+| Change status | Tickets → workflow step | `PUT /api/tickets/{ref}` → Jira transitions |
 | Comment | Ticket detail | `POST /api/tickets/{ref}/comments` |
-| Attachment ပေး | Ticket detail | `POST /api/tickets/{ref}/attachments` |
+| Attach a file | Ticket detail | `POST /api/tickets/{ref}/attachments` |
 
-Pull လုပ်တဲ့အခါ `jira_key` (ITHD-123) ကို key အနေနဲ့ သုံးတယ် — ထပ် run ရင်
-create မ လုပ်၊ update ပဲ လုပ်တယ်။ Jira status အမည်ကို canonical ၄ ခုကို ပြန်ပုံဖော်တယ်
+When pulling, `jira_key` (ITHD-123) is used as the key — on a later run it does not
+create, it only updates. Jira status names are mapped back to the four canonical ones
 (`ticket_status.canonical_from_jira_status`).
 
 ## 2.4 Verify
 
-- Tickets page မှာ Jira key တွေ ပေါ်လား (mock `ESC-xxxx` မ ရှိရ)
-- Jira ထဲမှာ ticket တကယ် ရှိလား (link နှိပ်)
-- Status ပြောင်းပြီး Jira UI မှာ status ပြောင်းသွားလား
-- Comment/attachment က Jira မှာလည်း ပေါ်လား
+- Do Jira keys appear on the Tickets page (there must be no mock `ESC-xxxx`)
+- Does the ticket really exist in Jira (click the link)
+- Change the status — did it change in the Jira UI
+- Do comments/attachments also appear in Jira
 - DB:
   ```sql
   SELECT jira_key, status, created_by FROM jira_tickets ORDER BY created_at DESC LIMIT 5;
@@ -229,100 +229,100 @@ create မ လုပ်၊ update ပဲ လုပ်တယ်။ Jira status �
 
 ## 2.5 Troubleshooting (Jira)
 
-| လက္ခဏာ | အကြောင်း | ဖြေရှင်း |
+| Symptom | Cause | Fix |
 | --- | --- | --- |
-| Test `401` | token/email မှား (သို့) scoped token Basic auth မ ရ | Classic token ပြန်ဖန်တီး |
-| `403` on create | Create Issues ခွင့် မ ရှိ | Project permissions |
-| `400 issuetype` | project မှာ `Task` မ ရှိ | Task ဖန်တီး (သို့) JSM request type သုံး |
-| `400 customfield required` | company-managed required field | JSM request type သုံး (field တွေ auto) |
-| `404 project` | project key မှား / archived | Project settings မှာ စစ် |
-| Ticket ဖန်တီးပြီး status မ ပြောင်း | transition အမည် မ ကိုက် | error detail ထဲက available list ကြည့် → workflow ပြင် |
-| Pull `total=0` | JSM မ ရှိ၊ project key မှား၊ permission | `fetch_all_tickets` log ကြည့်၊ project key စစ် |
-| `429` | rate limit | နည်းနည်းစောင့်၊ sync ကို ခဏခဏ မ run ပါ |
+| Test `401` | wrong token/email (or a scoped token that Basic auth rejects) | recreate a Classic token |
+| `403` on create | no Create Issues permission | Project permissions |
+| `400 issuetype` | the project has no `Task` | create a Task (or use a JSM request type) |
+| `400 customfield required` | company-managed required field | use a JSM request type (fields are automatic) |
+| `404 project` | wrong project key / archived | check in Project settings |
+| Ticket created but status not changed | transition name not matched | check the available list in the error detail → fix the workflow |
+| Pull `total=0` | no JSM, wrong project key, permission | check the `fetch_all_tickets` log, verify the project key |
+| `429` | rate limit | wait a little, do not run sync repeatedly |
 
 ---
 
-# အပိုင်း ၃ — Security & Operations
+# Part 3 — Security & Operations
 
-- Token တွေက **database (`system_settings`)** မှာ သိမ်း၊ API က **write-only** (mask ပဲ ပြန်)
-- Token လဲလှယ်ရင်: field ထဲ token အသစ် paste → Save (အလွတ်ထားရင် ဟောင်း ဆက် သုံး)
-- Integration ဖျက်ရန်: `DELETE /api/settings/integrations/<key>?confirm=<key>` — ပြန်မရ
-- Least privilege: space read ကို လိုတဲ့ space ပဲ၊ Jira ကို project တစ်ခုပဲ
-- Audit log: `sync`, ticket create/update, settings change တွေ မှတ်တမ်း တင်တယ်
-- Backup: DB backup ထဲ token တွေ ပါလာမယ် — backup ကို credential အနေနဲ့ ကာကွယ်ပါ
-- **Sync အလိုအလျောက် မ ရှိပါ** — လောလောဆယ် manual (Knowledge → Sync)၊ လိုရင် cron job ထည့်နိုင်
+- Tokens are stored in the **database (`system_settings`)**; the API is **write-only** (returns a mask only)
+- Rotating a token: paste the new token in the field → Save (if left empty the old one keeps being used)
+- Deleting an integration: `DELETE /api/settings/integrations/<key>?confirm=<key>` — irreversible
+- Least privilege: read access only to the spaces needed, Jira only for a single project
+- Audit log: `sync`, ticket create/update and settings changes are recorded
+- Backup: DB backups include the tokens — protect the backup as a credential
+- **There is no automatic sync** — currently manual (Knowledge → Sync); a cron job can be added if needed
 
-## လုပ်ငန်းစဉ် checklist (တစ်ခါတည်း)
+## One-time setup checklist
 
 **Confluence**
 - [ ] service account + Classic API token
 - [ ] space Can view permission
-- [ ] page labels: `approved` + `chatbot-safe` (restricted/internal-only/on-call ဖျက်)
-- [ ] CQL ကို Atlassian search မှာ စမ်း (0 မ ဖြစ်ရ)
-- [ ] Settings → Integrations → Confluence ထည့် → Test 200
-- [ ] Domains & Routing မှာ domain ရှိပြီးသား
+- [ ] page labels: `approved` + `chatbot-safe` (remove restricted/internal-only/on-call)
+- [ ] test the CQL in Atlassian search (must not return 0)
+- [ ] Settings → Integrations → Confluence → Test 200
+- [ ] domains already exist in Domains & Routing
 - [ ] Knowledge → Sync → insert count > 0
-- [ ] Chat မှာ မေးကြည့် → citation မှန်
+- [ ] ask a question in Chat → citation is correct
 
 **Jira**
 - [ ] service account + Classic API token
 - [ ] Project key + Browse/Create/Transition/Comment/Attachment permissions
-- [ ] Issue type `Task` ရှိ (သို့) JSM serviceDeskId + requestTypeId
-- [ ] Workflow transitions အမည် ကိုက်
-- [ ] Settings → Integrations → Jira ထည့် → Test 200
-- [ ] Tickets → Create support ticket → Jira မှာ ပေါ်
-- [ ] Status ပြောင်း → Jira မှာ ပြောင်း
-- [ ] Sync from Jira → existing ticket တွေ ပါလာ
+- [ ] issue type `Task` exists (or JSM serviceDeskId + requestTypeId)
+- [ ] workflow transition names match
+- [ ] Settings → Integrations → Jira → Test 200
+- [ ] Tickets → Create support ticket → appears in Jira
+- [ ] change status → changes in Jira
+- [ ] Sync from Jira → existing tickets are pulled in
 
-## ဒီ version မှာ မ ပါဝင်သေးတာ
+## Not included in this version
 
-- Confluence attachment/ပုံ ဖတ်ခြင်း (text ပဲ)
-- Confluence ကို article ပြန်ရေးခြင်း (ဖတ်တာ ပဲ; write path က code ထဲ ရှိပေမယ့် UI မ ဖွင့်ထား)
-- Space တစ်ခုချင်း credential ခွဲခြင်း (တစ် account တည်း)
-- Jira custom required field mapping (JSM request type ကနေ ဖြေရှင်းရ)
-- Jira panel ထဲက service desk / request type ကို dropdown နဲ့ ရွေးတာ (အခု JSON field)
-- Scheduled sync (manual ပဲ)
+- Reading Confluence attachments/images (text only)
+- Writing articles back to Confluence (read only; the write path exists in code but the UI does not expose it)
+- Per-space credential separation (single account only)
+- Jira custom required field mapping (resolve via JSM request type)
+- Selecting the service desk / request type from dropdowns in the Jira panel (currently a JSON field)
+- Scheduled sync (manual only)
 
-## “Configured ဖြစ်ပေမယ့် not connected” ဆိုတဲ့ အခြေအနေ
+## The "configured but not connected" situation
 
-Confluence/Jira ကို **site တစ်ခုချင်း** (`integration_connections`) သိမ်းတယ်။ Legacy
-single-site row (`system_settings.confluence|jira`) ကို ဖျက်ထားတဲ့ install တစ်ခုမှာ
-အောက်ပါ သုံးနေရာက legacy row ကို ဖတ်နေရင် “not connected” လို့ မှားပြပါတယ်။
+Confluence/Jira are stored **per site** (`integration_connections`). On an installation where the legacy
+single-site row (`system_settings.confluence|jira`) has been deleted, if any of the three places below
+still read the legacy row, "not connected" is reported incorrectly.
 
-| လက္ခဏာ | အကြောင်းရင်း | ပြင်ထားတာ |
+| Symptom | Root cause | Fix already in place |
 |---|---|---|
-| Settings ထဲ “Finish setting up” မှာ “No document source connected” / “Jira not connected” | `/api/setup/readiness` က legacy config ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်တယ် · `199 articles · 8 domains · 1 site` |
-| Tickets → “Sync from Jira” → `No tickets returned` | `fetch_all_tickets()` က connection မ bind ပဲ `_jira_cfg()` ဖတ်တယ် | site တစ်ခုချင်း bind ပြီး ပေါင်းတယ် (`updated 12`) |
-| Knowledge → Sync → 409 “already running” (ထာဝရ) | deploy က run အလယ်မှာ pod ကို လဲလိုက်တော့ `kb_sync_run` marker က `running` ပဲ ကျန်တယ် | 30 မိနစ်ကျော်ရင် `stale` လို့ သတ်မှတ်ပြီး sync အသစ် ခွင့်ပြုတယ် |
-| Overview ရဲ့ SERVICE STATUS မှာ “Confluence sync” / “Jira” ကို အနီ (Down) | `/api/dashboard/health` က legacy token ပဲ စစ်တယ် | site rows ကိုပါ ရေတွက်၊ healthy row မှာ “1 site” ပြထားတယ် |
-| Create/Edit ticket dialog မှာ “Jira offline” ပေမယ့် ticket က Jira မှာ တကယ်ရောက်တယ် | `/api/ticket-destinations` က legacy config ဖတ်တယ် | `effective_connections("jira")` ပါ ထည့်စစ်တယ် → “Connected to Jira” / “Jira synced” |
-| Comment ကို app မှာ ရေးပြီး Jira ticket မှာ မပေါ် | `add_comment()` က legacy config ဖတ်တယ် → “Jira is not configured”, toast တစ်ခုပဲ ကျန် | site fallback (dev-1.0.114) + `ticket_comments.jira_synced` → “Local only” pill + “Send to Jira” + admin repair endpoint |
-| Site ၂ ခု ထည့်လိုက်တာ ပထမတစ်ခု ပျောက် / site တစ်ခုပဲ ပြ | backend က `(provider, base_url)` ကို unique ထားတယ် → URL တူရင် row အသစ် မဝင်၊ ရှိပြီးသား row ကို **overwrite** လုပ်တယ် (spaces/token အဟောင်း ပျက်၊ နောက် sync မှာ article တွေပါ ဖျက်ခံရ) | unique key ကို `(provider, base_url, label)` ပြောင်း (dev-1.0.118) → URL တူပေမယ့် label မတူရင် binding နှစ်ခု အတူယှဉ်တွဲ ရှိနိုင်။ Dialog မှာ URL ထပ်နေရင် သတိပေးစာ ပြ |
-| Test က “1 pages visible” | `/rest/api/content` ရဲ့ `size` က response row အရေအတွက် (ငါတို့ 1 ခုပဲ တောင်းတယ်) | space စာရင်း ဖတ်ပြီး “3 spaces visible · not listed: …” |
+| In Settings, "Finish setting up" shows "No document source connected" / "Jira not connected" | `/api/setup/readiness` only checks legacy config | site rows are counted too · `199 articles · 8 domains · 1 site` |
+| Tickets → "Sync from Jira" → `No tickets returned` | `fetch_all_tickets()` reads `_jira_cfg()` without binding the connection | binds per site and merges (`updated 12`) |
+| Knowledge → Sync → 409 "already running" (permanently) | the deploy replaced the pod mid-run, so the `kb_sync_run` marker stayed at `running` | runs older than 30 minutes are marked `stale` and a new sync is allowed |
+| Overview's SERVICE STATUS shows "Confluence sync" / "Jira" in red (Down) | `/api/dashboard/health` only checks the legacy token | site rows are counted too; a healthy row shows "1 site" |
+| The Create/Edit ticket dialog says "Jira offline" but the ticket really reached Jira | `/api/ticket-destinations` reads legacy config | it now also checks `effective_connections("jira")` → "Connected to Jira" / "Jira synced" |
+| A comment written in the app does not appear on the Jira ticket | `add_comment()` reads legacy config → "Jira is not configured", leaving only a toast | site fallback (dev-1.0.114) + `ticket_comments.jira_synced` → "Local only" pill + "Send to Jira" + admin repair endpoint |
+| After adding 2 sites the first one disappears / only one site shows | the backend keeps `(provider, base_url)` unique → the same URL does not insert a new row, it **overwrites** the existing one (old spaces/token lost, articles deleted on the next sync) | the unique key became `(provider, base_url, label)` (dev-1.0.118) → the same URL with a different label can hold two bindings side by side. The dialog now warns when the URL is duplicated |
+| Test reports "1 pages visible" | `size` in `/rest/api/content` is the number of response rows (we only request 1) | reads the space list and reports "3 spaces visible · not listed: …" |
 
-ဒါကြောင့် “connected လား” ဆိုတာကို **Test** ခလုတ် (site တစ်ခုချင်း၊ အဲဒီ site ရဲ့ token နဲ့)
-နဲ့ `Finish setting up` က ပြောတယ် — catalogue က “In use” ဆိုတာနဲ့ မတူနိုင်ပါဘူး။
+So whether something is "connected" is answered by the **Test** button (per site, with that site's token)
+and by `Finish setting up` — it may differ from what the catalogue shows as "In use".
 
-### Comment တစ်ခု Jira မရောက်ရင် ဘယ်လို သိ/ပြင်မလဲ
+### How to tell and fix it when a comment does not reach Jira
 
-- `ticket_comments.jira_synced` က **true / false / null** — false ဆိုတာ “ဒီ app မှာပဲ ရှိတယ်”။
-- Ticket → Edit → **Activity** မှာ အဲဒီ comment အောက် **“Local only”** pill + **“Send to Jira”** ပေါ်တယ်။
-- ခုနက တစ်ခုချင်း မဟုတ်ဘဲ အားလုံး ပြန်တင်ချင်ရင် `POST /api/ticket-comments/sync-pending` (admin) —
-  body တူတာကို ကျော်တာမို့ နှစ်ခါ run လည်း duplicate မဖြစ်ဘူး။
-- Internal note က Jira မှာ role visibility နဲ့ ရောက်တယ်။ API account က “Service Desk Team”
-  role ထဲ မပါရင် Jira က “Administrators” ကို ရွေးတယ် — အဲဒါကို Jira admin side မှာ ဖြည့်ရမယ်
-  (code မဟုတ်)။
+- `ticket_comments.jira_synced` is **true / false / null** — false means "it exists only in this app".
+- In Ticket → Edit → **Activity**, under that comment a **"Local only"** pill + **"Send to Jira"** appear.
+- To resend all of them instead of one at a time: `POST /api/ticket-comments/sync-pending` (admin) —
+  identical bodies are skipped, so running it twice creates no duplicates.
+- An internal note reaches Jira with a role visibility. If the API account is not in the "Service Desk Team"
+  role, Jira picks "Administrators" — that has to be filled in on the Jira admin side
+  (not in code).
 
-## Site တစ်ခုတည်းရှိတဲ့ Atlassian account မှာ source နှစ်ခု ဘယ်လိုထားမလဲ
+## Two sources on a single-site Atlassian account
 
-Confluence **site** တစ်ခုမှာ space အများကြီး ရှိနိုင်တယ်။ Source နှစ်ခုလိုချင်ရင် နည်းနှစ်မျိုး ရှိတယ်:
+One Confluence **site** can hold many spaces. To have two sources there are two approaches:
 
-1. **Site တစ်ခု၊ space အားလုံး** — row တစ်ခုတည်းမှာ `AEC, IHKB, HELP, IT` လို့ comma ခြားပြီး ရေးပါ။ ဒါက အရိုးရှင်းဆုံး၊ token တစ်ခုတည်း သုံးတယ်။
-2. **Binding နှစ်ခု၊ space ကွဲ** — `AI Engineer Course` (AEC) နဲ့ `HQ Confluence` (IHKB, HELP, IT) ဆိုပြီး row နှစ်ခု ထားပါ။ URL တူလို့ ရပါတယ် (dev-1.0.118 ကတည်းက)၊ label မတူဖို့ လိုတယ်။
+1. **One site, all spaces** — write `AEC, IHKB, HELP, IT` comma-separated in a single row. This is the simplest and uses a single token.
+2. **Two bindings, split spaces** — keep two rows: `AI Engineer Course` (AEC) and `HQ Confluence` (IHKB, HELP, IT). The same URL is allowed (since dev-1.0.118); the labels must differ.
 
-နှစ်မျိုးလုံးအတွက် Settings → Integrations → Confluence → Configure မှာ ထည့်ပြီး **Sync now** နှိပ်ရတယ်။ Knowledge page ရဲ့ **Sources** card က configured site အရေအတွက် ကို ပြတယ် (article မဝင်သေးလည်း ပြတယ်)၊ **Site** filter က site တစ်ခုချင်း ခွဲကြည့်ဖို့ ရတယ်။
+For both approaches, enter them in Settings → Integrations → Confluence → Configure and click **Sync now**. The **Sources** card on the Knowledge page shows the number of configured sites (even before any article is ingested), and the **Site** filter lets you view each site separately.
 
-> သတိ: sync က ဖျက်တာနဲ့ ပတ်သက်ပြီး (dev-1.0.119 ကတည်းက) — ဖျက်တာက **ဒီ run မှာ fetch လုပ်ပြီး မတွေ့တော့တဲ့** (binding, space) အတွင်းမှာပဲ။ Space key ကို config ထဲက ဖျက်လိုက်ရင် အဲဒီ space ရဲ့ article တွေ KB ထဲမှာ ကျန်နေမယ် (ဖျက်မခံရ)၊ ဒါပေမယ့် Confluence မှာ page တကယ်ဖျက်လိုက်ရင်တော့ ဖျက်ခံရမယ်။ အရင်က config ပြောင်းတာနဲ့ တခြား space အားလုံး ဖျက်ခံရတဲ့ bug ရှိခဲ့တယ်။ Space key ကို မတော်တဆ ဖျက်မိရင် အဲဒီ space ရဲ့ article တွေ ပျောက်မယ် — ပြန်ထည့်ပြီး Sync now နှိပ်ရင် ပြန်ဝင်လာပါတယ်။
+> Caution: on deletion during sync (since dev-1.0.119) — deletion only happens within the (binding, space) **fetched in this run**. If a space key is removed from the config, that space's articles remain in the KB (not deleted), but if the page is actually deleted in Confluence it will be deleted. There used to be a bug where changing the config deleted the articles of all other spaces. If you delete a space key by accident, that space's articles disappear — re-add it and press Sync now and they come back.
 
 ## Ticket fields: what actually reaches Jira
 

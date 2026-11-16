@@ -18,7 +18,7 @@ import { createRoot } from "react-dom/client";
 
 import MarkdownMessage from "./MarkdownMessage";
 
-/** The shape of "Proxmox VMs list ပြပါ" — proxmox_list_vms. */
+/** The shape of "list the Proxmox VMs" — proxmox_list_vms. */
 const PROXMOX_VMS = `**29 guest(s)**
 
 | VMID | Kind | Name | Node | Status | CPU | Memory | Uptime |

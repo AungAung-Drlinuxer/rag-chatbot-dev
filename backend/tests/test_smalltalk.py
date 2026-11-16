@@ -15,7 +15,7 @@ GREETING_ANSWER = "Hello! I'm your internal IT support assistant. How can I help
 
 def test_plain_greetings_are_classified():
     for msg in ["Hi", "hi!", "Hello", "HELLO", "hey", "hi there", "Good morning",
-                "မင်္ဂလာပါ", "  hi  "]:
+                "  hi  "]:
         assert classify(msg) == "greeting", msg
 
 
@@ -43,7 +43,6 @@ def test_long_messages_are_never_small_talk():
 def test_thanks_bye_identity_and_ack_are_recognised():
     assert classify("thanks!") == "thanks"
     assert classify("thank you") == "thanks"
-    assert classify("ကျေးဇူးတင်ပါတယ်") == "thanks"
     assert classify("bye") == "bye"
     assert classify("who are you?") == "identity"
     assert classify("what can you do") == "identity"
@@ -81,6 +80,5 @@ def test_reply_is_deterministic_and_has_no_source_language():
     assert reply("unknown-kind") == GREETING_ANSWER
 
 
-def test_normalise_keeps_burmese_letters():
-    assert normalise("မင်္ဂလာပါ။") == "မင်္ဂလာပါ"
+def test_normalise_strips_punctuation_and_collapses_space():
     assert normalise("  Hi   THERE!! ") == "hi there"

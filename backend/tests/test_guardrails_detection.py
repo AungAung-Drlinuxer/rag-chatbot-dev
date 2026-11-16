@@ -52,14 +52,14 @@ def test_clean_sentences_are_not_flagged(message: str) -> None:
     assert verdict.type == "none"
 
 
-def test_burmese_profanity_is_flagged() -> None:
-    verdict = check_input("မင်းမ ဘာလဲ")
+def test_profanity_inside_a_question_is_flagged() -> None:
+    verdict = check_input("what the fuck is this error")
     assert verdict.action == "flagged"
     assert verdict.type == "profanity"
 
 
-def test_normal_burmese_is_not_flagged() -> None:
-    verdict = check_input("ဗီပီအန် ဘယ်လိုချိတ်ရမလဲ")
+def test_an_ordinary_question_is_not_flagged() -> None:
+    verdict = check_input("how do I connect to the VPN")
     assert verdict.action == "pass"
 
 

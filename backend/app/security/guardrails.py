@@ -107,11 +107,6 @@ _TOXIC_PATTERNS: list[str] = [
 # ("f u c k") without needing a second, normalising pass over the message.
 _PROFANITY_ROOTS: list[str] = ["fuck", "shit", "bitch", "asshole", "damn", "bastard"]
 
-# --- Profanity: Burmese -------------------------------------------------------
-# A starter list — the shop's own vocabulary belongs here too. Longest first so the
-# audit reason quotes the most specific match.
-_BURMESE_PROFANITY: list[str] = ["မင်းမ", "အကောင်မ", "ဖင်"]
-
 _SUFFIX = r"(?:s|es|ed|ing|er|ers|y|ty)?"
 
 
@@ -131,14 +126,11 @@ _PROFANITY_PATTERNS: list[str] = [
     rf"(?<![A-Za-z0-9]){_root_pattern(root)}{_SUFFIX}(?![A-Za-z0-9])"
     for root in _PROFANITY_ROOTS
 ]
-_BURMESE_PATTERNS: list[str] = [re.escape(w) for w in _BURMESE_PROFANITY]
 
 _INJECTION_RE = [(re.compile(pat, re.IGNORECASE), label) for pat, label in _INJECTION_PATTERNS]
 _PII_RE = [(re.compile(pat, re.IGNORECASE), label) for pat, label in _PII_PATTERNS]
 _PROFANITY_RE = [(re.compile(pat, re.IGNORECASE), root)
                  for pat, root in zip(_PROFANITY_PATTERNS, _PROFANITY_ROOTS)]
-_BURMESE_RE = [(re.compile(pat, re.IGNORECASE), word)
-               for pat, word in zip(_BURMESE_PATTERNS, _BURMESE_PROFANITY)]
 
 
 @dataclass
@@ -149,15 +141,11 @@ class GuardrailResult:
 
 
 def _profanity_hit(message: str) -> str | None:
-    """The first profanity match, quoted for the audit row. English first — it is the
-    more common case — then Burmese."""
+    """The first profanity match, quoted for the audit row."""
     for regex, root in _PROFANITY_RE:
         m = regex.search(message)
         if m:
             return f"abusive language: '{m.group(0)[:40]}' (root '{root}')"
-    for regex, word in _BURMESE_RE:
-        if regex.search(message):
-            return f"abusive language: '{word}'"
     return None
 
 

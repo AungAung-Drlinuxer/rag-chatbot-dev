@@ -21,7 +21,7 @@ class TestSafeFilename:
         assert "\\" not in _safe_filename("..\\..\\windows\\system32")
 
     def test_the_original_script_survives(self) -> None:
-        assert _safe_filename("မြန်မာ အစီရင်ခံစာ.pdf") == "မြန်မာ အစီရင်ခံစာ.pdf"
+        assert _safe_filename("annual report.pdf") == "annual report.pdf"
 
     def test_an_empty_name_gets_a_fallback(self) -> None:
         assert _safe_filename(None) == "attachment"
@@ -41,9 +41,9 @@ class TestContentDisposition:
         assert header.count('"') == 2  # exactly the pair around the quoted filename
 
     def test_a_non_latin_name_keeps_a_usable_ascii_stem(self) -> None:
-        header = _content_disposition("မြန်မာ.pdf")
+        header = _content_disposition("年次報告書.pdf")
         assert 'filename="attachment.pdf"' in header
-        assert "filename*=UTF-8''%E1%80%99" in header
+        assert "filename*=UTF-8''%E5%B9%B4" in header
 
     def test_inline_is_available_for_preview(self) -> None:
         assert _content_disposition("a.png", inline=True).startswith("inline;")
