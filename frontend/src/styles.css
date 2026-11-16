@@ -1598,7 +1598,7 @@ code, pre, .mono { font-family: var(--mono); }
 /* A table viewport that actually scrolls: a sticky <thead> only sticks when its nearest
    scroll container scrolls vertically, and the list wrappers had overflow-x only. Capping the
    height makes the header stay put while the rows move, which is the whole point of the rule
-   in docs/design/UI-STANDARD.md. */
+   for long lists. */
 .table-viewport {
   max-height: min(64dvh, 680px);
   overflow: auto;
