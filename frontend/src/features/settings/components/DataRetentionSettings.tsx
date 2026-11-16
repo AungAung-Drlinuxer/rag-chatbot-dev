@@ -217,7 +217,7 @@ export function DataRetentionSettings() {
             : <Pill tone="warn">{n(preview?.conversations)} conversations · {n(preview?.audit)} audit rows due</Pill>
         }
       >
-        <Row title="Confirm deletion" hint="Type DELETE to enable the button. Pinned conversations are never deleted.">
+        <Row title="Confirm deletion" hint="Type DELETE to enable. Pinned conversations are kept.">
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={confirmText}

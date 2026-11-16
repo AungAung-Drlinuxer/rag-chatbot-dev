@@ -110,13 +110,14 @@ export function Row({ title, hint, children, className = "" }: {
         className
       }
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-[180px]">
         <p className="text-xs font-semibold text-foreground">{title}</p>
         {hint && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
       </div>
-      {/* `max-w-full` lets a control wider than the row wrap inside instead of
-          pushing past the panel edge on a 320px phone. */}
-      <div className="min-w-0 max-w-full shrink-0">{children}</div>
+      {/* A control wider than the row must wrap its own contents on a phone, not squeeze the
+          label to five pixels or push past the panel edge. `max-w-full` caps it; `shrink-0`
+          returns at `sm`, where the row has room to sit on one line. */}
+      <div className="min-w-0 max-w-full sm:shrink-0">{children}</div>
     </div>
   );
 }
