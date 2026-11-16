@@ -7,7 +7,9 @@
  *     the cached shell is only a fallback
  *   - static files are stale-while-revalidate, hashed Vite assets included
  */
-const VERSION = "v1";
+/* The registration URL carries the build tag, so each deployment gets a new cache namespace
+   and `activate` deletes the previous one. Without it, "v1" kept the old shell forever. */
+const VERSION = new URL(self.location.href).searchParams.get("v") || "v1";
 const SHELL = "ith-shell-" + VERSION;
 const ASSETS = "ith-assets-" + VERSION;
 
