@@ -116,9 +116,7 @@ export function BrandingSettings({
             {branding.logo ? "Custom logo active" : "Built-in mark in use"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-            Upload a PNG or JPG (square recommended, up to 2 MB) to replace the mark on the
-            login page and the sidebar. With no logo the app shows the initials of the brand
-            name below.
+            PNG or JPG, up to 2 MB — square works best.
           </p>
           <div className="mt-3 flex flex-wrap gap-2.5">
             <button type="button" disabled={busy} onClick={() => fileRef.current?.click()}
@@ -176,8 +174,7 @@ export function BrandingSettings({
             Brand name
           </label>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Shown beside the mark on the login page and in the sidebar. Leave it empty to use
-            the built-in name. Saved with the rest of your preferences.
+            Shown on the login page and sidebar. Empty uses the built-in name.
           </p>
         </div>
         <input
