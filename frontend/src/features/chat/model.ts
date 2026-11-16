@@ -42,6 +42,23 @@ export type TicketDraft = {
   original_estimate?: string | null;
 };
 
+/** The `done` event carries the LLM usage for the answer that just finished. Copy it onto the
+ *  message: without this the pill only appeared after the conversation was reloaded from the
+ *  server, so a fresh answer looked like it had never used a token. */
+export function withStreamUsage(message: Message, payload: unknown): Message {
+  const usage = (payload as { usage?: Record<string, number> } | null)?.usage;
+  if (!usage) return message;
+  const pick = (k: string) => (typeof usage[k] === "number" ? usage[k] : undefined);
+  return {
+    ...message,
+    usage: {
+      input_tokens: pick("input_tokens") ?? message.usage?.input_tokens,
+      output_tokens: pick("output_tokens") ?? message.usage?.output_tokens,
+      total_tokens: pick("total_tokens") ?? message.usage?.total_tokens,
+    },
+  };
+}
+
 export type Message = {
   id: string;
   role: MsgRole;

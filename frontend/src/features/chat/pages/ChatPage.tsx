@@ -24,7 +24,7 @@ import { conversationFromHash, setConversationHash } from "@/app/router";
 import ChatTicketDialog from "@/features/chat/components/ChatTicketDialog";
 import { listActiveDomains } from "@/features/tickets/api";
 import { createTicketApi } from "@/features/tickets/api";
-import { formatMessageTime, latestSources, type Message, type Source, type TicketDraft } from "@/features/chat/model";
+import { formatMessageTime, latestSources, withStreamUsage, type Message, type Source, type TicketDraft } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
 import { greetingFor } from "@/features/chat/greeting";
 import { IntegrationLogo } from "@/features/settings/components/IntegrationLogo";
@@ -360,12 +360,15 @@ export default function Chat({ onNavigate, userName }: Props) {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? {
-                      ...m,
-                      latencyMs: d?.latency_ms ?? Date.now() - startedAt.current,
-                      ragTrace: d?.rag_trace ?? m.ragTrace,
-                      serverId: d?.message_id ?? m.serverId,
-                    }
+                  ? withStreamUsage(
+                      {
+                        ...m,
+                        latencyMs: d?.latency_ms ?? Date.now() - startedAt.current,
+                        ragTrace: d?.rag_trace ?? m.ragTrace,
+                        serverId: d?.message_id ?? m.serverId,
+                      },
+                      d,
+                    )
                   : m,
               ),
             );

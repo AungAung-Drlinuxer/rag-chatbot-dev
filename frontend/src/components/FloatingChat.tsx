@@ -35,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { runChatStream } from "@/features/chat/hooks/useChatStream";
-import { formatMessageTime, type Message, type Source } from "@/features/chat/model";
+import { formatMessageTime, withStreamUsage, type Message, type Source } from "@/features/chat/model";
 import { toSources } from "@/features/chat/sources";
 import {
   clearAssistantSnapshot,
@@ -219,11 +219,14 @@ export function FloatingChatPopup() {
           setMessages((p) =>
             p.map((m) =>
               m.id === botId
-                ? {
-                    ...m,
-                    confidence: meta.confidence != null ? Math.round(meta.confidence * 100) : undefined,
+                ? withStreamUsage(
+                    {
+                      ...m,
+                      confidence: meta.confidence != null ? Math.round(meta.confidence * 100) : undefined,
                       sources: toSources(meta.hits),
-                  }
+                    },
+                    d,
+                  )
                 : m,
             ),
           );
