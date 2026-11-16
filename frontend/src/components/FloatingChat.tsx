@@ -1,7 +1,7 @@
 /**
  * Global floating chat popup — MASTER spec §24-quality mini assistant.
  *
- * Opened from the NeedHelpCard ("Open Chat"). State lives in App-level
+ * Opened from its own floating bubble. State lives in App-level
  * context/mount so the popup + conversation persist across page switches.
  *
  * v0.22 additions (user feedback):
@@ -117,13 +117,12 @@ type Msg = Message & { sources?: Source[]; confidence?: number; failed?: boolean
 
 export function FloatingChatPopup() {
   /* The assistant is already on screen when the chat page is open; its floating button sat
-     on top of the composer's Send area on a 390px phone. */
-  const [onChatPage, setOnChatPage] = useState(isChatRoute);
-  useEffect(() => {
-    const update = () => setOnChatPage(isChatRoute());
-    window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
-  }, []);
+     on top of the composer's Send area on a 390px phone.
+     Read the route during render, not into state: the router navigates with
+     `history.replaceState`, which fires no `hashchange`, so a state copy stayed `true` after
+     leaving the chat page and the bubble never came back (until a real hashchange, e.g. a
+     reload, made it reappear — the "only sometimes" symptom). App re-renders on every nav. */
+  const onChatPage = isChatRoute();
   const preferences = useUserPreferences();
   const { open, setOpen, minimized, setMinimized } = useFloatingChat();
   /* Restored from sessionStorage so a page change or a reload does not wipe the thread. */

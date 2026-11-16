@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "react";
 import { useToast, ToastHost } from "@/shared/useToast";
 import PageSidebar from "@/components/PageSidebar";
 import CommandPalette from "@/components/CommandPalette";
-import { NeedHelpCard } from "@/components/NeedHelpCard";
 import { setPendingConversation } from "@/features/chat/pendingConversation";
 import { FloatingChatProvider, FloatingChatPopup } from "@/components/FloatingChat";
 import { hashToNav, useHashNav } from "@/app/router";
@@ -268,7 +267,6 @@ export default function App() {
           </div>
         </div>
       </div>
-      {active !== "chat" && <NeedHelpCard />}
       <FloatingChatPopup />
       {authed && (
         <CommandPalette
