@@ -171,7 +171,7 @@ def _ldap_authenticate(username: str, password: str) -> str | None:
     """Bind to LDAP/AD: service-bind → search user DN → rebind as user (verify password).
 
     v0.20.9 — resilient bind: if the service bind fails (bad DN format/password), fall
-    back to a direct UPN user bind (username@drlinuxer.com style), which AD accepts
+    back to a direct UPN user bind (username@example.com style), which AD accepts
     without a prior search. Keeps login working while the service account is sorted out.
     """
     from ldap3 import ALL, Connection, Server
@@ -184,7 +184,7 @@ def _ldap_authenticate(username: str, password: str) -> str | None:
                          password=cfg.get("bind_password") or None, auto_bind=False)
         if svc.bind():
             # v0.21.2: strip a UPN suffix if typed, and match either sAMAccountName
-            # or userPrincipalName so both "aungaung" and "AungAung@drlinuxer.com" work.
+            # or userPrincipalName so both "aungaung" and "user@example.com" work.
             base_user = username.split("@")[0]
             user_filter = (
                 f"(|(sAMAccountName={base_user})(userPrincipalName={username}))"
