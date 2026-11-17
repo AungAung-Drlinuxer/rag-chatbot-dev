@@ -9,6 +9,7 @@
  *  - Message actions: copy answer / copy question / edit & resend user query
  *  - Minimize button: collapses to a round bubble; reopen restores conversation
  */
+import { AssistantAvatar } from "@/components/AssistantAvatar";
 import {
   createContext,
   useCallback,
@@ -22,7 +23,6 @@ import AgentActivity, { stageFromText } from "@/components/AgentActivity";
 import Composer from "@/components/Composer";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import {
-  Bot,
   Check,
   Copy,
   Minus,
@@ -363,9 +363,10 @@ export function FloatingChatPopup() {
         aria-label={open ? "Reopen chat" : "Open IT assistant"}
         title={open ? "Reopen chat" : "Ask the IT assistant"}
         onClick={() => { setOpen(true); setMinimized(false); }}
-        className="safe-b fixed bottom-5 right-5 z-50 grid size-14 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-2xl shadow-black/30 transition hover:scale-105 hover:opacity-95"
+        className="safe-b fixed bottom-5 right-5 z-50 grid size-16 place-items-center rounded-full bg-[var(--card)] shadow-2xl shadow-black/40 ring-1 ring-[var(--border)] transition hover:scale-105"
       >
-        <Bot className="size-6" />
+        {/* 64 px — the size the mascot was drawn for; the ring keeps it off dark headers. */}
+        <AssistantAvatar size={60} />
         {messages.length > 0 && (
           <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full border-2 border-white bg-emerald-500 text-2xs font-bold text-white dark:border-[#09090F]">
             {messages.filter((m) => m.role === "assistant" && !m.failed).length || "•"}
@@ -383,9 +384,7 @@ export function FloatingChatPopup() {
     >
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-gradient-to-r from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] px-4 py-3 text-white">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 border border-white/25">
-          <Bot className="size-5 text-white" strokeWidth={1.8} />
-        </div>
+        <AssistantAvatar size={40} className="ring-1 ring-white/30" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold leading-tight text-white">IT Assistant</div>
         </div>
@@ -411,9 +410,8 @@ export function FloatingChatPopup() {
       <div ref={bodyRef} className="flex-1 space-y-4 overflow-y-auto bg-background p-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="grid size-14 place-items-center rounded-2xl bg-[var(--brand-soft)] text-[var(--brand-text)] border border-[var(--brand-text)]/30 shadow-sm">
-              <Sparkles className="size-6 text-[var(--brand-text)]" />
-            </div>
+            <AssistantAvatar size={96} className="drop-shadow-[0_8px_24px_rgba(59,130,246,0.25)]" />
+            <span className="sr-only">IT assistant</span>
             <h3 className="mt-3.5 text-base font-bold text-foreground">Ask an IT question</h3>
             <p className="mt-1.5 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
               I answer from your organization&apos;s knowledge base and cite the pages I used.
@@ -425,9 +423,7 @@ export function FloatingChatPopup() {
           <div key={m.id} className={m.role === "user" ? "group flex justify-end" : "group flex justify-start gap-2"}>
             {/* v1.6.38 — brand avatar on assistant turns, matching the Chat page */}
             {m.role !== "user" && (
-              <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--secondary)] text-[var(--secondary-foreground)]">
-                <Bot className="size-3.5" />
-              </div>
+              <AssistantAvatar size={28} className="mt-0.5" />
             )}
             <div className={m.role === "user" ? "max-w-[85%]" : "min-w-0 max-w-[88%]"}>
               <div

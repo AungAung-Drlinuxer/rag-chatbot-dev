@@ -62,10 +62,13 @@ src/
                        auth, chat, conversations, dashboard, domains, knowledge,
                        observability, settings, tickets, users, audits
   components/          shared UI: Composer, MarkdownMessage, HighlightedCode,
-                       FloatingChat, CommandPalette, NotificationBell, ui/
+                       FloatingChat, CommandPalette, NotificationBell,
+                       AssistantAvatar, ui/
   lib/                 http client, SSE parser, formatters
   shared/              cross-feature types and hooks
   styles.css           design tokens (light/dark) + Tailwind layers
+public/assistant-avatar.webp  the mascot the whole app renders (512 px, alpha)
+public/login-hero-v4.webp     login illustration, 2.2:1
 nginx.conf             SPA fallback, /api proxy (SSE-safe), cache policy
 vite.config.ts         dev server on :1420, /api proxy, vendor chunk split
 scripts/arch-render.mjs regenerates the architecture diagrams in docs/

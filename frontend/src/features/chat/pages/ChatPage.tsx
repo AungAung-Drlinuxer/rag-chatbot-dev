@@ -11,8 +11,9 @@
  *   header (fixed) · transcript (scrolls) · composer (fixed)
  * with the evidence rail only from `xl`, because on a phone the transcript is the product.
  */
+import { AssistantAvatar } from "@/components/AssistantAvatar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, Sparkles, Square, X } from "lucide-react";
+import { ArrowDown, BookOpen, CornerDownLeft, Loader2, Send, Square, X } from "lucide-react";
 
 import MessageBubble from "@/features/chat/components/MessageBubble";
 import SystemStatus from "@/features/chat/components/SystemStatusPanel";
@@ -54,8 +55,10 @@ function displayName(raw?: string): string {
 function Greeting({ name, composer, onPickPrompt }: { name: string; composer: React.ReactNode; onPickPrompt?: (prompt: string) => void }) {
   return (
     <section className="w-full text-center">
-      <span className="mx-auto mb-5 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-[var(--brand-grad-from)] to-[var(--brand-grad-to)] text-white shadow-lg shadow-black/25">
-        <Sparkles className="size-5" aria-hidden />
+      {/* The mascot is the welcome screen: 96 px, the size it reads at without looking like
+          a paragraph icon. */}
+      <span className="mx-auto mb-5 block size-24">
+        <AssistantAvatar size={96} className="drop-shadow-[0_10px_30px_rgba(59,130,246,0.28)]" />
       </span>
 
       <h1 className="text-[28px] font-bold leading-tight tracking-tight sm:text-[34px] text-foreground">

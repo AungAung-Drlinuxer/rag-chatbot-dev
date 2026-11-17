@@ -14,7 +14,8 @@
  * mockup's literal hexes, so the card follows both themes. Everything the card shows
  * is a value the message already carries — no figure is invented to fill it out.
  */
-import { AlertTriangle, Bot, Check, Clock3, Copy, ExternalLink, Loader2, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
+import { AssistantAvatar } from "@/components/AssistantAvatar";
+import { AlertTriangle, Check, Clock3, Copy, ExternalLink, Loader2, Pencil, RotateCcw, Share2, ShieldAlert, Sparkles, ThumbsDown, ThumbsUp, Ticket, User, Zap } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import AgentActivity, { stageFromText } from "@/components/AgentActivity";
@@ -234,8 +235,8 @@ function MessageBubble({
       <article className="min-w-0 flex-1 overflow-hidden rounded-xl border border-[var(--border)] bg-card text-card-foreground shadow-xs">
         {/* ---- card header: avatar · IT Assistant · provenance ---- */}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] px-4 py-3">
-          <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)]">
-            <Bot className="size-4" />
+          <div className="size-8 shrink-0">
+            <AssistantAvatar size={32} />
           </div>
           <div className="min-w-0">
             <div className="text-xs font-semibold text-foreground">IT Assistant</div>
