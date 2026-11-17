@@ -63,6 +63,9 @@ export function BrandingSettings({
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
+        // A 413 with no JSON body comes from the proxy, not the API: name the limit rather
+        // than leaking "HTTP 413" to someone who only picked a photo.
+        if (r.status === 413) throw new Error("Logo is larger than the 2 MB limit");
         throw new Error(j?.detail || `Upload failed (HTTP ${r.status})`);
       }
       const b = await fetchBranding();

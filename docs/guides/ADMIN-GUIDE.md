@@ -159,6 +159,26 @@ errors.
 
 ---
 
+### Branding and upload limits
+
+Settings → Branding sets the logo and workspace name shown on the login page and in the
+sidebar. The logo is stored as a data URL in `system_settings`, so it follows the database
+(no volume to back up) and reaches every replica on the next page load.
+
+Upload limits, by layer — a limit in a proxy below the API turns a clear validation message
+into a bare `HTTP 413`:
+
+- logo **2 MB**, PNG or JPEG, magic bytes checked (`app/api/settings.py`)
+- profile photo **512 KB** (`app/api/users.py`)
+- ticket attachment **8 MB** (`app/api/tickets.py`)
+- frontend nginx `client_max_body_size 12m`
+- ingress `nginx.ingress.kubernetes.io/proxy-body-size: "12m"` — **required**: ingress-nginx
+  defaults to 1 MB, which silently broke every upload between 1 and 2 MB before it reached
+  the app
+
+If you write your own Ingress instead of using `infra/k8s-dev/10-preview.yaml`, carry that
+annotation over, or large uploads will fail with 413 and no useful detail.
+
 ## 6. Guardrails
 
 Deterministic checks run **before** any model call (sub-millisecond, no LLM in the loop):

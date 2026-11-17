@@ -915,11 +915,12 @@ async def put_branding_logo(
     _require_admin(user)
     import base64 as _b64
 
-    data = await file.read()
+    # Read one byte past the limit: a 40 MB upload is rejected without buffering 40 MB.
+    data = await file.read(_MAX_LOGO_BYTES + 1)
     if not data:
         raise HTTPException(status_code=400, detail="Empty file")
     if len(data) > _MAX_LOGO_BYTES:
-        raise HTTPException(status_code=413, detail="Logo exceeds 2 MB limit")
+        raise HTTPException(status_code=413, detail="Logo exceeds the 2 MB limit")
     mime = file.content_type or ""
     if mime not in _ALLOWED_MIME:
         raise HTTPException(status_code=415, detail="Only PNG and JPG images are allowed")
