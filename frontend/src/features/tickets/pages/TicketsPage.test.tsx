@@ -24,6 +24,7 @@ vi.mock("@/features/tickets/api", () => ({
   /* No in-memory list in tests: every case starts from a cold page. */
   cachedTickets: vi.fn(() => null),
   listTicketDestinations: vi.fn(),
+  ticketComponents: vi.fn(async () => []),
   syncJiraTickets: vi.fn(),
   listActiveDomains: vi.fn(),
   createTicketApi: vi.fn(),

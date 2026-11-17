@@ -59,6 +59,36 @@ def priorities() -> list[str]:
         return list(FALLBACK_PRIORITIES)
 
 
+def components(project: str) -> list[dict]:
+    """The components this project already defines — [{"id", "name"}], [] on failure.
+
+    A component is a project-level taxonomy, not free text: Jira only accepts a name that
+    already exists, and rejects the whole field otherwise. Offering the real list is the
+    difference between a picker and a guessing game. Cached with the rest of the metadata;
+    an unconfigured or unreachable Jira yields [] and the form falls back to free text.
+    """
+    project = (project or "").strip()
+    if not project or not configured():
+        return []
+
+    def fetch() -> dict:
+        from app.integrations.jira import jira_get
+
+        data = jira_get(f"/rest/api/3/project/{project}/components") or []
+        items = [
+            {"id": str(c.get("id") or ""), "name": str(c.get("name") or "")}
+            for c in data
+            if isinstance(c, dict) and c.get("name")
+        ]
+        return {"components": sorted(items, key=lambda c: c["name"].lower())}
+
+    try:
+        return _cached(f"components:{project}", fetch).get("components") or []
+    except Exception as exc:
+        logger.info("component lookup failed (%s): %s", type(exc).__name__, exc)
+        return []
+
+
 def create_meta(project: str) -> dict:
     """{issue_types: [{id,name,subtask}], required_fields: [{key,name}]} for a project."""
     project = (project or "").strip()

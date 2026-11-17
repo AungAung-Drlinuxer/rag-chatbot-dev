@@ -10,9 +10,11 @@
  * so a field added here appears in all three places instead of in whichever one someone
  * remembered to update.
  */
+import { useEffect, useState } from "react";
 import { AlertCircle, CalendarDays, Sparkles } from "lucide-react";
 
-import type { CategoryAssignee } from "@/features/tickets/api";
+import { ticketComponents, type CategoryAssignee } from "@/features/tickets/api";
+import { ComponentPicker } from "@/features/tickets/components/ComponentPicker";
 
 export type TicketFormValues = {
   subject: string;
@@ -92,6 +94,17 @@ export function TicketFormFields({
   const missingSubject = Boolean(errors?.subject);
   const missingDescription = Boolean(errors?.description);
   const selected = assignable.find((u) => u.username === values.assignee);
+
+  // Jira's component list for the project. Empty (unconfigured, offline, or none defined)
+  // leaves the field as the plain comma-separated input it used to be.
+  const [componentOptions, setComponentOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    ticketComponents()
+      .then((items) => { if (alive) setComponentOptions(items); })
+      .catch(() => { /* the plain input is the fallback, not an error state */ });
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -279,14 +292,17 @@ export function TicketFormFields({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label htmlFor="ticket-components" className={LABEL}>Components</label>
-          <input
+          <ComponentPicker
             id="ticket-components"
             value={values.components}
-            onChange={(e) => onChange({ components: e.target.value })}
-            placeholder="Network & VPN, macOS"
-            className={FIELD}
+            onChange={(next) => onChange({ components: next })}
+            options={componentOptions}
           />
-          <p className={HINT}>Comma separated; must exist in Jira.</p>
+          <p className={HINT}>
+            {componentOptions.length > 0
+              ? "From this Jira project."
+              : "Comma separated; must exist in Jira."}
+          </p>
         </div>
         <div>
           <label htmlFor="ticket-labels" className={LABEL}>Labels</label>

@@ -85,3 +85,27 @@ def test_reconcile_still_applies_a_reopen():
     results = {"ITHD-36": {"ok": True, "status": "Reopened"}}
     plan = jira_reconcile.decide(rows, results, canonical_from_jira_status)
     assert plan["status"] == {"reopened": [7]}, plan
+
+
+def test_the_status_read_cache_is_seeded_after_a_transition():
+    """The list endpoint paints from a 60-second cache; a transition must refresh that entry.
+
+    THE BUG: `ticket_update` wrote the new status to the row, then `list_tickets` re-read the
+    ticket from Jira through `_jira_status_cache` and restored the PRE-transition value, so a
+    closed ticket showed its old pill until the cache expired.
+    """
+    source = inspect.getsource(tickets_api.ticket_update)
+    assert "_jira_status_cache[str(_row_key)]" in source, "the transition no longer seeds the cache"
+    assert source.index("_jira_status_cache[str(_row_key)]") > source.index("s.commit()"), \
+        "the cache is seeded before the local write lands"
+
+
+def test_a_cached_status_wins_over_a_stale_row(monkeypatch):
+    import time as _time
+
+    tickets_api._jira_status_cache.clear()
+    tickets_api._jira_status_cache["ITHD-9"] = (_time.time(), "done")
+    rows = [{"jira_key": "ITHD-9", "status": "open"}]
+    tickets_api._bulk_upstream_status_refresh(rows)
+    assert rows[0]["status"] == "done"
+    tickets_api._jira_status_cache.clear()

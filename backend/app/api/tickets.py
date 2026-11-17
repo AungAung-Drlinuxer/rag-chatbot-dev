@@ -993,6 +993,16 @@ def ticket_update(ticket_ref: str, req: TicketUpdateRequest,
                                 body=req.comment.strip()[:4000],
                                 kind="note" if req.comment_internal else "comment"))
         s.commit()
+
+    # The list endpoint re-reads every ticket's status from Jira and keeps a 60-second cache
+    # per key (`_jira_status_cache`). A transition wrote the new status to the row and then
+    # the very next list call painted the cached PRE-transition value over it, so the board
+    # showed the old pill for up to a minute after a move Jira had accepted. Seed the cache
+    # with what was just committed so the list agrees with the write.
+    _row_key = getattr(row, "jira_key", None)
+    if req.status and _row_key and row.status:
+        _jira_status_cache[str(_row_key)] = (time.time(), str(row.status))
+
     # `jira_synced` used to be inferred from the activity note's tail, so a save that pushed
     # only fields reported False and the UI warned about a failure that never happened.
     pushed_to_jira = bool(req.status) if getattr(row, "jira_key", None) else False

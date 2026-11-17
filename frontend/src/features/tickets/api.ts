@@ -9,6 +9,31 @@ export async function listActiveDomains(): Promise<{ key: string; label: string;
   return d?.domains ?? [];
 }
 
+/**
+ * Components the Jira project already defines. Jira rejects a component name it does not
+ * know, so this list is what the ticket form offers instead of free text. Empty when Jira is
+ * not configured or the project has none — the form then keeps its plain input.
+ */
+let componentsCache: { at: number; key: string; items: { id: string; name: string }[] } | null = null;
+
+export async function ticketComponents(project = ""): Promise<{ id: string; name: string }[]> {
+  const key = `${BASE}|${project}`;
+  if (componentsCache && componentsCache.key === key && Date.now() - componentsCache.at < 5 * 60_000) {
+    return componentsCache.items;
+  }
+  const q = project ? `?project=${encodeURIComponent(project)}` : "";
+  const r = await apiFetch(`${BASE}/api/escalations/fields${q}`, { headers: authHeaders() });
+  if (!r.ok) return [];
+  const d = await r.json().catch(() => ({}));
+  const items = Array.isArray(d?.components)
+    ? (d.components as { id?: string; name?: string }[])
+        .filter((c) => c && typeof c.name === "string" && c.name)
+        .map((c) => ({ id: String(c.id ?? ""), name: String(c.name) }))
+    : [];
+  componentsCache = { at: Date.now(), key, items };
+  return items;
+}
+
 /** Rewrite what the reporter typed into a clear ticket description (no new facts). */
 export async function improveTicketDescription(text: string, subject = ""): Promise<string> {
   const r = await apiFetch(`${BASE}/api/tickets/improve-description`, {

@@ -20,6 +20,7 @@ vi.mock("@/features/tickets/api", () => ({
   ticketAssignees: vi.fn(),
   listActiveDomains: vi.fn(),
   listTicketDestinations: vi.fn(),
+  ticketComponents: vi.fn(async () => []),
   improveTicketDescription: vi.fn(),
 }));
 vi.mock("@/features/users/api", () => ({ assignableUsers: vi.fn() }));

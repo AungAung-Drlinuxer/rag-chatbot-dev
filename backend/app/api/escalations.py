@@ -146,6 +146,9 @@ def fields(project: str = Query(default=""), user: str = Depends(get_current_use
         "default_issue_type": default_type,
         "priorities": priorities,
         "required_fields": required,
+        # A component must already exist in the project — Jira rejects the field otherwise —
+        # so the form offers this list instead of asking people to guess a valid name.
+        "components": jira_fields.components(target) if configured and target else [],
     }
 
 
