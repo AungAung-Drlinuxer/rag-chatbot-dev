@@ -88,6 +88,13 @@ explanation can never be forgotten as a "second step". Order of operations:
 2. comment posted to the issue (`comment_synced` reports it),
 3. the local mirror and its activity log updated.
 
+## Quick templates
+
+Three one-click templates (bug / access / service request) seed the category when a matching
+domain exists, the priority, a subject marker and a description skeleton. The skeleton is only
+written into an empty description, and the marker is stripped before a different template is
+applied, so repeated clicks replace rather than accumulate.
+
 ## Components come from Jira, not from the app
 
 A component is a project-level taxonomy: Jira accepts a name the ITHD project already defines

@@ -83,6 +83,15 @@ Every answer has these controls:
   this when the KB has no answer, or the fix in the KB did not work. If a draft already exists,
   the ticket icon reopens that draft instead of starting a second one.
 
+### Quick templates
+
+Above the fields, **Report a bug**, **Request access** and **Service request** fill the form in
+one click: category (when a matching domain exists), priority, a subject marker such as
+`Bug: `, and a description skeleton with the questions the team will ask anyway. A second
+click on the same template removes its marker; switching templates replaces it instead of
+stacking. A description you have already written — or one the chat pre-filled — is never
+overwritten.
+
 ### The ticket you review
 
 The Review dialog is the same form the Tickets page uses to create a ticket: subject,

@@ -18,7 +18,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  AlertCircle, Bug, Cloud, KeyRound, Paperclip,
+  AlertCircle, Bug, Check, Cloud, KeyRound, Paperclip,
   Send, Ticket as TicketIcon, X,
 } from "lucide-react";
 
@@ -78,18 +78,59 @@ const EMPTY = {
 
 
 /**
- * Templates seed the fields a reporter tends to get wrong — category and priority — and
- * leave the two they must write themselves empty. The category is matched against the live
- * domain list by pattern, because those labels are per-deployment.
+ * Templates are one click that changes the form, not a label for a field.
+ *
+ * Each one sets the category (matched against the live domain list, because those labels are
+ * per-deployment), the priority, a subject prefix, and the skeleton of a description. The
+ * skeleton is only written into an empty description: a reporter who has already typed, or a
+ * chat answer that pre-filled the text, must never be overwritten.
+ *
+ * `prefix` is used to both add and strip the marker, so switching templates replaces it
+ * instead of stacking "Bug: Access request: …".
  */
 const TEMPLATES = [
-  { key: "bug", label: "Report a bug", hint: "Something is broken", icon: Bug,
-    match: /bug|incident|problem/i, priority: "high", prefix: "Bug: " },
-  { key: "access", label: "Request access", hint: "Permissions, accounts", icon: KeyRound,
-    match: /access|identity|account/i, priority: "medium", prefix: "Access request: " },
-  { key: "service", label: "Service request", hint: "Hardware, software, setup", icon: Cloud,
-    match: /service|request|hardware|software/i, priority: "medium", prefix: "" },
-];
+  {
+    key: "bug",
+    label: "Report a bug",
+    hint: "Something is broken",
+    icon: Bug,
+    match: /bug|incident|problem|support/i,
+    priority: "high",
+    prefix: "Bug: ",
+    description:
+      "What happened:\n\nWhat I expected:\n\nSteps to reproduce:\n1. \n2. \n\nWhen it started:\n\nWho is affected:\n",
+  },
+  {
+    key: "access",
+    label: "Request access",
+    hint: "Permissions, accounts",
+    icon: KeyRound,
+    match: /access|identity|account|user/i,
+    priority: "medium",
+    prefix: "Access request: ",
+    description:
+      "System or resource:\n\nAccess level needed (read / write / admin):\n\nBusiness reason:\n\nWhen it is needed by:\n",
+  },
+  {
+    key: "service",
+    label: "Service request",
+    hint: "Hardware, software, setup",
+    icon: Cloud,
+    match: /service|request|hardware|software|network|server/i,
+    priority: "medium",
+    prefix: "",
+    description:
+      "What I need:\n\nWhy I need it:\n\nWhen I need it:\n\nAny constraints (location, budget, approval):\n",
+  },
+] as const;
+
+/** Remove any template marker from a subject, so templates replace rather than stack. */
+function stripTemplatePrefix(subject: string): string {
+  for (const t of TEMPLATES) {
+    if (t.prefix && subject.startsWith(t.prefix)) return subject.slice(t.prefix.length);
+  }
+  return subject;
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -114,6 +155,8 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   const [pendingDomain, setPendingDomain] = useState<string | null>(null);
   /** Set once the reporter has tried to submit: from then on the missing fields are visible. */
   const [tried, setTried] = useState(false);
+  /** Which template is applied, so the button can show it and a second click can undo it. */
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const subjectRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -236,15 +279,36 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
   }
 
   function applyTemplate(t: (typeof TEMPLATES)[number]) {
+    // Second click on the same template removes its marker and leaves the rest alone.
+    if (activeTemplate === t.key) {
+      setDraft((d) => ({ ...d, subject: stripTemplatePrefix(d.subject) }));
+      setActiveTemplate(null);
+      return;
+    }
+
     const target = categories.find((c) => t.match.test(c.label) || t.match.test(c.key));
-    setDraft((d) => ({
-      ...d,
-      category: target ? target.label : d.category,
-      priority: t.priority,
-      // A prefix, not a sentence: the reporter still writes the subject.
-      subject: d.subject.trim() ? d.subject : t.prefix,
-    }));
-    requestAnimationFrame(() => subjectRef.current?.focus());
+    setDraft((d) => {
+      // Strip before trimming: the marker itself ends with a space, so "Bug: ".trim() is
+      // "Bug:" and never matches the prefix being removed.
+      const base = stripTemplatePrefix(d.subject).trim();
+      const subject = t.prefix ? `${t.prefix}${base}` : base;
+      // Only an empty description is seeded: never overwrite what the reporter (or the chat
+      // answer that opened this dialog) already put there.
+      const description = d.description.trim() ? d.description : t.description;
+      return {
+        ...d,
+        category: target ? target.label : d.category,
+        priority: t.priority,
+        subject,
+        description,
+      };
+    });
+    setActiveTemplate(t.key);
+    requestAnimationFrame(() => {
+      subjectRef.current?.focus();
+      const end = subjectRef.current?.value.length ?? 0;
+      subjectRef.current?.setSelectionRange(end, end);
+    });
   }
 
   function addFiles(list: FileList | null) {
@@ -310,9 +374,15 @@ export function CreateTicketDialog({ open, onOpenChange, preset, onCreated, onTo
                   data-template={t.key}
                   onClick={() => applyTemplate(t)}
                   title={t.hint}
-                  className="rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-xs font-medium text-foreground transition hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/10 hover:text-foreground"
+                  aria-pressed={activeTemplate === t.key}
+                  className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                    activeTemplate === t.key
+                      ? "border-[var(--primary)] bg-[var(--primary)]/15 text-foreground"
+                      : "border-[var(--border)] bg-transparent text-foreground hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/10"
+                  }`}
                 >
-                  {t.label}
+                  <span>{t.label}</span>
+                  {activeTemplate === t.key && <Check className="size-3.5" aria-hidden />}
                 </button>
               ))}
             </div>

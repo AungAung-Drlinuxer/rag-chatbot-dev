@@ -44,7 +44,7 @@ export DATABASE_URL='postgresql+psycopg2://app:auditpw@127.0.0.1:55433/assistant
 ```
 
 Expected, with all three dependencies up: **497 passed, 0 skipped** for the backend and
-**267 passed** for the frontend (`cd frontend && npx vitest run`).
+**271 passed** for the frontend (`cd frontend && npx vitest run`).
 
 ## What the suite configures for itself
 

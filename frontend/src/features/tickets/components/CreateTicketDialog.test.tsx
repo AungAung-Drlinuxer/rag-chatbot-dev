@@ -96,6 +96,49 @@ describe("CreateTicketDialog", () => {
     expect(el.querySelector('input[type="file"]')).toBeTruthy();
   });
 
+  it("a template rewrites the form in one click", async () => {
+    const el = await mount();
+    const bug = el.querySelector('[data-template="bug"]') as HTMLButtonElement;
+    await act(async () => { bug.click(); });
+
+    const subject = el.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
+    const description = el.querySelector('textarea[aria-label="Ticket description"]') as HTMLTextAreaElement;
+    const priority = el.querySelector('select[aria-label="Priority"]') as HTMLSelectElement;
+
+    expect(subject.value).toBe("Bug: ");
+    expect(priority.value).toBe("high");
+    expect(description.value).toContain("What happened:");
+    expect(bug.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("switching templates replaces the marker instead of stacking it", async () => {
+    const el = await mount();
+    await act(async () => { (el.querySelector('[data-template="bug"]') as HTMLButtonElement).click(); });
+    await act(async () => { (el.querySelector('[data-template="access"]') as HTMLButtonElement).click(); });
+
+    const subject = el.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
+    expect(subject.value).toBe("Access request: ");
+    expect(subject.value).not.toContain("Bug:");
+  });
+
+  it("a second click on the active template removes its marker", async () => {
+    const el = await mount();
+    const bug = el.querySelector('[data-template="bug"]') as HTMLButtonElement;
+    await act(async () => { bug.click(); });
+    await act(async () => { bug.click(); });
+
+    const subject = el.querySelector('input[aria-label="Subject"]') as HTMLInputElement;
+    expect(subject.value).toBe("");
+    expect(bug.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("a template never overwrites a description the user already has", async () => {
+    const el = await mount({ subject: "", description: "Already written by the chat." });
+    await act(async () => { (el.querySelector('[data-template="service"]') as HTMLButtonElement).click(); });
+    const description = el.querySelector('textarea[aria-label="Ticket description"]') as HTMLTextAreaElement;
+    expect(description.value).toBe("Already written by the chat.");
+  });
+
   it("starts from the chat message when a preset is given", async () => {
     const el = await mount({ subject: "How do I reset my VPN?", description: "The answer that was given." });
     expect((el.querySelector('input[aria-label="Subject"]') as HTMLInputElement).value).toBe("How do I reset my VPN?");
