@@ -47,8 +47,10 @@ enable database backups.
 
 | Need | Detail |
 | --- | --- |
-| Kubernetes | 1.27+; the dev cluster runs single-node k3s |
-| CNPG operator | CloudNativePG installed cluster-wide (the `Cluster` CRD must exist) |
+| Kubernetes | 1.27+, and a kubeconfig with cluster-admin for the first install |
+| Local tools | `kubectl`, `helm`, `python3`, `openssl` — `install.sh` refuses to start without them |
+| CNPG operator | CloudNativePG cluster-wide (the `Cluster` CRD must exist); `install.sh` installs it with Helm when missing |
+| ingress-nginx | `install.sh` installs it with Helm when missing; `--skip-prereqs` fails instead |
 | StorageClass | one that supports `ReadWriteOnce`, named in `infra/env` as `STORAGE_CLASS` |
 | IngressClass | `ingressClassName` in `infra/env`; TLS via cert-manager or a manual secret |
 | Registry | push access to `REGISTRY`, e.g. `harbor.example.com/rag-chatbot-dev` |

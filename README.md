@@ -36,6 +36,8 @@ The full documentation index is [docs/README.md](docs/README.md).
 ## Repository layout
 
 ```
+docker-compose.yml  whole application on one machine (laptop / single VM)
+.env.example        copy to .env for the compose stack — never commit .env
 backend/            FastAPI app, RAG pipeline, workers, migrations, tests
 frontend/           React 18 + Vite + Tailwind SPA (served by nginx)
 services/rerank/    CPU cross-encoder service (bge-reranker-base over HTTP)

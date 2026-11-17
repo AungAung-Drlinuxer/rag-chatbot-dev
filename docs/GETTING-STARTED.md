@@ -1,14 +1,47 @@
 # Getting started — local machine
 
 Goal: the stack running on your laptop with an empty database, then signed in as the first
-administrator. About 10 minutes the first time.
+administrator.
 
-You need: **Docker**, **Python 3.12** + [uv](https://docs.astral.sh/uv/), **Node 20+**.
-Postgres, Redis and pgvector come from the compose file — no local install.
+There are two paths. **Path A** is one command and needs only Docker. **Path B** runs the API
+and the SPA from source, which is what you want while changing code.
 
 ---
 
-## 1. Database and cache
+## Path A — everything in containers (one command)
+
+```bash
+git clone https://github.com/AungAung-Drlinuxer/rag-chatbot-dev.git
+cd rag-chatbot-dev
+cp .env.example .env          # set POSTGRES_PASSWORD, ADMIN_USER, ADMIN_PASSWORD
+docker compose up -d --build
+```
+
+Open `http://localhost:8080` and sign in with `ADMIN_USER` / `ADMIN_PASSWORD`. The stack
+contains Postgres + pgvector, Redis, Ollama (the embedding model is pulled once), the rerank
+service, the API, a Celery worker and beat, and the SPA behind nginx.
+
+The `init` service creates the schema and the first administrator, then exits; everything
+else waits for it. First run downloads the base images and the reranker weights, so give it
+a few minutes. Later runs start in seconds.
+
+```bash
+docker compose ps            # every service "Up", init/ollama-models "Exited (0)"
+docker compose logs -f backend
+docker compose down          # stop; add -v to delete the database volume too
+```
+
+Ports are 8080 (app), 55433 (Postgres), 6380 (Redis), 11434 (Ollama) — picked so they do not
+collide with anything already running.
+
+---
+
+## Path B — from source
+
+You need: **Docker**, **Python 3.12** + [uv](https://docs.astral.sh/uv/), **Node 20+**.
+Postgres and Redis come from the compose file — no local install.
+
+### 1. Database and cache
 
 ```bash
 export POSTGRES_PASSWORD="$(openssl rand -hex 16)"   # keep it in this shell
@@ -24,7 +57,7 @@ Check:
 docker compose -f backend/docker-compose.dev.yml ps      # both healthy
 ```
 
-## 2. Backend
+### 2. Backend
 
 ```bash
 cd backend
@@ -48,7 +81,7 @@ uv run uvicorn app.main:app --reload --port 8000
 
 `http://127.0.0.1:8000/health` should answer.
 
-## 3. First administrator
+### 3. First administrator
 
 There is no default account. Create one locally (the password is prompted, never passed as
 an argument):
@@ -60,7 +93,7 @@ uv run python -m app.bootstrap --admin jane.doe
 Sign in with that username/password. Later users come from your directory (Settings →
 Integrations → LDAP/AD) or from Users → invite.
 
-## 4. Frontend
+### 4. Frontend
 
 ```bash
 cd frontend
@@ -71,7 +104,7 @@ npm run dev          # http://127.0.0.1:1420 — strict port, matches the Tauri 
 Vite proxies `/api` to `127.0.0.1:8000`, so the browser talks same-origin exactly like the
 cluster does.
 
-## 4b. Reranking on a laptop (optional)
+### 4b. Reranking on a laptop (optional)
 
 The backend defaults to `RERANK_MODE=local` (in-process cross-encoder) and the cluster sets
 `RERANK_MODE=remote` with a `RERANK_URL` pointing at `rerank-svc`. A laptop has neither a
@@ -87,7 +120,7 @@ export RERANK_MODE=remote RERANK_URL=http://127.0.0.1:8080
 Rerank failure is never fatal: chat falls back to vector order and increments
 `rerank_failures_total`.
 
-## 5. Make it answer
+### 5. Make it answer
 
 Nothing is seeded. An empty install starts, serves the UI and answers "I don't know".
 
@@ -108,12 +141,15 @@ curl -s -X POST http://127.0.0.1:8000/api/chat/stream \
   -d '{"message":"how do I reset my VPN password","session_id":"<uuid>"}' | head -20
 ```
 
-## 6. Tests
+### 6. Tests
 
 ```bash
 cd backend && uv run pytest -q tests        # DB-dependent tests skip if no database
 cd frontend && npx vitest run && npm run build && npm run lint
 ```
+
+A skip is a missing dependency, not a pass. The full recipe (a throwaway database, Redis, the
+embedding model) and the expected 491 passed / 0 skipped is [testing.md](testing.md).
 
 ---
 

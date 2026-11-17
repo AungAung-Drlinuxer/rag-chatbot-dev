@@ -1,6 +1,7 @@
 # Environment variables & local secrets
 .env
 .env.*
+!.env.example
 *.env
 *.local
 infra/k8s/_source/
