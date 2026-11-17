@@ -159,37 +159,25 @@ export default function Login({
                   </p>
                 </div>
 
-                {/* Width is derived from a height budget, not the other way round: the frame is
-                    min(available width, (viewport - chrome) x image ratio), so the picture and its
-                    border are always the same box. A 600px-tall window shrinks the artwork (220px
-                    floor) instead of letterboxing or clipping it. */}
-                <div className="flex w-full items-center justify-center">
-                  <figure
-                    className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[#dfe3fc] shadow-sm"
-                    style={{ width: "max(220px, min(100%, calc((100svh - 430px) * 2.34)))" }}
-                  >
-                    <div className="flex h-9 items-center gap-2 border-b border-[var(--border)] bg-muted/40 px-3">
-                      <span className="flex gap-1" aria-hidden>
-                        <span className="size-1.5 rounded-full bg-[var(--danger)]/50" />
-                        <span className="size-1.5 rounded-full bg-[var(--warn)]/60" />
-                        <span className="size-1.5 rounded-full bg-[var(--ok)]/50" />
-                      </span>
-                      <span className="truncate text-2xs font-medium text-muted-foreground">
-                        {appName} · assistant workspace
-                      </span>
-                    </div>
+                {/* Hero, full width of the column at 2.2:1 — the artwork's own ratio, so
+                    `cover` crops nothing at desktop widths. `max-h` is the short-screen guard:
+                    a 700px-tall window lets the picture keep its ratio, and a 600px one clamps
+                    its height (cropping top/bottom) instead of pushing the feature row off. */}
+                <figure className="w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[#070b18] shadow-sm">
+                  <picture>
+                    <source srcSet="/login-hero-v4.webp" type="image/webp" />
                     <img
-                      src="/login-illustration-v3.jpg"
-                      width={1146}
-                      height={454}
-                      alt="IT Help assistant illustration — search IT knowledge, verify sources, escalate if needed"
-                      className="pointer-events-none block h-auto w-full select-none"
+                      src="/login-hero-v4.jpg"
+                      width={1280}
+                      height={568}
+                      alt="Industrial knowledge assistant — documents connected to a knowledge graph, with network, database, security and support services around it"
+                      className="pointer-events-none block aspect-[2.2/1] max-h-[min(42vh,430px)] w-full select-none object-cover"
                       fetchPriority="high"
                       decoding="async"
                       draggable={false}
                     />
-                  </figure>
-                </div>
+                  </picture>
+                </figure>
 
                 <div className="grid shrink-0 gap-2.5 sm:grid-cols-3">
                   <FeatureCard icon={<BookOpenCheck className="size-4" />} title="Grounded" description="Answers use internal knowledge." />
@@ -229,15 +217,20 @@ export default function Login({
               <p className="relative mt-4 max-w-[34ch] text-[15px] font-medium leading-snug sm:hidden">
                 Grounded IT answers, with the source attached.
               </p>
-              <img
-                src="/login-illustration-v3.jpg"
-                alt=""
-                aria-hidden
-                className="relative mt-3 block h-auto w-full max-w-full rounded-xl shadow-sm ring-1 ring-white/15"
-                style={{ aspectRatio: "1146 / 454", maxHeight: 460 }}
-                decoding="async"
-                draggable={false}
-              />
+              {/* Phone: the form is the page. The picture is a short banner (2.2:1,
+                  cropped) rather than a 460px block that pushed the sign-in card below the
+                  fold. */}
+              <picture>
+                <source srcSet="/login-hero-v4.webp" type="image/webp" />
+                <img
+                  src="/login-hero-v4.jpg"
+                  alt=""
+                  aria-hidden
+                  className="relative mt-3 block aspect-[2.2/1] max-h-[132px] w-full max-w-full rounded-xl object-cover shadow-sm ring-1 ring-white/15"
+                  decoding="async"
+                  draggable={false}
+                />
+              </picture>
             </div>
           </div>
 
