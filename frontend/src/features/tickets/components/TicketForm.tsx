@@ -310,10 +310,9 @@ export function TicketFormFields({
             id="ticket-labels"
             value={values.labels}
             onChange={(e) => onChange({ labels: e.target.value })}
-            placeholder="vpn, macos"
             className={FIELD}
           />
-          <p className={HINT}>Comma separated, free form.</p>
+          <p className={HINT}>Comma separated, free form. Example: printer, outlook.</p>
         </div>
         <div>
           <label htmlFor="ticket-estimate" className={LABEL}>Original estimate</label>
@@ -321,10 +320,13 @@ export function TicketFormFields({
             id="ticket-estimate"
             value={values.original_estimate}
             onChange={(e) => onChange({ original_estimate: e.target.value })}
-            placeholder="2h · 1d 4h"
+            placeholder="e.g. 2h or 1d 4h"
             className={FIELD}
           />
-          <p className={HINT}>Jira format: w d h m.</p>
+          <p className={HINT}>
+            Time you expect it to take, not a deadline — 30m, 2h, 1d 4h (w = week, d = day,
+            h = hour, m = minute).
+          </p>
         </div>
       </div>
     </div>
