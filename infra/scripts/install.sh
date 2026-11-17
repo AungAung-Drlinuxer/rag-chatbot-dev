@@ -201,6 +201,24 @@ if [[ " $rendered_ns " != *" $NAMESPACE "* ]]; then
 fi
 note "manifests target namespace: $NAMESPACE"
 
+# Fail fast on the mistake that otherwise costs ten minutes of ImagePullBackOff: a
+# REGISTRY/tag combination that holds no images. Read-only and a warning, not a hard stop —
+# a private registry the local docker has not logged into answers the same as a missing tag.
+say "image preflight"
+if command -v docker >/dev/null 2>&1; then
+  for spec in "backend:${BACKEND_TAG}" "frontend:${FRONTEND_TAG}" \
+              "rerank-svc:${RERANK_TAG}" "ollama:${OLLAMA_TAG}"; do
+    ref="$REGISTRY/$spec"
+    if docker manifest inspect "$ref" >/dev/null 2>&1; then
+      note "found $ref"
+    else
+      note "WARNING: cannot see $ref — build it (build-images.sh --all) or check REGISTRY/HARBOR_*"
+    fi
+  done
+else
+  note "docker not installed here — skipping image check"
+fi
+
 say "deploy"
 "$ROOT/infra/scripts/deploy.sh" | sed 's/^/   /'
 
