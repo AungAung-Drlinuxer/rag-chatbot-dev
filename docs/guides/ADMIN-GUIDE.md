@@ -188,6 +188,9 @@ and the code is `backend/app/security/guardrails.py`.
   assignee, due date, components, labels, original estimate), with Jira's own limits and hints
   (200 / 2,000 characters, `2h 30m`, `backend,api`). Edit adds *status*; a create call cannot
   honour a status, so create does not offer one.
+- **Components** are read from the Jira project (`/api/escalations/fields`), because Jira only
+  accepts a component the project already defines. The app never creates one — add it in Jira,
+  and it appears in the picker on the next load (60-second cache).
 - A ticket created from a conversation stores that conversation's id. That is the only thing
   that makes it an **escalation** on the Overview — a ticket raised by hand on the Tickets page
   is a ticket, not an escalation.

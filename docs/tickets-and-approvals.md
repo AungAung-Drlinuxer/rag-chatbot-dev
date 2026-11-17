@@ -8,8 +8,8 @@ fields — the user's question as the subject, the answer as the description —
 session id, so the issue stays linked to the conversation.
 
 Fields: Subject · Description (+ AI assist) · Category · Priority · Assignee · Due date ·
-Attachments. Destination is always Jira; the dialog says so, and says when Jira is not
-configured instead of failing at submit time.
+Components · Labels · Original estimate · Attachments. Destination is always Jira; the dialog
+says so, and says when Jira is not configured instead of failing at submit time.
 
 Why one component: the chat used to have its own two-field dialog (priority pinned to
 `medium`, domain `general`, no assignee/due date/attachments), so the same button produced a
@@ -72,6 +72,10 @@ Rules enforced by `app/integrations/ticket_status.py`:
 - Asking for the status an issue already has is an accepted no-op.
 - If a transition lands next to what was asked (from `DONE` the only exit is *Reopen issue*,
   which produces `REOPENED`), the stored status is re-read from Jira rather than assumed.
+- The list endpoint re-reads each ticket's status from Jira through a 60-second cache. A
+  transition seeds that cache with the status it just committed; without it the next list
+  read restored the pre-transition value and the board showed the old pill for up to a
+  minute after a move Jira had accepted.
 - An unknown Jira status falls back to `open`.
 
 ## One save: status + comment
@@ -83,6 +87,28 @@ explanation can never be forgotten as a "second step". Order of operations:
 1. transition pushed to Jira — a refusal is `409` and nothing is written locally,
 2. comment posted to the issue (`comment_synced` reports it),
 3. the local mirror and its activity log updated.
+
+## Components come from Jira, not from the app
+
+A component is a project-level taxonomy: Jira accepts a name the ITHD project already defines
+and rejects the field otherwise. Because the create path is deliberately best-effort (one
+refused field must not lose the ticket), a typo did not fail loudly — the ticket was created
+without the component and the API's `field_warnings` went unread by the UI.
+
+The form therefore offers the project's real list:
+
+- `GET /api/escalations/fields` returns `components: [{id, name}]` for the default project,
+  read from `GET /rest/api/3/project/{key}/components` and cached 60 s with the rest of the
+  metadata (`app/escalation/jira_fields.py`).
+- `ComponentPicker` (`features/tickets/components/ComponentPicker.tsx`) is a searchable
+  multi-select with removable chips; it writes the same comma-separated names the API takes,
+  so Create, the chat's Review dialog and Edit all share one implementation.
+- When Jira is unconfigured, unreachable, or the project defines no components, the field
+  falls back to the plain comma-separated input — the form never blocks a submission.
+- A stored name that is not in the list is flagged in the form before submit.
+- The app **never creates components**. That would change the project taxonomy for everyone;
+  a new component is an administrator's decision in Jira. The account still needs *Browse
+  projects* to read the list.
 
 ## Attachments
 

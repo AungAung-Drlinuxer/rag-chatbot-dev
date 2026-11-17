@@ -149,7 +149,7 @@ cd frontend && npx vitest run && npm run build && npm run lint
 ```
 
 A skip is a missing dependency, not a pass. The full recipe (a throwaway database, Redis, the
-embedding model) and the expected 491 passed / 0 skipped is [testing.md](testing.md).
+embedding model) and the expected 497 passed / 0 skipped is [testing.md](testing.md).
 
 ---
 

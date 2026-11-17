@@ -43,7 +43,8 @@ export DATABASE_URL='postgresql+psycopg2://app:auditpw@127.0.0.1:55433/assistant
 .venv/bin/python -m pytest tests -q
 ```
 
-Expected, with all three dependencies up: **491 passed, 0 skipped**.
+Expected, with all three dependencies up: **497 passed, 0 skipped** for the backend and
+**267 passed** for the frontend (`cd frontend && npx vitest run`).
 
 ## What the suite configures for itself
 

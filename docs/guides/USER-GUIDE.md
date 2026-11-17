@@ -87,6 +87,8 @@ Every answer has these controls:
 
 The Review dialog is the same form the Tickets page uses to create a ticket: subject,
 description, category, priority, assignee, due date, components, labels and original estimate.
+Components are chosen from the list your Jira project defines (Jira rejects a name it does not
+know), so the field is a picker rather than free text whenever the list is available.
 Nothing is sent to Jira until you press **Create ticket**; the conversation is attached, so the
 agent can read what you already tried. You can change every field before sending.
 
