@@ -162,7 +162,8 @@ errors.
 ### Branding and upload limits
 
 Settings → Branding sets the logo and workspace name shown on the login page and in the
-sidebar. The logo is stored as a data URL in `system_settings`, so it follows the database
+sidebar. The login page's hero illustration is a shipped asset (`frontend/public/login-hero-v4.webp`),
+not an admin setting: it is product artwork, while the logo and name are deployment identity. The logo is stored as a data URL in `system_settings`, so it follows the database
 (no volume to back up) and reaches every replica on the next page load.
 
 Upload limits, by layer — a limit in a proxy below the API turns a clear validation message
