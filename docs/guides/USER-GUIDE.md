@@ -2,8 +2,9 @@
 
 The robot mascot is the assistant's identity: it is the floating button, the chat header, the
 welcome screen and the avatar beside every answer. It is one asset
-(`frontend/public/assistant-avatar.webp`, 512 px, transparent surround) rendered at 64, 40, 96
-and 28 px — never a different drawing per surface.
+(`frontend/public/assistant-avatar.webp`, 512 px, transparent surround) rendered at a 64 px
+launcher, a 40 px panel header, a 96 px welcome screen and 28–32 px beside an answer — never a
+different drawing per surface.
 
 For anyone with an account: how to ask, how to read the answer, and what to do when the
 answer is not good enough.

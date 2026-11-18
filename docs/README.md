@@ -65,6 +65,9 @@ Long-form references, kept current with the code:
 | [domains.md](domains.md) | domain routing |
 | [jira-reconciliation.md](jira-reconciliation.md) | mirroring Jira into the queue |
 | [testing.md](testing.md) | running the full backend suite |
+| [database-setup.md](database-setup.md) | PostgreSQL, pgvector, roles, schema bootstrap |
+| [solution-architecture-explanation.md](solution-architecture-explanation.md) | the architecture in plain language |
+| [architecture/security-guardrails-spec.md](architecture/security-guardrails-spec.md) | guardrail rules and their limits |
 
 ## Diagrams
 
